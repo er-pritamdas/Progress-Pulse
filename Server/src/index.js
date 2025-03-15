@@ -20,3 +20,11 @@ connectDB()
     console.log(`❌ Server Connection Failed : ${err}`);
     console.log("---------------------------------------------------------------");
 })
+
+
+// // For testing
+// app.listen(process.env.PORT || 8000, () => {
+//     console.log("---------------------------------------------------------------");
+//     console.log(`⚙️  Server is running at port : ${process.env.PORT}`);
+//     console.log("---------------------------------------------------------------");
+// })
