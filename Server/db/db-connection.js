@@ -10,14 +10,14 @@ const connectDB = async () => {
         console.log(`✅ MongoDB succsessfully Connected: ${conn.connection.host}`);
         console.log("---------------------------------------------------------------");
 
-        const dbone = mongoose.connection.useDb(process.env.DBONE);
-        console.log(`✅ ${dbone.name} Connected`);
-        const dbtwo = mongoose.connection.useDb(process.env.DBTWO);
-        console.log(`✅ ${dbtwo.name} Connected`);
-        const dbthree = mongoose.connection.useDb(process.env.DBTHREE);
-        console.log(`✅ ${dbthree.name} Connected`);
+        const UserDB = mongoose.connection.useDb(process.env.USER_DB);
+        console.log(`✅ ${UserDB.name} Connected`);
+        const HabitDB = mongoose.connection.useDb(process.env.HABIT_DB);
+        console.log(`✅ ${HabitDB.name} Connected`);
+        const ExpenseDB = mongoose.connection.useDb(process.env.EXPENSE_DB);
+        console.log(`✅ ${ExpenseDB.name} Connected`);
 
-        global.databases = { dbone, dbtwo, dbthree };
+        global.databases = { UserDB, HabitDB, ExpenseDB };
 
     } catch (error) {
         console.log("---------------------------------------------------------------");
