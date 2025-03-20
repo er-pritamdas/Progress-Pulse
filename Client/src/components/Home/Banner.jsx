@@ -1,4 +1,6 @@
 import React from 'react'
+import Spline from '@splinetool/react-spline';
+
 
 function Banner() {
     return (
@@ -11,7 +13,9 @@ function Banner() {
                     </span>
                 </div>
                 <div className="divider divider-horizontal"></div>
-                <div className="card bg-base-300 rounded-box grid grow place-items-center"></div>
+                <div className="card bg-base-300 rounded-box grid grow place-items-center">
+                    {/* <Spline scene="https://prod.spline.design/N4T5SkNQKyp5hsF3/scene.splinecode" /> */}
+                </div>
             </div>
 
         </>

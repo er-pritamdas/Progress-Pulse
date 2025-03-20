@@ -1,21 +1,60 @@
-import React from 'react'
+import React, { useState } from 'react';
 
 function Login() {
+  const [showPassword, setShowPassword] = useState(false);
+
   return (
     <>
-      <fieldset className="fieldset w-xs bg-base-200 border border-base-300 p-4 rounded-box">
-        <legend className="fieldset-legend">Login</legend>
+      <div className="flex w-full mt-2 justify-center items-center h-screen">
+        <div className="card bg-base-300 rounded-box grid h-170 grow place-items-center">
+          Content
+        </div>
+        <div className="divider divider-horizontal"></div>
+        <div className="card bg-base-300 rounded-box grid h-170 grow place-items-center">
 
-        <label className="fieldset-label">Email</label>
-        <input type="email" className="input" placeholder="Email" />
+          <fieldset className="fieldset w-full max-w-lg bg-base-200 border border-base-300 p-6 rounded-box">
+            <legend className="fieldset-legend text-2xl font-bold">Login</legend>
 
-        <label className="fieldset-label">Password</label>
-        <input type="password" className="input" placeholder="Password" />
+            <label className="fieldset-label text-lg">Email</label>
+            <input type="email" className="input validator input-lg w-full" placeholder="Email" required />
 
-        <button className="btn btn-neutral mt-4">Login</button>
-      </fieldset>
+            <label className="fieldset-label text-lg mt-2">Password</label>
+            <input
+              type={showPassword ? "text" : "password"}
+              className="input validator input-lg w-full"
+              required
+              placeholder="Password"
+              minLength="8"
+              pattern="(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}"
+              title="Must be more than 8 characters, including a number, a lowercase letter, and an uppercase letter"
+            />
+
+            {/* Show Password Checkbox */}
+            <div className="flex items-center mt-2">
+              <input
+                type="checkbox"
+                id="showPassword"
+                className="mr-2"
+                onChange={() => setShowPassword(!showPassword)}
+              />
+              <label htmlFor="showPassword" className="text-sm fieldset-label">Show Password</label>
+            </div>
+
+            <p className="text-right text-sm mt-1">
+              <a href="#" className="link link-info">Forgot Password?</a>
+            </p>
+
+            <button className="btn btn-neutral btn-lg mt-4 w-full">Login</button>
+
+            <p className="text-center mt-4 text-sm">
+              Don't have an account? <a href="/signup" className="link link-hover">Sign up here</a>
+            </p>
+          </fieldset>
+
+        </div>
+      </div>
     </>
-  )
+  );
 }
 
-export default Login
+export default Login;
