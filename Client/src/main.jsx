@@ -7,7 +7,7 @@ import './index.css'
 import Homepage from './pages/Homepage'
 import Login from './components/Authentication/Login.jsx'
 import Signup from './components/Authentication/Signup.jsx'
-import Layout from './layouts/layout.jsx'
+import Layout from './layouts/Layout.jsx'
 
 const router = createBrowserRouter(
   createRoutesFromElements(
