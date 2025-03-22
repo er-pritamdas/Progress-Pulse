@@ -30,10 +30,9 @@ const registeredUserSchema = new mongoose.Schema(
         required: true 
     }, // Must be hashed before saving
 
-    phoneNumber: { 
-        type: String, 
-        unique: true, 
-        sparse: true 
+    otp:{
+      type: String,
+      default: null,
     },
 
     // role: {
@@ -42,10 +41,10 @@ const registeredUserSchema = new mongoose.Schema(
     //   default: "user",
     // },
 
-    // isVerified: { 
-    //     type: Boolean, 
-    //     default: false 
-    // },
+    isVerified: { 
+        type: Boolean, 
+        default: false 
+    },
 
     // profilePic: { 
     //     type: String, 

@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { useNavigate, Link } from "react-router-dom";
+
 
 function Login() {
   const [showPassword, setShowPassword] = useState(false);
@@ -47,7 +49,7 @@ function Login() {
             <button className="btn btn-neutral btn-lg mt-4 w-full">Login</button>
 
             <p className="text-center mt-4 text-sm">
-              Don't have an account? <a href="/signup" className="link link-hover">Sign up here</a>
+              Don't have an account? <Link to="/signup" className="link link-hover">Sign up here</Link>
             </p>
           </fieldset>
 

@@ -5,7 +5,7 @@ import Navbar from './Navbar';
 
 function Layout() {
   const location = useLocation();
-  const hideNavFooter = ["/login", "/signup"].includes(location.pathname);
+  const hideNavFooter = ["/login", "/signup", "/otp"].includes(location.pathname);
 
   return (
     <>

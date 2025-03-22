@@ -1,5 +1,5 @@
 
-import asynchandler from "../../utils/asyncHandler.js";
+import asyncHandler from "../../utils/asyncHandler.js";
 import RegisteredUsers from "../../models/User-models/registeredUser.model.js";
 import mongoose from "mongoose";
 import {ApiError} from "../../utils/ApiError.js";
@@ -7,9 +7,9 @@ import {ApiResponse} from "../../utils/ApiResponse.js"
 
 
 
-const isUserPresent = asynchandler(
+const isUserPresent = asyncHandler(
     async(req,res,next) => {
-        const {username, email, password, phoneNumber} = req.body
+        const {username, email, password} = req.body
 
         if(!username){
             throw new ApiError(400, "Username is required")
@@ -20,10 +20,6 @@ const isUserPresent = asynchandler(
         if(!password){
             throw new ApiError(400, "Password is required")
         }
-        if(!phoneNumber){
-            throw new ApiError(400, "Phone number is required")
-        }
-
 
         const userExist = await RegisteredUsers.findOne({username: username})
         if(userExist){
@@ -35,9 +31,9 @@ const isUserPresent = asynchandler(
     }
 )
 
-const newUserEntry = asynchandler(
+const newUserEntry = asyncHandler(
     async (req, res, next) => {
-        const {username, email, password, phoneNumber} = req.body
+        const {username, email, password} = req.body
         try{
 
             const createUser = await RegisteredUsers.create(
@@ -45,10 +41,10 @@ const newUserEntry = asynchandler(
                     username: username,
                     email: email,
                     passwordHash: password,
-                    phoneNumber: phoneNumber
                 }
             )
     
+            next()
             return res.status(201).json(
                 new ApiResponse(201, createUser, "User Registered successfully")
             )
@@ -56,6 +52,7 @@ const newUserEntry = asynchandler(
         }catch(error){
             throw new ApiError(409, error.message)
         }
+        
     }
 )
 
