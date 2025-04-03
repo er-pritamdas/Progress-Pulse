@@ -1,9 +1,9 @@
 
 import asyncHandler from "../../utils/asyncHandler.js";
 import RegisteredUsers from "../../models/User-models/registeredUser.model.js";
-import mongoose from "mongoose";
 import {ApiError} from "../../utils/ApiError.js";
 import {ApiResponse} from "../../utils/ApiResponse.js"
+// import mongoose from "mongoose";
 
 
 
@@ -48,6 +48,7 @@ const newUserEntry = asyncHandler(
             return res.status(201).json(
                 new ApiResponse(201, createUser, "User Registered successfully")
             )
+            
 
         }catch(error){
             throw new ApiError(409, error.message)
