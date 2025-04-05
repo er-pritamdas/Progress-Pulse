@@ -57,10 +57,10 @@ const registeredUserSchema = new mongoose.Schema(
     //   default: "pending",
     // },
 
-    // lastLogin: { 
-    //     type: Date, 
-    //     default: null 
-    // },
+    lastLogin: { 
+        type: Date, 
+        default: null 
+    },
 
     // failedLoginAttempts: { 
     //     type: Number, 
