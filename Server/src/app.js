@@ -11,8 +11,8 @@ app.use(express.urlencoded({extended: true, limit: "16kb"}))
 
 
 
-// Routes
-// ------------
+// ----------------------Routes----------------------
+
 // Registered User Routes
 app.use("/api/v1/users/registered", registeredUserRoutes)
 
@@ -20,6 +20,9 @@ app.use("/api/v1/users/registered", registeredUserRoutes)
 
 
 
+
+
+// ----------------------- Global Error Handling -------------------
 app.use((err, req, res, next) => {
     res.status(err.statusCode || 500).json({
         status: err.statusCode,
@@ -30,3 +33,4 @@ app.use((err, req, res, next) => {
 });
 
 export default app
+

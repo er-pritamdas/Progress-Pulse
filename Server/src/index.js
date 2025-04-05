@@ -5,10 +5,11 @@ dotenv.config({
     path: './.env'
 })
 
-// Db Connection
+// -------------------------Db Connection----------------------
 connectDB()
+
 .then(() => {
-    // Server connection
+    // Maker Server listen on port 
     app.listen(process.env.PORT || 8000, () => {
         console.log("---------------------------------------------------------------");
         console.log(`⚙️  Server is running at port : ${process.env.PORT}`);
@@ -16,15 +17,8 @@ connectDB()
     })
 })
 .catch((err) => {
+    // If Server Failed to listen, log the error
     console.log("---------------------------------------------------------------");
     console.log(`❌ Server Connection Failed : ${err}`);
     console.log("---------------------------------------------------------------");
 })
-
-
-// // For testing
-// app.listen(process.env.PORT || 8000, () => {
-//     console.log("---------------------------------------------------------------");
-//     console.log(`⚙️  Server is running at port : ${process.env.PORT}`);
-//     console.log("---------------------------------------------------------------");
-// })
