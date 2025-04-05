@@ -17,8 +17,7 @@ app.use(express.urlencoded({extended: true, limit: "16kb"}))
 app.use("/api/v1/users/registered", registeredUserRoutes)
 
 // LoggedIn User Routes
-
-
+app.use("/api/v1/users/loggedin",loggedInUserRoutes)
 
 
 

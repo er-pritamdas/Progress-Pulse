@@ -82,6 +82,11 @@ const registeredUserSchema = new mongoose.Schema(
     //     default: null 
     // },
 
+    isLoggedIn: {
+        type:Boolean,
+        default:false
+    }
+
   },
   {
     timestamps: true,
