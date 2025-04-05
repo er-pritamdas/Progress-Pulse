@@ -24,7 +24,7 @@ const isUserNamePresent = asynchandler(
 const isPasswordCorrect = asynchandler(
     async (req,res,next) => {
         const {password} = req.body
-        // const user = req.user
+        const user = req.user
         if(password !== user.password){
             throw new ApiError(401, "Password is incorrect")
         }
