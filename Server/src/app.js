@@ -1,6 +1,7 @@
 // Importing neccessary Files and Folders
 import express from "express";
 import registeredUserRoutes from "../routes/User-routes/registeredUser.routes.js";
+import loggedInUserRoutes from "../routes/User-routes/loggedInUser.routes.js";
 // import nodemailer from "nodemailer";
 
 const app = express()
