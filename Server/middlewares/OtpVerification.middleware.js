@@ -21,6 +21,11 @@ const OtpVerfication = asyncHandler(async (req, res) => {
         throw new ApiError(409, "User not found")
     }
 
+    // Check if OTP is valid and not expired
+    if (Date.now() > user.otpValidTill) {
+        throw new ApiError(400, "OTP expired")
+    }
+
     // Check if OTP matches
     if (user.otp !== otp) {
         throw new ApiError(409, "Invalid OTP")

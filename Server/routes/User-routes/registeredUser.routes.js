@@ -1,5 +1,5 @@
 import {Router} from "express";
-import {isUserPresent, newUserEntry} from "../../controllers/User-controllers/newUserEntry.controller.js";
+import {isUserPresent, newUserEntry} from "../../controllers/User-controllers/registeredUser.controller.js";
 import OTP_Generation from "../../middlewares/OtpGeneration.middleware.js";
 import OTP_Verification from "../../middlewares/OtpVerification.middleware.js";
 

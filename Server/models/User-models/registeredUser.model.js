@@ -35,6 +35,11 @@ const registeredUserSchema = new mongoose.Schema(
       default: null,
     },
 
+    otpValidTill:{
+      type: Date,
+      default:null,
+    },
+
     // role: {
     //   type: String,
     //   enum: ["user", "admin", "moderator"],
