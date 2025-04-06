@@ -33,6 +33,7 @@ const OtpVerfication = asyncHandler(async (req, res) => {
 
     // Nullify OTP and verify user
     user.otp = null;
+    user.otpValidTill = null;
     user.isVerified = true;
     await user.save();
 

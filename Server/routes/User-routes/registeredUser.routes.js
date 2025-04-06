@@ -10,6 +10,7 @@ const router = Router()
 // router.route("/").post(isUserPresent, newUserEntry)
 router.route("/").post(isUserPresent, newUserEntry, OTP_Generation)
 router.route("/verify-otp").post(OTP_Verification)
+router.route("/resend-otp").post(OTP_Generation, OTP_Verification)
 
 
 

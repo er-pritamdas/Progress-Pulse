@@ -97,6 +97,7 @@ function Signup() {
         {showErrorAlert && <ErrorAlert message={alertErrorMessage} />}
         {showSuccessAlert && <SuccessAlert message={alertSuccessMessage} />}
 
+        {/* // Signup Form */}
         <form
           className="fieldset w-full max-w-lg bg-base-200 border border-base-300 p-6 rounded-box"
           onSubmit={registerUser}

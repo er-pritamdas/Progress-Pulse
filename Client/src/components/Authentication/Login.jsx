@@ -49,7 +49,7 @@ function Login() {
             <button className="btn btn-neutral btn-lg mt-4 w-full">Login</button>
 
             <p className="text-center mt-4 text-sm">
-              Don't have an account? <Link to="/signup" className="link link-hover">Sign up here</Link>
+              Don't have an account? <Link to="/signup" className="text-blue-500 hover:underline">Sign up here</Link>
             </p>
           </fieldset>
 
