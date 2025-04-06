@@ -9,6 +9,7 @@ import Login from './components/Authentication/Login.jsx'
 import Signup from './components/Authentication/Signup.jsx'
 import Otp from './components/Authentication/Otp.jsx'
 import Layout from './layouts/Layout.jsx'
+import Dashboard from './pages/Dashboard.jsx'
 
 const router = createBrowserRouter(
   createRoutesFromElements(
@@ -17,6 +18,10 @@ const router = createBrowserRouter(
       <Route path='login' element={<Login />} />
       <Route path='signup' element={<Signup />} />
       <Route path='otp' element={<Otp />} />
+
+      
+      <Route path='dashboard' element={<Dashboard />} />
+      
     </Route>
   )
 )
