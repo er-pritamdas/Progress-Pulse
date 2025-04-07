@@ -1,3 +1,5 @@
+import bcrypt from "bcryptjs";
+
 import asynchandler from "../../utils/asyncHandler.js";
 import RegisteredUsers from "../../models/User-models/registeredUser.model.js";
 import {ApiError} from  "../../utils/ApiError.js";
@@ -25,9 +27,13 @@ const isPasswordCorrect = asynchandler(
     async (req,res,next) => {
         const {password} = req.body
         const user = req.user
-        if(password !== user.passwordHash){
+
+        const isMatch = await bcrypt.compare(password, user.passwordHash)
+
+        if(!isMatch){
             throw new ApiError(401, "Password is incorrect")
         }
+
         user.lastLogin = Date.now()
         user.isLoggedIn = true
         await user.save();

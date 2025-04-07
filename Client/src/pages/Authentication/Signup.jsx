@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import axios from "axios";
-import ErrorAlert from "../Alerts/ErrorAlert";
-import SuccessAlert from "../Alerts/SuccessAlert";
+import ErrorAlert from "../../components/Alerts/ErrorAlert";
+import SuccessAlert from "../../components/Alerts/SuccessAlert";
 import { useNavigate, Link } from "react-router-dom";
 
 

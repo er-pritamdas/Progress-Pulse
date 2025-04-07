@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
-import ErrorAlert from "../Alerts/ErrorAlert";
-import SuccessAlert from "../Alerts/SuccessAlert";
+import ErrorAlert from "../../components/Alerts/ErrorAlert";
+import SuccessAlert from "../../components/Alerts/SuccessAlert";
 
 function Otp() {
     

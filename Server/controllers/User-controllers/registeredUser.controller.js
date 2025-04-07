@@ -1,4 +1,5 @@
 
+import bcrypt from "bcryptjs";
 import asyncHandler from "../../utils/asyncHandler.js";
 import RegisteredUsers from "../../models/User-models/registeredUser.model.js";
 import {ApiError} from "../../utils/ApiError.js";
@@ -34,13 +35,16 @@ const isUserPresent = asyncHandler(
 const newUserEntry = asyncHandler(
     async (req, res, next) => {
         const {username, email, password} = req.body
+
+        const encryptPassword = await bcrypt.hash(password, 10)
+
         try{
 
             const createUser = await RegisteredUsers.create(
                 {
                     username: username,
                     email: email,
-                    passwordHash: password,
+                    passwordHash: encryptPassword,
                 }
             )
     
