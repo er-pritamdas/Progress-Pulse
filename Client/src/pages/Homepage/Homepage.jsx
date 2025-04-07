@@ -1,6 +1,6 @@
 import React from 'react'
-import How from '../components/Home/How'
-import Banner from '../components/Home/Banner'
+import How from '../../components/Homepage/How.jsx'
+import Banner from '../../components/Homepage/Banner.jsx'
 
 
 function Homepage() {
