@@ -37,7 +37,7 @@ const themes = [
 ];
 
 function ThemeSwitcher() {
-  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark');
+  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'night');
 
   const changeTheme = (selectedTheme) => {
     setTheme(selectedTheme);

@@ -3,6 +3,11 @@ import Navbar from '../components/Dashboard/Navbar'
 import Footer from '../components/Homepage/Footer'
 
 const DashboardLayout = () => {
+  const isOtpPage = location.pathname === "/otp";
+  if (!isOtpPage){
+    localStorage.setItem('allowOtp', false);
+  }
+  
   const isAuthenticated = true // or: localStorage.getItem('token')
 
   return (
