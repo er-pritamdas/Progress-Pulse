@@ -1,10 +1,31 @@
 import { Navigate, Outlet } from 'react-router-dom'
+import Navbar from '../components/Dashboard/Navbar'
+import Footer from '../components/Homepage/Footer'
 
 const DashboardLayout = () => {
-  const isAuthenticated = localStorage.getItem('token') // or useContext/Auth state
-  console.log(isAuthenticated)
+  const isAuthenticated = true // or: localStorage.getItem('token')
 
-  return isAuthenticated ? <Outlet /> : <Navigate to="/login" />
+  return (
+    <>
+      <Navbar />
+      {
+        isAuthenticated ?
+          (
+            <div className={`mt-1 p-4 h-[calc(100vh-4rem)] ml-20`}>
+              <Outlet />
+            </div>
+
+          ) : (<Navigate to="/login" />)
+      }
+      <div className={`ml-12`}>
+        <Footer />
+      </div>
+    </>
+  )
 }
 
 export default DashboardLayout
+
+
+// Use in Div of Outleft if you want the content to be sliding When sidebar slides in and out
+// className={`transition-all duration-300 mt-1 p-4 h-[calc(100vh-4rem)] overflow-y-auto ${sidebarOpen ? 'ml-64' : 'ml-16' }`}

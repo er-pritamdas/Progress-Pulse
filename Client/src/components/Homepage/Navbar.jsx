@@ -1,17 +1,9 @@
 import React from 'react'
 import { useState } from 'react'
 import { Outlet, Link } from "react-router-dom";
+import ThemeSwitcher from '../ThemeSwitches';
 
 function Navbar() {
-    const themes = ["light", "dark", "synth", "retro", "forest", "lofi", "luxury", "night", "abyss", "business", "aqua"]
-
-    const [currenttheme, Settcurrenttheme] = useState("dark")
-
-    const changeTheme = (theme) => {
-        Settcurrenttheme(theme)
-        document.documentElement.setAttribute("data-theme", theme);
-    };
-
     return (
         <>
             <div className="navbar bg-base-100 shadow-sm sticky top-0 p-0 z-1000">
@@ -38,16 +30,7 @@ function Navbar() {
                     </ul>
                 </div>
                 <div className="navbar-end">
-                    <div className="dropdown  dropdown-hover mr-2">
-                        <div tabIndex="0" role="button" className="btn m-1">Theme</div>
-                        <ul tabIndex="0" className="dropdown-content menu bg-base-100 rounded-box z-1 w-52 p-2 shadow-sm">
-                            {themes.map((theme) => (
-                                <li key={theme}>
-                                    <a onClick={() => changeTheme(theme)}>{theme}</a>
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
+                    <ThemeSwitcher  />
                     <Link to="/signup" className="btn btn-accent mr-2">Signup</Link>
                     <Link to="/login" className="btn btn-outline btn-accent">Login</Link>
                 </div>
