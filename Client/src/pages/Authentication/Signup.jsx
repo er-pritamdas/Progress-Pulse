@@ -60,6 +60,7 @@ function Signup() {
       // Success Alert Popup
       setalertSuccessMessage("OTP Generated");
       setShowSuccessAlert(true);
+      localStorage.setItem('allowOtp', true);
       setTimeout(() => {
         setShowSuccessAlert(false)
         navigate("/otp", { state: { formData } });
@@ -70,6 +71,7 @@ function Signup() {
       // Error Alert Popup
       setAlertErrorMessage(errorMessage);
       setShowErrorAlert(true);
+      localStorage.setItem('allowOtp', false);
       setTimeout(() => setShowErrorAlert(false), 4000);
     }
   };
