@@ -2,6 +2,7 @@ import React from "react";
 import Navbar from "../../components/Dashboard/Navbar";
 import ActiveLastBreadcrumb from "../../components/Dashboard/ActiveLastBreadcrumb";
 import DatePicker from "../../components/Dashboard/DatePicker";
+import Linecharts from "../../components/Dashboard/Expense/charts/Linecharts.jsx";
 
 const Dashboard = () => {
   return (
@@ -10,6 +11,7 @@ const Dashboard = () => {
         <ActiveLastBreadcrumb />
         <DatePicker />  
         This is Dashboard
+        <Linecharts />
       </div>
     </>
   );
