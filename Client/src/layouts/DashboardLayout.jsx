@@ -6,7 +6,7 @@ import { useState } from 'react';
 
 const DashboardLayout = () => {
   const isOtpPage = location.pathname === "/otp";
-  if (!isOtpPage){
+  if (!isOtpPage) {
     localStorage.setItem('allowOtp', false);
   }
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -15,20 +15,20 @@ const DashboardLayout = () => {
   return (
     <>
       <Navbar />
-      {
-        isAuthenticated ?
-          (
-            <div className={`transition-all duration-300 mt-1 p-4 h-[calc(100vh-4rem)] overflow-y-auto ${sidebarOpen ? 'ml-64' : 'ml-23' }`}>
-              <Outlet />
-            </div>
-
-          ) : (<Navigate to="/login" />)
-      }
-      <div className={`ml-20`}>
-        <Footer />
-      </div>
-      <Sidebar open={sidebarOpen} setOpen={setSidebarOpen}/>
+      {isAuthenticated ? (
+        <div className="flex h-[calc(100vh-4rem)]">
+          <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} />
+          <main className="flex-1 transition-all duration-300 mt-1 p-4 overflow-y-auto">
+            <Outlet />
+          </main>
+        </div>
+      ) : (
+        <Navigate to="/login" />
+      )}
+      <Footer />
     </>
+
+
   )
 }
 
