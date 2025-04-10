@@ -26,7 +26,7 @@ function Sidebar({ open, setOpen }) {
     return (
         <div
             ref={sidebarRef}
-            className={`transition-all duration-300 ease-in-out bg-base-200 h-full overflow-y-auto scroll-hidden ${open ? 'min-w-[16rem]' : 'min-w-[5.25rem]'
+            className={`transition-all duration-300 ease-in-out bg-base-200 h-full overflow-y-auto scroll-hidden ${open ? 'w-64' : 'w-22'
                 }`}>
 
             <ul className="menu p-2 space-y-2">

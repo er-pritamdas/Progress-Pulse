@@ -1,10 +1,12 @@
 import React from 'react'
-
+import ActiveLastBreadcrumb from '../../../components/Dashboard/ActiveLastBreadcrumb'
 function HabitTableEntry() {
   return (
-    <div>
-      
-    </div>
+    <>
+      <div>
+        Habit Table Entry
+      </div>
+    </>
   )
 }
 

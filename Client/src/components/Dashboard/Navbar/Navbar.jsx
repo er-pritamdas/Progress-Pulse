@@ -30,8 +30,8 @@ function Navbar() {
                         {/* AvatarImage */}
                         <div tabIndex={0} role="button" className="btn btn-ghost btn-circle avatar">
                             <div class="avatar avatar-online avatar-placeholder">
-                                <div class="bg-neutral text-neutral-content w-10 rounded-full">
-                                    <span class="text-l">JB</span>
+                                <div class="bg-neutral text-neutral-content w-9 rounded-full">
+                                    <span class="text-l">PD</span>
                                 </div>
                             </div>
                         </div>

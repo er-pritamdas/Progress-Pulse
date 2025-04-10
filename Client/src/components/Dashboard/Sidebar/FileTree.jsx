@@ -15,15 +15,16 @@ function FileTree({ open, setOpen }) {
                 <li>
                     <details>
                         <summary className="btn btn-ghost justify-start">
+                            {/* Icon */}
                             <AlarmClockCheck />
-                            {open && <span className="ml-2">Habit Tracker</span>}
+                            {open && <Link to="/dashboard/habit" className="ml-2">Habit Tracker</Link>}
                         </summary>
                         <ul className='ml-0'>
                             <li>
-                                <a className="btn btn-ghost justify-start">
+                                <Link to="/dashboard/habit-table-entry" className="btn btn-ghost justify-start">
                                     <TableEntry />
-                                    {open && <span className="ml-2">Table Entry</span>}
-                                </a>
+                                    {open && <Link to="/dashboard/habit-table-entry" className="ml-2">Table Entry</Link>}
+                                </Link>
                             </li>
                             <li>
                                 <Link to="/dashboard/habit-dashboard" className="btn btn-ghost justify-start">
@@ -32,10 +33,10 @@ function FileTree({ open, setOpen }) {
                                 </Link>
                             </li>
                             <li>
-                                <a className="btn btn-ghost justify-start">
+                                <Link to="/dashboard/habit-table-view" className="btn btn-ghost justify-start">
                                     <TableView />
-                                    {open && <span className="ml-2">Table View</span>}
-                                </a>
+                                    {open && <Link to="/dashboard/habit-table-view" className="ml-2">Table View</Link>}
+                                </Link>
                             </li>
                         </ul>
                     </details>
@@ -46,28 +47,28 @@ function FileTree({ open, setOpen }) {
                 <li>
                     <details>
                         <summary className="btn btn-ghost justify-start">
-                            {/* <CreditCard /> */}
+                            {/* Icon */}
                             <CreditCard />
-                            {open && <span className="ml-2">Expense Tracker</span>}
+                            {open && <Link to="/dashboard/expense" className="ml-2">Expense Tracker</Link>}
                         </summary>
                         <ul className='ml-0'>
                             <li>
-                                <a className="btn btn-ghost justify-start">
+                                <Link to="/dashboard/expense-table-entry" className="btn btn-ghost justify-start">
                                     <TableEntry />
-                                    {open && <span className="ml-2">Table Entry</span>}
-                                </a>
+                                    {open && <Link to="/dashboard/expense-table-entry" className="ml-2">Table Entry</Link>}
+                                </Link>
                             </li>
                             <li>
-                                <a className="btn btn-ghost justify-start">
+                                <Link to="/dashboard/expense-dashboard" className="btn btn-ghost justify-start">
                                     <Dashboard />
-                                    {open && <span className="ml-2">Dashboard</span>}
-                                </a>
+                                    {open && <Link to="/dashboard/expense-dashboard" className="ml-2">Dashboard</Link>}
+                                </Link>
                             </li>
                             <li>
-                                <a className="btn btn-ghost justify-start">
+                                <Link to="/dashboard/expense-table-view" className="btn btn-ghost justify-start">
                                     <TableView />
-                                    {open && <span className="ml-2">Table View</span>}
-                                </a>
+                                    {open && <Link to="/dashboard/expense-table-view" className="ml-2">Table View</Link>}
+                                </Link>
                             </li>
                         </ul>
                     </details>
@@ -78,27 +79,28 @@ function FileTree({ open, setOpen }) {
                 <li>
                     <details>
                         <summary className="btn btn-ghost justify-start">
+                            {/* Icon */}
                             <Wallet />
-                            {open && <span className="ml-2">Investment Tracker</span>}
+                            {open && <Link to="/dashboard/investment" className="ml-2">Investment Tracker</Link>}
                         </summary>
                         <ul className='ml-0'>
                             <li>
-                                <a className="btn btn-ghost justify-start">
+                                <Link to="/dashboard/investment-table-entry" className="btn btn-ghost justify-start">
                                     <TableEntry />
-                                    {open && <span className="ml-2">Table Entry</span>}
-                                </a>
+                                    {open && <Link to="/dashboard/investment-table-entry" className="ml-2">Table Entry</Link>}
+                                </Link>
                             </li>
                             <li>
-                                <a className="btn btn-ghost justify-start">
+                                <Link to="/dashboard/investment-dashboard" className="btn btn-ghost justify-start">
                                     <Dashboard />
-                                    {open && <span className="ml-2">Dashboard</span>}
-                                </a>
+                                    {open && <Link to="/dashboard/investment-dashboard" className="ml-2">Dashboard</Link>}
+                                </Link>
                             </li>
                             <li>
-                                <a className="btn btn-ghost justify-start">
+                                <Link to="/dashboard/investment-table-view" className="btn btn-ghost justify-start">
                                     <TableView />
-                                    {open && <span className="ml-2">Table View</span>}
-                                </a>
+                                    {open && <Link to="/dashboard/investment-table-view" className="ml-2">Table View</Link>}
+                                </Link>
                             </li>
                         </ul>
                     </details>

@@ -1,20 +1,22 @@
 import { Navigate, Outlet } from 'react-router-dom'
 import { useState } from 'react';
 
+
 // Importing Components
 import Navbar from '../components/Dashboard/Navbar/Navbar'
 import Footer from '../components/Homepage/Footer'
 import Sidebar from '../components/Dashboard/Sidebar/Sidebar';
+import ActiveLastBreadcrumb from '../components/Dashboard/ActiveLastBreadcrumb';
 
 
 const DashboardLayout = () => {
-  
+
   // Variables
   const isOtpPage = location.pathname === "/otp";
 
   // Sidebar State
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  
+
   // ------------------- Conditions before Dashboard -----------------------
   if (!isOtpPage) {
     localStorage.setItem('allowOtp', false);
@@ -26,12 +28,13 @@ const DashboardLayout = () => {
     <>
       {/* Navbar */}
       <Navbar />
-
+      
       {/* Sidebar and Outlet */}
       {isAuthenticated ? (
         <div className="flex h-[calc(100vh-4rem)]">
           <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} />
           <main className="flex-1 transition-all duration-300 mt-1 p-4 overflow-y-auto">
+            <ActiveLastBreadcrumb />
             <Outlet />
           </main>
         </div>

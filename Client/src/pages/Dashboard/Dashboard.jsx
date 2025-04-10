@@ -8,10 +8,19 @@ const Dashboard = () => {
   return (
     <>
       <div>
-        <ActiveLastBreadcrumb />
-        <DatePicker />  
+        {/* <ActiveLastBreadcrumb /> */}
+        {/* <DatePicker />   */}
         This is Dashboard
         <Linecharts />
+        <Linecharts />
+        <Linecharts />
+        <Linecharts />
+        <Linecharts />
+        <Linecharts />
+        <Linecharts />
+        <Linecharts />
+        <Linecharts />
+
       </div>
     </>
   );
