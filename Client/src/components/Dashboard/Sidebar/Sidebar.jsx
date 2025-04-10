@@ -2,6 +2,7 @@ import React, { useRef, useEffect, useState } from 'react'
 import FileTree from './FileTree'
 
 
+
 function Sidebar({ open, setOpen }) {
     const sidebarRef = useRef(null)
 
@@ -20,9 +21,10 @@ function Sidebar({ open, setOpen }) {
     return (
         <div
             ref={sidebarRef}
-            className={`fixed top-16 left-0 bg-base-200 transition-all duration-300 ease-in-out z-10 min-h-[calc(100vh-4rem)] ${
-                open ? 'w-64' : 'w-21'
-            }`}>
+            className={`fixed top-16 left-0 bg-base-200 transition-all duration-300 ease-in-out z-10 h-[calc(100vh-4rem)] ${
+                open ? 'w-64' : 'w-21' 
+            } overflow-y-auto scroll-hidden`}>
+
             <ul className="menu p-2 space-y-2">
                 <li>
                     <button className="btn btn-ghost justify-start" onClick={() => setOpen(!open)}>
@@ -36,18 +38,6 @@ function Sidebar({ open, setOpen }) {
                     </button>
                 </li>
                 <FileTree open={open} setOpen={setOpen} />
-                <li>
-                    <a className="btn btn-ghost justify-start">
-                        <span className="text-lg">🏠</span>
-                        {open && <span className="ml-2">Home</span>}
-                    </a>
-                </li>
-                <li>
-                    <a className="btn btn-ghost justify-start">
-                        <span className="text-lg">⚙️</span>
-                        {open && <span className="ml-2">Settings</span>}
-                    </a>
-                </li>
             </ul>
         </div>
     )
