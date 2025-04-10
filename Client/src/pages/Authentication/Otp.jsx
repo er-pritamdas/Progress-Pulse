@@ -169,7 +169,7 @@ function Otp() {
 
                     {/* // Resend OTP Button*/}
                     <button
-                        className="btn btn-neutral btn-lg w-full"
+                        className="btn btn-accent btn-lg mt-4 w-full"
                         onClick={handleResendOtp}
                         disabled={resendDisabled}
                     >

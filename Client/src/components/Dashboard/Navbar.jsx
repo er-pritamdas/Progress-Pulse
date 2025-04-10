@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import CollapsibleSidebar from './Sidebar'
 import Dashboard from '../../pages/Dashboard/Dashboard'
-import ThemeSwitcher from '../ThemeSwitches'
+import ThemeSwitcher from '../../utils/ThemeSwitches'
 
 function Navbar() {
     const [sidebarOpen, setSidebarOpen] = useState(false)

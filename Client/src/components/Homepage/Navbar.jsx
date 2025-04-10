@@ -1,7 +1,7 @@
 import React from 'react'
 import { useState } from 'react'
 import { Outlet, Link } from "react-router-dom";
-import ThemeSwitcher from '../ThemeSwitches';
+import ThemeSwitcher from '../../utils/ThemeSwitches';
 
 function Navbar() {
     return (

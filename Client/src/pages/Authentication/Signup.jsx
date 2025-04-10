@@ -181,7 +181,7 @@ function Signup() {
           {error && <p className="text-red-500 text-sm mt-1">{error}</p>}
 
           {/* // SignUp Button  */}
-          <button className="btn btn-neutral btn-lg mt-4 w-full" type="submit">
+          <button className="btn btn-accent btn-lg mt-4 w-full" type="submit">
             Sign Up
           </button>
         
