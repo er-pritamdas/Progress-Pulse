@@ -1,4 +1,6 @@
-import React, { useRef, useEffect } from 'react'
+import React, { useRef, useEffect, useState } from 'react'
+import FileTree from './FileTree'
+
 
 function Sidebar({ open, setOpen }) {
     const sidebarRef = useRef(null)
@@ -19,7 +21,7 @@ function Sidebar({ open, setOpen }) {
         <div
             ref={sidebarRef}
             className={`fixed top-16 left-0 bg-base-200 transition-all duration-300 ease-in-out z-10 min-h-[calc(100vh-4rem)] ${
-                open ? 'w-64' : 'w-18'
+                open ? 'w-64' : 'w-21'
             }`}>
             <ul className="menu p-2 space-y-2">
                 <li>
@@ -33,6 +35,7 @@ function Sidebar({ open, setOpen }) {
                         {open && <span className="ml-2">Menu</span>}
                     </button>
                 </li>
+                <FileTree open={open} setOpen={setOpen} />
                 <li>
                     <a className="btn btn-ghost justify-start">
                         <span className="text-lg">🏠</span>

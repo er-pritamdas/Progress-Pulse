@@ -1,11 +1,9 @@
 import React, { useState } from 'react'
-import CollapsibleSidebar from './Sidebar'
-import Dashboard from '../../pages/Dashboard/Dashboard'
-import ThemeSwitcher from '../../utils/ThemeSwitches'
+import Sidebar from '../Sidebar/Sidebar'
+import Dashboard from '../../../pages/Dashboard/Dashboard'
+import ThemeSwitcher from '../../../utils/ThemeSwitches'
 
 function Navbar() {
-    const [sidebarOpen, setSidebarOpen] = useState(false)
-
     return (
         <>
             {/* Fixed Navbar */}
@@ -39,9 +37,6 @@ function Navbar() {
                     </div>
                 </div>
             </div>
-
-            {/* Sidebar */}
-            <CollapsibleSidebar open={sidebarOpen} setOpen={setSidebarOpen} />
         </>
     )
 }
