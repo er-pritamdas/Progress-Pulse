@@ -38,6 +38,7 @@ function Login() {
         setShowSuccessAlert(false)
         navigate("/dashboard", { state: { formData } });
       }, 4000);
+      localStorage.setItem("token", response.data.token);
     } catch (err){
       const errorMessage = err.response?.data?.message || "Something went Wrong";
       setAlertErrorMessage(errorMessage);
