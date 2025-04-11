@@ -1,5 +1,5 @@
 import bcrypt from "bcryptjs";
-
+import jwt from "jsonwebtoken";
 import asynchandler from "../../utils/asyncHandler.js";
 import RegisteredUsers from "../../models/User-models/registeredUser.model.js";
 import {ApiError} from  "../../utils/ApiError.js";
@@ -36,9 +36,14 @@ const isPasswordCorrect = asynchandler(
 
         user.lastLogin = Date.now()
         user.isLoggedIn = true
+        const token = jwt.sign(
+            { id: user._id, username: user.username },
+            process.env.JWT_SECRET_KEY,
+            { expiresIn: process.env.JWT_EXPIRES_IN }
+        );
         await user.save();
         return res.status(200).json(
-            new ApiResponse(200, user, "User Logged In Successfully")
+            new ApiResponse(200, user, "User Logged In Successfully", token)
         )
     }
 )

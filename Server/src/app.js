@@ -2,6 +2,7 @@
 import express from "express";
 import registeredUserRoutes from "../routes/User-routes/registeredUser.routes.js";
 import loggedInUserRoutes from "../routes/User-routes/loggedInUser.routes.js";
+import dashboardRoutes from "../routes/Dashboard-routes/dashboard.routes.js";
 // import nodemailer from "nodemailer";
 
 const app = express()
@@ -19,6 +20,9 @@ app.use("/api/v1/users/registered", registeredUserRoutes)
 
 // LoggedIn User Routes
 app.use("/api/v1/users/loggedin",loggedInUserRoutes)
+
+// Dashboard Routes
+app.use("/api/v1/dashboard", dashboardRoutes)
 
 
 
