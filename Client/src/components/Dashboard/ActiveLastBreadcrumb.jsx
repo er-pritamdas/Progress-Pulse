@@ -32,12 +32,6 @@ export default function ThemedBreadcrumbs() {
     .map((sheet) => sheet.charAt(0).toUpperCase() + sheet.slice(1).toLowerCase())
     .join(' ');
 
-    console.log(pathnames)
-    console.log(mainSheet)
-    console.log(subSheets)
-    console.log(mainCategory)
-    console.log(subCategory)
-
   return (
     <div className="breadcrumbs text-sm p-4 bg-base-200 text-base-content rounded-box shadow-sm mb-4">
       <ul className="flex flex-wrap items-center gap-2">
