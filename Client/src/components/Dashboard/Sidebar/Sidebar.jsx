@@ -1,9 +1,12 @@
 import React, { useRef, useEffect, useState } from 'react'
+
+// Importing Components
 import FileTree from './FileTree'
 
 
-
 function Sidebar({ open, setOpen }) {
+
+    // Ref for sidebar to detect clicks outside
     const sidebarRef = useRef(null)
 
     // Close sidebar when clicking outside
@@ -18,6 +21,8 @@ function Sidebar({ open, setOpen }) {
         return () => document.removeEventListener('mousedown', handleClickOutside)
     }, [setOpen])
 
+
+    // ---------------------------------- Sidebar HTML Layout -------------------------
     return (
         <div
             ref={sidebarRef}
@@ -26,8 +31,8 @@ function Sidebar({ open, setOpen }) {
 
             <ul className="menu p-2 space-y-2">
                 <li>
+                    {/* Hamburger Button */}
                     <button className="btn btn-ghost justify-start" onClick={() => setOpen(!open)}>
-                        {/* Hamburger icon */}
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none"
                             viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -36,6 +41,7 @@ function Sidebar({ open, setOpen }) {
                         {open && <span className="ml-2">Menu</span>}
                     </button>
                 </li>
+                
                 <FileTree open={open} setOpen={setOpen} />
             </ul>
         </div>

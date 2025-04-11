@@ -5,6 +5,7 @@ import Wallet from '../../../utils/Icons/Wallet'
 import TableView from '../../../utils/Icons/TableView'
 import TableEntry from '../../../utils/Icons/TableEntry'
 import Dashboard from '../../../utils/Icons/Dashboard'
+import { Link } from "react-router-dom";
 
 
 function FileTree({ open, setOpen }) {
@@ -25,10 +26,10 @@ function FileTree({ open, setOpen }) {
                                 </a>
                             </li>
                             <li>
-                                <a className="btn btn-ghost justify-start">
+                                <Link to="/dashboard/habit-dashboard" className="btn btn-ghost justify-start">
                                     <Dashboard />
-                                    {open && <span className="ml-2">Dashboard</span>}
-                                </a>
+                                    {open && <Link to="/dashboard/habit-dashboard" className="ml-2">Dashboard</Link>}
+                                </Link>
                             </li>
                             <li>
                                 <a className="btn btn-ghost justify-start">
