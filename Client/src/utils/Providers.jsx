@@ -1,13 +1,15 @@
 // Providers.jsx
-
 import { LoadingProvider } from "../Context/LoadingContext";
+import { AuthProvider } from "../Context/JwtAuthContext";
 
 
 const Providers = ({ children }) => {
   return (
-      <LoadingProvider>
-        {children}
-      </LoadingProvider>
+    <LoadingProvider>
+      <AuthProvider>
+      {children}
+      </AuthProvider>
+    </LoadingProvider>
   );
 };
 

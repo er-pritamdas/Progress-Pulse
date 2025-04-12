@@ -47,7 +47,7 @@ const router = createBrowserRouter(
       </Route>
 
       {/* Protected Routes */}
-      <Route path="/dashboard" element={<DashboardLayout/>}>
+      <Route path="/dashboard" element={<DashboardLayout />}>
         <Route index element={<Dashboard />} />
 
         <Route path='habit' element={<Habit />} />
@@ -59,7 +59,7 @@ const router = createBrowserRouter(
         <Route path='expense-table-entry' element={<ExpTableEntry />} />
         <Route path='expense-dashboard' element={<ExpDashboard />} />
         <Route path='expense-table-view' element={<ExpTableView />} />
-        
+
         <Route path='investment' element={<Investment />} />
         <Route path='investment-table-entry' element={<InvTableEntry />} />
         <Route path='investment-dashboard' element={<InvDashboard />} />
