@@ -1,9 +1,10 @@
 import { Router} from "express";
+import jwtAuthorization  from "../../middlewares/JwtAuthorization.middleware.js";
 
 
 const router = Router()
 
-// router.route("/").post(jwtAuthorization)
+router.route("/").get(jwtAuthorization)
 
 
 
