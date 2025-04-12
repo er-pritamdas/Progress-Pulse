@@ -1,14 +1,18 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import axios from "axios";
 import ErrorAlert from "../../utils/Alerts/ErrorAlert";
 import SuccessAlert from "../../utils/Alerts/SuccessAlert";
+import { useLoading } from "../../Context/LoadingContext";
 
 function Login() {
+
+  const { setLoading } = useLoading();
 
   //Variables
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
+  const [disableButton, setDisableButton] = useState(false);
 
   // -------------------------HandleChange Function for input Fileds-------------------------
   const [formData, setFormData] = useState({
@@ -31,15 +35,20 @@ function Login() {
     e.preventDefault();
 
     try {
+      setLoading(true)
+      setDisableButton(true);
       const response = await axios.post("/api/v1/users/loggedin", formData)
       setalertSuccessMessage("User Logged In Successfully");
       setShowSuccessAlert(true);
       setTimeout(() => {
+        setLoading(false)
         setShowSuccessAlert(false)
         navigate("/dashboard", { state: { formData } });
       }, 4000);
       localStorage.setItem("token", response.data.token);
-    } catch (err){
+    } catch (err) {
+      setLoading(false)
+      setDisableButton(false);
       const errorMessage = err.response?.data?.message || "Something went Wrong";
       setAlertErrorMessage(errorMessage);
       setShowErrorAlert(true);
@@ -126,6 +135,7 @@ function Login() {
 
             {/*Login Button*/}
             <button
+              disabled={disableButton}
               className="btn btn-accent btn-lg mt-4 w-full"
               type="submit"
             >

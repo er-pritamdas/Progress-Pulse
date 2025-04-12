@@ -12,3 +12,19 @@
 .scroll-hidden::-webkit-scrollbar {
   display: none; /* Chrome, Safari */
 }
+
+/* HTML: <div class="loader"></div> */
+.loader {
+  width: 70px;
+  aspect-ratio: 1;
+  background:
+    radial-gradient(farthest-side, #000 90%, #0000) 50% / 14px 14px no-repeat,
+    conic-gradient(from -90deg at 26.25px 26.25px, #0000 90deg, #fff 0) 0 0 / 43.75px 43.75px;
+  animation: l7 1s infinite;
+}
+
+@keyframes l7 {
+  0%   { background-position: 50%, 0 0; }
+  50%  { background-position: 50%, 43.75px 0; }
+  100% { background-position: 50%, 43.75px 43.75px; }
+}

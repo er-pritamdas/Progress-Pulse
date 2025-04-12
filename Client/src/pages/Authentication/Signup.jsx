@@ -3,15 +3,21 @@ import axios from "axios";
 import ErrorAlert from "../../utils/Alerts/ErrorAlert";
 import SuccessAlert from "../../utils/Alerts/SuccessAlert";
 import { useNavigate, Link } from "react-router-dom";
+import { useLoading } from "../../Context/LoadingContext";
+
 
 
 function Signup() {
+
+  const { setLoading } = useLoading();
 
   // Variables
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [disableButton, setDisableButton] = useState(false);
+  
   
   
   // -------------------------HandleChange Function for input Fileds-------------------------
@@ -56,17 +62,23 @@ function Signup() {
     }
 
     try {
+
+      setLoading(true)
+      setDisableButton(true);
       const response = await axios.post("/api/v1/users/registered", formData);
       // Success Alert Popup
       setalertSuccessMessage("OTP Generated");
       setShowSuccessAlert(true);
       localStorage.setItem('allowOtp', true);
       setTimeout(() => {
+        setLoading(false)
         setShowSuccessAlert(false)
         navigate("/otp", { state: { formData } });
       }, 4000);
 
     } catch (err) {
+      setLoading(false)
+      setDisableButton(false);
       const errorMessage = err.response?.data?.message || "Something went wrong. Please try again.";
       // Error Alert Popup
       setAlertErrorMessage(errorMessage);
@@ -181,7 +193,7 @@ function Signup() {
           {error && <p className="text-red-500 text-sm mt-1">{error}</p>}
 
           {/* // SignUp Button  */}
-          <button className="btn btn-accent btn-lg mt-4 w-full" type="submit">
+          <button disabled={disableButton} className="btn btn-accent btn-lg mt-4 w-full" type="submit">
             Sign Up
           </button>
         

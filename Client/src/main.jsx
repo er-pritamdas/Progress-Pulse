@@ -5,6 +5,9 @@ import { Route, RouterProvider, createBrowserRouter, createRoutesFromElements } 
 // CSS
 import './index.css'
 
+// Context Providers
+import Providers from './utils/Providers.jsx'
+
 // Pages
 import Homepage from './pages/Homepage/Homepage.jsx'
 import Login from './pages/Authentication/Login.jsx'
@@ -23,7 +26,6 @@ import ExpTableView from './pages/Dashboard/Expense/ExpTableView.jsx'
 import InvTableEntry from './pages/Dashboard/Investment/InvTableEntry.jsx'
 import InvDashboard from './pages/Dashboard/Investment/InvDashboard.jsx'
 import InvTableView from './pages/Dashboard/Investment/InvTableView.jsx'
-
 
 // Layouts
 import Layout from './layouts/Layout.jsx'
@@ -72,8 +74,8 @@ const router = createBrowserRouter(
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <div>
+    <Providers>
       <RouterProvider router={router} />
-    </div>
+    </Providers>
   </StrictMode>,
 )

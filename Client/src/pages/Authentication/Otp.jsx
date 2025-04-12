@@ -3,21 +3,27 @@ import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import ErrorAlert from "../../utils/Alerts/ErrorAlert";
 import SuccessAlert from "../../utils/Alerts/SuccessAlert";
+import { useLoading } from "../../Context/LoadingContext";
+
 
 function Otp() {
-    
+    const { setLoading } = useLoading();
+
+
     const [showErrorAlert, setShowErrorAlert] = useState(false);
     const [alertErrorMessage, setAlertErrorMessage] = useState("");
-    
+
     const [showSuccessAlert, setShowSuccessAlert] = useState(false);
     const [alertSuccessMessage, setAlertSuccessMessage] = useState("");
-    
-    
+    const [disableButton, setDisableButton] = useState(false);
+
+
+
     const navigate = useNavigate();
     const location = useLocation();
     const formData = location.state?.formData || {};
-    
-    
+
+
     const [timer, setTimer] = useState(300);
     const [resendDisabled, setResendDisabled] = useState(true);
     useEffect(() => {
@@ -31,35 +37,35 @@ function Otp() {
         }
         return () => clearInterval(countdown);
     }, [resendDisabled, timer]);
-    
-    
+
+
     // -------------------------HandleChange Function for OTP Entry Fileds-------------------------
     const [otp, setOtp] = useState(["", "", "", "", "", ""]);
-    
+
     const handleChange = (index, value) => {
         if (!/^\d*$/.test(value) || value.length > 1) return;
 
         const newOtp = [...otp];
         newOtp[index] = value;
         setOtp(newOtp);
-        
+
         if (value && index < 5) {
             document.getElementById(`otp-${index + 1}`).focus();
         }
     };
-    
+
     // -------------------------HandleBackspace in OTP Entry Fields-------------------------
     const handleKeyDown = (index, e) => {
         if (e.key === "Backspace" && !otp[index] && index > 0) {
             document.getElementById(`otp-${index - 1}`).focus();
         }
     };
-    
+
     // ------------------------- Submit OTP Verification -------------------------
     const handleSubmit = async (e) => {
         e.preventDefault();
         const enteredOTP = otp.join("");
-        
+
         if (enteredOTP.length !== 6) {
             // Error Alert Popup
             setAlertErrorMessage("Please enter a valid 6-digit OTP.");
@@ -67,8 +73,10 @@ function Otp() {
             setTimeout(() => setShowErrorAlert(false), 4000);
             return;
         }
-        
+
         try {
+            setLoading(true)
+            setDisableButton(true);
             const response = await axios.post("/api/v1/users/registered/verify-otp", {
                 ...formData,
                 otp: enteredOTP,
@@ -77,11 +85,14 @@ function Otp() {
             setAlertSuccessMessage("OTP Verified Successfully!");
             setShowSuccessAlert(true);
             setTimeout(() => {
+                setLoading(false)
                 setShowSuccessAlert(false);
                 navigate("/dashboard");
             }, 4000);
-            
+
         } catch (err) {
+            setLoading(false)
+            setDisableButton(false);
             const errorMessage = err.response?.data?.message || "OTP Verification Failed.";
             // Error Alert Popup
             setAlertErrorMessage(errorMessage);
@@ -89,20 +100,25 @@ function Otp() {
             setTimeout(() => setShowErrorAlert(false), 4000);
         }
     };
-    
+
     // ------------------------- Resend OTP Funnction -------------------------
 
     const handleResendOtp = async () => {
         try {
+            setLoading(true)
             await axios.post("/api/v1/users/registered/resend-otp", formData);
             // Success Alert Popup
             setAlertSuccessMessage("OTP resent successfully!");
             setShowSuccessAlert(true);
-            setTimeout(() => setShowSuccessAlert(false), 4000);
-            
+            setTimeout(() => {
+                setLoading(false)
+                setShowSuccessAlert(false)
+            }, 4000);
+
             setResendDisabled(true);
             setTimer(300); // 5 minutes
         } catch (err) {
+            setLoading(false)
             const errorMessage = err.response?.data?.message || "Failed to resend OTP.";
             // Error Alert Popup
             setAlertErrorMessage(errorMessage);
@@ -163,7 +179,7 @@ function Otp() {
                     </div>
 
                     {/* // Verify OTP Button*/}
-                    <button className="btn btn-neutral btn-lg w-full" onClick={handleSubmit}>
+                    <button disabled={disableButton} className="btn btn-neutral btn-lg w-full" onClick={handleSubmit}>
                         Verify OTP
                     </button>
 
@@ -173,7 +189,7 @@ function Otp() {
                         onClick={handleResendOtp}
                         disabled={resendDisabled}
                     >
-                         {resendDisabled ? `Resend OTP In (${formatTime(timer)})` : "Resend OTP"}
+                        {resendDisabled ? `Resend OTP In (${formatTime(timer)})` : "Resend OTP"}
                     </button>
                 </fieldset>
             </div>
