@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useNavigate, Link } from "react-router-dom";
 
 
@@ -6,6 +6,25 @@ import { useNavigate, Link } from "react-router-dom";
 import ThemeSwitcher from '../../../utils/ThemeSwitches'
 
 function Navbar() {
+
+    const [initials, setInitials] = useState('');
+
+
+    useEffect(() => {
+        const name = localStorage.getItem('username'); // make sure the name is stored
+        if (name) {
+            const words = name.trim().split(' ');
+            let initials = '';
+
+            if (words.length >= 2) {
+                initials = words[0][0] + words[1][0];
+            } else if (words.length === 1) {
+                initials = words[0][0];
+            }
+
+            setInitials(initials.toUpperCase());
+        }
+    }, []);
 
     // --------------------- Navbar HTML Layout -------------------------
     return (
@@ -31,9 +50,11 @@ function Navbar() {
 
                         {/* AvatarImage */}
                         <div tabIndex={0} role="button" className="btn btn-ghost btn-circle avatar">
-                            <div class="avatar avatar-online avatar-placeholder">
-                                <div class="bg-neutral text-neutral-content w-9 rounded-full">
-                                    <span class="text-l">PD</span>
+                            <div className="avatar avatar-online avatar-placeholder">
+                                <div className="bg-neutral text-neutral-content w-9 rounded-full">
+                                    <span className="text-l">
+                                        {initials || "XX"}
+                                    </span>
                                 </div>
                             </div>
                         </div>
