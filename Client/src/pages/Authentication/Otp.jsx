@@ -180,7 +180,8 @@ function Otp() {
 
                     {/* // Verify OTP Button*/}
                     <button disabled={disableButton} className="btn btn-neutral btn-lg w-full" onClick={handleSubmit}>
-                        Verify OTP
+                        {/* <span className={`${disableButton ? 'loading loading-spinner text-primary' : ''}`}></span> */}
+                        <span>Verify OTP</span>
                     </button>
 
                     {/* // Resend OTP Button*/}

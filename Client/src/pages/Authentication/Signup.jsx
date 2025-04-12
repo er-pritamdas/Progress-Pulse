@@ -17,9 +17,9 @@ function Signup() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [disableButton, setDisableButton] = useState(false);
-  
-  
-  
+
+
+
   // -------------------------HandleChange Function for input Fileds-------------------------
   const [formData, setFormData] = useState({
     username: "",
@@ -30,8 +30,8 @@ function Signup() {
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
-  
-  
+
+
   // -------------------------Checks if passwords == ConfirmPassword-------------------------
   const [error, setError] = useState("");
 
@@ -39,8 +39,8 @@ function Signup() {
     setConfirmPassword(e.target.value);
     setError(password !== e.target.value ? "Passwords do not match!" : "");
   };
-  
-  
+
+
   // -------------------------On Submit Function-------------------------
   // Error Alert Variables
   const [showErrorAlert, setShowErrorAlert] = useState(false);
@@ -194,9 +194,10 @@ function Signup() {
 
           {/* // SignUp Button  */}
           <button disabled={disableButton} className="btn btn-accent btn-lg mt-4 w-full" type="submit">
-            Sign Up
+            {/* <span className={`${disableButton ? 'loading loading-spinner text-primary' : ''}`}></span> */}
+            <span>Sign Up</span>
           </button>
-        
+
           {/* // Already have an account?  */}
           <p className="text-center mt-4 text-sm">
             Already have an account?{" "}
