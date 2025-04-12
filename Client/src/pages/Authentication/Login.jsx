@@ -4,8 +4,16 @@ import axios from "axios";
 import ErrorAlert from "../../utils/Alerts/ErrorAlert";
 import SuccessAlert from "../../utils/Alerts/SuccessAlert";
 import { useLoading } from "../../Context/LoadingContext";
+import { useAuth } from "../../Context/JwtAuthContext";
 
 function Login() {
+
+  const {validToken } = useAuth();
+  useEffect(() => {
+    if (validToken) {
+      navigate("/dashboard");
+    }
+  }, [validToken]);
 
   const { setLoading } = useLoading();
 
@@ -46,6 +54,7 @@ function Login() {
         navigate("/dashboard", { state: { formData } });
       }, 4000);
       localStorage.setItem("token", response.data.token);
+      localStorage.setItem("username", formData.username);
     } catch (err) {
       setLoading(false)
       setDisableButton(false);

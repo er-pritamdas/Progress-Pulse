@@ -4,7 +4,7 @@ import Loader from "../utils/Alerts/Loader";
 const LoadingContext = createContext();
 
 export const LoadingProvider = ({ children }) => {
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   return (
     <LoadingContext.Provider value={{ loading, setLoading }}>

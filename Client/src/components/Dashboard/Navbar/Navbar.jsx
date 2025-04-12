@@ -1,4 +1,6 @@
 import React, { useState } from 'react'
+import { useNavigate, Link } from "react-router-dom";
+
 
 // Importing Components
 import ThemeSwitcher from '../../../utils/ThemeSwitches'
@@ -13,7 +15,7 @@ function Navbar() {
 
                 {/* Logo */}
                 <div className="flex-1">
-                    <a className="btn btn-ghost text-xl">Progress Pulse</a>
+                    <Link to="/" className="btn btn-ghost text-xl">Progress Pulse</Link>
                 </div>
 
                 <div className="flex justify-between items-center">

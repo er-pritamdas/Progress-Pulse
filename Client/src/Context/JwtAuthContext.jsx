@@ -6,13 +6,10 @@ import { useNavigate, useLocation } from "react-router-dom";
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  // const navigate = useNavigate();
-  // const location = useLocation();
-  const { setLoading } = useLoading(true); 
-  const [user, setUser] = useState(null);  
-  const [token, setToken] = useState(null);  
+  const { setLoading } = useLoading(true);
+  const [user, setUser] = useState(null);
+  const [validToken, setvalidToken] = useState(false);
 
-  // ✅ Token validation on app load
   const validateToken = async (location) => {
     const storedToken = localStorage.getItem("token");
     if (!storedToken) {
@@ -23,18 +20,14 @@ export const AuthProvider = ({ children }) => {
     axios.defaults.headers.common["Authorization"] = `Bearer ${storedToken}`;
 
     try {
-      const res = await axios.get("/api/v1/dashboard"); 
+      const res = await axios.get("/api/v1/dashboard");
       const username = res.data.data;
       console.log(username);
+      setUser(username);
       setTimeout(() => {
-        setUser(username); 
-      }, 4000);
-      localStorage.setItem("username",username);             // Adjust based on your backend
-      // setToken(storedToken);
-      // console.log(location.pathname);
-      // if (location.pathname === "/") {
-      //   navigate("/dashboard");
-      // } // Redirect to dashboard or desired route
+        localStorage.setItem("username", username);
+      }, 5000);
+      setvalidToken(true);
     } catch (err) {
       console.log("JWT validation failed:", err?.response?.data?.message);
     } finally {
@@ -43,11 +36,11 @@ export const AuthProvider = ({ children }) => {
   };
 
   useEffect(() => {
-    validateToken(window.location.pathname); // Run on page load
+    validateToken(window.location.pathname);
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user }}>
+    <AuthContext.Provider value={{ user, validToken }}>
       {children}
     </AuthContext.Provider>
   );
