@@ -44,7 +44,7 @@ function Login() {
         setLoading(false)
         setShowSuccessAlert(false)
         navigate("/dashboard", { state: { formData } });
-      }, 4000);
+      }, 10000);
       localStorage.setItem("token", response.data.token);
     } catch (err) {
       setLoading(false)
@@ -139,7 +139,8 @@ function Login() {
               className="btn btn-accent btn-lg mt-4 w-full"
               type="submit"
             >
-              Login
+              <span className={`${disableButton ? 'loading loading-spinner text-primary' : ''}`}></span>
+              <span>Login</span>
             </button>
 
             {/* // Sign Up Link */}
