@@ -3,6 +3,7 @@ import express from "express";
 import registeredUserRoutes from "../routes/User-routes/registeredUser.routes.js";
 import loggedInUserRoutes from "../routes/User-routes/loggedInUser.routes.js";
 import dashboardRoutes from "../routes/Dashboard-routes/dashboard.routes.js";
+import habitTrackerRoutes from "../routes/Habit-routes/HabitTracker.routes.js";
 // import nodemailer from "nodemailer";
 
 const app = express()
@@ -13,20 +14,17 @@ app.use(express.urlencoded({extended: true, limit: "16kb"}))
 
 
 
-// ----------------------Routes----------------------
-
+// ----------------------Public Routes----------------------
 // Registered User Routes
 app.use("/api/v1/users/registered", registeredUserRoutes)
-
 // LoggedIn User Routes
 app.use("/api/v1/users/loggedin",loggedInUserRoutes)
 
+// --------------------------- Protected Routes ---------------------------
 // Dashboard Routes
 app.use("/api/v1/dashboard", dashboardRoutes)
-
 // Habit Tracker Routes
-// app.use("/api/vi/dashboard/habit-tracker",)
-
+app.use("/api/v1/dashboard/habit",habitTrackerRoutes)
 
 
 // ----------------------- Global Error Handling -------------------
