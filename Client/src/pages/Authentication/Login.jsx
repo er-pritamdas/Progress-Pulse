@@ -53,7 +53,7 @@ function Login() {
         setShowSuccessAlert(false)
         navigate("/dashboard", { state: { formData } });
       }, 4000);
-      console.log(response.data.data.accessToken)
+      // console.log(response.data.data.accessToken)
       localStorage.setItem("token", response.data.data.accessToken);
       localStorage.setItem("username", formData.username);
     } catch (err) {

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate, Link } from "react-router-dom";
+// import {useAuth} from "../../../Context/JwtAuthContext.jsx";
 
 
 // Importing Components
@@ -9,7 +10,7 @@ function Navbar() {
 
     const [initials, setInitials] = useState('');
 
-
+    // const {name} = useAuth();
     useEffect(() => {
         const name = localStorage.getItem('username'); // make sure the name is stored
         if (name) {
