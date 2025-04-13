@@ -24,31 +24,62 @@ const isUserNamePresent = asynchandler(
 )
 
 const isPasswordCorrect = asynchandler(
-    async (req,res,next) => {
-        const {password} = req.body
-        const user = req.user
-
-        const isMatch = await bcrypt.compare(password, user.passwordHash)
-
-        if(!isMatch){
-            throw new ApiError(401, "Password is incorrect")
+    async (req, res, next) => {
+        const { password } = req.body;
+        const user = req.user;
+    
+        // Check if password matches
+        const isMatch = await bcrypt.compare(password, user.passwordHash);
+        if (!isMatch) {
+            throw new ApiError(401, "Password is incorrect");
         }
-
-        user.lastLogin = Date.now()
-        user.isLoggedIn = true
-        const token = jwt.sign(
-            { id: user._id, username: user.username },
-            process.env.JWT_SECRET_KEY,
-            { expiresIn: process.env.JWT_EXPIRES_IN }
-        );
+    
+        // Update user login status
+        user.lastLogin = Date.now();
+        user.isLoggedIn = true;
+    
+        // Generate the access token and refresh token
+        const accessToken = generateAccessToken(user);
+        const refreshToken = generateRefreshToken(user);
+    
+        // Save user data
         await user.save();
+    
+        // Send refresh token as secure, HTTP-only cookie
+        res.cookie('refreshToken', refreshToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',  // Set secure flag only in production
+            sameSite: 'Strict',
+            maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+        });
+    
+        // Send the response with access token
         return res.status(200).json(
-            new ApiResponse(200, user, "User Logged In Successfully", token)
-        )
+            new ApiResponse(200, { user, accessToken }, "User Logged In Successfully")
+        );
     }
 )
 
-export {isUserNamePresent, isPasswordCorrect}
+
+//---------------------------------- Helper Functions-----------------------------------
+
+const generateAccessToken = (user) => {
+    return jwt.sign(
+        { id: user._id, username: user.username },
+        process.env.JWT_SECRET_KEY,  // Secret for access token
+        { expiresIn: '15m' } // Access token expires in 15 minutes
+    );
+};
+
+const generateRefreshToken = (user) => {
+    return jwt.sign(
+        { id: user._id },
+        process.env.REFRESH_TOKEN_SECRET_KEY, // Secret for refresh token
+        { expiresIn: '7d' } // Refresh token expires in 7 days
+    );
+};
+
+export {isUserNamePresent, isPasswordCorrect, generateAccessToken, generateRefreshToken}
 
 
 
