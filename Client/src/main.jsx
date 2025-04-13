@@ -50,23 +50,28 @@ const router = createBrowserRouter(
       <Route path="/dashboard" element={<DashboardLayout />}>
         <Route index element={<Dashboard />} />
 
-        <Route path='habit' element={<Habit />} />
-        <Route path='habit-table-entry' element={<HabitTableEntry />} />
-        <Route path='habit-dashboard' element={<HabitDashboard />} />
-        <Route path='habit-table-view' element={<HabitTableView />} />
+        {/* Habit Routes */}
+        <Route path="habit" element={<Habit />}>
+          <Route path="table-entry" element={<HabitTableEntry />} />
+          <Route path="dashboard" element={<HabitDashboard />} />
+          <Route path="table-view" element={<HabitTableView />} />
+        </Route>
 
-        <Route path='expense' element={<Expense />} />
-        <Route path='expense-table-entry' element={<ExpTableEntry />} />
-        <Route path='expense-dashboard' element={<ExpDashboard />} />
-        <Route path='expense-table-view' element={<ExpTableView />} />
+        {/* Expense Routes */}
+        <Route path="expense" element={<Expense />}>
+          <Route path="table-entry" element={<ExpTableEntry />} />
+          <Route path="dashboard" element={<ExpDashboard />} />
+          <Route path="table-view" element={<ExpTableView />} />
+        </Route>
 
-        <Route path='investment' element={<Investment />} />
-        <Route path='investment-table-entry' element={<InvTableEntry />} />
-        <Route path='investment-dashboard' element={<InvDashboard />} />
-        <Route path='investment-table-view' element={<InvTableView />} />
-
-
+        {/* Investment Routes */}
+        <Route path="investment" element={<Investment />}>
+          <Route path="table-entry" element={<InvTableEntry />} />
+          <Route path="dashboard" element={<InvDashboard />} />
+          <Route path="table-view" element={<InvTableView />} />
+        </Route>
       </Route>
+
 
     </>
   )
