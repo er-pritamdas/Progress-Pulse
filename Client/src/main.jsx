@@ -15,6 +15,7 @@ import Signup from './pages/Authentication/Signup.jsx'
 import Otp from './pages/Authentication/Otp.jsx'
 import Dashboard from './pages/Dashboard/Dashboard.jsx'
 // Habit Pages
+import Habit from './pages/Dashboard/Habit/Habit.jsx'
 import HabitTableEntry from './pages/Dashboard/Habit/HabitTableEntry.jsx'
 import HabitDashboard from './pages/Dashboard/Habit/HabitDashboard.jsx'
 import HabitTableView from './pages/Dashboard/Habit/HabitTableView.jsx'
@@ -31,8 +32,11 @@ import InvTableView from './pages/Dashboard/Investment/InvTableView.jsx'
 import Layout from './layouts/Layout.jsx'
 import DashboardLayout from './layouts/DashboardLayout.jsx'
 import Expense from './pages/Dashboard/Expense/Expense.jsx'
-import Habit from './pages/Dashboard/Habit/Habit.jsx'
 import Investment from './pages/Dashboard/Investment/Investment.jsx'
+import HabitLayout from './layouts/HabitLayout.jsx'
+import ExpenseLayout from './layouts/ExpenseLayout.jsx'
+import InvestmentLayout from './layouts/InvestmentLayout.jsx'
+
 
 
 const router = createBrowserRouter(
@@ -51,21 +55,24 @@ const router = createBrowserRouter(
         <Route index element={<Dashboard />} />
 
         {/* Habit Routes */}
-        <Route path="habit" element={<Habit />}>
+        <Route path="habit" element={<HabitLayout />}>
+          <Route index element={<Habit />} />
           <Route path="table-entry" element={<HabitTableEntry />} />
           <Route path="dashboard" element={<HabitDashboard />} />
           <Route path="table-view" element={<HabitTableView />} />
         </Route>
 
         {/* Expense Routes */}
-        <Route path="expense" element={<Expense />}>
+        <Route path="expense" element={<ExpenseLayout />}>
+          <Route index element={<Expense />} />
           <Route path="table-entry" element={<ExpTableEntry />} />
           <Route path="dashboard" element={<ExpDashboard />} />
           <Route path="table-view" element={<ExpTableView />} />
         </Route>
 
         {/* Investment Routes */}
-        <Route path="investment" element={<Investment />}>
+        <Route path="investment" element={<InvestmentLayout />}>
+          <Route index element={<Investment />} />
           <Route path="table-entry" element={<InvTableEntry />} />
           <Route path="dashboard" element={<InvDashboard />} />
           <Route path="table-view" element={<InvTableView />} />
