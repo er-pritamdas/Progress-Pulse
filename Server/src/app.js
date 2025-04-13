@@ -24,6 +24,9 @@ app.use("/api/v1/users/loggedin",loggedInUserRoutes)
 // Dashboard Routes
 app.use("/api/v1/dashboard", dashboardRoutes)
 
+// Habit Tracker Routes
+app.use("/api/vi/dashboard/habit-tracker",)
+
 
 
 // ----------------------- Global Error Handling -------------------
