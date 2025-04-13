@@ -1,12 +1,27 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate, Link } from "react-router-dom";
+import { useLoading } from '../../../Context/LoadingContext.jsx';
 // import {useAuth} from "../../../Context/JwtAuthContext.jsx";
+import useLogout from './logout.jsx';
+import ErrorAlert from '../../../utils/Alerts/ErrorAlert';
+import SuccessAlert from '../../../utils/Alerts/SuccessAlert';
 
 
 // Importing Components
 import ThemeSwitcher from '../../../utils/ThemeSwitches'
 
 function Navbar() {
+
+    const navigate = useNavigate();
+    const logout = useLogout();
+    const { setLoading } = useLoading();
+    const [disableButton, setDisableButton] = useState(false);
+
+    const [showSuccessAlert, setShowSuccessAlert] = useState(false);
+    const [successMsg, setSuccessMsg] = useState("");
+    const [showErrorAlert, setShowErrorAlert] = useState(false);
+    const [errorMsg, setErrorMsg] = useState("");
+
 
     const [initials, setInitials] = useState('');
 
@@ -27,9 +42,37 @@ function Navbar() {
         }
     }, []);
 
+    const handleLogout = async () => {
+        const username = localStorage.getItem("username");
+        try {
+            setDisableButton(true);
+            setLoading(true);
+
+            await logout(username);
+
+            setSuccessMsg("User Logged Out Successfully");
+            setShowSuccessAlert(true);
+
+            setTimeout(() => {
+                setLoading(false);
+                setShowSuccessAlert(false);
+                navigate("/");
+            }, 3000);
+        } catch (err) {
+            setLoading(false);
+            setDisableButton(false);
+            const msg = err.response?.data?.message || "Something went wrong";
+            setErrorMsg(msg);
+            setShowErrorAlert(true);
+            setTimeout(() => setShowErrorAlert(false), 4000);
+        }
+    };
+
+
     // --------------------- Navbar HTML Layout -------------------------
     return (
         <>
+
             {/* Fixed Navbar */}
             <div className="navbar bg-base-100 shadow-sm sticky top-0 p-0 z-1000">
 
@@ -44,6 +87,9 @@ function Navbar() {
 
                     {/* SearchBar */}
                     <input type="text" placeholder="Search" className="input input-bordered w-24 md:w-auto mr-2" />
+
+                    {showSuccessAlert && <SuccessAlert message={successMsg} />}
+                    {showErrorAlert && <ErrorAlert message={errorMsg} />}
 
 
                     {/* User Avatar */}
@@ -71,7 +117,7 @@ function Navbar() {
                                 </a>
                             </li>
                             <li><a>Settings</a></li>
-                            <li><a>Logout</a></li>
+                            <li><button onClick={handleLogout} disabled={disableButton}>Logout</button></li>
                         </ul>
                     </div>
                 </div>

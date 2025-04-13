@@ -67,6 +67,11 @@ const registeredUserSchema = new mongoose.Schema(
         default: null 
     },
 
+    lastLogout: { 
+      type: Date, 
+      default: null 
+  },
+
     // failedLoginAttempts: { 
     //     type: Number, 
     //     default: 0 
