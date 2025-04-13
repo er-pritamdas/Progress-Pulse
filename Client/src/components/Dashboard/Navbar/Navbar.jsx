@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate, Link } from "react-router-dom";
 // import {useAuth} from "../../../Context/JwtAuthContext.jsx";
+import  useLogout  from './logout.jsx';
 
 
 // Importing Components
 import ThemeSwitcher from '../../../utils/ThemeSwitches'
 
 function Navbar() {
+
+    const logout = useLogout();
 
     const [initials, setInitials] = useState('');
 
@@ -71,7 +74,7 @@ function Navbar() {
                                 </a>
                             </li>
                             <li><a>Settings</a></li>
-                            <li><a>Logout</a></li>
+                            <li><a onClick={logout}>Logout</a></li>
                         </ul>
                     </div>
                 </div>
