@@ -1,11 +1,12 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, BookOpen, Navigation, TrendingUp, Wallet, CalendarCheck } from 'lucide-react'; // Add icons
-import clsx from 'clsx'; // Optional: For cleaner conditional classNames
+import { Home, BookOpen, Navigation, TrendingUp, Wallet, CalendarCheck } from 'lucide-react';
+import clsx from 'clsx';
 import Dashboard from '../../utils/Icons/Dashboard';
 
 export default function ThemedBreadcrumbs() {
   const location = useLocation();
+  const pathnames = location.pathname.split('/').filter(Boolean); // ['dashboard', 'habit', 'table-entry']
 
   const mainCategoryIcon = {
     Habit: <CalendarCheck className="w-4 h-4" />,
@@ -19,18 +20,19 @@ export default function ThemedBreadcrumbs() {
     'Table View': <BookOpen className="w-4 h-4" />,
   };
 
-  const pathnames = location.pathname.split('/').filter(Boolean);
+  const mainCategoryRaw = pathnames[1]; // habit, expense, investment
+  const subCategoryRaw = pathnames[2]; // table-entry, dashboard, table-view
 
-  // e.g., /sheet/Habit-table-entry => ["sheet", "Habit-table-entry"]
-  const [mainSheet, ...subSheets] = pathnames[1]?.split('-') || [];
-
-  const mainCategory = mainSheet
-    ? mainSheet.charAt(0).toUpperCase() + mainSheet.slice(1).toLowerCase()
+  const mainCategory = mainCategoryRaw
+    ? mainCategoryRaw.charAt(0).toUpperCase() + mainCategoryRaw.slice(1)
     : null;
 
-  const subCategory = subSheets
-    .map((sheet) => sheet.charAt(0).toUpperCase() + sheet.slice(1).toLowerCase())
-    .join(' ');
+  const subCategory = subCategoryRaw
+    ? subCategoryRaw
+        .split('-')
+        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ')
+    : null;
 
   return (
     <div className="breadcrumbs text-sm p-4 bg-base-200 text-base-content rounded-box shadow-sm mb-4">
@@ -45,7 +47,7 @@ export default function ThemedBreadcrumbs() {
         {mainCategory && (
           <li>
             <Link
-              to={`/dashboard/${mainSheet}`}
+              to={`/dashboard/${mainCategoryRaw}`}
               className="hover:text-primary transition-colors flex items-center gap-1"
             >
               {mainCategoryIcon[mainCategory] || <BookOpen className="w-4 h-4" />}
