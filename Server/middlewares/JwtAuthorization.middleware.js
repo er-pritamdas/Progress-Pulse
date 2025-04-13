@@ -19,9 +19,9 @@ const verifyToken = asyncHandler(
           const userExist = await RegisteredUsers.findOne({username: username})
           req.user = userExist
           console.log(req.user)
-          // next();
+          next();
           return res.status(200).json(
-              new ApiResponse(200, username, "token Verified")
+              new ApiResponse(200, {username}, "token Verified")
           ) 
         } catch (error) {
           throw new ApiError(401, error.message);

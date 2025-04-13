@@ -9,6 +9,7 @@ import RegisteredUsers from '../models/User-models/registeredUser.model.js';
 // Refresh Token Route
 const refreshTokenHandler = asynchandler(async (req, res, next) => {
     const refreshToken = req.cookies.refreshToken; // Get the refresh token from cookie
+    console.log(refreshToken)
 
     if (!refreshToken) {
         throw new ApiError(401, "Refresh Token is missing");
@@ -16,7 +17,8 @@ const refreshTokenHandler = asynchandler(async (req, res, next) => {
 
     try {
         // Verify the refresh token
-        const decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
+        const decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET_KEY);
+        console.log(decoded)
         const user = await RegisteredUsers.findById(decoded.id);
 
         if (!user) {
