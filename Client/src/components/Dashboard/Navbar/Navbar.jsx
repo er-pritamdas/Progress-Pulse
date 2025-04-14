@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate, Link } from "react-router-dom";
 import { useLoading } from '../../../Context/LoadingContext.jsx';
-// import {useAuth} from "../../../Context/JwtAuthContext.jsx";
-import useLogout from './logout.jsx';
 import ErrorAlert from '../../../utils/Alerts/ErrorAlert';
 import SuccessAlert from '../../../utils/Alerts/SuccessAlert';
+import axios from "axios";
 
 
 // Importing Components
@@ -13,7 +12,6 @@ import ThemeSwitcher from '../../../utils/ThemeSwitches'
 function Navbar() {
 
     const navigate = useNavigate();
-    const logout = useLogout();
     const { setLoading } = useLoading();
     const [disableButton, setDisableButton] = useState(false);
 
@@ -48,7 +46,10 @@ function Navbar() {
             setDisableButton(true);
             setLoading(true);
 
-            await logout(username);
+            const formData = { username };
+            await axios.post("/api/v1/users/logout", formData);
+            localStorage.removeItem("token");
+            localStorage.removeItem("username");
 
             setSuccessMsg("User Logged Out Successfully");
             setShowSuccessAlert(true);
@@ -88,10 +89,6 @@ function Navbar() {
                     {/* SearchBar */}
                     <input type="text" placeholder="Search" className="input input-bordered w-24 md:w-auto mr-2" />
 
-                    {showSuccessAlert && <SuccessAlert message={successMsg} />}
-                    {showErrorAlert && <ErrorAlert message={errorMsg} />}
-
-
                     {/* User Avatar */}
                     <div className="dropdown dropdown-end mr-2">
 
@@ -121,6 +118,8 @@ function Navbar() {
                         </ul>
                     </div>
                 </div>
+                {showSuccessAlert && <SuccessAlert message={successMsg} />}
+                {showErrorAlert && <ErrorAlert message={errorMsg} />}
             </div>
         </>
     )
