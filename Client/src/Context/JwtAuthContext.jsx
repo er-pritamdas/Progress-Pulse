@@ -15,7 +15,7 @@ export const AuthProvider = ({ children }) => {
   const { setLoading } = useLoading(true);
   const [user, setUser] = useState(null);
   const [validToken, setvalidToken] = useState(false);
-  const isFirstRun = useRef(true); // 🧠 Prevent double execution in StrictMode
+  // const isFirstRun = useRef(true); // 🧠 Prevent double execution in StrictMode
 
   const validateToken = async (location) => {
     const storedToken = localStorage.getItem("token");
@@ -52,7 +52,7 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, validToken }}>
+    <AuthContext.Provider value={{ user, validToken, setvalidToken}}>
       {children}
     </AuthContext.Provider>
   );

@@ -4,9 +4,11 @@ import axios from "axios";
 import ErrorAlert from "../../utils/Alerts/ErrorAlert";
 import SuccessAlert from "../../utils/Alerts/SuccessAlert";
 import { useLoading } from "../../Context/LoadingContext";
+import { useAuth } from "../../Context/JwtAuthContext";
 
 
 function Otp() {
+    const {setvalidToken} = useAuth();
     const { setLoading } = useLoading();
 
 
@@ -61,6 +63,18 @@ function Otp() {
         }
     };
 
+// ---------------- Login Automatically after signing up : Bette User Experience ------------------
+const LoginAfterSignup = async () =>{
+    try{
+      const loginResponse = await axios.post("/api/v1/users/loggedin", formData);
+      localStorage.setItem("token", loginResponse.data.data.accessToken);
+      localStorage.setItem("username", formData.username);
+    }catch(error){
+        const errorMessage = err.response?.data?.message || "Something went Wrong";
+        console.log(errorMessage)
+    }
+  }
+
     // ------------------------- Submit OTP Verification -------------------------
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -84,6 +98,7 @@ function Otp() {
             // Success Alert Popup
             setAlertSuccessMessage("OTP Verified Successfully!");
             setShowSuccessAlert(true);
+            LoginAfterSignup()
             setTimeout(() => {
                 setLoading(false)
                 setShowSuccessAlert(false);
