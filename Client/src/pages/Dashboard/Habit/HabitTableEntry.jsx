@@ -1,13 +1,20 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Trash from '../../../utils/Icons/trash';
 import Pencil from '../../../utils/Icons/Pencil';
 import Save from '../../../utils/Icons/Save';
 import Cancel from '../../../utils/Icons/Cancel';
 
+
+
+
 const mockData = [
   { id: 1, date: '2025-04-01', days: 'Day 1', burned: '100', water: '4', sleep: '5', read: '60', intake: '1850', selfCare: 'BNF', mood: 'Productive' },
   { id: 2, date: '2025-04-02', days: 'Day 2', burned: '100', water: '4', sleep: '5', read: '60', intake: '1850', selfCare: 'BNF', mood: 'Productive' },
   { id: 3, date: '2025-04-03', days: 'Day 3', burned: '100', water: '4', sleep: '5', read: '60', intake: '1850', selfCare: 'BNF', mood: 'Productive' },
+  { id: 4, date: '2025-04-03', days: 'Day 3', burned: '100', water: '4', sleep: '5', read: '60', intake: '1850', selfCare: 'BNF', mood: 'Productive' },
+  { id: 5, date: '2025-04-03', days: 'Day 3', burned: '100', water: '4', sleep: '5', read: '60', intake: '1850', selfCare: 'BNF', mood: 'Productive' },
+  { id: 6, date: '2025-04-03', days: 'Day 3', burned: '100', water: '4', sleep: '5', read: '60', intake: '1850', selfCare: 'BNF', mood: 'Productive' },
+  { id: 7, date: '2025-04-03', days: 'Day 3', burned: '100', water: '4', sleep: '5', read: '60', intake: '1850', selfCare: 'BNF', mood: 'Productive' },
 ];
 
 const formatDate = (dateString) => {
@@ -18,17 +25,25 @@ const formatDate = (dateString) => {
   return `${day}-${month}-${year}`;
 };
 
-const sortedData = mockData.sort((a, b) => b.id - a.id).map(item => ({
-  ...item,
-  date: formatDate(item.date)
-}));
+const sortedData = mockData.sort((a, b) => b.id - a.id);
 
-const ITEMS_PER_PAGE = 5;
+const ITEMS_PER_PAGE = 7;
 
 function HabitTableEntry() {
   const [data, setData] = useState(sortedData);
   const [currentPage, setCurrentPage] = useState(1);
   const [editingItem, setEditingItem] = useState(null);
+
+  useEffect(() => {
+    if (editingItem) {
+      window.addEventListener('keydown', handleKeyDown);
+    }
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [editingItem]);
+
 
   const paginatedData = data.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
@@ -44,8 +59,15 @@ function HabitTableEntry() {
     }
   };
 
+  const handleKeyDown = (e) => {
+    if (editingItem && e.key === 'Enter') {
+      e.preventDefault(); // Optional: prevents form submission or weird input behaviors
+      handleSave();
+    }
+  };
+
   const handleEdit = (item) => {
-    setEditingItem(item);
+    setEditingItem({ ...item });
   };
 
   const handleSave = () => {
@@ -62,17 +84,18 @@ function HabitTableEntry() {
 
   const handleAdd = () => {
     const nextDayNumber = data.length + 1;
+    const today = new Date().toISOString().split('T')[0];
     const newItem = {
       id: Date.now(),
-      date: formatDate(Date.now()),
+      date: today,
       days: `Day ${nextDayNumber}`,
-      burned: '',
-      water: '',
-      sleep: '',
-      read: '',
-      intake: '',
-      selfCare: '',
-      mood: ''
+      burned: '300',
+      water: '3',
+      sleep: '7',
+      read: '120',
+      intake: '1500',
+      selfCare: 'BNF',
+      mood: 'Good'
     };
     setData([newItem, ...data]);
     setCurrentPage(1);
@@ -87,18 +110,18 @@ function HabitTableEntry() {
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto overflow-y-auto scroll-hidden">
         <table className="table table-fixed w-full">
           <thead>
             <tr>
-              <th className="w-[100px]">Date</th>
+              <th className="w-[120px]">Date</th>
               <th className="w-[80px]">Burned [Kcal]</th>
               <th className="w-[80px]">Water [L]</th>
               <th className="w-[80px]">Sleep [Hrs]</th>
               <th className="w-[90px]">Read [Pages]</th>
               <th className="w-[90px]">Intake [Kcal]</th>
               <th className="w-[100px]">Self Care</th>
-              <th className="w-[80px]">Mood</th>
+              <th className="w-[100px]">Mood</th>
               <th className="w-[120px] text-center">Actions</th>
             </tr>
           </thead>
@@ -106,30 +129,72 @@ function HabitTableEntry() {
             {paginatedData.map(item => (
               editingItem?.id === item.id ? (
                 <tr key={item.id}>
-                  <td className="whitespace-nowrap text-sm w-[100px]">{item.date}</td>
-                  <td><input type="text" name="burned" className="input input-bordered input-sm w-full max-w-[80px]" value={editingItem.burned} onChange={handleChange} /></td>
-                  <td><input type="text" name="water" className="input input-bordered input-sm w-full max-w-[80px]" value={editingItem.water} onChange={handleChange} /></td>
-                  <td><input type="text" name="sleep" className="input input-bordered input-sm w-full max-w-[80px]" value={editingItem.sleep} onChange={handleChange} /></td>
-                  <td><input type="text" name="read" className="input input-bordered input-sm w-full max-w-[90px]" value={editingItem.read} onChange={handleChange} /></td>
-                  <td><input type="text" name="intake" className="input input-bordered input-sm w-full max-w-[90px]" value={editingItem.intake} onChange={handleChange} /></td>
-                  <td><input type="text" name="selfCare" className="input input-bordered input-sm w-full max-w-[100px]" value={editingItem.selfCare} onChange={handleChange} /></td>
                   <td>
-                    <select
-                      name="mood"
-                      value={editingItem.mood}
-                      onChange={handleChange}
-                      className="select select-sm w-[110px] text-center "
-                    >
-                      <option className="text-center" value="">--</option>
-                      <option className="text-center" value="Amazing">Amazing</option>
-                      <option className="text-center" value="Good">Good</option>
-                      <option className="text-center" value="Average">Average</option>
-                      <option className="text-center" value="Sad">Sad</option>
-                      <option className="text-center" value="Depressed">Depressed</option>
-                      <option className="text-center" value="Productive">Productive</option>
-                    </select>
+                    <div className="dropdown dropdown-bottom">
+                      <div tabIndex={0} role="button" className="input input-bordered input-sm w-full max-w-[120px]">
+                        {editingItem.date || "Pick a date"}
+                      </div>
+                      <div className="dropdown-content z-[999] bg-base-300 rounded-box shadow-sm p-2 ">
+                        <calendar-date
+                          class="cally"
+                          onchange={(e) => {
+                            handleChange({ target: { name: "date", value: e.target.value } });
+                          }}
+                        >
+                          <svg
+                            aria-label="Previous"
+                            className="fill-current size-4"
+                            slot="previous"
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 24 24"
+                          >
+                            <path d="M15.75 19.5 8.25 12l7.5-7.5"></path>
+                          </svg>
+                          <svg
+                            aria-label="Next"
+                            className="fill-current size-4"
+                            slot="next"
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 24 24"
+                          >
+                            <path d="m8.25 4.5 7.5 7.5-7.5 7.5"></path>
+                          </svg>
+                          <calendar-month></calendar-month>
+                        </calendar-date>
+                      </div>
+                    </div>
                   </td>
-                  
+
+
+                  <td><input onKeyDown={handleKeyDown} type="text" name="burned" className="btn btn-sm w-full max-w-[80px] hover:cursor-text" value={editingItem.burned} onChange={handleChange} /></td>
+                  <td><input onKeyDown={handleKeyDown} type="text" name="water" className="btn btn-sm w-full max-w-[80px] hover:cursor-text" value={editingItem.water} onChange={handleChange} /></td>
+                  <td><input onKeyDown={handleKeyDown} type="text" name="sleep" className="btn btn-sm w-full max-w-[80px] hover:cursor-text" value={editingItem.sleep} onChange={handleChange} /></td>
+                  <td><input onKeyDown={handleKeyDown} type="text" name="read" className="btn btn-sm w-full max-w-[80px] hover:cursor-text" value={editingItem.read} onChange={handleChange} /></td>
+                  <td><input onKeyDown={handleKeyDown} type="text" name="intake" className="btn btn-sm w-full max-w-[80px] hover:cursor-text" value={editingItem.intake} onChange={handleChange} /></td>
+                  <td><input onKeyDown={handleKeyDown} type="text" name="selfCare" className="btn btn-sm w-full max-w-[80px] hover:cursor-text" value={editingItem.selfCare} onChange={handleChange} /></td>
+                  <td>
+                    <div className="dropdown dropdown-bottom dropdown-center">
+                      <div tabIndex={0} role="button" className="btn btn-sm m-1 w-[100px] text-center">
+                        {editingItem.mood || 'Select ⬇️'}
+                      </div>
+                      <ul
+                        tabIndex={0}
+                        className="dropdown-content menu bg-base-300 rounded-box z-[1] w-30 p-2 shadow-sm"
+                      >
+                        {['Amazing', 'Good', 'Average', 'Sad', 'Depressed', 'Productive'].map((mood) => (
+                          <li key={mood}>
+                            <a
+                              onClick={() => handleChange({ target: { name: 'mood', value: mood } })}
+                              className={editingItem.mood === mood ? 'font-bold text-primary' : ''}
+                            >
+                              {mood}
+                            </a>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </td>
+
                   <td className="text-center w-[120px]">
                     <div className="flex justify-center gap-2">
                       <button className="btn btn-success btn-sm" onClick={handleSave}><Save /></button>
@@ -139,7 +204,7 @@ function HabitTableEntry() {
                 </tr>
               ) : (
                 <tr key={item.id}>
-                  <td className="whitespace-nowrap text-sm w-[100px]">{item.date}</td>
+                  <td className="text-sm">{formatDate(item.date)}</td>
                   <td className="text-sm truncate">{item.burned}</td>
                   <td className="text-sm truncate">{item.water}</td>
                   <td className="text-sm truncate">{item.sleep}</td>
