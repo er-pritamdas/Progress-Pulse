@@ -7,12 +7,14 @@ import Navbar from '../components/Dashboard/Navbar/Navbar'
 import Footer from '../components/Homepage/Footer'
 import Sidebar from '../components/Dashboard/Sidebar/Sidebar';
 import ActiveLastBreadcrumb from '../components/Dashboard/ActiveLastBreadcrumb';
+import { useAuth } from '../Context/JwtAuthContext';
 
 
 const DashboardLayout = () => {
 
   // Variables
   const isOtpPage = location.pathname === "/otp";
+  const {validToken} = useAuth()
 
   // Sidebar State
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -21,7 +23,7 @@ const DashboardLayout = () => {
   if (!isOtpPage) {
     localStorage.setItem('allowOtp', false);
   }
-  const isAuthenticated = true // or: localStorage.getItem('token')
+  const isAuthenticated = true //validToken
 
   // --------------------- Dashboard HTML Layout -------------------------
   return (

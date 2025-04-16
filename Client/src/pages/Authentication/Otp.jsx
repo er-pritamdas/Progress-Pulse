@@ -4,11 +4,11 @@ import axios from "axios";
 import ErrorAlert from "../../utils/Alerts/ErrorAlert";
 import SuccessAlert from "../../utils/Alerts/SuccessAlert";
 import { useLoading } from "../../Context/LoadingContext";
-import { useAuth } from "../../Context/JwtAuthContext";
+
 
 
 function Otp() {
-    const {setvalidToken} = useAuth();
+
     const { setLoading } = useLoading();
 
 

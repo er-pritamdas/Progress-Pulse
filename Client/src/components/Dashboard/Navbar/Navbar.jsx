@@ -23,7 +23,6 @@ function Navbar() {
 
     const [initials, setInitials] = useState('');
 
-    // const {name} = useAuth();
     useEffect(() => {
         const name = localStorage.getItem('username'); // make sure the name is stored
         if (name) {

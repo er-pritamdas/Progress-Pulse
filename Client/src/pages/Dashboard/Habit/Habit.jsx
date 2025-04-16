@@ -1,6 +1,6 @@
 import React from 'react'
 
-function Habit() {
+function  Habit() {
   return (
     <div>
       This is Habit Page
