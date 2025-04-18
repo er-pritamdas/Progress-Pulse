@@ -8,18 +8,16 @@ dotenv.config({
 const HabitDB = mongoose.connection.useDb(process.env.HABIT_DB);
 console.log(`✅ ${HabitDB.name} Connected`);
 
-const habitEntrySchema = new mongoose.Schema({
-  completed: { type: Boolean, default: false },
-  note: String,
-  quantity: String,
-  hours: Number,
-});
-
 const dailyHabitSchema = new mongoose.Schema(
   {
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: RegisteredUsers,
+      required: true,
+    },
+
+    day:{
+      type: Number,
       required: true,
     },
 
@@ -29,13 +27,35 @@ const dailyHabitSchema = new mongoose.Schema(
     }, // Format: YYYY-MM-DD
 
     habits: {
-      workout: habitEntrySchema,
-      water: habitEntrySchema,
-      sleep: habitEntrySchema,
-      read: habitEntrySchema,
-      calories: habitEntrySchema,
-      selfcare: habitEntrySchema,
-      journal: habitEntrySchema,
+      burned: {
+        type: Number,
+      },
+      water: {
+        type: Number,
+      },
+      sleep: {
+        type: Number,
+      },
+      read: {
+        type: Number,
+      },
+      intake: {
+        type: Number,
+      },
+      selfcare: {
+        type: String,
+      },
+      mood: {
+        type: String,
+      },
+    },
+
+    progress:{
+      type: Number,
+      required: true,
+      min:0,
+      max:100,
+      default:0,
     },
 
     status: {

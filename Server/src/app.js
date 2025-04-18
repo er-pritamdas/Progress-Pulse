@@ -24,21 +24,22 @@ app.use(express.urlencoded({extended: true, limit: "16kb"}))
 app.use(cookieParser());
 
 
-// ----------------------Public Routes----------------------
+// ------------------------------Public Routes---------------------------
 // Registered User Routes
 app.use("/api/v1/users/registered", registeredUserRoutes)
 // LoggedIn User Routes
 app.use("/api/v1/users/loggedin",loggedInUserRoutes)
 
 app.use("/api/v1/users/logout", loggedOutUserRoutes)
-// --------------------------- Protected Routes ---------------------------
+
+// --------------------------- Protected Routes --------------------------
 // Dashboard Routes
 app.use("/api/v1/dashboard", dashboardRoutes)
 // Habit Tracker Routes
 app.use("/api/v1/dashboard/habit",habitTrackerRoutes)
 
 
-// ----------------------- Global Error Handling -------------------
+// ------------------------ Global Error Handling -----------------------
 app.use((err, req, res, next) => {
     res.status(err.statusCode || 500).json({
         status: err.statusCode,
