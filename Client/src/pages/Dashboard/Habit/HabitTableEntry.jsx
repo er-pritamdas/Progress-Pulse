@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import AddHabitPopUp from '../../../components/Dashboard/Habit/AddHabitPopUp';
 import Trash from '../../../utils/Icons/trash';
 import Pencil from '../../../utils/Icons/Pencil';
 import Save from '../../../utils/Icons/Save';
@@ -9,18 +10,19 @@ function HabitTableEntry() {
 
   // Data
   const mockData = [
-    { day: 1, date: '2025-04-01', burned: '100', water: '4', sleep: '5', read: '60', intake: '1850', selfCare: 'BNF', mood: 'Productive', progress: '100' },
-    { day: 2, date: '2025-04-02', burned: '100', water: '4', sleep: '5', read: '60', intake: '1850', selfCare: 'BNF', mood: 'Productive', progress: '100' },
-    { day: 3, date: '2025-04-03', burned: '100', water: '4', sleep: '5', read: '60', intake: '1850', selfCare: 'BNF', mood: 'Productive', progress: '100' },
-    { day: 4, date: '2025-04-03', burned: '100', water: '4', sleep: '5', read: '60', intake: '1850', selfCare: 'BNF', mood: 'Productive', progress: '100' },
-    { day: 5, date: '2025-04-03', burned: '100', water: '4', sleep: '5', read: '60', intake: '1850', selfCare: 'BNF', mood: 'Productive', progress: '100' },
-    { day: 6, date: '2025-04-03', burned: '100', water: '4', sleep: '5', read: '60', intake: '1850', selfCare: 'BNF', mood: 'Productive', progress: '100' },
-    { day: 7, date: '2025-04-03', burned: '100', water: '4', sleep: '5', read: '60', intake: '1850', selfCare: 'BNF', mood: 'Productive', progress: '100' },
+    {date: '2025-04-01', burned: '100', water: '4', sleep: '5', read: '60', intake: '1850', selfcare: 'BNF', mood: 'Productive', progress: '100' },
+    {date: '2025-04-02', burned: '100', water: '4', sleep: '5', read: '60', intake: '1850', selfcare: 'BNF', mood: 'Productive', progress: '100' },
+    {date: '2025-04-03', burned: '100', water: '4', sleep: '5', read: '60', intake: '1850', selfcare: 'BNF', mood: 'Productive', progress: '100' },
+    {date: '2025-04-04', burned: '100', water: '4', sleep: '5', read: '60', intake: '1850', selfcare: 'BNF', mood: 'Productive', progress: '100' },
+    {date: '2025-04-05', burned: '100', water: '4', sleep: '5', read: '60', intake: '1850', selfcare: 'BNF', mood: 'Productive', progress: '100' },
+    {date: '2025-04-06', burned: '100', water: '4', sleep: '5', read: '60', intake: '1850', selfcare: 'BNF', mood: 'Productive', progress: '100' },
+    {date: '2025-04-07', burned: '100', water: '4', sleep: '5', read: '60', intake: '1850', selfcare: 'BNF', mood: 'Productive', progress: '100' },
   ];
 
   // variables 
-  const sortedData = mockData.sort((a, b) => b.day - a.day);
+  const sortedData = mockData.sort((a, b) => b.date - a.date);
   const ITEMS_PER_PAGE = 7;
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [data, setData] = useState(sortedData);
   const [currentPage, setCurrentPage] = useState(1);
   const [editingItem, setEditingItem] = useState(null);
@@ -65,7 +67,7 @@ function HabitTableEntry() {
   const calculateProgress = (item) => {
     if (!item) return 0;
 
-    const fields = ['burned', 'water', 'sleep', 'read', 'intake', 'selfCare', 'mood'];
+    const fields = ['burned', 'water', 'sleep', 'read', 'intake', 'selfcare', 'mood'];
     const filled = fields.filter(key => item[key] && item[key].toString().trim() !== "0");
     const progressPercentage = Math.round((filled.length / fields.length) * 100)
     item['progress'] = progressPercentage
@@ -73,10 +75,10 @@ function HabitTableEntry() {
   };
 
   // Delection Data Function
-  const handleDelete = (day) => {
+  const handleDelete = (date) => {
     const confirmDelete = window.confirm('Are you sure you want to delete?');
     if (confirmDelete) {
-      setData(data.filter(item => item.day !== day));
+      setData(data.filter(item => item.date !== date));
     }
   };
 
@@ -96,7 +98,7 @@ function HabitTableEntry() {
   // Save Data Function
   const handleSave = () => {
     setData(prev =>
-      prev.map(item => (item.day === editingItem.day ? editingItem : item))
+      prev.map(item => (item.date === editingItem.date ? editingItem : item))
     );
     setEditingItem(null);
   };
@@ -108,21 +110,7 @@ function HabitTableEntry() {
   };
 
   // Add Data Function
-  const handleAdd = () => {
-    const nextDayNumber = data.length + 1;
-    const today = new Date().toISOString().split('T')[0];
-    const newItem = {
-      day: Date.now(),
-      date: today,
-      days: `Day ${nextDayNumber}`,
-      burned: '0',
-      water: '0',
-      sleep: '0',
-      read: '0',
-      intake: '0',
-      selfCare: '',
-      mood: ''
-    };
+  const handleAdd = (newItem) => {
     setData([newItem, ...data]);
     setCurrentPage(1);
   };
@@ -136,7 +124,7 @@ function HabitTableEntry() {
       {/* Heading and Add Button */}
       <div className="flex justify-between mb-4">
         <h1 className="text-2xl font-bold">Habit Tracker Table Entry</h1>
-        <button className="btn btn-primary" onClick={handleAdd}>+ Add Entry</button>
+        <button className="btn btn-primary" onClick={() => setIsModalOpen(true)}>+ Add Entry</button>
       </div>
 
       {/* Table */}
@@ -162,8 +150,8 @@ function HabitTableEntry() {
           {/* Table Body */}
           <tbody>
             {paginatedData.map(item => (
-              editingItem?.day === item.day ? (
-                <tr key={item.day}>
+              editingItem?.date === item.date ? (
+                <tr key={item.date}>
                   <td>
                     <div className="dropdown dropdown-bottom">
                       <div tabIndex={0} role="button" className="input input-bordered input-sm w-full max-w-[120px]">
@@ -204,7 +192,7 @@ function HabitTableEntry() {
                   <td><input type="number" min="0" max="10" onKeyDown={handleKeyDown} name="sleep" className="btn btn-sm w-full max-w-[80px] hover:cursor-text" value={editingItem.sleep} onChange={handleChange} /></td>
                   <td><input type="number" min="0" max="24" onKeyDown={handleKeyDown} name="read" className="btn btn-sm w-full max-w-[80px] hover:cursor-text" value={editingItem.read} onChange={handleChange} /></td>
                   <td><input type="number" min="0" max="100000" onKeyDown={handleKeyDown} name="intake" className="btn btn-sm w-full max-w-[80px] hover:cursor-text" value={editingItem.intake} onChange={handleChange} /></td>
-                  <td><input type="text" pattern="^[B_]{1}[S_]{1}[F_]{1}$" title="Only B, S, F or _ in respective positions. Example: BSF, B_F, _SF" onKeyDown={handleKeyDown} name="selfCare" className="btn btn-sm w-full max-w-[80px] hover:cursor-text" value={editingItem.selfCare} onChange={handleChange} /></td>
+                  <td><input type="text" pattern="^[B_]{1}[S_]{1}[F_]{1}$" title="Only B, S, F or _ in respective positions. Example: BSF, B_F, _SF" onKeyDown={handleKeyDown} name="selfcare" className="btn btn-sm w-full max-w-[80px] hover:cursor-text" value={editingItem.selfcare} onChange={handleChange} /></td>
                   <td>
                     <div className="dropdown dropdown-bottom dropdown-center">
                       <div tabIndex={0} role="button" className="btn btn-sm m-1 w-[100px] text-center">
@@ -236,20 +224,20 @@ function HabitTableEntry() {
                   </td>
                 </tr>
               ) : (
-                <tr key={item.day}>
+                <tr key={item.date}>
                   <td className="text-sm">{formatDate(item.date)}</td>
                   <td className="text-sm truncate">{item.burned} Kcal</td>
                   <td className="text-sm truncate">{item.water} Ltr</td>
                   <td className="text-sm truncate">{item.sleep} Hrs</td>
                   <td className="text-sm truncate">{item.read} Hrs</td>
                   <td className="text-sm truncate">{item.intake} Kcal</td>
-                  <td className="text-sm truncate">{item.selfCare}</td>
+                  <td className="text-sm truncate">{item.selfcare}</td>
                   <td className="text-sm truncate">{item.mood}</td>
                   <td><progress className={`progress w-20 ${getProgressColorClass(calculateProgress(item))}`} value={calculateProgress(item)} max="100"></progress></td>
                   <td className="text-center w-[120px]">
                     <div className="flex justify-center gap-2">
                       <button className="btn btn-square btn-info btn-sm" onClick={() => handleEdit(item)}><Pencil /></button>
-                      <button className="btn btn-square btn-error btn-sm" onClick={() => handleDelete(item.day)}><Trash /></button>
+                      <button className="btn btn-square btn-error btn-sm" onClick={() => handleDelete(item.date)}><Trash /></button>
                     </div>
                   </td>
                 </tr>
@@ -282,7 +270,13 @@ function HabitTableEntry() {
           Next
         </button>
       </div>
-
+      <AddHabitPopUp
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onAdd={handleAdd}
+        progress={calculateProgress}
+        progresscolor={getProgressColorClass}
+      />
     </div>
   );
 }

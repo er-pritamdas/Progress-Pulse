@@ -25,6 +25,7 @@ export const AuthProvider = ({ children }) => {
     }
 
     try {
+      setLoading(true)
       const res = await axiosInstance.get("/v1/dashboard");
       const username = res.data.data.username;
 
@@ -37,6 +38,7 @@ export const AuthProvider = ({ children }) => {
       }, 5000);
 
       setvalidToken(true);
+      setLoading(true)
     } catch (err) {
       console.log("JWT validation failed:", err?.response?.data?.message);
     } finally {
