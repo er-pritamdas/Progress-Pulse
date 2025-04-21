@@ -20,9 +20,6 @@ const verifyToken = asyncHandler(
           req.user = userExist
           console.log(req.user)
           next();
-          return res.status(200).json(
-              new ApiResponse(200, {username}, "token Verified")
-          ) 
         } catch (error) {
           throw new ApiError(401, error.message);
         }

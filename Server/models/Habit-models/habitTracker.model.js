@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 import dotenv from "dotenv";
-import RegisteredUsers from "../User-models/registeredUser.model";
+import RegisteredUsers from "../User-models/registeredUser.model.js";
 dotenv.config({
   path: "./.env",
 });
@@ -16,37 +16,62 @@ const dailyHabitSchema = new mongoose.Schema(
       required: true,
     },
 
-    day:{
-      type: Number,
-      required: true,
-    },
-
     date: { 
         type: String, 
-        required: true 
+        required: true,
+        trim: true,
+        match: /^\d{4}-\d{2}-\d{2}$/
     }, // Format: YYYY-MM-DD
 
     habits: {
       burned: {
         type: Number,
+        default: 0,
+        min: 0,
+        max: 10000,
+        trim: true,
       },
       water: {
         type: Number,
+        default: 0,
+        min: 0,
+        max: 10000,
+        trim: true,
       },
       sleep: {
         type: Number,
+        default: 0,
+        min: 0,
+        max: 10000,
+        trim: true,
       },
       read: {
         type: Number,
+        default: 0,
+        min: 0,
+        max: 10000,
+        trim: true,
       },
       intake: {
         type: Number,
+        default: 0,
+        min: 0,
+        max: 10000,
+        trim: true,
       },
       selfcare: {
         type: String,
+        default: 0,
+        min: 0,
+        max: 10000,
+        trim: true,
       },
       mood: {
         type: String,
+        default: 0,
+        min: 0,
+        max: 10000,
+        trim: true,
       },
     },
 
@@ -56,6 +81,7 @@ const dailyHabitSchema = new mongoose.Schema(
       min:0,
       max:100,
       default:0,
+      trim: true,
     },
 
     status: {
@@ -86,6 +112,8 @@ const dailyHabitSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+dailyHabitSchema.index({ userId: 1, date: 1 }, { unique: true });
 
 const HabitTracker = HabitDB.model("habittracker", dailyHabitSchema);
 
