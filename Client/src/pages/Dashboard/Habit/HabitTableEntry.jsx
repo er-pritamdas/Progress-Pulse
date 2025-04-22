@@ -4,23 +4,25 @@ import Trash from '../../../utils/Icons/trash';
 import Pencil from '../../../utils/Icons/Pencil';
 import Save from '../../../utils/Icons/Save';
 import Cancel from '../../../utils/Icons/Cancel';
+import ErrorAlert from '../../../utils/Alerts/ErrorAlert';
+import SuccessAlert from '../../../utils/Alerts/SuccessAlert'
 
 
 function HabitTableEntry() {
 
   // Data
   const mockData = [
-    {date: '2025-04-01', burned: '100', water: '4', sleep: '5', read: '60', intake: '1850', selfcare: 'BNF', mood: 'Productive', progress: '100' },
-    {date: '2025-04-02', burned: '100', water: '4', sleep: '5', read: '60', intake: '1850', selfcare: 'BNF', mood: 'Productive', progress: '100' },
-    {date: '2025-04-03', burned: '100', water: '4', sleep: '5', read: '60', intake: '1850', selfcare: 'BNF', mood: 'Productive', progress: '100' },
-    {date: '2025-04-04', burned: '100', water: '4', sleep: '5', read: '60', intake: '1850', selfcare: 'BNF', mood: 'Productive', progress: '100' },
-    {date: '2025-04-05', burned: '100', water: '4', sleep: '5', read: '60', intake: '1850', selfcare: 'BNF', mood: 'Productive', progress: '100' },
-    {date: '2025-04-06', burned: '100', water: '4', sleep: '5', read: '60', intake: '1850', selfcare: 'BNF', mood: 'Productive', progress: '100' },
-    {date: '2025-04-07', burned: '100', water: '4', sleep: '5', read: '60', intake: '1850', selfcare: 'BNF', mood: 'Productive', progress: '100' },
+    { date: '2025-04-21', burned: '100', water: '4', sleep: '5', read: '60', intake: '1850', selfcare: 'BNF', mood: 'Productive', progress: '100' },
+    { date: '2025-04-22', burned: '100', water: '4', sleep: '5', read: '60', intake: '1850', selfcare: 'BNF', mood: 'Productive', progress: '100' },
+    { date: '2025-04-23', burned: '100', water: '4', sleep: '5', read: '60', intake: '1850', selfcare: 'BNF', mood: 'Productive', progress: '100' },
+    { date: '2025-04-24', burned: '100', water: '4', sleep: '5', read: '60', intake: '1850', selfcare: 'BNF', mood: 'Productive', progress: '100' },
+    { date: '2025-04-25', burned: '100', water: '4', sleep: '5', read: '60', intake: '1850', selfcare: 'BNF', mood: 'Productive', progress: '100' },
+    { date: '2025-04-26', burned: '100', water: '4', sleep: '5', read: '60', intake: '1850', selfcare: 'BNF', mood: 'Productive', progress: '100' },
+    { date: '2025-04-27', burned: '100', water: '4', sleep: '5', read: '60', intake: '1850', selfcare: 'BNF', mood: 'Productive', progress: '100' },
   ];
 
   // variables 
-  const sortedData = mockData.sort((a, b) => b.date - a.date);
+  const sortedData = mockData.sort((a, b) => new Date(b.date) - new Date(a.date));
   const ITEMS_PER_PAGE = 7;
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [data, setData] = useState(sortedData);
@@ -31,10 +33,16 @@ function HabitTableEntry() {
     currentPage * ITEMS_PER_PAGE
   );
   const totalPages = Math.ceil(data.length / ITEMS_PER_PAGE);
-
-
+  //Error Alert Variables
+  const [showErrorAlert, setShowErrorAlert] = useState(false);
+  const [alertErrorMessage, setAlertErrorMessage] = useState("");
+  // Success Alert Variables
+  const [showSuccessAlert, setShowSuccessAlert] = useState(false);
+  const [alertSuccessMessage, setalertSuccessMessage] = useState("");
+  
+  
   // -------------------------------------------------------------------- Functions ---------------------------------------------------------------
-
+  
   // Format Date Function
   const formatDate = (dateString) => {
     const date = new Date(dateString);
@@ -111,20 +119,40 @@ function HabitTableEntry() {
 
   // Add Data Function
   const handleAdd = (newItem) => {
-    setData([newItem, ...data]);
+    const newData = [newItem, ...data];
+    const sortedNewData = newData.sort((a, b) => new Date(b.date) - new Date(a.date))
+    setData(sortedNewData)
     setCurrentPage(1);
+    setalertSuccessMessage("Habit logged successfully");
+    setShowSuccessAlert(true);
+    setTimeout(() => setShowSuccessAlert(false), 4000);
   };
 
+  const handleAddEntryClick = () => {
+    const today = new Date().toISOString().split('T')[0]; // 'YYYY-MM-DD'
+    const exists = data.some(entry => entry.date === today);
 
+    if (exists) {
+      setAlertErrorMessage(`Entry for ${formatDate(today)} already exists!`);
+      setShowErrorAlert(true);
+      setTimeout(() => setShowErrorAlert(false), 4000);
+    } else {
+      setIsModalOpen(true);
+    }
+  };
 
   // -------------------------------------------------------- Habit Table HTML Data -----------------------------------------------------------
   return (
     <div className="p-1">
 
+      {/* // Alerts Messages */}
+      {showErrorAlert && <ErrorAlert message={alertErrorMessage} top={20} />}
+      {showSuccessAlert && <SuccessAlert message={alertSuccessMessage} top={20} />}
+
       {/* Heading and Add Button */}
       <div className="flex justify-between mb-4">
         <h1 className="text-2xl font-bold">Habit Tracker Table Entry</h1>
-        <button className="btn btn-primary" onClick={() => setIsModalOpen(true)}>+ Add Entry</button>
+        <button className="btn btn-primary" onClick={handleAddEntryClick}>+ Add Entry</button>
       </div>
 
       {/* Table */}
