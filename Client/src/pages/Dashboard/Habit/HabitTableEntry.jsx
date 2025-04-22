@@ -5,24 +5,28 @@ import Pencil from '../../../utils/Icons/Pencil';
 import Save from '../../../utils/Icons/Save';
 import Cancel from '../../../utils/Icons/Cancel';
 import ErrorAlert from '../../../utils/Alerts/ErrorAlert';
-import SuccessAlert from '../../../utils/Alerts/SuccessAlert'
+import SuccessAlert from '../../../utils/Alerts/SuccessAlert';
+import axiosInstance from '../../../Context/AxiosInstance';
+import { useLoading } from '../../../Context/LoadingContext';
+
 
 
 function HabitTableEntry() {
 
   // Data
   const mockData = [
-    { date: '2025-04-20', burned: '100', water: '4', sleep: '5', read: '60', intake: '1850', selfcare: 'BNF', mood: 'Productive', progress: '100' },
-    { date: '2025-04-21', burned: '100', water: '4', sleep: '5', read: '60', intake: '1850', selfcare: 'BNF', mood: 'Productive', progress: '100' },
-    { date: '2025-04-22', burned: '100', water: '4', sleep: '5', read: '60', intake: '1850', selfcare: 'BNF', mood: 'Productive', progress: '100' },
-    { date: '2025-04-23', burned: '100', water: '4', sleep: '5', read: '60', intake: '1850', selfcare: 'BNF', mood: 'Productive', progress: '100' },
-    { date: '2025-04-24', burned: '100', water: '4', sleep: '5', read: '60', intake: '1850', selfcare: 'BNF', mood: 'Productive', progress: '100' },
-    { date: '2025-04-25', burned: '100', water: '4', sleep: '5', read: '60', intake: '1850', selfcare: 'BNF', mood: 'Productive', progress: '100' },
-    { date: '2025-04-26', burned: '100', water: '4', sleep: '5', read: '60', intake: '1850', selfcare: 'BNF', mood: 'Productive', progress: '100' },
+  // { date: '2025-04-20', burned: '100', water: '4', sleep: '5', read: '60', intake: '1850', selfcare: 'BNF', mood: 'Productive', progress: '100' },
+  // { date: '2025-04-21', burned: '100', water: '4', sleep: '5', read: '60', intake: '1850', selfcare: 'BNF', mood: 'Productive', progress: '100' },
+  // { date: '2025-04-22', burned: '100', water: '4', sleep: '5', read: '60', intake: '1850', selfcare: 'BNF', mood: 'Productive', progress: '100' },
+  // { date: '2025-04-23', burned: '100', water: '4', sleep: '5', read: '60', intake: '1850', selfcare: 'BNF', mood: 'Productive', progress: '100' },
+  // { date: '2025-04-24', burned: '100', water: '4', sleep: '5', read: '60', intake: '1850', selfcare: 'BNF', mood: 'Productive', progress: '100' },
+  // { date: '2025-04-25', burned: '100', water: '4', sleep: '5', read: '60', intake: '1850', selfcare: 'BNF', mood: 'Productive', progress: '100' },
+  // { date: '2025-04-26', burned: '100', water: '4', sleep: '5', read: '60', intake: '1850', selfcare: 'BNF', mood: 'Productive', progress: '100' },
   ];
 
   // variables 
   const ITEMS_PER_PAGE = 7;
+  const { setLoading } = useLoading();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [data, setData] = useState(() =>
     [...mockData].sort((a, b) => new Date(b.date) - new Date(a.date))
@@ -43,6 +47,34 @@ function HabitTableEntry() {
 
 
   // -------------------------------------------------------------------- Functions ---------------------------------------------------------------
+
+  const fetchHabits = async () => {
+    try {
+      setLoading(true);
+      const response = await axiosInstance.get("/v1/dashboard/habit/table-entry", {
+        params: {
+          page: currentPage,
+          limit: ITEMS_PER_PAGE,
+        }
+      });
+      const habits = response.data.data || [];
+
+      const sortedHabits = habits.sort((a, b) => new Date(b.date) - new Date(a.date));
+      setData(sortedHabits);
+    } catch (err) {
+      const errorMessage = err.response?.data?.message || "Failed to fetch habit data";
+      setAlertErrorMessage(errorMessage);
+      setShowErrorAlert(true);
+      setTimeout(() => setShowErrorAlert(false), 4000);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchHabits();
+  }, []);
+
 
   // Format Date Function
   const formatDate = (dateString) => {
@@ -119,15 +151,37 @@ function HabitTableEntry() {
   };
 
   // Add Data Function
-  const handleAdd = (newItem) => {
-    const sortedNewData = [...data, newItem].sort((a, b) => new Date(b.date) - new Date(a.date));
-    setData(sortedNewData)
-    setCurrentPage(1);
-    setalertSuccessMessage("Habit logged successfully");
-    setShowSuccessAlert(true);
-    setTimeout(() => setShowSuccessAlert(false), 4000);
+  const handleAdd = async (newItem) => {
+    // Check if the date already exists
+    try{
+      setLoading(true)
+      const dateExists = data.some(entry => entry.date === newItem.date);
+
+      if (dateExists) {
+        setAlertErrorMessage("Entry for this date already exists");
+        setShowErrorAlert(true);
+        setTimeout(() => setShowErrorAlert(false), 4000);
+        return;
+      }
+      const sortedNewData = [...data, newItem].sort((a, b) => new Date(b.date) - new Date(a.date)); 
+      const response = await axiosInstance.post("/v1/dashboard/habit/table-entry", {...newItem, currentPage})
+      setData(sortedNewData);
+      setalertSuccessMessage("Habit logged successfully");
+      setShowSuccessAlert(true);
+      setTimeout(() => setShowSuccessAlert(false), 4000);
+    }catch(err){
+      setLoading(false)
+      const errorMessage = err.response?.data?.message || "Something went Wrong";
+      setAlertErrorMessage(errorMessage);
+      setShowErrorAlert(true);
+      setTimeout(() => setShowErrorAlert(false), 4000);
+    }finally{
+      fetchHabits();
+      setLoading(false)
+    }
   };
 
+  // Open Entry Popup
   const handleAddEntryClick = () => {
     setIsModalOpen(true);
   };
@@ -168,66 +222,83 @@ function HabitTableEntry() {
 
           {/* Table Body */}
           <tbody>
-            {paginatedData.map(item => (
-              editingItem?.date === item.date ? (
-                <tr key={item.date}>
-                  <td className="text-sm">{formatDate(item.date)}</td>
-                  <td><input type="number" min="0" max="10000" onKeyDown={handleKeyDown} name="burned" className="btn btn-sm w-full max-w-[80px] hover:cursor-text" value={editingItem.burned} onChange={handleChange} /></td>
-                  <td><input type="number" min="0" max="10" step="0.1" onKeyDown={handleKeyDown} name="water" className="btn btn-sm w-full max-w-[80px] hover:cursor-text" value={editingItem.water} onChange={handleChange} /></td>
-                  <td><input type="number" min="0" max="10" onKeyDown={handleKeyDown} name="sleep" className="btn btn-sm w-full max-w-[80px] hover:cursor-text" value={editingItem.sleep} onChange={handleChange} /></td>
-                  <td><input type="number" min="0" max="24" onKeyDown={handleKeyDown} name="read" className="btn btn-sm w-full max-w-[80px] hover:cursor-text" value={editingItem.read} onChange={handleChange} /></td>
-                  <td><input type="number" min="0" max="100000" onKeyDown={handleKeyDown} name="intake" className="btn btn-sm w-full max-w-[80px] hover:cursor-text" value={editingItem.intake} onChange={handleChange} /></td>
-                  <td><input type="text" pattern="^[B_]{1}[S_]{1}[F_]{1}$" title="Only B, S, F or _ in respective positions. Example: BSF, B_F, _SF" onKeyDown={handleKeyDown} name="selfcare" className="btn btn-sm w-full max-w-[80px] hover:cursor-text" value={editingItem.selfcare} onChange={handleChange} /></td>
-                  <td>
-                    <div className="dropdown dropdown-bottom dropdown-center">
-                      <div tabIndex={0} role="button" className="btn btn-sm m-1 w-[100px] text-center">
-                        {editingItem.mood || 'Select ⬇️'}
-                      </div>
-                      <ul
-                        tabIndex={0}
-                        className="dropdown-content menu bg-base-200 rounded-box z-[1] w-30 p-2 shadow-sm"
-                      >
-                        {['Amazing', 'Good', 'Average', 'Sad', 'Depressed', 'Productive'].map((mood) => (
-                          <li key={mood}>
-                            <a
-                              onClick={() => handleChange({ target: { name: 'mood', value: mood } })}
-                              className={editingItem.mood === mood ? 'font-bold text-primary' : ''}
-                            >
-                              {mood}
-                            </a>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  </td>
-                  <td><progress className={`progress w-20 ${getProgressColorClass(calculateProgress(editingItem))}`} value={calculateProgress(editingItem)} max="100"></progress></td>
-                  <td className="text-center w-[120px]">
-                    <div className="flex justify-center gap-2">
-                      <button className="btn btn-square btn-success btn-sm" onClick={handleSave}><Save /></button>
-                      <button className="btn btn-square btn-warning btn-sm" onClick={() => setEditingItem(null)}><Cancel /></button>
+            {
+              paginatedData.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan="10"
+                    className="h-[60vh] text-center text-gray-400 align-middle"
+                  >
+                    <div className="flex justify-center items-center h-full">
+                      <p className="text-lg">
+                        No habit entries found. Click <strong className="text-blue-500">+ Add Entry</strong> to get started!
+                      </p>
                     </div>
                   </td>
                 </tr>
               ) : (
-                <tr key={item.date}>
-                  <td className="text-sm">{formatDate(item.date)}</td>
-                  <td className="text-sm truncate">{item.burned} Kcal</td>
-                  <td className="text-sm truncate">{item.water} Ltr</td>
-                  <td className="text-sm truncate">{item.sleep} Hrs</td>
-                  <td className="text-sm truncate">{item.read} Hrs</td>
-                  <td className="text-sm truncate">{item.intake} Kcal</td>
-                  <td className="text-sm truncate">{item.selfcare}</td>
-                  <td className="text-sm truncate">{item.mood}</td>
-                  <td><progress className={`progress w-20 ${getProgressColorClass(calculateProgress(item))}`} value={calculateProgress(item)} max="100"></progress></td>
-                  <td className="text-center w-[120px]">
-                    <div className="flex justify-center gap-2">
-                      <button className="btn btn-square btn-info btn-sm" onClick={() => handleEdit(item)}><Pencil /></button>
-                      <button className="btn btn-square btn-error btn-sm" onClick={() => handleDelete(item.date)}><Trash /></button>
-                    </div>
-                  </td>
-                </tr>
-              )
-            ))}
+                paginatedData.map(item => (
+                  editingItem?.date === item.date ? (
+                    <tr key={item.date}>
+                      <td className="text-sm">{formatDate(item.date)}</td>
+                      <td><input type="number" min="0" max="10000" onKeyDown={handleKeyDown} name="burned" className="btn btn-sm w-full max-w-[80px] hover:cursor-text" value={editingItem.burned} onChange={handleChange} /></td>
+                      <td><input type="number" min="0" max="10" step="0.1" onKeyDown={handleKeyDown} name="water" className="btn btn-sm w-full max-w-[80px] hover:cursor-text" value={editingItem.water} onChange={handleChange} /></td>
+                      <td><input type="number" min="0" max="10" onKeyDown={handleKeyDown} name="sleep" className="btn btn-sm w-full max-w-[80px] hover:cursor-text" value={editingItem.sleep} onChange={handleChange} /></td>
+                      <td><input type="number" min="0" max="24" onKeyDown={handleKeyDown} name="read" className="btn btn-sm w-full max-w-[80px] hover:cursor-text" value={editingItem.read} onChange={handleChange} /></td>
+                      <td><input type="number" min="0" max="100000" onKeyDown={handleKeyDown} name="intake" className="btn btn-sm w-full max-w-[80px] hover:cursor-text" value={editingItem.intake} onChange={handleChange} /></td>
+                      <td><input type="text" pattern="^[B_]{1}[S_]{1}[F_]{1}$" title="Only B, S, F or _ in respective positions. Example: BSF, B_F, _SF" onKeyDown={handleKeyDown} name="selfcare" className="btn btn-sm w-full max-w-[80px] hover:cursor-text" value={editingItem.selfcare} onChange={handleChange} /></td>
+                      <td>
+                        <div className="dropdown dropdown-bottom dropdown-center">
+                          <div tabIndex={0} role="button" className="btn btn-sm m-1 w-[100px] text-center">
+                            {editingItem.mood || 'Select ⬇️'}
+                          </div>
+                          <ul
+                            tabIndex={0}
+                            className="dropdown-content menu bg-base-200 rounded-box z-[1] w-30 p-2 shadow-sm"
+                          >
+                            {['Amazing', 'Good', 'Average', 'Sad', 'Depressed', 'Productive'].map((mood) => (
+                              <li key={mood}>
+                                <a
+                                  onClick={() => handleChange({ target: { name: 'mood', value: mood } })}
+                                  className={editingItem.mood === mood ? 'font-bold text-primary' : ''}
+                                >
+                                  {mood}
+                                </a>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      </td>
+                      <td><progress className={`progress w-20 ${getProgressColorClass(calculateProgress(editingItem))}`} value={calculateProgress(editingItem)} max="100"></progress></td>
+                      <td className="text-center w-[120px]">
+                        <div className="flex justify-center gap-2">
+                          <button className="btn btn-square btn-success btn-sm" onClick={handleSave}><Save /></button>
+                          <button className="btn btn-square btn-warning btn-sm" onClick={() => setEditingItem(null)}><Cancel /></button>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : (
+                    <tr key={item.date}>
+                      <td className="text-sm">{formatDate(item.date)}</td>
+                      <td className="text-sm truncate">{item.burned} Kcal</td>
+                      <td className="text-sm truncate">{item.water} Ltr</td>
+                      <td className="text-sm truncate">{item.sleep} Hrs</td>
+                      <td className="text-sm truncate">{item.read} Hrs</td>
+                      <td className="text-sm truncate">{item.intake} Kcal</td>
+                      <td className="text-sm truncate">{item.selfcare}</td>
+                      <td className="text-sm truncate">{item.mood}</td>
+                      <td><progress className={`progress w-20 ${getProgressColorClass(calculateProgress(item))}`} value={calculateProgress(item)} max="100"></progress></td>
+                      <td className="text-center w-[120px]">
+                        <div className="flex justify-center gap-2">
+                          <button className="btn btn-square btn-info btn-sm" onClick={() => handleEdit(item)}><Pencil /></button>
+                          <button className="btn btn-square btn-error btn-sm" onClick={() => handleDelete(item.date)}><Trash /></button>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                )))
+
+            }
           </tbody>
         </table>
       </div>

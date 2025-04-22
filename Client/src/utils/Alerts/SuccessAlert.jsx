@@ -1,6 +1,6 @@
 import React from 'react'
 
-function ErrorAlert({message, top=5}) {
+function SuccessAlert({message, top=5}) {
     return (
         <div role="alert" className={`alert alert-success absolute top-${top} right-5`}>
             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 shrink-0 stroke-current" fill="none" viewBox="0 0 24 24">
@@ -11,4 +11,4 @@ function ErrorAlert({message, top=5}) {
     )
 }
 
-export default ErrorAlert
+export default SuccessAlert
