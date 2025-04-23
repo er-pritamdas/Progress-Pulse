@@ -16,11 +16,11 @@ const dailyHabitSchema = new mongoose.Schema(
       required: true,
     },
 
-    date: { 
-        type: String, 
-        required: true,
-        trim: true,
-        match: /^\d{4}-\d{2}-\d{2}$/
+    date: {
+      type: String,
+      required: true,
+      trim: true,
+      match: /^\d{4}-\d{2}-\d{2}$/
     }, // Format: YYYY-MM-DD
 
     habits: {
@@ -75,12 +75,12 @@ const dailyHabitSchema = new mongoose.Schema(
       },
     },
 
-    progress:{
+    progress: {
       type: Number,
       required: true,
-      min:0,
-      max:100,
-      default:0,
+      min: 0,
+      max: 100,
+      default: 0,
       trim: true,
     },
 

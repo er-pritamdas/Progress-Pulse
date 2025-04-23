@@ -67,6 +67,7 @@ const newHabitTableEntry = asynchandler(async (req, res, next) => {
   } = req.body;
 
   const user = req.user;
+  console.log(user._id)
 
   if (!user || !user._id) {
     return res.status(401).json({ message: "Unauthorized: user not found." });
