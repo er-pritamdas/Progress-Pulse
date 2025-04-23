@@ -22,14 +22,3 @@ class ApiError extends Error {
 }
 
 export {ApiError}
-
-
-
-// error : timestamp : [   error stack
-//                                       ]
-// info : timestamp : "Mesage"
-// warning: timestamp : "Warning Message"
-//
-//
-//
-//

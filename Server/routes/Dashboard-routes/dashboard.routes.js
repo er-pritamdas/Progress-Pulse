@@ -1,10 +1,12 @@
 import { Router} from "express";
-import jwtAuthorization  from "../../middlewares/JwtAuthorization.middleware.js";
+import {verifyToken}  from "../../middlewares/JwtAuthorization.middleware.js";
+import { autoLogin } from "../../middlewares/JwtAuthorization.middleware.js";
 
 
 const router = Router()
 
-router.route("/").get(jwtAuthorization)
+router.route("/auto-login").get(autoLogin)
+router.route("/").get(verifyToken)
 
 
 

@@ -8,12 +8,12 @@ const fetchHabitTableData = asynchandler(async (req, res, next) => {
   const user = req.user;
 
   if (!user) {
-    return res.status(401).json({ message: "Username Required" });
+    throw new ApiError(401,"Username Required")
   }
 
   // Get pagination params from query
   const page = parseInt(req.query.page) || 1;
-  const limit = parseInt(req.query.limit) || 10;
+  const limit = parseInt(req.query.limit) || 7;
   const skip = (page - 1) * limit;
 
   // Count total entries for this user
@@ -64,7 +64,6 @@ const newHabitTableEntry = asynchandler(async (req, res, next) => {
     selfcare,
     mood,
     progress,
-    currentPage
   } = req.body;
 
   const user = req.user;
@@ -110,4 +109,17 @@ const newHabitTableEntry = asynchandler(async (req, res, next) => {
   }
 });
 
-export { fetchHabitTableData, newHabitTableEntry };
+
+const deleteHabitTableEntry = asynchandler(
+  async(req, res, next) =>{
+
+  }
+);
+
+const editHabitTableEntry = asynchandler(
+  async(req, res, next) =>{
+
+  }
+);
+
+export { fetchHabitTableData, newHabitTableEntry, deleteHabitTableEntry,  editHabitTableEntry};

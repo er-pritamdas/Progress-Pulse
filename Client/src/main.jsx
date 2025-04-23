@@ -1,3 +1,4 @@
+
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { Route, RouterProvider, createBrowserRouter, createRoutesFromElements } from 'react-router-dom'
@@ -14,15 +15,18 @@ import Login from './pages/Authentication/Login.jsx'
 import Signup from './pages/Authentication/Signup.jsx'
 import Otp from './pages/Authentication/Otp.jsx'
 import Dashboard from './pages/Dashboard/Dashboard.jsx'
+
 // Habit Pages
 import Habit from './pages/Dashboard/Habit/Habit.jsx'
 import HabitTableEntry from './pages/Dashboard/Habit/HabitTableEntry.jsx'
 import HabitDashboard from './pages/Dashboard/Habit/HabitDashboard.jsx'
 import HabitTableView from './pages/Dashboard/Habit/HabitTableView.jsx'
+
 // Expense Pages
 import ExpTableEntry from './pages/Dashboard/Expense/ExpTableEntry.jsx'
 import ExpDashboard from './pages/Dashboard/Expense/ExpDashboard.jsx'
 import ExpTableView from './pages/Dashboard/Expense/ExpTableView.jsx'
+
 // Investment Pages
 import InvTableEntry from './pages/Dashboard/Investment/InvTableEntry.jsx'
 import InvDashboard from './pages/Dashboard/Investment/InvDashboard.jsx'

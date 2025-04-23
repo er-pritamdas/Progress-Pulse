@@ -107,6 +107,7 @@ const AddHabitPopUp = ({ isOpen, onClose, onAdd, progress, progresscolor }) => {
               className="input input-bordered w-full"
               value={formData.water}
               onChange={handleChange}
+              required
             />
           </div>
 

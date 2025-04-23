@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import AddHabitPopUp from '../../../components/Dashboard/Habit/AddHabitPopUp';
-import Trash from '../../../utils/Icons/trash';
+import Trash from '../../../utils/Icons/Trash';
 import Pencil from '../../../utils/Icons/Pencil';
 import Save from '../../../utils/Icons/Save';
 import Cancel from '../../../utils/Icons/Cancel';
@@ -44,11 +44,11 @@ function HabitTableEntry() {
   // Success Alert Variables
   const [showSuccessAlert, setShowSuccessAlert] = useState(false);
   const [alertSuccessMessage, setalertSuccessMessage] = useState("");
-
-
+  
+  
   // -------------------------------------------------------------------- Functions ---------------------------------------------------------------
-
-  const fetchHabits = async () => {
+  
+  const fetchHabits = async (currentPage) => {
     try {
       setLoading(true);
       const response = await axiosInstance.get("/v1/dashboard/habit/table-entry", {
@@ -58,7 +58,6 @@ function HabitTableEntry() {
         }
       });
       const habits = response.data.data || [];
-
       const sortedHabits = habits.sort((a, b) => new Date(b.date) - new Date(a.date));
       setData(sortedHabits);
     } catch (err) {
@@ -67,12 +66,14 @@ function HabitTableEntry() {
       setShowErrorAlert(true);
       setTimeout(() => setShowErrorAlert(false), 4000);
     } finally {
+      totalPages = Math.ceil(response.data.totalEntries / ITEMS_PER_PAGE) 
+      console.log(totalPages)
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchHabits();
+    fetchHabits(currentPage);
   }, []);
 
 
@@ -176,7 +177,7 @@ function HabitTableEntry() {
       setShowErrorAlert(true);
       setTimeout(() => setShowErrorAlert(false), 4000);
     }finally{
-      fetchHabits();
+      fetchHabits(currentPage);
       setLoading(false)
     }
   };
@@ -280,13 +281,13 @@ function HabitTableEntry() {
                   ) : (
                     <tr key={item.date}>
                       <td className="text-sm">{formatDate(item.date)}</td>
-                      <td className="text-sm truncate">{item.burned} Kcal</td>
-                      <td className="text-sm truncate">{item.water} Ltr</td>
-                      <td className="text-sm truncate">{item.sleep} Hrs</td>
-                      <td className="text-sm truncate">{item.read} Hrs</td>
-                      <td className="text-sm truncate">{item.intake} Kcal</td>
-                      <td className="text-sm truncate">{item.selfcare}</td>
-                      <td className="text-sm truncate">{item.mood}</td>
+                      <td className="text-sm truncate">{item.burned? item.burned : 0} Kcal</td>
+                      <td className="text-sm truncate">{item.water? item.water : 0} Ltr</td>
+                      <td className="text-sm truncate">{item.sleep? item.sleep : 0} Hrs</td>
+                      <td className="text-sm truncate">{item.read? item.read : 0} Hrs</td>
+                      <td className="text-sm truncate">{item.intake? item.intake : 0} Kcal</td>
+                      <td className="text-sm truncate">{item.selfcare? item.selfcare : "---"}</td>
+                      <td className="text-sm truncate">{item.mood? item.mood : "---"}</td>
                       <td><progress className={`progress w-20 ${getProgressColorClass(calculateProgress(item))}`} value={calculateProgress(item)} max="100"></progress></td>
                       <td className="text-center w-[120px]">
                         <div className="flex justify-center gap-2">
@@ -309,7 +310,10 @@ function HabitTableEntry() {
         {/* Previous Button */}
         <button
           className="btn btn-sm"
-          onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}
+          onClick={() => {
+            setCurrentPage(p => Math.max(p - 1, 1))
+            fetchHabits(currentPage);
+          }}
           disabled={currentPage === 1}
         >
           Prev
@@ -320,7 +324,10 @@ function HabitTableEntry() {
         {/* Next Button */}
         <button
           className="btn btn-sm"
-          onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))}
+          onClick={() => {
+            setCurrentPage(p => Math.min(p + 1, totalPages))
+            fetchHabits(currentPage);
+          }}
           disabled={currentPage === totalPages}
         >
           Next

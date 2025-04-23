@@ -4,7 +4,7 @@ const axiosInstance = axios.create({
   baseURL: "/api", // because Vite proxy handles /api -> http://localhost:3000
 });
 
-// 🔐 Attach access token before each request
+// Attach access token before each request
 axiosInstance.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("token");
@@ -16,13 +16,13 @@ axiosInstance.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// 🔁 Handle token expiration & retry original request
+//Handle token expiration & retry original request
 axiosInstance.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
 
-    console.log(originalRequest)
+    // console.log(originalRequest)
 
     // Check if error is due to expired access token and not already retried
     if (
@@ -33,7 +33,7 @@ axiosInstance.interceptors.response.use(
       originalRequest._retry = true;
 
       try {
-        console.log("Firing to get Refresh Token")
+        // console.log("Firing to get Refresh Token")
         // Call refresh-token API to get a new access token
         const res = await axios.post(
           "/api/v1/users/loggedin/refresh-token",
@@ -45,22 +45,22 @@ axiosInstance.interceptors.response.use(
         console.log(newAccessToken)
 
         // Store new access token
-        console.log("New Token")
+        // console.log("New Token")
         localStorage.setItem("token", newAccessToken);
 
         // Update headers for retry
-        console.log("Setting Headers")
+        // console.log("Setting Headers")
         axiosInstance.defaults.headers.common["Authorization"] = `Bearer ${newAccessToken}`;
-        console.log("settings")
+        // console.log("settings")
         originalRequest.headers["Authorization"] = `Bearer ${newAccessToken}`;
 
         // Retry original request
-        console.log("Refreshed")
+        // console.log("Refreshed")
         return axiosInstance(originalRequest);
       } catch (refreshError) {
         console.error("Refresh token expired or invalid");
-        // localStorage.removeItem("token");
-        // window.location.href = "/login"; // force logout
+        localStorage.removeItem("token");
+        window.location.href = "/login"; // force logout
       }
     }
 
