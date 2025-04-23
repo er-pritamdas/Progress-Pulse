@@ -12,20 +12,21 @@ function HabitTableEntry() {
 
   // Data
   const mockData = [
+    { date: '2025-04-20', burned: '100', water: '4', sleep: '5', read: '60', intake: '1850', selfcare: 'BNF', mood: 'Productive', progress: '100' },
     { date: '2025-04-21', burned: '100', water: '4', sleep: '5', read: '60', intake: '1850', selfcare: 'BNF', mood: 'Productive', progress: '100' },
     { date: '2025-04-22', burned: '100', water: '4', sleep: '5', read: '60', intake: '1850', selfcare: 'BNF', mood: 'Productive', progress: '100' },
     { date: '2025-04-23', burned: '100', water: '4', sleep: '5', read: '60', intake: '1850', selfcare: 'BNF', mood: 'Productive', progress: '100' },
     { date: '2025-04-24', burned: '100', water: '4', sleep: '5', read: '60', intake: '1850', selfcare: 'BNF', mood: 'Productive', progress: '100' },
     { date: '2025-04-25', burned: '100', water: '4', sleep: '5', read: '60', intake: '1850', selfcare: 'BNF', mood: 'Productive', progress: '100' },
     { date: '2025-04-26', burned: '100', water: '4', sleep: '5', read: '60', intake: '1850', selfcare: 'BNF', mood: 'Productive', progress: '100' },
-    { date: '2025-04-27', burned: '100', water: '4', sleep: '5', read: '60', intake: '1850', selfcare: 'BNF', mood: 'Productive', progress: '100' },
   ];
 
   // variables 
-  const sortedData = mockData.sort((a, b) => new Date(b.date) - new Date(a.date));
   const ITEMS_PER_PAGE = 7;
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [data, setData] = useState(sortedData);
+  const [data, setData] = useState(() =>
+    [...mockData].sort((a, b) => new Date(b.date) - new Date(a.date))
+  );
   const [currentPage, setCurrentPage] = useState(1);
   const [editingItem, setEditingItem] = useState(null);
   const paginatedData = data.slice(
@@ -39,10 +40,10 @@ function HabitTableEntry() {
   // Success Alert Variables
   const [showSuccessAlert, setShowSuccessAlert] = useState(false);
   const [alertSuccessMessage, setalertSuccessMessage] = useState("");
-  
-  
+
+
   // -------------------------------------------------------------------- Functions ---------------------------------------------------------------
-  
+
   // Format Date Function
   const formatDate = (dateString) => {
     const date = new Date(dateString);
@@ -119,8 +120,7 @@ function HabitTableEntry() {
 
   // Add Data Function
   const handleAdd = (newItem) => {
-    const newData = [newItem, ...data];
-    const sortedNewData = newData.sort((a, b) => new Date(b.date) - new Date(a.date))
+    const sortedNewData = [...data, newItem].sort((a, b) => new Date(b.date) - new Date(a.date));
     setData(sortedNewData)
     setCurrentPage(1);
     setalertSuccessMessage("Habit logged successfully");
@@ -129,16 +129,7 @@ function HabitTableEntry() {
   };
 
   const handleAddEntryClick = () => {
-    const today = new Date().toISOString().split('T')[0]; // 'YYYY-MM-DD'
-    const exists = data.some(entry => entry.date === today);
-
-    if (exists) {
-      setAlertErrorMessage(`Entry for ${formatDate(today)} already exists!`);
-      setShowErrorAlert(true);
-      setTimeout(() => setShowErrorAlert(false), 4000);
-    } else {
-      setIsModalOpen(true);
-    }
+    setIsModalOpen(true);
   };
 
   // -------------------------------------------------------- Habit Table HTML Data -----------------------------------------------------------
@@ -180,41 +171,7 @@ function HabitTableEntry() {
             {paginatedData.map(item => (
               editingItem?.date === item.date ? (
                 <tr key={item.date}>
-                  <td>
-                    <div className="dropdown dropdown-bottom">
-                      <div tabIndex={0} role="button" className="input input-bordered input-sm w-full max-w-[120px]">
-                        {editingItem.date || "Pick a date"}
-                      </div>
-                      <div className="dropdown-content z-[999] bg-base-100 rounded-box shadow-sm p-2 ">
-                        <calendar-date
-                          class="cally"
-                          onchange={(e) => {
-                            handleChange({ target: { name: "date", value: e.target.value } });
-                          }}
-                        >
-                          <svg
-                            aria-label="Previous"
-                            className="fill-current size-4"
-                            slot="previous"
-                            xmlns="http://www.w3.org/2000/svg"
-                            viewBox="0 0 24 24"
-                          >
-                            <path d="M15.75 19.5 8.25 12l7.5-7.5"></path>
-                          </svg>
-                          <svg
-                            aria-label="Next"
-                            className="fill-current size-4"
-                            slot="next"
-                            xmlns="http://www.w3.org/2000/svg"
-                            viewBox="0 0 24 24"
-                          >
-                            <path d="m8.25 4.5 7.5 7.5-7.5 7.5"></path>
-                          </svg>
-                          <calendar-month></calendar-month>
-                        </calendar-date>
-                      </div>
-                    </div>
-                  </td>
+                  <td className="text-sm">{formatDate(item.date)}</td>
                   <td><input type="number" min="0" max="10000" onKeyDown={handleKeyDown} name="burned" className="btn btn-sm w-full max-w-[80px] hover:cursor-text" value={editingItem.burned} onChange={handleChange} /></td>
                   <td><input type="number" min="0" max="10" step="0.1" onKeyDown={handleKeyDown} name="water" className="btn btn-sm w-full max-w-[80px] hover:cursor-text" value={editingItem.water} onChange={handleChange} /></td>
                   <td><input type="number" min="0" max="10" onKeyDown={handleKeyDown} name="sleep" className="btn btn-sm w-full max-w-[80px] hover:cursor-text" value={editingItem.sleep} onChange={handleChange} /></td>
