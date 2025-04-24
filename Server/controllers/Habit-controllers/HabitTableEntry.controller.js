@@ -8,7 +8,7 @@ const fetchHabitTableData = asynchandler(async (req, res, next) => {
   const user = req.user;
 
   if (!user) {
-    throw new ApiError(401,"Username Required")
+    throw new ApiError(401, "Username Required")
   }
 
   // Get pagination params from query
@@ -26,7 +26,7 @@ const fetchHabitTableData = asynchandler(async (req, res, next) => {
     .limit(limit);
 
   if (!entries || entries.length === 0) {
-    return res.status(404).json({ message: "No habit entries found" });
+    throw new ApiError(404, "No Habit Entries Found")
   }
 
   // Format data similar to the mock data format with fallback to "" for undefined values
@@ -42,16 +42,10 @@ const fetchHabitTableData = asynchandler(async (req, res, next) => {
     progress: entry.progress ? entry.progress.toString() : "",
   }));
 
-  return res.status(200).json({
-    success: true,
-    page,
-    limit,
-    totalEntries,
-    totalPages: Math.ceil(totalEntries / limit),
-    data: formattedEntries,
-  });
+  return res.status(201).json(
+    new ApiResponse(201, {page, limit, totalEntries, totalPages:Math.ceil(totalEntries / limit), formattedEntries }, "User Registered successfully")
+)
 });
-
 
 const newHabitTableEntry = asynchandler(async (req, res, next) => {
   const {
@@ -67,10 +61,9 @@ const newHabitTableEntry = asynchandler(async (req, res, next) => {
   } = req.body;
 
   const user = req.user;
-  console.log(user._id)
 
   if (!user || !user._id) {
-    return res.status(401).json({ message: "Unauthorized: user not found." });
+    throw new ApiError(401, "Unauthorized: User Not Found")
   }
 
   try {
@@ -90,37 +83,48 @@ const newHabitTableEntry = asynchandler(async (req, res, next) => {
       // score, completionRate, streak will take default values
     });
 
-    res.status(201).json({
-      message: "Habit entry created successfully!",
-      data: newHabit,
-    });
+    return res.status(201).json(
+      new ApiResponse(201, newHabit, "Habit Logged Successfully")
+    )
+    // res.status(201).json({
+    //   message: "Habit entry created successfully!",
+    //   data: newHabit,
+    // });
   } catch (err) {
     if (err.code === 11000) {
       // duplicate entry error due to unique index on userId + date
-      return res.status(400).json({
-        message: "You've already submitted a habit log for this date.",
-      });
+      throw new ApiError(400, "You've already submitted a habit log for this date.")
     }
-
-    console.error("Error creating habit entry:", err.message);
-    res.status(500).json({
-      message: "Something went wrong while creating habit entry.",
-      error: err.message,
-    });
+    throw new ApiError(500, "Something went wrong while creating habit entry.", [err.message])
   }
 });
 
+const deleteHabitTableEntry = asynchandler(async (req, res, next) => {
+    const date = req.query.date; // Expecting format: "YYYY-MM-DD"
+    const userId = req.user._id;
 
-const deleteHabitTableEntry = asynchandler(
-  async(req, res, next) =>{
+    if (!date) {
+      throw new ApiError(400, "Date query parameter is required")
+    }
 
-  }
-);
+    const deletedDoc = await HabitTracker.findOneAndDelete({
+      userId: userId,
+      date: date,
+    });
+
+    if (!deletedDoc) {
+      throw new ApiError(404, "Habit entry not found for this date")
+    }
+    return res.status(200).json(
+      new ApiResponse(200, `Habit entry for ${date} deleted successfully`)
+    )
+
+});
 
 const editHabitTableEntry = asynchandler(
-  async(req, res, next) =>{
+  async (req, res, next) => {
 
   }
 );
 
-export { fetchHabitTableData, newHabitTableEntry, deleteHabitTableEntry,  editHabitTableEntry};
+export { fetchHabitTableData, newHabitTableEntry, deleteHabitTableEntry, editHabitTableEntry };

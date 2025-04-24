@@ -44,21 +44,21 @@ function HabitTableEntry() {
         },
       });
 
-      const habits = response.data.data || [];
+      const habits = response.data.data.formattedEntries || [];
       const sortedHabits = habits.sort(
         (a, b) => new Date(b.date) - new Date(a.date)
       );
       setData(sortedHabits);
     } catch (err) {
-      const errorMessage =
-        err.response?.data?.message || "Failed to fetch habit data";
+      setData([]);
+      const errorMessage = err.response?.data?.message || "Failed to fetch habit data!";
       setAlertErrorMessage(errorMessage);
       setShowErrorAlert(true);
       setTimeout(() => setShowErrorAlert(false), 4000);
     } finally {
       // only compute totalPages if we got a response
-      if (response?.data?.totalEntries != null) {
-        setTotalPages(Math.ceil(response.data.totalEntries / ITEMS_PER_PAGE));
+      if (response?.data?.data?.totalEntries != null) {
+        setTotalPages(Math.ceil(response.data.data.totalEntries / ITEMS_PER_PAGE));
       }
       setLoading(false);
     }
@@ -126,8 +126,30 @@ function HabitTableEntry() {
   };
 
   const handleDeleteConfirm = async () => {
-    setData(data.filter((item) => item.date !== itemToDelete));
-    setIsDeleteModalOpen(false);
+    try {
+      setLoading(true)
+      const response = axiosInstance.delete("/v1/dashboard/habit/table-entry", {
+        params: {
+          date: itemToDelete,
+        }
+      })
+      setAlertErrorMessage(`Entry For ${itemToDelete} Deleted`);
+      setShowErrorAlert(true);
+      setTimeout(() => setShowErrorAlert(false), 4000);
+
+    } catch (err) {
+      const errorMessage =
+        err.response?.data?.message || "Failed to fetch habit data!";
+      setAlertErrorMessage(errorMessage);
+      setShowErrorAlert(true);
+      setTimeout(() => setShowErrorAlert(false), 4000);
+
+    } finally {
+      fetchHabits(currentPage);
+      setLoading(false)
+      setIsDeleteModalOpen(false);
+    }
+    // setData(data.filter((item) => item.date !== itemToDelete));
   }
 
   // Handle Enter Key function
@@ -165,7 +187,7 @@ function HabitTableEntry() {
       const dateExists = data.some((entry) => entry.date === newItem.date);
 
       if (dateExists) {
-        setAlertErrorMessage("Entry for this date already exists");
+        setAlertErrorMessage("Entry for this date already exists!");
         setShowErrorAlert(true);
         setTimeout(() => setShowErrorAlert(false), 4000);
         return;
@@ -178,13 +200,13 @@ function HabitTableEntry() {
         { ...newItem, currentPage }
       );
       setData(sortedNewData);
-      setalertSuccessMessage("Habit logged successfully");
+      setalertSuccessMessage(response.data.message);
       setShowSuccessAlert(true);
       setTimeout(() => setShowSuccessAlert(false), 4000);
     } catch (err) {
       setLoading(false);
       const errorMessage =
-        err.response?.data?.message || "Something went Wrong";
+        err.response?.data?.message || "Something went Wrong!";
       setAlertErrorMessage(errorMessage);
       setShowErrorAlert(true);
       setTimeout(() => setShowErrorAlert(false), 4000);
@@ -211,9 +233,14 @@ function HabitTableEntry() {
       {/* Heading and Add Button */}
       <div className="flex justify-between mb-4">
         <h1 className="text-2xl font-bold">Habit Tracker Table Entry</h1>
-        <button className="btn btn-primary" onClick={handleAddEntryClick}>
-          + Add Entry
-        </button>
+        <div className="join join-vertical lg:join-horizontal">
+          <button className="btn btn-primary join-item" onClick={handleAddEntryClick}>
+            + Add Entry
+          </button>
+          <button className="btn btn-dash join-item">
+            +
+          </button>
+        </div>
       </div>
 
       {/* Table */}
