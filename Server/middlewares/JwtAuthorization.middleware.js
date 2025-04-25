@@ -43,7 +43,6 @@ const verifyToken = asyncHandler(
       const username = decoded["username"];
       const userExist = await RegisteredUsers.findOne({ username: username })
       req.user = userExist
-      console.log(req.user)
       next();
     } catch (error) {
       throw new ApiError(401, error.message);

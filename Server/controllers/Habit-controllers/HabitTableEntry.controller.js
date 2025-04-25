@@ -4,7 +4,7 @@ import asynchandler from "../../utils/asyncHandler.js";
 import { ApiError } from "../../utils/ApiError.js";
 import { ApiResponse } from "../../utils/ApiResponse.js";
 
-const fetchHabitTableData = asynchandler(async (req, res, next) => {
+const readHabitTableData = asynchandler(async (req, res, next) => {
   const user = req.user;
 
   if (!user) {
@@ -47,7 +47,7 @@ const fetchHabitTableData = asynchandler(async (req, res, next) => {
 )
 });
 
-const newHabitTableEntry = asynchandler(async (req, res, next) => {
+const createHabitTableEntry = asynchandler(async (req, res, next) => {
   const {
     date,
     burned,
@@ -121,10 +121,49 @@ const deleteHabitTableEntry = asynchandler(async (req, res, next) => {
 
 });
 
-const editHabitTableEntry = asynchandler(
-  async (req, res, next) => {
+const updateHabitTableEntry = asynchandler(async (req, res, next) => {
+  const userId = req.user._id;
 
+  const {
+    date,
+    burned,
+    water,
+    sleep,
+    read,
+    intake,
+    selfcare,
+    mood,
+    progress,
+  } = req.body;
+
+  if (!date) {
+    throw new ApiError(400, "Date query parameter is required");
   }
-);
 
-export { fetchHabitTableData, newHabitTableEntry, deleteHabitTableEntry, editHabitTableEntry };
+  const updatedDoc = await HabitTracker.findOneAndUpdate(
+    { userId, date },
+    {
+      $set: {
+        "habits.burned": burned,
+        "habits.water": water,
+        "habits.sleep": sleep,
+        "habits.read": read,
+        "habits.intake": intake,
+        "habits.selfcare": selfcare,
+        "habits.mood": mood,
+        progress: progress,
+      },
+    },
+    { new: true } // return the updated document
+  );
+
+  if (!updatedDoc) {
+    throw new ApiError(404, "Habit entry not found for this date");
+  }
+
+  return res.status(200).json(
+    new ApiResponse(200, updatedDoc, `Habit entry for ${date} updated successfully`)
+  );
+});
+
+export { readHabitTableData, createHabitTableEntry, deleteHabitTableEntry, updateHabitTableEntry };

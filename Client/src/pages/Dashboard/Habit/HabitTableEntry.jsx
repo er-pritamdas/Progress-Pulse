@@ -9,6 +9,7 @@ import SuccessAlert from "../../../utils/Alerts/SuccessAlert";
 import axiosInstance from "../../../Context/AxiosInstance";
 import { useLoading } from "../../../Context/LoadingContext";
 import DeleteHabitPopUp from "../../../components/Dashboard/Habit/DeleteHabitPopUp";
+import Refresh from "../../../utils/Icons/Refresh";
 
 function HabitTableEntry() {
   // variables
@@ -166,11 +167,39 @@ function HabitTableEntry() {
   };
 
   // Save Data Function
-  const handleSave = () => {
-    setData((prev) =>
-      prev.map((item) => (item.date === editingItem.date ? editingItem : item))
-    );
-    setEditingItem(null);
+  const handleSave = async () => {
+    const originalItem = data.find((item) => item.date === editingItem.date);
+    console.log(originalItem)
+
+    if (JSON.stringify(originalItem) === JSON.stringify(editingItem)) {
+      setalertSuccessMessage("Already up to date!");
+      setShowSuccessAlert(true);
+      setTimeout(() => setShowSuccessAlert(false), 4000);
+      setEditingItem(null);
+      return;
+    }
+    try{
+      setLoading(true)
+      const response = await axiosInstance.put("/v1/dashboard/habit/table-entry", {...editingItem})
+      console.log(response.data.message)
+      setalertSuccessMessage(response.data.message);
+      setShowSuccessAlert(true);
+      setTimeout(() => setShowSuccessAlert(false), 4000);
+
+    }catch(err){
+      setLoading(false);
+      const errorMessage = err.response?.data?.message || "Failed To Save Entry!";
+      setAlertErrorMessage(errorMessage);
+      setShowErrorAlert(true);
+      setTimeout(() => setShowErrorAlert(false), 4000);
+    }finally{
+      fetchHabits(currentPage);
+      setLoading(false);
+      setEditingItem(null);
+    }
+    // setData((prev) =>
+    //   prev.map((item) => (item.date === editingItem.date ? editingItem : item))
+    // );
   };
 
   // On Change function
@@ -206,7 +235,7 @@ function HabitTableEntry() {
     } catch (err) {
       setLoading(false);
       const errorMessage =
-        err.response?.data?.message || "Something went Wrong!";
+        err.response?.data?.message || "Failed To Add Entry!";
       setAlertErrorMessage(errorMessage);
       setShowErrorAlert(true);
       setTimeout(() => setShowErrorAlert(false), 4000);
@@ -237,8 +266,14 @@ function HabitTableEntry() {
           <button className="btn btn-primary join-item" onClick={handleAddEntryClick}>
             + Add Entry
           </button>
-          <button className="btn btn-dash join-item">
-            +
+          <button className="btn btn-dash join-item" onClick={() => {
+            if (!data || data.length === 0) return; // Optional: skip logic if data is empty
+            fetchHabits(currentPage);
+            setalertSuccessMessage("Refreshed!");
+            setShowSuccessAlert(true);
+            setTimeout(() => setShowSuccessAlert(false), 4000);
+          }}>
+            <Refresh /> Refresh
           </button>
         </div>
       </div>
