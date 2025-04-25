@@ -137,6 +137,7 @@ function HabitTableEntry() {
       setAlertErrorMessage(`Entry For ${itemToDelete} Deleted`);
       setShowErrorAlert(true);
       setTimeout(() => setShowErrorAlert(false), 4000);
+      fetchHabits(currentPage);
 
     } catch (err) {
       const errorMessage =
@@ -146,7 +147,6 @@ function HabitTableEntry() {
       setTimeout(() => setShowErrorAlert(false), 4000);
 
     } finally {
-      fetchHabits(currentPage);
       setLoading(false)
       setIsDeleteModalOpen(false);
     }
