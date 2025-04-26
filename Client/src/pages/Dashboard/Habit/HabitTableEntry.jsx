@@ -134,9 +134,9 @@ function HabitTableEntry() {
           date: itemToDelete,
         }
       })
-      setAlertErrorMessage(`Entry For ${itemToDelete} Deleted`);
-      setShowErrorAlert(true);
-      setTimeout(() => setShowErrorAlert(false), 4000);
+      setalertSuccessMessage(`Entry For ${itemToDelete} Deleted`);
+      setShowSuccessAlert(true);
+      setTimeout(() => setShowSuccessAlert(false), 4000);
       fetchHabits(currentPage);
 
     } catch (err) {
