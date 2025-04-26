@@ -7,6 +7,7 @@ import habitTrackerRoutes from "../routes/Habit-routes/HabitTracker.routes.js";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import loggedOutUserRoutes from "../routes/User-routes/loggedOutUser.routes.js";
+import existingUserRoutes from "../routes/User-routes/existingUser.routes.js";
 // import nodemailer from "nodemailer";
 
 const app = express()
@@ -32,6 +33,8 @@ app.use("/api/v1/users/loggedin",loggedInUserRoutes)
 
 app.use("/api/v1/users/logout", loggedOutUserRoutes)
 
+
+app.use("/api/v1/users/forgot-password-verification", existingUserRoutes )
 // --------------------------- Protected Routes --------------------------
 // Dashboard Routes
 app.use("/api/v1/dashboard", dashboardRoutes)
