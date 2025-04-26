@@ -138,9 +138,9 @@ function Login() {
 
             {/*Forgot password*/}
             <p className="text-right text-sm mt-1">
-              <a href="#" className="link link-info">
+              <Link to="/forgot_Password_Verify" className="link link-info">
                 Forgot Password?
-              </a>
+              </Link>
             </p>
 
             {/*Login Button*/}

@@ -16,6 +16,8 @@ import Signup from './pages/Authentication/Signup.jsx'
 import Otp from './pages/Authentication/Otp.jsx'
 import Dashboard from './pages/Dashboard/Dashboard.jsx'
 
+import ForgotPasswordVerification from './pages/Authentication/ForgotPasswordVerification.jsx'
+import ForgotPasswordOTPverification from './pages/Authentication/ForgotPasswordOTPverification.jsx'
 // Habit Pages
 import Habit from './pages/Dashboard/Habit/Habit.jsx'
 import HabitTableEntry from './pages/Dashboard/Habit/HabitTableEntry.jsx'
@@ -40,6 +42,7 @@ import Investment from './pages/Dashboard/Investment/Investment.jsx'
 import HabitLayout from './layouts/HabitLayout.jsx'
 import ExpenseLayout from './layouts/ExpenseLayout.jsx'
 import InvestmentLayout from './layouts/InvestmentLayout.jsx'
+import ResetPassword from './pages/Authentication/ResetPassword.jsx'
 
 
 
@@ -52,6 +55,9 @@ const router = createBrowserRouter(
         <Route path='login' element={<Login />} />
         <Route path='signup' element={<Signup />} />
         <Route path='otp' element={<Otp />} />
+        <Route path='forgot_Password_Verify' element={<ForgotPasswordVerification />} />
+        <Route path='forgot_Password-otp' element={<ForgotPasswordOTPverification />} />
+        <Route path='reset-password' element={<ResetPassword />} />
       </Route>
 
       {/* Protected Routes */}

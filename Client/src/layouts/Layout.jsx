@@ -8,7 +8,7 @@ function Layout() {
   const isOtpPage = location.pathname === "/otp";
   const allowOtp = localStorage.getItem("allowOtp");
 
-  const hideNavFooter = ["/login", "/signup", "/otp"].includes(location.pathname);
+  const hideNavFooter = ["/login", "/signup", "/otp", "/forgot_Password_Verify", "/forgot_Password-otp","/reset-password"].includes(location.pathname);
 
   if (!isOtpPage){
     localStorage.setItem('allowOtp', false);
