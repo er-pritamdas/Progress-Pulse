@@ -4,26 +4,20 @@ import axios from "axios";
 import ErrorAlert from "../../utils/Alerts/ErrorAlert";
 import SuccessAlert from "../../utils/Alerts/SuccessAlert";
 import { useLoading } from "../../Context/LoadingContext";
-import { useAuth } from "../../Context/JwtAuthContext";
-import ResetPassword from "./ResetPassword";
-
 
 function ForgotPassOtp() {
-    const {setvalidToken} = useAuth();
+    const navigate = useNavigate();
+    const location = useLocation();
+
     const { setLoading } = useLoading();
-
-
     const [showErrorAlert, setShowErrorAlert] = useState(false);
     const [alertErrorMessage, setAlertErrorMessage] = useState("");
-
     const [showSuccessAlert, setShowSuccessAlert] = useState(false);
     const [alertSuccessMessage, setAlertSuccessMessage] = useState("");
     const [disableButton, setDisableButton] = useState(false);
 
 
 
-    const navigate = useNavigate();
-    const location = useLocation();
     const formData = location.state?.formData || {};
 
 
@@ -90,7 +84,7 @@ function ForgotPassOtp() {
             setTimeout(() => {
                 setLoading(false)
                 setShowSuccessAlert(false);
-                navigate("/reset-password",{ state: { formData } });
+                navigate("/reset-password", { state: { formData } });
             }, 4000);
 
         } catch (err) {

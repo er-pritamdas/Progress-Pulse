@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useState} from "react";
 import { useNavigate, Link } from "react-router-dom";
 import axios from "axios";
 import ErrorAlert from "../../utils/Alerts/ErrorAlert";
 import SuccessAlert from "../../utils/Alerts/SuccessAlert";
 import { useLoading } from "../../Context/LoadingContext";
-import { useAuth } from "../../Context/JwtAuthContext";
+
 
 function ForgotPasswordVerification() {
 

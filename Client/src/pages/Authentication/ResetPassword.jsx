@@ -2,17 +2,17 @@ import React, { useState } from "react";
 import axios from "axios";
 import ErrorAlert from "../../utils/Alerts/ErrorAlert";
 import SuccessAlert from "../../utils/Alerts/SuccessAlert";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useLocation } from "react-router-dom";
 import { useLoading } from "../../Context/LoadingContext";
 
 
 
 function ResetPassword() {
-
+  const location = useLocation();
+  const navigate = useNavigate();
   const { setLoading } = useLoading();
 
   // Variables
-  const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -53,7 +53,7 @@ function ResetPassword() {
 
       setLoading(true)
       setDisableButton(true);
-      const response = await axios.post("/api/v1/users/forgot-password-verification/reset-password", {...formData,password});
+      const response = await axios.post("/api/v1/users/forgot-password-verification/reset-password", { ...formData, password });
       // Success Alert Popup
       setalertSuccessMessage("Password updated successfully!");
       setShowSuccessAlert(true);

@@ -1,6 +1,6 @@
 import asynchandler from "../../utils/asyncHandler.js";
 import RegisteredUsers from "../../models/User-models/registeredUser.model.js";
-import {ApiError} from  "../../utils/ApiError.js";
+import { ApiError } from "../../utils/ApiError.js";
 import { ApiResponse } from "../../utils/ApiResponse.js";
 import bcrypt from "bcryptjs";
 
@@ -8,14 +8,14 @@ import bcrypt from "bcryptjs";
 
 
 const isUserExist = asynchandler(
-    async (req,res,next) => {
-        const {email} = req.body
-        if(!email){
+    async (req, res, next) => {
+        const { email } = req.body
+        if (!email) {
             throw new ApiError(400, "Email is required")
         }
-        const userExist = await RegisteredUsers.findOne({email: email})
-        if(!userExist){
-            throw new ApiError(404, "User Not Found")  
+        const userExist = await RegisteredUsers.findOne({ email: email })
+        if (!userExist) {
+            throw new ApiError(404, "User Not Found")
         }
         req.user = userExist
         next()
@@ -23,28 +23,28 @@ const isUserExist = asynchandler(
 )
 
 const updateUserPassword = asynchandler(async (req, res) => {
-    const { email,password} = req.body;
+    const { email, password } = req.body;
     console.log(req.body);
 
     if (!email) {
-            throw new ApiError(400, "Email requied");
-        }
+        throw new ApiError(400, "Email requied");
+    }
 
     const encryptedPassword = await bcrypt.hash(password, 10);
 
-    const updatedUser = await RegisteredUsers.findByIdAndUpdate(
-        {email,
-        passwordHash: encryptedPassword,
-        new: true, 
-    }
+    const updatedUser = await RegisteredUsers.findOneAndUpdate(
+        { email },
+        {
+            $set: {
+                passwordHash: encryptedPassword,
+            }
+        },
+        { new: true }
     );
 
     if (!updatedUser) {
         throw new ApiError(404, "User not found");
     }
-
-    // Clear the session after successful reset
-    req.session.userIdForReset = null;
 
     return res.status(200).json(
         new ApiResponse(200, updatedUser, "Password reset successfully")
@@ -53,4 +53,4 @@ const updateUserPassword = asynchandler(async (req, res) => {
 
 
 
-export {isUserExist , updateUserPassword}
+export { isUserExist, updateUserPassword }
