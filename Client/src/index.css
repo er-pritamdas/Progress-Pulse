@@ -1,4 +1,7 @@
 @import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 @plugin "daisyui" {
   themes: all;
 }
@@ -26,4 +29,8 @@
   0%   { background-position: 50%, 0 0; }
   50%  { background-position: 50%, 43.75px 0; }
   100% { background-position: 50%, 43.75px 43.75px; }
+}
+
+html {
+  scroll-behavior: smooth;
 }
