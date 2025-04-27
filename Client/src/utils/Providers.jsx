@@ -7,7 +7,7 @@ const Providers = ({ children }) => {
   return (
     <LoadingProvider>
       <AuthProvider>
-      {children}
+        {children}
       </AuthProvider>
     </LoadingProvider>
   );

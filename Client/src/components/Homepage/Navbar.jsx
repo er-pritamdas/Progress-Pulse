@@ -50,7 +50,7 @@ function Navbar() {
                         <li><a href="#how" className={activeSection === "how" ? "text-primary" : ""}>How</a></li>
                     </ul>
                 </div>
-                <a className="btn btn-ghost text-xl">Progress Pulse</a>
+                <a href="/" className="btn btn-ghost text-xl">Progress Pulse</a>
             </div>
             <div className="navbar-center hidden lg:flex">
                 <ul className="menu menu-horizontal px-1">

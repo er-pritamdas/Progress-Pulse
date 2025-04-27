@@ -4,10 +4,12 @@ import ErrorAlert from "../../utils/Alerts/ErrorAlert";
 import SuccessAlert from "../../utils/Alerts/SuccessAlert";
 import { useNavigate, Link } from "react-router-dom";
 import { useLoading } from "../../Context/LoadingContext";
+import { TitleChanger } from "../../utils/TitleChanger";
 
 
 
 function Signup() {
+  TitleChanger("Progress Pulse | Sign Up")
 
   const { setLoading } = useLoading();
 

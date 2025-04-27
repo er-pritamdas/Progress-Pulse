@@ -10,8 +10,10 @@ import axiosInstance from "../../../Context/AxiosInstance";
 import { useLoading } from "../../../Context/LoadingContext";
 import DeleteHabitPopUp from "../../../components/Dashboard/Habit/DeleteHabitPopUp";
 import Refresh from "../../../utils/Icons/Refresh";
+import { TitleChanger } from "../../../utils/TitleChanger";
 
 function HabitTableEntry() {
+  TitleChanger("Progress Pulse | Habit Entry")
   // variables
   const [itemToDelete, setItemToDelete] = useState(null);
   const ITEMS_PER_PAGE = 7;

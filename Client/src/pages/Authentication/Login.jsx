@@ -5,9 +5,11 @@ import ErrorAlert from "../../utils/Alerts/ErrorAlert";
 import SuccessAlert from "../../utils/Alerts/SuccessAlert";
 import { useLoading } from "../../Context/LoadingContext";
 import { useAuth } from "../../Context/JwtAuthContext";
+import { TitleChanger } from "../../utils/TitleChanger";
 
 function Login() {
-
+  
+  TitleChanger("Progress Pulse | Login")
   const {validToken } = useAuth();
   useEffect(() => {
     if (validToken) {

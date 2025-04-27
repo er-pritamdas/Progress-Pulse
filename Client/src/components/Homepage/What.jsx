@@ -21,12 +21,12 @@ function What() {
                     <h3 className=" divider text-2xl font-bold mb-6 text-primary">Track Your Habits</h3>
                     <figure class="diff aspect-20/9" tabindex="0">
                         <div class="diff-item-1" role="img" tabindex="0">
-                            <img alt="daisy" src="../../../../public/Dashboard.png" />
+                            <img alt="daisy" src="/Dashboard.png" />
                         </div>
                         <div class="diff-item-2" role="img">
                             <img
                                 alt="daisy"
-                                src="../../../../public/Dashboard-Dark.png" />
+                                src="/Dashboard-Dark.png" />
                         </div>
                         <div class="diff-resizer"></div>
                     </figure>
@@ -38,12 +38,12 @@ function What() {
 
                     <figure class="diff aspect-20/9" tabindex="0">
                         <div class="diff-item-1" role="img" tabindex="0">
-                            <img alt="daisy" src="../../../../public/Dashboard-Dark.png" />
+                            <img alt="daisy" src="/Dashboard-Dark.png" />
                         </div>
                         <div class="diff-item-2" role="img">
                             <img
                                 alt="daisy"
-                                src="../../../../public/Dashboard.png" />
+                                src="/Dashboard.png" />
                         </div>
                         <div class="diff-resizer"></div>
                     </figure>
@@ -55,12 +55,12 @@ function What() {
 
                     <figure class="diff aspect-20/9" tabindex="0">
                         <div class="diff-item-1" role="img" tabindex="0">
-                            <img alt="daisy" src="../../../../public/Dashboard.png" />
+                            <img alt="daisy" src="/Dashboard.png" />
                         </div>
                         <div class="diff-item-2" role="img">
                             <img
                                 alt="daisy"
-                                src="../../../../public/Dashboard-Dark.png" />
+                                src="/Dashboard-Dark.png" />
                         </div>
                         <div class="diff-resizer"></div>
                     </figure>

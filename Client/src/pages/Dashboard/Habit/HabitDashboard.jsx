@@ -1,7 +1,10 @@
 import React from 'react'
 import BarChart from "../../../components/Dashboard/Habit/Charts/BrushBarChart"
+import { TitleChanger } from '../../../utils/TitleChanger'
 
 function HabitDashboard() {
+
+  TitleChanger("Progress Pulse | Habit Dashboard")
   return (
 
     <div className="w-full h-full overflow-y-auto overflow-x-hidden p-4 bg-base-300">
