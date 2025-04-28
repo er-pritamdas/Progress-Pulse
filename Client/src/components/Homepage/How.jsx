@@ -72,7 +72,7 @@ function How() {
               <p>Analyze your habits, investments, and expenses with clean, powerful visuals.</p>
               <div className="card-actions justify-end">
                 <div className="badge badge-outline badge-info font-bold">Dashboard</div>
-                <div className="badge badge-outline badge-info font-bold">Insights</div>
+                <div className="badge badge-outline badge-success font-bold">Insights</div>
               </div>
             </div>
           </div>
