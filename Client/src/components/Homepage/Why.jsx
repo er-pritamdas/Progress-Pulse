@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion } from 'framer-motion';
 
 function Why() {
     return (
@@ -6,16 +7,28 @@ function Why() {
             <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-12">
 
                 {/* Left Side - Heading and Description */}
-                <div className="md:w-2/5 text-center md:text-left">
+                <motion.div 
+                    className="md:w-2/5 text-center md:text-left"
+                    initial={{ x: -100, opacity: 0 }}
+                    whileInView={{ x: 0, opacity: 1 }}
+                    transition={{ duration: 0.8, ease: "easeOut" }}
+                    viewport={{ once: true }}
+                >
                     <h2 className="text-5xl font-bold mb-6 text-primary">Why Progress Pulse?</h2>
                     <p className="text-base-content text-lg max-w-3xl mx-auto md:mx-0">
                         Because consistency beats intensity. Progress Pulse helps you maintain small daily wins that eventually build into life-changing results.
                         Plus, it's customizable, lightweight, and designed to suit your journey — whether it's building habits, managing investments, or tracking expenses!
                     </p>
-                </div>
+                </motion.div>
 
                 {/* Right Side - Tabs Section */}
-                <div className="flex flex-col justify-center items-center md:w-3/5">
+                <motion.div 
+                    className="flex flex-col justify-center items-center md:w-3/5"
+                    initial={{ x: 100, opacity: 0 }}
+                    whileInView={{ x: 0, opacity: 1 }}
+                    transition={{ duration: 0.8, ease: "easeOut", delay: 0.2 }}
+                    viewport={{ once: true }}
+                >
                     <div className="tabs tabs-lift w-full">
                         <input type="radio" name="why_tabs" className="tab text-primary hover:text-primary font-semibold text-1xl" aria-label="Consistency" defaultChecked />
                         <div className="tab-content border-base-300 bg-base-100 p-8 shadow-md">
@@ -44,7 +57,7 @@ function Why() {
                             </p>
                         </div>
                     </div>
-                </div>
+                </motion.div>
 
             </div>
         </section>

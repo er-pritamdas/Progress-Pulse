@@ -1,18 +1,60 @@
 import React from 'react';
+import { motion } from 'framer-motion';
 
 function How() {
   return (
-    <section id="how" className="min-h-screen w-full flex flex-col items-center justify-center px-6 md:px-20 bg-base-100">
+    <section
+      id="how"
+      className="min-h-screen w-full flex flex-col items-center justify-center px-6 md:px-20 bg-base-100"
+    >
       <div className="text-center">
-        <h2 className="text-5xl font-bold mb-6 text-primary">How it Works?</h2>
-        <p className="text-base-content text-lg max-w-3xl mx-auto mb-8">
+        {/* Animated Section Title */}
+        <motion.h2
+          className="text-5xl font-bold mb-6 text-primary"
+          initial={{ opacity: 0, y: 50 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.7 }}
+          viewport={{ once: true }}
+        >
+          How it Works?
+        </motion.h2>
+
+        {/* Animated Description */}
+        <motion.p
+          className="text-base-content text-lg max-w-3xl mx-auto mb-8"
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.9, delay: 0.2 }}
+          viewport={{ once: true }}
+        >
           Simply log your habits, investments, and expenses through an easy-to-use table with full CRUD operations.
           Your data instantly updates interactive dashboards and detailed tables, helping you visualize and manage your journey effortlessly.
-        </p>
+        </motion.p>
 
-        <div className="flex flex-col md:flex-row flex-wrap items-center justify-center gap-8">
+        {/* Cards with Staggered Animation */}
+        <motion.div
+          className="flex flex-col md:flex-row flex-wrap items-center justify-center gap-8"
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true }}
+          variants={{
+            hidden: {},
+            visible: {
+              transition: {
+                staggerChildren: 0.3,
+              },
+            },
+          }}
+        >
           {/* Card 1 */}
-          <div className="card card-border bg-base-300 w-96 shadow-md">
+          <motion.div
+            className="card card-border bg-base-300 w-96 shadow-md"
+            variants={{
+              hidden: { opacity: 0, y: 50 },
+              visible: { opacity: 1, y: 0 },
+            }}
+            transition={{ duration: 0.7 }}
+          >
             <figure>
               <img
                 src="/Dashboard.png"
@@ -31,10 +73,17 @@ function How() {
                 <div className="badge badge-outline badge-success font-bold">Finance</div>
               </div>
             </div>
-          </div>
+          </motion.div>
 
           {/* Card 2 */}
-          <div className="card card-border bg-base-300 w-96 shadow-md">
+          <motion.div
+            className="card card-border bg-base-300 w-96 shadow-md"
+            variants={{
+              hidden: { opacity: 0, y: 50 },
+              visible: { opacity: 1, y: 0 },
+            }}
+            transition={{ duration: 0.7, delay: 0.2 }}
+          >
             <figure>
               <img
                 src="/Dashboard.png"
@@ -53,10 +102,17 @@ function How() {
                 <div className="badge badge-outline badge-success font-bold">Smart</div>
               </div>
             </div>
-          </div>
+          </motion.div>
 
           {/* Card 3 */}
-          <div className="card card-border bg-base-300 w-96 shadow-md">
+          <motion.div
+            className="card card-border bg-base-300 w-96 shadow-md"
+            variants={{
+              hidden: { opacity: 0, y: 50 },
+              visible: { opacity: 1, y: 0 },
+            }}
+            transition={{ duration: 0.7, delay: 0.4 }}
+          >
             <figure>
               <img
                 src="/Dashboard.png"
@@ -75,8 +131,8 @@ function How() {
                 <div className="badge badge-outline badge-success font-bold">Insights</div>
               </div>
             </div>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       </div>
     </section>
   );
