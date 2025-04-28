@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion } from 'framer-motion';
 
 function What() {
     return (
@@ -7,68 +8,84 @@ function What() {
             className="min-h-screen w-full flex flex-col items-center justify-center px-6 md:px-20 bg-base-100 pt-20 mb-20">
 
             {/* Intro Section */}
-            <div className="text-center mb-12">
+            <motion.div
+                className="text-center mb-12"
+                initial={{ opacity: 0, y: 50 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.8, ease: "easeOut" }}
+            >
                 <h2 className="text-5xl font-bold mb-6 text-primary">What is Progress Pulse?</h2>
                 <p className="text-base-content text-lg max-w-3xl mx-auto mb-8">
-                    Progress Pulse is your personal dashboard to track habits, manage goals, and monitor growth. It gives you real insights about your daily progress and helps you stay consistent and motivated.
+                    Progress Pulse is your all-in-one platform to track daily habits, investments, and expenses,
+                    with powerful dashboards and table views to keep you organized and in control.
                 </p>
-            </div>
+            </motion.div>
 
             {/* Images Section */}
             <div className="w-full">
                 {/* Picture 1 */}
-                <div className="flex flex-col items-center mb-12">
-                    <h3 className=" divider text-2xl font-bold mb-6 text-primary">Track Your Habits</h3>
-                    <figure class="diff aspect-20/9" tabindex="0">
-                        <div class="diff-item-1" role="img" tabindex="0">
-                            <img alt="daisy" src="/Dashboard.png" />
+                <motion.div
+                    className="flex flex-col items-center mb-12"
+                    initial={{ opacity: 0, y: 50 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
+                >
+                    <h3 className="divider text-2xl font-bold mb-6 text-primary">Track Your Habits</h3>
+                    <figure className="diff aspect-20/9" tabIndex="0">
+                        <div className="diff-item-1" role="img" tabIndex="0">
+                            <img alt="Habits Dashboard" src="/Dashboard.png" />
                         </div>
-                        <div class="diff-item-2" role="img">
-                            <img
-                                alt="daisy"
-                                src="/Dashboard-Dark.png" />
+                        <div className="diff-item-2" role="img">
+                            <img alt="Habits Dashboard Dark" src="/Dashboard-Dark.png" />
                         </div>
-                        <div class="diff-resizer"></div>
+                        <div className="diff-resizer"></div>
                     </figure>
-                </div>
+                </motion.div>
 
                 {/* Picture 2 */}
-                <div className="flex flex-col items-center mb-12">
-                    <h3 className=" divider text-2xl font-bold mb-6 text-primary">Track Your Investment</h3>
-
-                    <figure class="diff aspect-20/9" tabindex="0">
-                        <div class="diff-item-1" role="img" tabindex="0">
-                            <img alt="daisy" src="/Dashboard-Dark.png" />
+                <motion.div
+                    className="flex flex-col items-center mb-12"
+                    initial={{ opacity: 0, y: 50 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.8, delay: 0.4, ease: "easeOut" }}
+                >
+                    <h3 className="divider text-2xl font-bold mb-6 text-primary">Track Your Investment</h3>
+                    <figure className="diff aspect-20/9" tabIndex="0">
+                        <div className="diff-item-1" role="img" tabIndex="0">
+                            <img alt="Investment Dashboard Dark" src="/Dashboard-Dark.png" />
                         </div>
-                        <div class="diff-item-2" role="img">
-                            <img
-                                alt="daisy"
-                                src="/Dashboard.png" />
+                        <div className="diff-item-2" role="img">
+                            <img alt="Investment Dashboard" src="/Dashboard.png" />
                         </div>
-                        <div class="diff-resizer"></div>
+                        <div className="diff-resizer"></div>
                     </figure>
-                </div>
+                </motion.div>
 
                 {/* Picture 3 */}
-                <div className="flex flex-col items-center mb-12">
-                    <h3 className=" divider text-2xl font-bold mb-6 text-primary">Track Your Expenses</h3>
-
-                    <figure class="diff aspect-20/9" tabindex="0">
-                        <div class="diff-item-1" role="img" tabindex="0">
-                            <img alt="daisy" src="/Dashboard.png" />
+                <motion.div
+                    className="flex flex-col items-center mb-12"
+                    initial={{ opacity: 0, y: 50 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.8, delay: 0.6, ease: "easeOut" }}
+                >
+                    <h3 className="divider text-2xl font-bold mb-6 text-primary">Track Your Expenses</h3>
+                    <figure className="diff aspect-20/9" tabIndex="0">
+                        <div className="diff-item-1" role="img" tabIndex="0">
+                            <img alt="Expenses Dashboard" src="/Dashboard.png" />
                         </div>
-                        <div class="diff-item-2" role="img">
-                            <img
-                                alt="daisy"
-                                src="/Dashboard-Dark.png" />
+                        <div className="diff-item-2" role="img">
+                            <img alt="Expenses Dashboard Dark" src="/Dashboard-Dark.png" />
                         </div>
-                        <div class="diff-resizer"></div>
+                        <div className="diff-resizer"></div>
                     </figure>
-                </div>
+                </motion.div>
             </div>
         </section>
     );
 }
 
 export default What;
-
