@@ -8,9 +8,10 @@ import { useAuth } from "../../Context/JwtAuthContext";
 import { TitleChanger } from "../../utils/TitleChanger";
 
 function Login() {
-  
-  TitleChanger("Progress Pulse | Login")
-  const {validToken } = useAuth();
+  TitleChanger("Progress Pulse | Login");
+  const navigate = useNavigate();
+  const { validToken } = useAuth();
+
   useEffect(() => {
     if (validToken) {
       navigate("/dashboard");
@@ -18,154 +19,161 @@ function Login() {
   }, [validToken]);
 
   const { setLoading } = useLoading();
-
-  //Variables
-  const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [disableButton, setDisableButton] = useState(false);
-
-  // -------------------------HandleChange Function for input Fileds-------------------------
-  const [formData, setFormData] = useState({
-    username: "",
-    password: "",
-  });
+  const [formData, setFormData] = useState({ username: "", password: "" });
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // -------------------------On Submit Function-------------------------
-  //Error Alert Variables
   const [showErrorAlert, setShowErrorAlert] = useState(false);
   const [alertErrorMessage, setAlertErrorMessage] = useState("");
-  // Success Alert Variables
   const [showSuccessAlert, setShowSuccessAlert] = useState(false);
   const [alertSuccessMessage, setalertSuccessMessage] = useState("");
+
   const loginUser = async (e) => {
     e.preventDefault();
-
     try {
-      setLoading(true)
+      setLoading(true);
       setDisableButton(true);
-      const response = await axios.post("/api/v1/users/loggedin", formData)
+      const response = await axios.post("/api/v1/users/loggedin", formData);
       setalertSuccessMessage("User Logged In Successfully");
       setShowSuccessAlert(true);
-      setTimeout(() => {
-        setLoading(false)
-        setShowSuccessAlert(false)
-        navigate("/dashboard", { state: { formData } });
-      }, 4000);
-      // console.log(response.data.data.accessToken)
       localStorage.setItem("token", response.data.data.accessToken);
       localStorage.setItem("username", formData.username);
+      setTimeout(() => {
+        setLoading(false);
+        setShowSuccessAlert(false);
+        navigate("/dashboard", { state: { formData } });
+      }, 4000);
     } catch (err) {
-      setLoading(false)
+      setLoading(false);
       setDisableButton(false);
-      const errorMessage = err.response?.data?.message || "Something went Wrong";
+      const errorMessage =
+        err.response?.data?.message || "Something went Wrong";
       setAlertErrorMessage(errorMessage);
       setShowErrorAlert(true);
       setTimeout(() => setShowErrorAlert(false), 4000);
     }
   };
 
-  // -------------------------Return HTML Code-------------------------
   return (
-    <>
-      <div className="flex w-full mt-2 justify-center items-center h-screen">
-        {/* // Left Card */}
-        <div className="card bg-base-300 rounded-box grid h-170 grow place-items-center">
-          Content
+    <div className="relative w-full h-screen">
+      {/* Background Video */}
+      <video
+        className="absolute top-0 left-0 w-full h-full object-cover z-0"
+        autoPlay
+        muted
+        loop
+        playsInline
+      >
+        <source src="/Video/ProgressPulse.mp4" type="video/mp4" />
+        Your browser does not support the video tag.
+      </video>
+
+      {/* <img
+        src="/Video/Beats.gif"
+        alt="Background Animation"
+        className="fixed top-0 left-0 w-full h-full object-cover"
+      /> */}
+
+      {/* Overlay Content */}
+      <div className="relative z-10 w-full h-full flex flex-col md:flex-row backdrop-blur-sm bg-black/30">
+        {/* Left Side */}
+        <div className="w-full md:w-1/2 flex flex-col justify-center items-center text-white p-10 text-center">
+          <img
+            src="https://undraw.co/api/illustrations/login.svg"
+            alt="Welcome"
+            className="w-2/3 max-w-sm mb-8"
+          />
+          <h1 className="text-4xl font-bold mb-4">Welcome Back!</h1>
+          <p className="text-md max-w-md leading-relaxed">
+            Track your goals, habits, and progress with
+            <span className="font-semibold"> Progress Pulse</span>. Your journey
+            to productivity and self-growth begins here.
+          </p>
         </div>
 
-        {/* // Divider */}
-        <div className="divider divider-horizontal"></div>
+        {/* Right Side */}
+        <div className="w-full md:w-1/2 flex justify-center items-center px-4 py-8">
+          <div className="w-full max-w-lg bg-opacity-80 backdrop-blur-md p-8 rounded-box shadow-lg">
+            {showErrorAlert && <ErrorAlert message={alertErrorMessage} />}
+            {showSuccessAlert && <SuccessAlert message={alertSuccessMessage} />}
 
-        {/* // Right Card : The Login Page */}
-        <div className="card bg-base-300 rounded-box grid h-170 grow place-items-center">
+            <form onSubmit={loginUser}>
+              <legend className="text-3xl font-bold mb-6 text-center">
+                Login
+              </legend>
 
-          {/* // Alerts Messages */}
-          {showErrorAlert && <ErrorAlert message={alertErrorMessage} />}
-          {showSuccessAlert && <SuccessAlert message={alertSuccessMessage} />}
-
-
-          {/* Login Form*/}
-          <form
-            className="fieldset w-full max-w-lg bg-base-200 border border-base-300 p-6 rounded-box"
-            onSubmit={loginUser}
-          >
-            <legend className="fieldset-legend text-2xl font-bold">
-              Login
-            </legend>
-
-            {/* //User Name  */}
-            <label className="fieldset-label text-lg">UserName</label>
-            <input
-              type="text"
-              name="username"
-              className="input validator input-lg w-full"
-              placeholder="Full Name"
-              required
-              pattern="[A-Za-z][A-Za-z ]*"
-              minLength="3"
-              maxLength="30"
-              title="Only letters and spaces allowed"
-              onChange={handleChange}
-            />
-            {/* //Password  */}
-            <label className="fieldset-label text-lg mt-2">Password</label>
-            <input
-              name="password"
-              type={showPassword ? "text" : "password"}
-              className="input validator input-lg w-full"
-              required
-              placeholder="Password"
-              minLength="8"
-              pattern="(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}"
-              title="Must be more than 8 characters, including a number, a lowercase letter, and an uppercase letter"
-              onChange={handleChange}
-            />
-
-            {/* Show Password Checkbox */}
-            <div className="flex items-center mt-2">
+              {/* Username */}
+              <label className="block text-lg font-medium mb-1">UserName</label>
               <input
-                type="checkbox"
-                id="showPassword"
-                className="mr-2"
-                onChange={() => setShowPassword(!showPassword)}
+                type="text"
+                name="username"
+                className="input input-bordered input-lg w-full mb-4"
+                placeholder="Full Name"
+                required
+                pattern="[A-Za-z][A-Za-z ]*"
+                minLength="3"
+                maxLength="30"
+                onChange={handleChange}
               />
-              <label htmlFor="showPassword" className="text-sm fieldset-label">
-                Show Password
-              </label>
-            </div>
 
-            {/*Forgot password*/}
-            <p className="text-right text-sm mt-1">
-              <Link to="/forgot_Password_Verify" className="link link-info">
-                Forgot Password?
-              </Link>
-            </p>
+              {/* Password */}
+              <label className="block text-lg font-medium mb-1">Password</label>
+              <input
+                name="password"
+                type={showPassword ? "text" : "password"}
+                className="input input-bordered input-lg w-full mb-2"
+                required
+                placeholder="Password"
+                minLength="8"
+                pattern="(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}"
+                onChange={handleChange}
+              />
 
-            {/*Login Button*/}
-            <button
-              disabled={disableButton}
-              className="btn btn-accent btn-lg mt-4 w-full"
-              type="submit"
-            >
-              {/* <span className={`${disableButton ? 'loading loading-spinner text-primary' : ''}`}></span> */}
-              <span>Login</span>
-            </button>
+              {/* Show Password */}
+              <div className="flex items-center mb-2">
+                <input
+                  type="checkbox"
+                  id="showPassword"
+                  className="mr-2"
+                  onChange={() => setShowPassword(!showPassword)}
+                />
+                <label htmlFor="showPassword" className="text-sm">
+                  Show Password
+                </label>
+              </div>
 
-            {/* // Sign Up Link */}
-            <p className="text-center mt-4 text-sm">
-              Don't have an account?{" "}
-              <Link to="/signup" className="text-blue-500 hover:underline">
-                Sign up here
-              </Link>
-            </p>
-          </form>
+              {/* Forgot Password */}
+              <div className="text-right text-sm mb-4">
+                <Link to="/forgot_Password_Verify" className="link link-info">
+                  Forgot Password?
+                </Link>
+              </div>
+
+              {/* Submit Button */}
+              <button
+                disabled={disableButton}
+                className="btn btn-accent btn-lg w-full"
+                type="submit"
+              >
+                Login
+              </button>
+
+              {/* Sign Up Link */}
+              <p className="text-center mt-4 text-sm">
+                Don’t have an account?{" "}
+                <Link to="/signup" className="text-blue-500 hover:underline">
+                  Sign up here
+                </Link>
+              </p>
+            </form>
+          </div>
         </div>
       </div>
-    </>
+    </div>
   );
 }
 

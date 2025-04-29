@@ -33,7 +33,7 @@ function Navbar() {
     }, []);
 
     return (
-        <div className="navbar bg-base-100 shadow-sm sticky top-0 p-0 z-1000">
+        <div className="navbar bg-opacity-90 backdrop-blur-md shadow-sm sticky top-0 p-0 z-1000">
             <div className="navbar-start">
                 <div className="dropdown">
                     <div tabIndex={0} role="button" className="btn btn-ghost lg:hidden">
