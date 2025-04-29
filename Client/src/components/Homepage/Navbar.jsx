@@ -15,7 +15,7 @@ function Navbar() {
                 const element = document.getElementById(section);
                 if (element) {
                     const rect = element.getBoundingClientRect();
-                    if (rect.top <= navbarHeight  && rect.bottom >= navbarHeight ) {
+                    if (rect.top <= navbarHeight && rect.bottom >= navbarHeight) {
                         currentSection = section;
                     }
                 }
@@ -49,6 +49,13 @@ function Navbar() {
                         <li><a href="#why" className={activeSection === "why" ? "text-primary" : ""}>Why</a></li>
                         <li><a href="#how" className={activeSection === "how" ? "text-primary" : ""}>How</a></li>
                     </ul>
+                </div>
+                <div class="avatar avatar-placeholder ml-4">
+                    <div class="bg-neutral text-neutral-content w-8 rounded-full">
+                        <a href="/">
+                        <img src="/favicon/favicon.svg" />
+                        </a>
+                    </div>
                 </div>
                 <a href="/" className="btn btn-ghost text-xl">Progress Pulse</a>
             </div>
