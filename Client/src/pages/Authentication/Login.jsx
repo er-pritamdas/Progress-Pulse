@@ -6,6 +6,7 @@ import SuccessAlert from "../../utils/Alerts/SuccessAlert";
 import { useLoading } from "../../Context/LoadingContext";
 import { useAuth } from "../../Context/JwtAuthContext";
 import { TitleChanger } from "../../utils/TitleChanger";
+import { motion } from "framer-motion";
 
 function Login() {
   TitleChanger("Progress Pulse | Login");
@@ -59,7 +60,7 @@ function Login() {
   };
 
   return (
-    <div className="relative w-full h-screen">
+    <div className="relative w-full h-screen overflow-hidden">
       {/* Background Video */}
       <video
         className="absolute top-0 left-0 w-full h-full object-cover z-0"
@@ -72,18 +73,18 @@ function Login() {
         Your browser does not support the video tag.
       </video>
 
-      {/* <img
-        src="/Video/Beats.gif"
-        alt="Background Animation"
-        className="fixed top-0 left-0 w-full h-full object-cover"
-      /> */}
-
       {/* Overlay Content */}
       <div className="relative z-10 w-full h-full flex flex-col md:flex-row backdrop-blur-sm bg-black/30">
+        
         {/* Left Side */}
-        <div className="w-full md:w-1/2 flex flex-col justify-center items-center text-white p-10 text-center">
+        <motion.div
+          className="w-full md:w-1/2 flex flex-col justify-center items-center text-white p-10 text-center"
+          initial={{ opacity: 0, x: -100 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.8 }}
+        >
           <img
-            src="https://undraw.co/api/illustrations/login.svg"
+            src="/Dashboard.png"
             alt="Welcome"
             className="w-2/3 max-w-sm mb-8"
           />
@@ -93,13 +94,23 @@ function Login() {
             <span className="font-semibold"> Progress Pulse</span>. Your journey
             to productivity and self-growth begins here.
           </p>
-        </div>
+        </motion.div>
 
         {/* Right Side */}
-        <div className="w-full md:w-1/2 flex justify-center items-center px-4 py-8">
-          <div className="w-full max-w-lg bg-opacity-80 backdrop-blur-md p-8 rounded-box shadow-lg">
-            {showErrorAlert && <ErrorAlert message={alertErrorMessage} />}
-            {showSuccessAlert && <SuccessAlert message={alertSuccessMessage} />}
+        <motion.div
+          className="w-full md:w-1/2 flex justify-center items-center px-4 py-8"
+          initial={{ opacity: 0, x: 100 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.8 }}
+        >
+          <motion.div
+            className="w-full max-w-lg bg-opacity-80 backdrop-blur-md p-8 rounded-box shadow-lg"
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+          >
+            {showErrorAlert && <ErrorAlert message={alertErrorMessage} top={-10} />}
+            {showSuccessAlert && <SuccessAlert message={alertSuccessMessage} top={-15} />}
 
             <form onSubmit={loginUser}>
               <legend className="text-3xl font-bold mb-6 text-center">
@@ -156,7 +167,7 @@ function Login() {
               {/* Submit Button */}
               <button
                 disabled={disableButton}
-                className="btn btn-accent btn-lg w-full"
+                className="btn btn-accent btn-soft btn-lg w-full"
                 type="submit"
               >
                 Login
@@ -170,8 +181,8 @@ function Login() {
                 </Link>
               </p>
             </form>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       </div>
     </div>
   );

@@ -74,7 +74,7 @@ function Navbar() {
         <>
 
             {/* Fixed Navbar */}
-            <div className="navbar bg-base-100 shadow-sm sticky top-0 p-0 z-1000">
+            <div className="navbar bg-base-200 shadow-sm sticky top-0 p-0 z-1000">
 
                 {/* Logo */}
                 <div className="flex-1">
