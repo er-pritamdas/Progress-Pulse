@@ -7,6 +7,7 @@ import { useLoading } from "../../Context/LoadingContext";
 import { useAuth } from "../../Context/JwtAuthContext";
 import { TitleChanger } from "../../utils/TitleChanger";
 import { motion } from "framer-motion";
+import CatchSeconds from "../../components/Authentication/CatchSeconds";
 
 function Login() {
   TitleChanger("Progress Pulse | Login");
@@ -83,7 +84,7 @@ function Login() {
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.8 }}
         >
-          <img
+          {/* <img
             src="/Dashboard.png"
             alt="Welcome"
             className="w-2/3 max-w-sm mb-8"
@@ -93,7 +94,9 @@ function Login() {
             Track your goals, habits, and progress with
             <span className="font-semibold"> Progress Pulse</span>. Your journey
             to productivity and self-growth begins here.
-          </p>
+          </p> */}
+
+          <CatchSeconds/>
         </motion.div>
 
         {/* Right Side */}
