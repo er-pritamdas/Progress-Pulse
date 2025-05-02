@@ -192,7 +192,9 @@ function Signup() {
               <button
                 disabled={disableButton}
                 className={`btn btn-primary btn-lg w-full ${/^[A-Za-z ]{3,30}$/.test(formData.username) &&
-                    /^(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}$/.test(formData.password)
+                    /^(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}$/.test(formData.password) &&
+                    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email) &&
+                    error === "" && /^(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}$/.test(confirmPassword)
                     ? ""
                     : "btn-soft"
                   }`}

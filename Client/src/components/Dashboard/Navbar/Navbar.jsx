@@ -4,12 +4,15 @@ import { useLoading } from '../../../Context/LoadingContext.jsx';
 import ErrorAlert from '../../../utils/Alerts/ErrorAlert';
 import SuccessAlert from '../../../utils/Alerts/SuccessAlert';
 import axios from "axios";
+import { useAuth } from '../../../Context/JwtAuthContext.jsx';
 
 
 // Importing Components
 import ThemeSwitcher from '../../../utils/ThemeSwitches'
 
 function Navbar() {
+
+    const {validToken, setvalidToken} = useAuth();
 
     const navigate = useNavigate();
     const { setLoading } = useLoading();
@@ -52,7 +55,6 @@ function Navbar() {
 
             setSuccessMsg("User Logged Out Successfully");
             setShowSuccessAlert(true);
-
             setTimeout(() => {
                 setLoading(false);
                 setShowSuccessAlert(false);
@@ -65,6 +67,8 @@ function Navbar() {
             setErrorMsg(msg);
             setShowErrorAlert(true);
             setTimeout(() => setShowErrorAlert(false), 4000);
+        } finally {
+            setvalidToken(false);
         }
     };
 

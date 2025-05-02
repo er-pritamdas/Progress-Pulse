@@ -12,7 +12,7 @@ import LoginLeftCard from "../../components/Authentication/LoginLeftCard";
 function Login() {
   TitleChanger("Progress Pulse | Login");
   const navigate = useNavigate();
-  const { validToken } = useAuth();
+  const { validToken, setvalidToken } = useAuth();
 
   useEffect(() => {
     if (validToken) {
@@ -44,6 +44,7 @@ function Login() {
       setShowSuccessAlert(true);
       localStorage.setItem("token", response.data.data.accessToken);
       localStorage.setItem("username", formData.username);
+      setvalidToken(true);
       setTimeout(() => {
         setLoading(false);
         setShowSuccessAlert(false);
