@@ -1,17 +1,17 @@
 import React from "react";
 import { FaInstagram, FaTwitter, FaPinterest, FaLinkedin } from "react-icons/fa";
 
-const CatchSeconds = () => {
+const LoginLeftCard = () => {
   return (
     <div className="min-h-screen flex items-center justify-center p-6">
       <div className="relative max-w-xl p-10">
         {/* Main Content */}
         <div className="relative z-10 text-center space-y-6">
-          <h1 className="text-5xl font-extrabold leading-tight text-transparent bg-gradient-to-r from-green-400 via-blue-500 to-purple-600 bg-clip-text opacity-70">
+          <h1 className="text-5xl font-extrabold leading-tight text-transparent bg-gradient-to-r from-green-400 via-blue-500 to-purple-600 bg-clip-text opacity-60">
             Track Reflect Improve Repeat
           </h1>
 
-          <p className="text-gray-300 text-xl font-medium">
+          <p className="text-gray-300 text-xl font-medium opacity-80">
             Welcome to <span className="text-teal-400">Progress Pulse</span> - your companion for building better habits, staying accountable, and owning your progress one second at a time.
           </p>
 
@@ -36,4 +36,4 @@ const CatchSeconds = () => {
   );
 };
 
-export default CatchSeconds;
+export default LoginLeftCard;

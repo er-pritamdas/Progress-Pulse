@@ -6,6 +6,7 @@ import ErrorAlert from "../../utils/Alerts/ErrorAlert";
 import SuccessAlert from "../../utils/Alerts/SuccessAlert";
 import { useLoading } from "../../Context/LoadingContext";
 import { TitleChanger } from "../../utils/TitleChanger";
+import SignupLeftCard from "../../components/Authentication/SignupLeftCaard";
 
 function Signup() {
   TitleChanger("Progress Pulse | Sign Up");
@@ -93,10 +94,11 @@ function Signup() {
           transition={{ duration: 0.8 }}
           className="w-full md:w-1/2 flex flex-col justify-center items-center text-white p-10 text-center"
         >
-          <h1 className="text-4xl font-bold">Welcome to Progress Pulse</h1>
+          {/* <h1 className="text-4xl font-bold">Welcome to Progress Pulse</h1>
           <p className="mt-4 text-lg">
             Track your progress, stay motivated, and grow every day.
-          </p>
+          </p> */}
+          <SignupLeftCard />
         </motion.div>
 
         {/* Signup Form with Motion */}
@@ -189,7 +191,11 @@ function Signup() {
 
               <button
                 disabled={disableButton}
-                className="btn btn-accent btn-lg mt-4 w-full"
+                className={`btn btn-primary btn-lg w-full ${/^[A-Za-z ]{3,30}$/.test(formData.username) &&
+                    /^(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}$/.test(formData.password)
+                    ? ""
+                    : "btn-soft"
+                  }`}
                 type="submit"
               >
                 <span>Sign Up</span>

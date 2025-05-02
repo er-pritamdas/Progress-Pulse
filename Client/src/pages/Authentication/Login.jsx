@@ -7,7 +7,7 @@ import { useLoading } from "../../Context/LoadingContext";
 import { useAuth } from "../../Context/JwtAuthContext";
 import { TitleChanger } from "../../utils/TitleChanger";
 import { motion } from "framer-motion";
-import CatchSeconds from "../../components/Authentication/CatchSeconds";
+import LoginLeftCard from "../../components/Authentication/LoginLeftCard";
 
 function Login() {
   TitleChanger("Progress Pulse | Login");
@@ -76,7 +76,7 @@ function Login() {
 
       {/* Overlay Content */}
       <div className="relative z-10 w-full h-full flex flex-col md:flex-row backdrop-blur-sm bg-black/30">
-        
+
         {/* Left Side */}
         <motion.div
           className="w-full md:w-1/2 flex flex-col justify-center items-center text-white p-10 text-center"
@@ -96,7 +96,7 @@ function Login() {
             to productivity and self-growth begins here.
           </p> */}
 
-          <CatchSeconds/>
+          <LoginLeftCard />
         </motion.div>
 
         {/* Right Side */}
@@ -170,7 +170,11 @@ function Login() {
               {/* Submit Button */}
               <button
                 disabled={disableButton}
-                className="btn btn-accent btn-soft btn-lg w-full"
+                className={`btn btn-success btn-lg w-full ${/^[A-Za-z ]{3,30}$/.test(formData.username) &&
+                    /^(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}$/.test(formData.password)
+                    ? ""
+                    : "btn-soft"
+                  }`}
                 type="submit"
               >
                 Login
