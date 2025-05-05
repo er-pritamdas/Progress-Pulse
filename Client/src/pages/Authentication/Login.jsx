@@ -44,10 +44,10 @@ function Login() {
       setShowSuccessAlert(true);
       localStorage.setItem("token", response.data.data.accessToken);
       localStorage.setItem("username", formData.username);
-      setvalidToken(true);
       setTimeout(() => {
         setLoading(false);
         setShowSuccessAlert(false);
+        setvalidToken(true);
         navigate("/dashboard", { state: { formData } });
       }, 4000);
     } catch (err) {
@@ -172,9 +172,9 @@ function Login() {
               <button
                 disabled={disableButton}
                 className={`btn btn-success btn-lg w-full ${/^[A-Za-z ]{3,30}$/.test(formData.username) &&
-                    /^(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}$/.test(formData.password)
-                    ? ""
-                    : "btn-soft"
+                  /^(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}$/.test(formData.password)
+                  ? ""
+                  : "btn-soft"
                   }`}
                 type="submit"
               >

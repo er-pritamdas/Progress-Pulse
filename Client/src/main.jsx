@@ -55,7 +55,7 @@ const router = createBrowserRouter(
         <Route path='login' element={<Login />} />
         <Route path='signup' element={<Signup />} />
         <Route path='otp' element={<Otp />} />
-        <Route path='forgot_Password_Verify' element={<ForgotPasswordVerification />} />
+        <Route path='forgot_Password_Verify' element={<ForgotPasswordVerification />} /> 
         <Route path='forgot_Password-otp' element={<ForgotPasswordOTPverification />} />
         <Route path='reset-password' element={<ResetPassword />} />
       </Route>

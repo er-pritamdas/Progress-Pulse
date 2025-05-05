@@ -56,9 +56,12 @@ function Navbar() {
             setSuccessMsg("User Logged Out Successfully");
             setShowSuccessAlert(true);
             setTimeout(() => {
+                navigate("/");
                 setLoading(false);
                 setShowSuccessAlert(false);
-                navigate("/");
+                setTimeout(() => { 
+                    setvalidToken(false);
+                }, 1000);
             }, 3000);
         } catch (err) {
             setLoading(false);
@@ -67,8 +70,6 @@ function Navbar() {
             setErrorMsg(msg);
             setShowErrorAlert(true);
             setTimeout(() => setShowErrorAlert(false), 4000);
-        } finally {
-            setvalidToken(false);
         }
     };
 
