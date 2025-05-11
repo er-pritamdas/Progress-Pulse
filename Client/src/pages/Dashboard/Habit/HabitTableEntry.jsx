@@ -93,10 +93,10 @@ function HabitTableEntry() {
 
   // Progress Color function
   const getProgressColorClass = (percentage) => {
-    if (percentage === 100) return "progress-primary"; // ✅ Full
-    if (percentage >= 70) return "progress-warning"; // 🟡 Almost there
-    if (percentage >= 30) return "progress-error"; // 🟠 Midway
-    return "progress-secondary"; // 🔴 Low
+    if (percentage === 100) return "progress-success"; // ✅ Full
+    if (percentage >= 70) return "progress-info"; // 🟡 Almost there
+    if (percentage >= 30) return "progress-warning"; // 🟠 Midway
+    return "progress-error"; // 🔴 Low
   };
 
   // calculate Progress Function
@@ -268,7 +268,7 @@ function HabitTableEntry() {
           <button className="btn btn-primary join-item" onClick={handleAddEntryClick}>
             + Add Entry
           </button>
-          <button className="btn btn-dash join-item" onClick={() => {
+          <button className="btn btn-soft join-item" onClick={() => {
             if (!data || data.length === 0) return; // Optional: skip logic if data is empty
             fetchHabits(currentPage);
             setalertSuccessMessage("Refreshed!");
@@ -447,13 +447,13 @@ function HabitTableEntry() {
                     <td className="text-center w-[120px]">
                       <div className="flex justify-center gap-2">
                         <button
-                          className="btn btn-square btn-success btn-sm"
+                          className="btn btn-soft btn-circle btn-success btn-sm"
                           onClick={handleSave}
                         >
                           <Save />
                         </button>
                         <button
-                          className="btn btn-square btn-warning btn-sm"
+                          className="btn btn-soft btn-circle btn-warning btn-sm"
                           onClick={() => setEditingItem(null)}
                         >
                           <Cancel />
@@ -497,13 +497,13 @@ function HabitTableEntry() {
                     <td className="text-center w-[120px]">
                       <div className="flex justify-center gap-2">
                         <button
-                          className="btn btn-square btn-info btn-sm"
+                          className="btn btn-soft btn-circle btn-info btn-sm"
                           onClick={() => handleEdit(item)}
                         >
                           <Pencil />
                         </button>
                         <button
-                          className="btn btn-square btn-error btn-sm"
+                          className="btn btn-soft btn-circle btn-error btn-sm"
                           onClick={() => handleDeleteClick(item.date)}
                         >
                           <Trash />
@@ -522,7 +522,7 @@ function HabitTableEntry() {
       <div className="mt-4 flex justify-end gap-2">
         {/* Previous Button */}
         <button
-          className="btn btn-sm"
+          className="btn btn-soft btn-secondary btn-sm"
           onClick={() => {
             const prevPageNumber = Math.max(currentPage - 1, 1);
             setCurrentPage(prevPageNumber);
@@ -539,7 +539,7 @@ function HabitTableEntry() {
 
         {/* Next Button */}
         <button
-          className="btn btn-sm"
+          className="btn btn-soft btn-secondary btn-sm"
           onClick={() => {
             const nextPageNumber = Math.min(currentPage + 1, totalPages);
             setCurrentPage(nextPageNumber);

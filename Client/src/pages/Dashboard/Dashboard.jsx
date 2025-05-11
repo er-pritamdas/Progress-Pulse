@@ -4,6 +4,7 @@ import ActiveLastBreadcrumb from "../../components/Dashboard/ActiveLastBreadcrum
 import DatePicker from "../../components/Dashboard/DatePicker";
 import Linecharts from "../../components/Dashboard/Expense/charts/Linecharts.jsx";
 import { TitleChanger } from "../../utils/TitleChanger.jsx";
+import BrushBarChart  from "../../components/Dashboard/Habit/Charts/BrushBarChart.jsx"
 
 
 const Dashboard = () => {
@@ -16,7 +17,7 @@ const Dashboard = () => {
         {/* <ActiveLastBreadcrumb /> */}
         {/* <DatePicker />   */}
         Welcome {user} to your dashboard!
-        <Linecharts />
+        <BrushBarChart />
         <Linecharts />
         <Linecharts />
         <Linecharts />

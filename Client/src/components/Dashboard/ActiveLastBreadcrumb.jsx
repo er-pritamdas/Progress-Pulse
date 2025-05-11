@@ -1,7 +1,5 @@
-import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, BookOpen, Navigation, TrendingUp, Wallet, CalendarCheck } from 'lucide-react';
-import clsx from 'clsx';
+import { Home, BookOpen, Navigation, TrendingUp, Wallet, CalendarCheck, Grid2x2Plus, Grid2x2Check, Settings2 } from 'lucide-react';
 import Dashboard from '../../utils/Icons/Dashboard';
 
 export default function ThemedBreadcrumbs() {
@@ -15,13 +13,14 @@ export default function ThemedBreadcrumbs() {
   };
 
   const subCategoryIcon = {
-    'Table Entry': <BookOpen className="w-4 h-4" />,
+    'Table Entry': <Grid2x2Plus className="w-4 h-4" />,
     'Dashboard': <Dashboard />,
-    'Table View': <BookOpen className="w-4 h-4" />,
+    'Table View': <Grid2x2Check className="w-4 h-4" />,
+    'Settings' : <Settings2 className="w-4 h-4" />,
   };
 
   const mainCategoryRaw = pathnames[1]; // habit, expense, investment
-  const subCategoryRaw = pathnames[2]; // table-entry, dashboard, table-view
+  const subCategoryRaw = pathnames[2]; // table-entry, dashboard, table-view, settings
 
   const mainCategory = mainCategoryRaw
     ? mainCategoryRaw.charAt(0).toUpperCase() + mainCategoryRaw.slice(1)

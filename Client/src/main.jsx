@@ -23,16 +23,19 @@ import Habit from './pages/Dashboard/Habit/Habit.jsx'
 import HabitTableEntry from './pages/Dashboard/Habit/HabitTableEntry.jsx'
 import HabitDashboard from './pages/Dashboard/Habit/HabitDashboard.jsx'
 import HabitTableView from './pages/Dashboard/Habit/HabitTableView.jsx'
+import HabitSettings from './pages/Dashboard/Habit/HabitSettings.jsx'
 
 // Expense Pages
 import ExpTableEntry from './pages/Dashboard/Expense/ExpTableEntry.jsx'
 import ExpDashboard from './pages/Dashboard/Expense/ExpDashboard.jsx'
 import ExpTableView from './pages/Dashboard/Expense/ExpTableView.jsx'
+import ExpSettings from './pages/Dashboard/Expense/ExpSettings.jsx'
 
 // Investment Pages
 import InvTableEntry from './pages/Dashboard/Investment/InvTableEntry.jsx'
 import InvDashboard from './pages/Dashboard/Investment/InvDashboard.jsx'
 import InvTableView from './pages/Dashboard/Investment/InvTableView.jsx'
+import InvSettings from './pages/Dashboard/Investment/InvSettings.jsx'
 
 // Layouts
 import Layout from './layouts/Layout.jsx'
@@ -70,6 +73,7 @@ const router = createBrowserRouter(
           <Route path="table-entry" element={<HabitTableEntry />} />
           <Route path="dashboard" element={<HabitDashboard />} />
           <Route path="table-view" element={<HabitTableView />} />
+          <Route path="settings" element={<HabitSettings />} />
         </Route>
 
         {/* Expense Routes */}
@@ -78,6 +82,7 @@ const router = createBrowserRouter(
           <Route path="table-entry" element={<ExpTableEntry />} />
           <Route path="dashboard" element={<ExpDashboard />} />
           <Route path="table-view" element={<ExpTableView />} />
+          <Route path="settings" element={<ExpSettings />} />
         </Route>
 
         {/* Investment Routes */}
@@ -86,6 +91,7 @@ const router = createBrowserRouter(
           <Route path="table-entry" element={<InvTableEntry />} />
           <Route path="dashboard" element={<InvDashboard />} />
           <Route path="table-view" element={<InvTableView />} />
+          <Route path="settings" element={<InvSettings />} />
         </Route>
       </Route>
 

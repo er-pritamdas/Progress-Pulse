@@ -34,6 +34,7 @@ app.use("/api/v1/users/loggedin",loggedInUserRoutes)
 app.use("/api/v1/users/logout", loggedOutUserRoutes)
 
 app.use("/api/v1/users/forgot-password-verification", existingUserRoutes )
+
 // --------------------------- Protected Routes --------------------------
 // Dashboard Routes
 app.use("/api/v1/dashboard", dashboardRoutes)
