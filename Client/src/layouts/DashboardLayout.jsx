@@ -23,7 +23,7 @@ const DashboardLayout = () => {
   if (!isOtpPage) {
     localStorage.setItem('allowOtp', false);
   }
-  const isAuthenticated = validToken
+  const isAuthenticated = true //validToken
 
   // --------------------- Dashboard HTML Layout -------------------------
   return (

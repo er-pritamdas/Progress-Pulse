@@ -1,15 +1,19 @@
 // Providers.jsx
 import { LoadingProvider } from "../Context/LoadingContext";
 import { AuthProvider } from "../Context/JwtAuthContext";
+import { Provider } from 'react-redux'
+import store from "../services/redux/store/store";
 
 
 const Providers = ({ children }) => {
   return (
-    <LoadingProvider>
-      <AuthProvider>
-        {children}
-      </AuthProvider>
-    </LoadingProvider>
+    <Provider store={store}>
+      <LoadingProvider>
+        <AuthProvider>
+          {children}
+        </AuthProvider>
+      </LoadingProvider>
+    </Provider>
   );
 };
 
