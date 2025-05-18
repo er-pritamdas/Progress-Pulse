@@ -11,9 +11,11 @@ import { useLoading } from "../../../Context/LoadingContext";
 import DeleteHabitPopUp from "../../../components/Dashboard/Habit/DeleteHabitPopUp";
 import Refresh from "../../../utils/Icons/Refresh";
 import { TitleChanger } from "../../../utils/TitleChanger";
+import { useSelector } from "react-redux";
 
 function HabitTableEntry() {
   TitleChanger("Progress Pulse | Habit Entry")
+  const settings = useSelector((state) => state.habit.settings);
   // variables
   const [itemToDelete, setItemToDelete] = useState(null);
   const ITEMS_PER_PAGE = 7;
@@ -32,6 +34,14 @@ function HabitTableEntry() {
   const [alertSuccessMessage, setalertSuccessMessage] = useState("");
 
   // -------------------------------------------------------------------- Functions ---------------------------------------------------------------
+
+  const getColorClass = (field, value, settings) => {
+    if (!settings[field]) return 'text-gray-500'; // fallback
+    const { min, max } = settings[field];
+    if (value < min) return 'text-warning';
+    if (value > max) return 'text-error';
+    return 'text-success';
+  };
 
   const fetchHabits = async (currentPage) => {
     setLoading(true);
@@ -180,21 +190,21 @@ function HabitTableEntry() {
       setEditingItem(null);
       return;
     }
-    try{
+    try {
       setLoading(true)
-      const response = await axiosInstance.put("/v1/dashboard/habit/table-entry", {...editingItem})
+      const response = await axiosInstance.put("/v1/dashboard/habit/table-entry", { ...editingItem })
       console.log(response.data.message)
       setalertSuccessMessage(response.data.message);
       setShowSuccessAlert(true);
       setTimeout(() => setShowSuccessAlert(false), 4000);
 
-    }catch(err){
+    } catch (err) {
       setLoading(false);
       const errorMessage = err.response?.data?.message || "Failed To Save Entry!";
       setAlertErrorMessage(errorMessage);
       setShowErrorAlert(true);
       setTimeout(() => setShowErrorAlert(false), 4000);
-    }finally{
+    } finally {
       fetchHabits(currentPage);
       setLoading(false);
       setEditingItem(null);
@@ -262,29 +272,52 @@ function HabitTableEntry() {
       )}
 
       {/* Heading and Add Button */}
-      <div className="flex justify-between mb-4">
+      <div className="flex justify-between mb-4 flex-wrap gap-4">
         <h1 className="text-2xl font-bold">Habit Tracker Table Entry</h1>
+
+        {/* <div className="flex items-center gap-2">
+          <div className="badge badge-sm badge-warning">Below Min</div>
+          <div className="badge badge-sm badge-success">Within Range</div>
+          <div className="badge badge-sm badge-error">Above Max</div>
+        </div> */}
+
         <div className="join join-vertical lg:join-horizontal">
           <button className="btn btn-primary join-item" onClick={handleAddEntryClick}>
             + Add Entry
           </button>
-          <button className="btn btn-soft join-item" onClick={() => {
-            if (!data || data.length === 0) return; // Optional: skip logic if data is empty
-            fetchHabits(currentPage);
-            setalertSuccessMessage("Refreshed!");
-            setShowSuccessAlert(true);
-            setTimeout(() => setShowSuccessAlert(false), 4000);
-          }}>
+          <button
+            className="btn btn-soft join-item"
+            onClick={() => {
+              if (!data || data.length === 0) return;
+              fetchHabits(currentPage);
+              setalertSuccessMessage("Refreshed!");
+              setShowSuccessAlert(true);
+              setTimeout(() => setShowSuccessAlert(false), 4000);
+            }}
+          >
             <Refresh /> Refresh
           </button>
         </div>
       </div>
+
 
       {/* Table */}
       <div className="overflow-x-auto overflow-y-auto scroll-hidden">
         <table className="bg-base-300 table table-fixed w-full">
           {/* Headings */}
           <thead>
+            {/* Indicator Row */}
+            <tr>
+              <th colSpan="10" className="py-3 px-4 bg-base-200">
+                <div className="flex items-center gap-4 text-sm font-normal">
+                  <div className="badge badge-sm badge-soft badge-warning font-normal">Below Min</div>
+                  <div className="badge badge-sm badge-soft badge-success font-normal">Within Range</div>
+                  <div className="badge badge-sm badge-soft badge-error font-normal">Above Max</div>
+                </div>
+              </th>
+            </tr>
+
+            {/* Heading Row */}
             <tr>
               <th className="w-[120px]">Date</th>
               <th className="w-[80px]">Burned [Kcal]</th>
@@ -328,7 +361,7 @@ function HabitTableEntry() {
                         max="10000"
                         onKeyDown={handleKeyDown}
                         name="burned"
-                        className="btn btn-sm w-full max-w-[80px] hover:cursor-text"
+                        className="btn btn-sm w-full max-w-[80px] hover:cursor-text bg-base-100"
                         value={editingItem.burned}
                         onChange={handleChange}
                       />
@@ -341,7 +374,7 @@ function HabitTableEntry() {
                         step="0.1"
                         onKeyDown={handleKeyDown}
                         name="water"
-                        className="btn btn-sm w-full max-w-[80px] hover:cursor-text"
+                        className="btn btn-sm w-full max-w-[80px] hover:cursor-text bg-base-100"
                         value={editingItem.water}
                         onChange={handleChange}
                       />
@@ -353,7 +386,7 @@ function HabitTableEntry() {
                         max="10"
                         onKeyDown={handleKeyDown}
                         name="sleep"
-                        className="btn btn-sm w-full max-w-[80px] hover:cursor-text"
+                        className="btn btn-sm w-full max-w-[80px] hover:cursor-text bg-base-100"
                         value={editingItem.sleep}
                         onChange={handleChange}
                       />
@@ -365,7 +398,7 @@ function HabitTableEntry() {
                         max="24"
                         onKeyDown={handleKeyDown}
                         name="read"
-                        className="btn btn-sm w-full max-w-[80px] hover:cursor-text"
+                        className="btn btn-sm w-full max-w-[80px] hover:cursor-text bg-base-100"
                         value={editingItem.read}
                         onChange={handleChange}
                       />
@@ -377,7 +410,7 @@ function HabitTableEntry() {
                         max="100000"
                         onKeyDown={handleKeyDown}
                         name="intake"
-                        className="btn btn-sm w-full max-w-[80px] hover:cursor-text"
+                        className="btn btn-sm w-full max-w-[80px] hover:cursor-text bg-base-100"
                         value={editingItem.intake}
                         onChange={handleChange}
                       />
@@ -389,7 +422,7 @@ function HabitTableEntry() {
                         title="Only B, S, F or _ in respective positions. Example: BSF, B_F, _SF"
                         onKeyDown={handleKeyDown}
                         name="selfcare"
-                        className="btn btn-sm w-full max-w-[80px] hover:cursor-text"
+                        className="btn btn-sm w-full max-w-[80px] hover:cursor-text bg-base-100"
                         value={editingItem.selfcare}
                         onChange={handleChange}
                       />
@@ -407,14 +440,7 @@ function HabitTableEntry() {
                           tabIndex={0}
                           className="dropdown-content menu bg-base-200 rounded-box z-[1] w-30 p-2 shadow-sm"
                         >
-                          {[
-                            "Amazing",
-                            "Good",
-                            "Average",
-                            "Sad",
-                            "Depressed",
-                            "Productive",
-                          ].map((mood) => (
+                          {[...settings.mood].map((mood) => (
                             <li key={mood}>
                               <a
                                 onClick={() =>
@@ -464,36 +490,43 @@ function HabitTableEntry() {
                 ) : (
                   <tr key={item.date}>
                     <td className="text-sm">{formatDate(item.date)}</td>
-                    <td className="text-sm truncate">
-                      {item.burned ? item.burned : 0} Kcal
+
+                    <td className={`text-sm truncate ${getColorClass("burned", item.burned || 0, settings)}`}>
+                      {item.burned || 0} Kcal
                     </td>
-                    <td className="text-sm truncate">
-                      {item.water ? item.water : 0} Ltr
+
+                    <td className={`text-sm truncate ${getColorClass("water", item.water || 0, settings)}`}>
+                      {item.water || 0} Ltr
                     </td>
-                    <td className="text-sm truncate">
-                      {item.sleep ? item.sleep : 0} Hrs
+
+                    <td className={`text-sm truncate ${getColorClass("sleep", item.sleep || 0, settings)}`}>
+                      {item.sleep || 0} Hrs
                     </td>
-                    <td className="text-sm truncate">
-                      {item.read ? item.read : 0} Hrs
+
+                    <td className={`text-sm truncate ${getColorClass("read", item.read || 0, settings)}`}>
+                      {item.read || 0} Hrs
                     </td>
-                    <td className="text-sm truncate">
-                      {item.intake ? item.intake : 0} Kcal
+
+                    <td className={`text-sm truncate ${getColorClass("intake", item.intake || 0, settings)}`}>
+                      {item.intake || 0} Kcal
                     </td>
+
                     <td className="text-sm truncate">
-                      {item.selfcare ? item.selfcare : "---"}
+                      {item.selfcare || "---"}
                     </td>
+
                     <td className="text-sm truncate">
-                      {item.mood ? item.mood : "---"}
+                      {item.mood || "---"}
                     </td>
+
                     <td>
                       <progress
-                        className={`progress w-20 ${getProgressColorClass(
-                          calculateProgress(item)
-                        )}`}
+                        className={`progress w-20 ${getProgressColorClass(calculateProgress(item))}`}
                         value={calculateProgress(item)}
                         max="100"
                       ></progress>
                     </td>
+
                     <td className="text-center w-[120px]">
                       <div className="flex justify-center gap-2">
                         <button
@@ -511,6 +544,7 @@ function HabitTableEntry() {
                       </div>
                     </td>
                   </tr>
+
                 )
               )
             )}

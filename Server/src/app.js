@@ -30,9 +30,9 @@ app.use(cookieParser());
 app.use("/api/v1/users/registered", registeredUserRoutes)
 // LoggedIn User Routes
 app.use("/api/v1/users/loggedin",loggedInUserRoutes)
-
+// Logout Routes
 app.use("/api/v1/users/logout", loggedOutUserRoutes)
-
+// Porgot password Routes
 app.use("/api/v1/users/forgot-password-verification", existingUserRoutes )
 
 // --------------------------- Protected Routes --------------------------
@@ -40,6 +40,9 @@ app.use("/api/v1/users/forgot-password-verification", existingUserRoutes )
 app.use("/api/v1/dashboard", dashboardRoutes)
 // Habit Tracker Routes
 app.use("/api/v1/dashboard/habit",habitTrackerRoutes)
+// Expense Tracker Routes
+
+// Investment Tracker Routes
 
 
 // ------------------------ Global Error Handling -----------------------
