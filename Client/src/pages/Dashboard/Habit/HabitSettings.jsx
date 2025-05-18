@@ -38,6 +38,19 @@ function HabitSettings() {
     intake: <Utensils size={18} />,
   };
 
+  const unitMap = {
+    burned: "Kcal",
+    water: "Liters",
+    sleep: "Hrs",
+    read: "Hrs",
+    intake: "Kcal",
+    selfCare: "Score",
+    mood: "Scale",
+    progress: "%",
+    // Add more units as per your fields
+  };
+
+
   const [ranges, setRanges] = useState({ ...settings });
   const [selfcareInput, setSelfcareInput] = useState("");
   const [moodInput, setMoodInput] = useState("");
@@ -286,31 +299,46 @@ function HabitSettings() {
         {/* Range Settings */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
           {Object.keys(iconMap).map((field) => (
-            <div key={field} className="card bg-base-200 p-4 shadow-md">
+            <div key={field} className="card bg-base-200 p-4 shadow-md relative">
+              {/* Unit Tag in top-left */}
+              <div className="absolute top-2 right-2 text-xs px-2 py-1 rounded badge badge-soft badge-success">
+                {unitMap[field] || "-"}
+              </div>
+
               <h2 className="text-lg font-semibold capitalize mb-3 flex items-center gap-2">
                 {iconMap[field]} {field}
               </h2>
+
               <div className="flex items-center gap-2 mb-2">
-                <input
-                  type="number"
-                  placeholder="Min"
-                  className="input input-bordered w-full"
-                  value={ranges[field]?.min}
-                  onChange={(e) =>
-                    handleRangeChange(field, "min", e.target.value)
-                  }
-                />
+                <label className="floating-label w-full">
+                  <span>Min</span>
+                  <input
+                    type="number"
+                    placeholder="Min"
+                    className="input input-bordered w-full"
+                    value={ranges[field]?.min}
+                    onChange={(e) =>
+                      handleRangeChange(field, "min", e.target.value)
+                    }
+                  />
+                </label>
+
                 <span>-</span>
-                <input
-                  type="number"
-                  placeholder="Max"
-                  className="input input-bordered w-full"
-                  value={ranges[field]?.max}
-                  onChange={(e) =>
-                    handleRangeChange(field, "max", e.target.value)
-                  }
-                />
+
+                <label className="floating-label w-full">
+                  <span>Max</span>
+                  <input
+                    type="number"
+                    placeholder="Max"
+                    className="input input-bordered w-full"
+                    value={ranges[field]?.max}
+                    onChange={(e) =>
+                      handleRangeChange(field, "max", e.target.value)
+                    }
+                  />
+                </label>
               </div>
+
               <button
                 className="btn btn-soft btn-info btn-sm w-full"
                 onClick={() => saveRange(field)}
@@ -318,6 +346,7 @@ function HabitSettings() {
                 Save
               </button>
             </div>
+
           ))}
         </div>
 
