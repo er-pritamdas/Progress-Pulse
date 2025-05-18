@@ -351,12 +351,11 @@ function HabitSettings() {
                 {settings.selfcare.map((habit, idx) => (
                   <div
                     key={idx}
-                    className="badge badge-soft badge-default gap-1 text-sm px-3 py-2 flex items-center"
-                  >
+                    className="badge badge-soft badge-success gap-1 text-sm px-3 py-2 flex items-center">
                     <UserCheck size={14} />
                     {habit}
                     <button
-                      className="ml-2"
+                      className="ml-2 cursor-pointer"
                       onClick={() => removeFromArray("selfcare", idx)}
                     >
                       <X size={15} />
@@ -390,12 +389,12 @@ function HabitSettings() {
                 {settings.mood.map((m, idx) => (
                   <div
                     key={idx}
-                    className="badge badge-soft badge-default gap-1 text-sm px-3 py-2 flex items-center"
+                    className="badge badge-soft badge-success gap-1 text-sm px-3 py-2 flex items-center"
                   >
                     <Smile size={14} />
                     {m}
                     <button
-                      className="ml-2"
+                      className="ml-2 cursor-pointer"
                       onClick={() => removeFromArray("mood", idx)}
                     >
                       <X size={15} />

@@ -7,7 +7,7 @@ function ErrorAlert({ message, top = 5 }) {
       {message && (
         <motion.div
           role="alert"
-          className="alert alert-soft alert-error absolute right-5"
+          className="alert alert-soft alert-error absolute right-5 z-50"
           style={{ top: `${top * 0.25}rem` }}
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
