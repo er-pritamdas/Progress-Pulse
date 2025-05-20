@@ -40,12 +40,14 @@ function Login() {
       setLoading(true);
       setDisableButton(true);
       const response = await axios.post("/api/v1/users/loggedin", formData);
-      setalertSuccessMessage("User Logged In Successfully");
-      setShowSuccessAlert(true);
+
       localStorage.setItem("token", response.data.data.accessToken);
       localStorage.setItem("username", formData.username);
+
+      setalertSuccessMessage("User Logged In Successfully");
+      setShowSuccessAlert(true);
+
       setTimeout(() => {
-        setLoading(false);
         setShowSuccessAlert(false);
         setvalidToken(true);
         navigate("/dashboard", { state: { formData } });
@@ -54,12 +56,45 @@ function Login() {
       setLoading(false);
       setDisableButton(false);
       const errorMessage =
-        err.response?.data?.message || "Something went Wrong";
+        err?.response?.data?.message || "Something went Wrong";
       setAlertErrorMessage(errorMessage);
       setShowErrorAlert(true);
-      setTimeout(() => setShowErrorAlert(false), 4000);
+      setTimeout(() => {
+        setShowErrorAlert(false)
+      }, 2000);
+
+      const isVerifiedError = err?.response?.data?.errors?.[0]?.isVerified === false;
+
+      if (isVerifiedError) {
+        try {
+          setLoading(true);
+          setDisableButton(true);
+          const response = await axios.post("/api/v1/users/loggedin/generate-otp", formData);
+
+          setalertSuccessMessage("OTP Generated to your Registered Email ID");
+          localStorage.setItem("allowOtp", "true");
+          setShowSuccessAlert(true);
+
+          setTimeout(() => {
+            setShowSuccessAlert(false);
+            setLoading(false);
+            navigate("/otp", { state: { formData } });
+          }, 4000);
+        } catch (err) {
+          setLoading(false);
+          setDisableButton(false);
+          const otpErrorMessage =
+            err?.response?.data?.message ||
+            "Something went wrong. Please try again.";
+          setAlertErrorMessage(otpErrorMessage);
+          setShowErrorAlert(true);
+          localStorage.setItem("allowOtp", "false");
+          setTimeout(() => setShowErrorAlert(false), 4000);
+        }
+      }
     }
   };
+
 
   return (
     <div className="relative w-full h-screen overflow-hidden">

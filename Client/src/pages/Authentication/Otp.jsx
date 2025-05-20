@@ -5,6 +5,7 @@ import ErrorAlert from "../../utils/Alerts/ErrorAlert";
 import SuccessAlert from "../../utils/Alerts/SuccessAlert";
 import { useLoading } from "../../Context/LoadingContext";
 import { TitleChanger } from "../../utils/TitleChanger";
+import { useAuth } from "../../Context/JwtAuthContext";
 
 
 
@@ -13,6 +14,7 @@ function Otp() {
     TitleChanger("Progress Pulse | OTP")
 
     const { setLoading } = useLoading();
+    const { validToken, setvalidToken } = useAuth();
 
 
     const [showErrorAlert, setShowErrorAlert] = useState(false);
@@ -72,6 +74,7 @@ const LoginAfterSignup = async () =>{
       const loginResponse = await axios.post("/api/v1/users/loggedin", formData);
       localStorage.setItem("token", loginResponse.data.data.accessToken);
       localStorage.setItem("username", formData.username);
+      setvalidToken(true)
     }catch(error){
         const errorMessage = err.response?.data?.message || "Something went Wrong";
         console.log(errorMessage)
