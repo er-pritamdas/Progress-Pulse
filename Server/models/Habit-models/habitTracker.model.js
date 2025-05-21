@@ -6,7 +6,7 @@ dotenv.config({
 });
 
 const HabitDB = mongoose.connection.useDb(process.env.HABIT_DB);
-console.log(`✅ ${HabitDB.name} Connected`);
+
 
 const dailyHabitSchema = new mongoose.Schema(
   {
@@ -116,5 +116,6 @@ const dailyHabitSchema = new mongoose.Schema(
 dailyHabitSchema.index({ userId: 1, date: 1 }, { unique: true });
 
 const HabitTracker = HabitDB.model("habittracker", dailyHabitSchema);
-
+const collectionName = HabitTracker.collection.collectionName;
+console.log(`✅ Pulse/${HabitDB.name}/${collectionName} Connected`);
 export default HabitTracker;

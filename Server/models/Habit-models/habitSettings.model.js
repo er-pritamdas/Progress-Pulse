@@ -6,7 +6,6 @@ dotenv.config({
 });
 
 const HabitDB = mongoose.connection.useDb(process.env.HABIT_DB);
-console.log(`✅ ${HabitDB.name} Connected`);
 
 const rangeSchema = new mongoose.Schema(
     {
@@ -63,4 +62,8 @@ const habitSettingsSchema = new mongoose.Schema(
 );
 
 const HabitSettings = HabitDB.model("habitsettings", habitSettingsSchema);
+const collectionName = HabitSettings.collection.collectionName;
+
+console.log(`✅ Pulse/${HabitDB.name}/${collectionName} Connected`);
+
 export default HabitSettings;

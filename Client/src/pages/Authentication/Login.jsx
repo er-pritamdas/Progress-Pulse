@@ -50,6 +50,7 @@ function Login() {
       setTimeout(() => {
         setShowSuccessAlert(false);
         setvalidToken(true);
+        setLoading(false);
         navigate("/dashboard", { state: { formData } });
       }, 4000);
     } catch (err) {

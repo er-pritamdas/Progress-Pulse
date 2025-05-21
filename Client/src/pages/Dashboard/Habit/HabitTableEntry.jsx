@@ -12,6 +12,7 @@ import DeleteHabitPopUp from "../../../components/Dashboard/Habit/DeleteHabitPop
 import Refresh from "../../../utils/Icons/Refresh";
 import { TitleChanger } from "../../../utils/TitleChanger";
 import { useSelector } from "react-redux";
+import { Flame, Droplet, Moon, BookOpen, Utensils, Smile, UserCheck, X, Info, Download, SaveAll, ListRestart } from "lucide-react";
 
 function HabitTableEntry() {
   TitleChanger("Progress Pulse | Habit Entry")

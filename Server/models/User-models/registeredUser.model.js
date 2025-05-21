@@ -5,7 +5,7 @@ dotenv.config({
 })
 
 const UserDB = mongoose.connection.useDb(process.env.USER_DB);
-console.log(`✅ ${UserDB.name} Connected`);
+
 
 
 const registeredUserSchema = new mongoose.Schema(
@@ -104,5 +104,8 @@ const registeredUserSchema = new mongoose.Schema(
 );
 
 const RegisteredUsers = UserDB.model("RegisteredUsers", registeredUserSchema);
+const collectionName = RegisteredUsers.collection.collectionName;
+
+console.log(`✅ Pulse/${UserDB.name}/${collectionName} Connected`);
 
 export default RegisteredUsers
