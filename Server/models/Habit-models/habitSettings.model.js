@@ -64,6 +64,8 @@ const habitSettingsSchema = new mongoose.Schema(
 const HabitSettings = HabitDB.model("habitsettings", habitSettingsSchema);
 const collectionName = HabitSettings.collection.collectionName;
 
+console.log("---------------------------------------------------------------");
 console.log(`✅ Pulse/${HabitDB.name}/${collectionName} Connected`);
+console.log("---------------------------------------------------------------");
 
 export default HabitSettings;

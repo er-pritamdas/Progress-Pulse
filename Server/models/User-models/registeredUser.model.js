@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 import dotenv from 'dotenv'
 dotenv.config({
-    path: './.env'
+  path: './.env'
 })
 
 const UserDB = mongoose.connection.useDb(process.env.USER_DB);
@@ -10,11 +10,11 @@ const UserDB = mongoose.connection.useDb(process.env.USER_DB);
 
 const registeredUserSchema = new mongoose.Schema(
   {
-    username: { 
-        type: String, 
-        required: true, 
-        unique: true, 
-        trim: true 
+    username: {
+      type: String,
+      required: true,
+      unique: true,
+      trim: true
     },
 
     email: {
@@ -25,19 +25,19 @@ const registeredUserSchema = new mongoose.Schema(
       index: true,
     },
 
-    passwordHash: { 
-        type: String, 
-        required: true 
+    passwordHash: {
+      type: String,
+      required: true
     }, // Must be hashed before saving
 
-    otp:{
+    otp: {
       type: String,
       default: null,
     },
 
-    otpValidTill:{
+    otpValidTill: {
       type: Date,
-      default:null,
+      default: null,
     },
 
     // role: {
@@ -46,9 +46,9 @@ const registeredUserSchema = new mongoose.Schema(
     //   default: "user",
     // },
 
-    isVerified: { 
-        type: Boolean, 
-        default: false 
+    isVerified: {
+      type: Boolean,
+      default: false
     },
 
     // profilePic: { 
@@ -62,15 +62,15 @@ const registeredUserSchema = new mongoose.Schema(
     //   default: "pending",
     // },
 
-    lastLogin: { 
-        type: Date, 
-        default: null 
+    lastLogin: {
+      type: Date,
+      default: null
     },
 
-    lastLogout: { 
-      type: Date, 
-      default: null 
-  },
+    lastLogout: {
+      type: Date,
+      default: null
+    },
 
     // failedLoginAttempts: { 
     //     type: Number, 
@@ -93,8 +93,8 @@ const registeredUserSchema = new mongoose.Schema(
     // },
 
     isLoggedIn: {
-        type:Boolean,
-        default:false
+      type: Boolean,
+      default: false
     }
 
   },
@@ -106,6 +106,8 @@ const registeredUserSchema = new mongoose.Schema(
 const RegisteredUsers = UserDB.model("RegisteredUsers", registeredUserSchema);
 const collectionName = RegisteredUsers.collection.collectionName;
 
+console.log("---------------------------------------------------------------");
 console.log(`✅ Pulse/${UserDB.name}/${collectionName} Connected`);
+console.log("---------------------------------------------------------------");
 
 export default RegisteredUsers

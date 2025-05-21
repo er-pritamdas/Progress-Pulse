@@ -117,5 +117,9 @@ dailyHabitSchema.index({ userId: 1, date: 1 }, { unique: true });
 
 const HabitTracker = HabitDB.model("habittracker", dailyHabitSchema);
 const collectionName = HabitTracker.collection.collectionName;
+
+console.log("---------------------------------------------------------------");
 console.log(`✅ Pulse/${HabitDB.name}/${collectionName} Connected`);
+console.log("---------------------------------------------------------------");
+
 export default HabitTracker;

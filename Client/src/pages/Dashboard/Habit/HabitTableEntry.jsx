@@ -12,7 +12,21 @@ import DeleteHabitPopUp from "../../../components/Dashboard/Habit/DeleteHabitPop
 import Refresh from "../../../utils/Icons/Refresh";
 import { TitleChanger } from "../../../utils/TitleChanger";
 import { useSelector } from "react-redux";
-import { Flame, Droplet, Moon, BookOpen, Utensils, Smile, UserCheck, X, Info, Download, SaveAll, ListRestart } from "lucide-react";
+import {
+  AlertTriangle,
+  CheckCircle,
+  XCircle,
+  CalendarDays,
+  Flame,
+  Droplet,
+  BedDouble,
+  BookOpen,
+  Utensils,
+  Heart,
+  Smile,
+  BarChart3,
+  MoreHorizontal
+} from "lucide-react";
 
 function HabitTableEntry() {
   TitleChanger("Progress Pulse | Habit Entry")
@@ -304,32 +318,91 @@ function HabitTableEntry() {
 
       {/* Table */}
       <div className="overflow-x-auto overflow-y-auto scroll-hidden">
-        <table className="bg-base-300 table table-fixed w-full">
+        <table className="bg-base-300 table table-fixed   w-full">
           {/* Headings */}
           <thead>
             {/* Indicator Row */}
             <tr>
               <th colSpan="10" className="py-3 px-4 bg-base-200">
                 <div className="flex items-center gap-4 text-sm font-normal">
-                  <div className="badge badge-sm badge-soft badge-warning font-normal">Below Min</div>
-                  <div className="badge badge-sm badge-soft badge-success font-normal">Within Range</div>
-                  <div className="badge badge-sm badge-soft badge-error font-normal">Above Max</div>
+                  <div className="badge badge-sm badge-soft badge-warning font-normal flex items-center gap-1">
+                    <AlertTriangle className="w-4 h-4" />
+                    Below Min
+                  </div>
+                  <div className="badge badge-sm badge-soft badge-success font-normal flex items-center gap-1">
+                    <CheckCircle className="w-4 h-4" />
+                    Within Range
+                  </div>
+                  <div className="badge badge-sm badge-soft badge-error font-normal flex items-center gap-1">
+                    <XCircle className="w-4 h-4" />
+                    Above Max
+                  </div>
                 </div>
               </th>
             </tr>
 
             {/* Heading Row */}
             <tr>
-              <th className="w-[120px]">Date</th>
-              <th className="w-[80px]">Burned [Kcal]</th>
-              <th className="w-[80px]">Water [L]</th>
-              <th className="w-[80px]">Sleep [Hrs]</th>
-              <th className="w-[90px]">Read [Hrs]</th>
-              <th className="w-[90px]">Intake [Kcal]</th>
-              <th className="w-[100px]">Self Care</th>
-              <th className="w-[100px]">Mood</th>
-              <th className="w-[100px]">Progress</th>
-              <th className="w-[120px] text-center">Actions</th>
+              <th className="w-[80px] text-center border border-base-100">
+                <div className="flex items-center justify-center gap-1">
+                  <CalendarDays className="w-4 h-4" />
+                  Date
+                </div>
+              </th>
+              <th className="w-[80px] text-center border border-base-100">
+                <div className="flex items-center justify-center gap-1">
+                  <Flame className="w-4 h-4" />
+                  Burned [Kcal]
+                </div>
+              </th>
+              <th className="w-[80px] text-center border border-base-100">
+                <div className="flex items-center justify-center gap-1">
+                  <Droplet className="w-4 h-4" />
+                  Water [L]
+                </div>
+              </th>
+              <th className="w-[80px] text-center border border-base-100">
+                <div className="flex items-center justify-center gap-1">
+                  <BedDouble className="w-4 h-4" />
+                  Sleep [Hrs]
+                </div>
+              </th>
+              <th className="w-[80px] text-center border border-base-100">
+                <div className="flex items-center justify-center gap-1">
+                  <BookOpen className="w-4 h-4" />
+                  Read [Hrs]
+                </div>
+              </th>
+              <th className="w-[80px] text-center border border-base-100">
+                <div className="flex items-center justify-center gap-1">
+                  <Utensils className="w-4 h-4" />
+                  Intake [Kcal]
+                </div>
+              </th>
+              <th className="w-[80px] text-center border border-base-100">
+                <div className="flex items-center justify-center gap-1">
+                  <Heart className="w-4 h-4" />
+                  Self Care
+                </div>
+              </th>
+              <th className="w-[80px]text-center border border-base-100">
+                <div className="flex items-center justify-center gap-1">
+                  <Smile className="w-4 h-4" />
+                  Mood
+                </div>
+              </th>
+              <th className="w-[80px] text-center border border-base-100">
+                <div className="flex items-center justify-center gap-1">
+                  <BarChart3 className="w-4 h-4" />
+                  Progress
+                </div>
+              </th>
+              <th className="w-[80px] text-center border border-base-100">
+                <div className="flex justify-center items-center justify-center gap-1">
+                  <MoreHorizontal className="w-4 h-4" />
+                  Actions
+                </div>
+              </th>
             </tr>
           </thead>
 
@@ -353,7 +426,7 @@ function HabitTableEntry() {
             ) : (
               data.map((item) =>
                 editingItem?.date === item.date ? (
-                  <tr key={item.date}>
+                  <tr key={item.date} className="text-center">
                     <td className="text-sm">{formatDate(item.date)}</td>
                     <td>
                       <input
@@ -489,34 +562,34 @@ function HabitTableEntry() {
                     </td>
                   </tr>
                 ) : (
-                  <tr key={item.date}>
-                    <td className="text-sm">{formatDate(item.date)}</td>
+                  <tr key={item.date} className="text-center">
+                    <td className="border border-base-100 text-sm">{formatDate(item.date)}</td>
 
-                    <td className={`text-sm truncate ${getColorClass("burned", item.burned || 0, settings)}`}>
+                    <td className={`text-sm border border-base-100 truncate ${getColorClass("burned", item.burned || 0, settings)}`}>
                       {item.burned || 0} Kcal
                     </td>
 
-                    <td className={`text-sm truncate ${getColorClass("water", item.water || 0, settings)}`}>
+                    <td className={`text-sm border border-base-100 truncate ${getColorClass("water", item.water || 0, settings)}`}>
                       {item.water || 0} Ltr
                     </td>
 
-                    <td className={`text-sm truncate ${getColorClass("sleep", item.sleep || 0, settings)}`}>
+                    <td className={`text-sm border border-base-100 truncate ${getColorClass("sleep", item.sleep || 0, settings)}`}>
                       {item.sleep || 0} Hrs
                     </td>
 
-                    <td className={`text-sm truncate ${getColorClass("read", item.read || 0, settings)}`}>
+                    <td className={`text-sm border border-base-100 truncate ${getColorClass("read", item.read || 0, settings)}`}>
                       {item.read || 0} Hrs
                     </td>
 
-                    <td className={`text-sm truncate ${getColorClass("intake", item.intake || 0, settings)}`}>
+                    <td className={`text-sm border border-base-100 truncate ${getColorClass("intake", item.intake || 0, settings)}`}>
                       {item.intake || 0} Kcal
                     </td>
 
-                    <td className="text-sm truncate">
+                    <td className="text-sm border border-base-100 truncate">
                       {item.selfcare || "---"}
                     </td>
 
-                    <td className="text-sm truncate">
+                    <td className="text-sm border border-base-100 truncate">
                       {item.mood || "---"}
                     </td>
 
