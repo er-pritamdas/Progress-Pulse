@@ -1,6 +1,5 @@
-import React from 'react'
-import BarChart from "../../../components/Dashboard/Habit/Charts/BrushBarChart"
 import { TitleChanger } from '../../../utils/TitleChanger'
+import HeatMap from '../../../components/Dashboard/Habit/Charts/HeatMap'
 
 function HabitDashboard() {
 
@@ -21,7 +20,7 @@ function HabitDashboard() {
         <div className="col-span-4 row-span-3 col-start-9 row-start-2 border border-gray-500 p-4">7</div>
 
         <div className="col-span-12 row-span-4 row-start-5 border border-gray-500 p-4">
-          <BarChart />
+          <HeatMap />
         </div>
         <div className="col-span-12 row-span-4 row-start-9 border border-gray-500 p-4">9</div>
       </div>
