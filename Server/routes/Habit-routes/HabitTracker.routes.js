@@ -1,7 +1,12 @@
 import { Router} from "express";
 import {verifyToken} from "../../middlewares/JwtAuthorization.middleware.js";
+// Habit Table entry Controller
 import { readHabitTableData, createHabitTableEntry, updateHabitTableEntry, deleteHabitTableEntry } from "../../controllers/Habit-controllers/HabitTableEntry.controller.js";
+// Habit Settings Controller
 import { getHabitSettings, updateHabitSettings, resetHabitSettingsToDefault } from "../../controllers/Habit-controllers/HabitSettings.controller.js";
+// Habit Dashboard Controller
+
+// Habit Table View Controller
 
 const router = Router()
 
@@ -16,9 +21,8 @@ router.route("/settings").get(verifyToken, getHabitSettings)
 router.route("/settings").put(verifyToken, updateHabitSettings)
 router.route("/settings").delete(verifyToken, resetHabitSettingsToDefault)
 
-
-
 // Habit Dashboard Routes
+router.route("").get(verifyToken, )
 
 // Habit Table View Routes
 
