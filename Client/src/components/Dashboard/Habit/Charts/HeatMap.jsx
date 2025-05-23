@@ -6,7 +6,7 @@ import DaisyColorsRaw from '../../../../utils/DaisyColors';
 function HeatMap() {
   const [colorRanges, setColorRanges] = useState([]);
 
-  // Convert raw Daisy colors to hex using culori
+  // Convert raw Daisy colors (CSS vars) to hex using culori
   const DaisyColors = useMemo(() => {
     const convertToHex = (value) => {
       const parsed = parse(value);
@@ -41,17 +41,18 @@ function HeatMap() {
     ]);
   }, [DaisyColors]);
 
+  const days = Array.from({ length: 31 }, (_, i) => `${i + 1}`);
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-  const series = Array.from({ length: 31 }, (_, day) => ({
-    name: `${day + 1}`,
-    data: months.map(month => ({
-      x: month,
-      y: Math.floor(Math.random() * 31)
-    }))
-  }));
+  const series = useMemo(() =>
+    months.map(month => ({
+      name: month,
+      data: days.map(day => ({
+        x: day,
+        y: Math.floor(Math.random() * 31)
+      }))
+    })), []);
 
-  // 👇 useMemo to ensure options re-calculate when colorRanges updates
   const options = useMemo(() => ({
     chart: {
       type: 'heatmap',
@@ -62,20 +63,20 @@ function HeatMap() {
     },
     xaxis: {
       type: 'category',
-      categories: months,
+      categories: days,
       labels: {
         style: { colors: DaisyColors.info }
       }
     },
     yaxis: {
-      title: { text: 'Day' },
+      categories: months,
       labels: {
         style: { colors: DaisyColors.info }
       }
     },
     plotOptions: {
       heatmap: {
-        shadeIntensity: 0.5,
+        shadeIntensity: 0,
         useFillColorAsStroke: true,
         distributed: false,
         colorScale: {
@@ -86,13 +87,13 @@ function HeatMap() {
   }), [colorRanges, DaisyColors]);
 
   return (
-    <div style={{ width: '720px', height: '930px' }}>
+    <div style={{ width: '1280px', height: '720px' }}>
       <Chart
         options={options}
         series={series}
         type="heatmap"
-        width={12 * 40}
-        height={31 * 30}
+        width={31 * 42} // 31 days
+        height={12 * 42} // 12 months
       />
     </div>
   );
