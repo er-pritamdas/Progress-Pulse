@@ -6,45 +6,66 @@ import { ApiResponse } from "../../utils/ApiResponse.js";
 
 const readHabitTableData = asynchandler(async (req, res, next) => {
   const user = req.user;
+  if (!user) throw new ApiError(401, "Username Required");
 
-  if (!user) {
-    throw new ApiError(401, "Username Required")
-  }
-
-  // Get pagination params from query
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 7;
   const skip = (page - 1) * limit;
 
-  // Count total entries for this user
-  const totalEntries = await HabitTracker.countDocuments({ userId: user._id });
+  // Parse optional date filters
+  const startDate = req.query.startDate ?? null;
+  const endDate = req.query.endDate ?? null;
 
-  // Fetch paginated entries
-  const entries = await HabitTracker.find({ userId: user._id })
-    .sort({ date: -1 }) // latest first
+  const dateFilter = {};
+  if (startDate && endDate) {
+    dateFilter.date = { $gte: startDate, $lte: endDate };
+  } else if (startDate) {
+    dateFilter.date = { $gte: startDate };
+  } else if (endDate) {
+    dateFilter.date = { $lte: endDate };
+  }
+
+  const filter = {
+    userId: user._id,
+    ...dateFilter
+  };
+
+  const totalEntries = await HabitTracker.countDocuments(filter);
+  console.log(filter)
+  const entries = await HabitTracker.find(filter)
+    .sort({ date: -1 })
     .skip(skip)
     .limit(limit);
 
-  if (!entries || entries.length === 0) {
-    throw new ApiError(404, "No Habit Entries Found")
+  if (!entries.length) {
+    throw new ApiError(404, "No Habit Entries Found");
   }
 
-  // Format data similar to the mock data format with fallback to "" for undefined values
   const formattedEntries = entries.map((entry) => ({
     date: entry.date ? entry.date.toString() : "",
-    burned: entry.habits.burned ? entry.habits.burned.toString() : "",
-    water: entry.habits.water ? entry.habits.water.toString() : "",
-    sleep: entry.habits.sleep ? entry.habits.sleep.toString() : "",
-    read: entry.habits.read ? entry.habits.read.toString() : "",
-    intake: entry.habits.intake ? entry.habits.intake.toString() : "",
-    selfcare: entry.habits.selfcare ? entry.habits.selfcare.toString() : "",
-    mood: entry.habits.mood ? entry.habits.mood.toString() : "",
-    progress: entry.progress ? entry.progress.toString() : "",
+    burned: entry.habits.burned?.toString() || "",
+    water: entry.habits.water?.toString() || "",
+    sleep: entry.habits.sleep?.toString() || "",
+    read: entry.habits.read?.toString() || "",
+    intake: entry.habits.intake?.toString() || "",
+    selfcare: entry.habits.selfcare?.toString() || "",
+    mood: entry.habits.mood?.toString() || "",
+    progress: entry.progress?.toString() || "",
   }));
 
-  return res.status(201).json(
-    new ApiResponse(201, {page, limit, totalEntries, totalPages:Math.ceil(totalEntries / limit), formattedEntries }, "User Registered successfully")
-)
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        page,
+        limit,
+        totalEntries,
+        totalPages: Math.ceil(totalEntries / limit),
+        formattedEntries,
+      },
+      "Habit entries fetched successfully"
+    )
+  );
 });
 
 const createHabitTableEntry = asynchandler(async (req, res, next) => {

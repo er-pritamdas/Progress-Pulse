@@ -34,3 +34,12 @@
 html {
   scroll-behavior: smooth;
 }
+
+.apexcharts-tooltip {
+  background:rgb(0, 0, 0) !important;
+  color: white !important;
+  border: 1px solid #ccc !important;
+  font-weight: 500;
+}
+
+

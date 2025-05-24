@@ -1,102 +1,120 @@
-import { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState } from 'react';
 import Chart from 'react-apexcharts';
-import { parse, formatHex } from 'culori';
-import DaisyColorsRaw from '../../../../utils/DaisyColors';
+import axios from 'axios';
+import dayjs from 'dayjs';
+import axiosInstance from '../../../../Context/AxiosInstance';
 
-function HeatMap() {
-  const [colorRanges, setColorRanges] = useState([]);
+const HeatmapChart = () => {
+  const [series, setSeries] = useState([]);
+  const [min, setMin] = useState(0);
+  const [max, setMax] = useState(100);
 
-  // Convert raw Daisy colors (CSS vars) to hex using culori
-  const DaisyColors = useMemo(() => {
-    const convertToHex = (value) => {
-      const parsed = parse(value);
-      return parsed ? formatHex(parsed) : '#ffffff';
-    };
 
-    return Object.fromEntries(
-      Object.entries(DaisyColorsRaw).map(([key, value]) => [key, convertToHex(value)])
-    );
-  }, []);
+  const days = Array.from({ length: 31 }, (_, i) => (i + 1).toString());
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+  const fetchHabitSettings = async () => {
+    try {
+      const res = await axiosInstance.get("/v1/dashboard/habit/settings")
+      const min = res.data.data.settings.water.min
+      const max = res.data.data.settings.water.max
+      console.log(min)
+      console.log(max)
+      setMin(min)
+      setMax(max)
+    } catch (err) {
+      console.error('Error fetching heatmap Settings data:', err);
+    }
+  }
+
+  const fetchData = async () => {
+    try {
+      const res = await axiosInstance.get("/v1/dashboard/habit/table-entry?page=1&limit=372")
+
+      const entries = res.data.data.formattedEntries;
+
+      // Initialize empty heatmap data structure
+      const dataByMonth = months.map((month) => ({
+        name: month,
+        data: days.map(day => ({ x: day, y: 0 }))
+      }));
+
+      // Fill in values from the API
+      entries.forEach(entry => {
+        const date = dayjs(entry.date);
+        const day = date.date();       // 1–31
+        const monthIndex = date.month(); // 0–11
+
+        const waterLiters = parseFloat(entry.water ?? "0");
+        dataByMonth[monthIndex].data[day - 1].y = isNaN(waterLiters) ? 0 : waterLiters;
+
+      });
+
+      setSeries(dataByMonth);
+    } catch (err) {
+      console.error('Error fetching heatmap data:', err);
+    }
+  };
 
   useEffect(() => {
-    setColorRanges([
-      {
-        from: 0,
-        to: 10,
-        name: 'Low',
-        color: DaisyColors.success
-      },
-      {
-        from: 11,
-        to: 20,
-        name: 'Medium',
-        color: DaisyColors.warning
-      },
-      {
-        from: 21,
-        to: 31,
-        name: 'High',
-        color: DaisyColors.error
-      }
-    ]);
-  }, [DaisyColors]);
+    fetchData();
+    fetchHabitSettings();
+  }, []);
 
-  const days = Array.from({ length: 31 }, (_, i) => `${i + 1}`);
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-
-  const series = useMemo(() =>
-    months.map(month => ({
-      name: month,
-      data: days.map(day => ({
-        x: day,
-        y: Math.floor(Math.random() * 31)
-      }))
-    })), []);
-
-  const options = useMemo(() => ({
+  const options = {
     chart: {
       type: 'heatmap',
-      toolbar: { show: true }
+      toolbar: { show: false },
+      height: 588,
     },
+    plotOptions: {
+      heatmap: {
+        radius: 21,
+        shadeIntensity: 1,
+        useFillColorAsStroke: false,
+        colorScale: {
+          ranges: [
+            { from: 0, to: 1, color: "#142434", name: "No Value" },     // 0 to 0 
+            { from: 1, to: min, color: "#a7e9df", name: "Below Min" }, //  1 to 1 (min=2)
+            { from: min, to: max + 1, color: "#29c0ad", name: "Within Range" },   // 2 to 4 (max=4+1)
+            { from: max + 1, to: Infinity, color: "#25a899", name: "Above Max" }  // 5 to infinity
+          ]
+        }
+      }
+    },
+    stroke: { show: false },
     dataLabels: {
-      enabled: true
+      enabled: true,
+      style: { colors: ['#000'] }
+    },
+    grid: {
+      yaxis: { lines: { show: false } }
     },
     xaxis: {
       type: 'category',
       categories: days,
-      labels: {
-        style: { colors: DaisyColors.info }
-      }
+      labels: { style: { colors: '#fff' } },
+      title: { text: "Day of Month", style: { color: '#fff' } }
     },
     yaxis: {
-      categories: months,
-      labels: {
-        style: { colors: DaisyColors.info }
-      }
+      labels: { style: { colors: '#fff' } },
+      title: { text: "Month", style: { color: '#fff' } }
     },
-    plotOptions: {
-      heatmap: {
-        shadeIntensity: 0,
-        useFillColorAsStroke: true,
-        distributed: false,
-        colorScale: {
-          ranges: colorRanges
-        }
-      }
+    legend: {
+      labels: { colors: '#fff' }
+    },
+    title: {
+      text: 'Water',
+      align: 'center',
+      style: { color: '#fff' }
     }
-  }), [colorRanges, DaisyColors]);
+  };
 
   return (
-    <div style={{ width: '1280px', height: '720px' }}>
-      <Chart
-        options={options}
-        series={series}
-        type="heatmap"
-        width={31 * 42} // 31 days
-        height={12 * 42} // 12 months
-      />
+    <div style={{ width: '100%', overflowX: 'auto' }} className="p-4">
+      <Chart options={options} series={series} type="heatmap" height={588} />
     </div>
   );
-}
+};
 
-export default HeatMap;
+export default HeatmapChart;

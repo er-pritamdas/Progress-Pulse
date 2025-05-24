@@ -25,12 +25,22 @@ import {
   Heart,
   Smile,
   BarChart3,
-  MoreHorizontal
+  MoreHorizontal,
 } from "lucide-react";
 
 function HabitTableEntry() {
-  TitleChanger("Progress Pulse | Habit Entry")
+  TitleChanger("Progress Pulse | Habit Entry");
   const settings = useSelector((state) => state.habit.settings);
+
+  // Format Date Function
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    const day = String(date.getDate()).padStart(2, "0");
+    const month = date.toLocaleString("default", { month: "short" });
+    const year = String(date.getFullYear()).slice(2);
+    return `${day}-${month}-${year}`;
+  };
+
   // variables
   const [itemToDelete, setItemToDelete] = useState(null);
   const ITEMS_PER_PAGE = 7;
@@ -50,12 +60,28 @@ function HabitTableEntry() {
 
   // -------------------------------------------------------------------- Functions ---------------------------------------------------------------
 
+  const currentYear = new Date().getFullYear();
+
+  // 🔹 Generate raw date strings for Jan 1 and Dec 31
+  const firstDateRaw = `${currentYear}-01-01`;
+  const lastDateRaw = `${currentYear}-12-31`;
+
+  // 🔹 Set in state
+  const [fromDate, setFromDate] = useState(firstDateRaw);
+  const [toDate, setToDate] = useState(lastDateRaw);
+
+  const resetFilters = () => {
+    setFromDate(firstDateRaw);
+    setToDate(lastDateRaw);
+    // Optionally re-fetch or show all data
+  };
+
   const getColorClass = (field, value, settings) => {
-    if (!settings[field]) return 'text-gray-500'; // fallback
+    if (!settings[field]) return "text-gray-500"; // fallback
     const { min, max } = settings[field];
-    if (value < min) return 'text-warning';
-    if (value > max) return 'text-error';
-    return 'text-success';
+    if (value < min) return "text-warning";
+    if (value > max) return "text-error";
+    return "text-success";
   };
 
   const fetchHabits = async (currentPage) => {
@@ -69,6 +95,8 @@ function HabitTableEntry() {
         params: {
           page: currentPage,
           limit: ITEMS_PER_PAGE,
+          startDate: fromDate,
+          endDate: toDate,
         },
       });
 
@@ -79,14 +107,19 @@ function HabitTableEntry() {
       setData(sortedHabits);
     } catch (err) {
       setData([]);
-      const errorMessage = err.response?.data?.message || "Failed to fetch habit data!";
+      const errorMessage =
+        err.response?.data?.message || "Failed to fetch habit data!";
       setAlertErrorMessage(errorMessage);
       setShowErrorAlert(true);
+      setTotalPages(1)
+      setCurrentPage(1)
       setTimeout(() => setShowErrorAlert(false), 4000);
     } finally {
       // only compute totalPages if we got a response
       if (response?.data?.data?.totalEntries != null) {
-        setTotalPages(Math.ceil(response.data.data.totalEntries / ITEMS_PER_PAGE));
+        setTotalPages(
+          Math.ceil(response.data.data.totalEntries / ITEMS_PER_PAGE)
+        );
       }
       setLoading(false);
     }
@@ -95,15 +128,6 @@ function HabitTableEntry() {
   useEffect(() => {
     fetchHabits(currentPage);
   }, []); // re-run when currentPage changes
-
-  // Format Date Function
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    const day = String(date.getDate()).padStart(2, "0");
-    const month = date.toLocaleString("default", { month: "short" });
-    const year = String(date.getFullYear()).slice(2);
-    return `${day}-${month}-${year}`;
-  };
 
   // Key Down Function
   useEffect(() => {
@@ -155,30 +179,28 @@ function HabitTableEntry() {
 
   const handleDeleteConfirm = async () => {
     try {
-      setLoading(true)
+      setLoading(true);
       const response = axiosInstance.delete("/v1/dashboard/habit/table-entry", {
         params: {
           date: itemToDelete,
-        }
-      })
+        },
+      });
       setalertSuccessMessage(`Entry For ${itemToDelete} Deleted`);
       setShowSuccessAlert(true);
       setTimeout(() => setShowSuccessAlert(false), 4000);
       fetchHabits(currentPage);
-
     } catch (err) {
       const errorMessage =
         err.response?.data?.message || "Failed to fetch habit data!";
       setAlertErrorMessage(errorMessage);
       setShowErrorAlert(true);
       setTimeout(() => setShowErrorAlert(false), 4000);
-
     } finally {
-      setLoading(false)
+      setLoading(false);
       setIsDeleteModalOpen(false);
     }
     // setData(data.filter((item) => item.date !== itemToDelete));
-  }
+  };
 
   // Handle Enter Key function
   const handleKeyDown = (e) => {
@@ -196,7 +218,7 @@ function HabitTableEntry() {
   // Save Data Function
   const handleSave = async () => {
     const originalItem = data.find((item) => item.date === editingItem.date);
-    console.log(originalItem)
+    console.log(originalItem);
 
     if (JSON.stringify(originalItem) === JSON.stringify(editingItem)) {
       setalertSuccessMessage("Already up to date!");
@@ -206,16 +228,19 @@ function HabitTableEntry() {
       return;
     }
     try {
-      setLoading(true)
-      const response = await axiosInstance.put("/v1/dashboard/habit/table-entry", { ...editingItem })
-      console.log(response.data.message)
+      setLoading(true);
+      const response = await axiosInstance.put(
+        "/v1/dashboard/habit/table-entry",
+        { ...editingItem }
+      );
+      console.log(response.data.message);
       setalertSuccessMessage(response.data.message);
       setShowSuccessAlert(true);
       setTimeout(() => setShowSuccessAlert(false), 4000);
-
     } catch (err) {
       setLoading(false);
-      const errorMessage = err.response?.data?.message || "Failed To Save Entry!";
+      const errorMessage =
+        err.response?.data?.message || "Failed To Save Entry!";
       setAlertErrorMessage(errorMessage);
       setShowErrorAlert(true);
       setTimeout(() => setShowErrorAlert(false), 4000);
@@ -297,13 +322,16 @@ function HabitTableEntry() {
         </div> */}
 
         <div className="join join-vertical lg:join-horizontal">
-          <button className="btn btn-primary join-item" onClick={handleAddEntryClick}>
+          <button
+            className="btn btn-primary join-item"
+            onClick={handleAddEntryClick}
+          >
             + Add Entry
           </button>
           <button
             className="btn btn-soft join-item"
             onClick={() => {
-              if (!data || data.length === 0) return;
+              // if (!data || data.length === 0) return;
               fetchHabits(currentPage);
               setalertSuccessMessage("Refreshed!");
               setShowSuccessAlert(true);
@@ -315,31 +343,129 @@ function HabitTableEntry() {
         </div>
       </div>
 
-
       {/* Table */}
       <div className="overflow-x-auto overflow-y-auto scroll-hidden">
         <table className="bg-base-300 table table-fixed   w-full">
           {/* Headings */}
           <thead>
-            {/* Indicator Row */}
             <tr>
               <th colSpan="10" className="py-3 px-4 bg-base-200">
-                <div className="flex items-center gap-4 text-sm font-normal">
-                  <div className="badge badge-sm badge-soft badge-warning font-normal flex items-center gap-1">
-                    <AlertTriangle className="w-4 h-4" />
-                    Below Min
+                <div className="flex justify-between items-center flex-wrap gap-4 text-sm font-normal">
+
+                  {/* Left: Badges */}
+                  <div className="flex items-center gap-3">
+                    <div className="badge badge-sm badge-soft badge-warning flex items-center gap-1">
+                      <AlertTriangle className="w-4 h-4" />
+                      Below Min
+                    </div>
+                    <div className="badge badge-sm badge-soft badge-success flex items-center gap-1">
+                      <CheckCircle className="w-4 h-4" />
+                      Within Range
+                    </div>
+                    <div className="badge badge-sm badge-soft badge-error flex items-center gap-1">
+                      <XCircle className="w-4 h-4" />
+                      Above Max
+                    </div>
                   </div>
-                  <div className="badge badge-sm badge-soft badge-success font-normal flex items-center gap-1">
-                    <CheckCircle className="w-4 h-4" />
-                    Within Range
-                  </div>
-                  <div className="badge badge-sm badge-soft badge-error font-normal flex items-center gap-1">
-                    <XCircle className="w-4 h-4" />
-                    Above Max
+
+                  {/* Right: From/To Date Pickers */}
+                  <div className="flex items-center gap-4 ml-auto">
+                    {/* FROM DATE PICKER */}
+                    <div className="dropdown dropdown-end floating-label">
+                      <div
+                        tabIndex={0}
+                        role="button"
+                        className="input text-xs w-25"
+                      >
+                        {formatDate(fromDate) || "-- / --- / --"}
+                      </div>
+                      <span>From Date</span>
+                      <div className="dropdown-content z-[999] bg-base-100 rounded-box shadow-sm p-2">
+                        <calendar-date
+                          class="cally"
+                          onchange={(e) =>
+                            setFromDate(e.target.value)
+                          }
+                        >
+                          <svg
+                            aria-label="Previous"
+                            className="fill-current size-4"
+                            slot="previous"
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 24 24"
+                          >
+                            <path d="M15.75 19.5 8.25 12l7.5-7.5"></path>
+                          </svg>
+                          <svg
+                            aria-label="Next"
+                            className="fill-current size-4"
+                            slot="next"
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 24 24"
+                          >
+                            <path d="m8.25 4.5 7.5 7.5-7.5 7.5"></path>
+                          </svg>
+                          <calendar-month></calendar-month>
+                        </calendar-date>
+                      </div>
+                    </div>
+                    -
+
+                    {/* TO DATE PICKER */}
+                    <div className="dropdown dropdown-end floating-label">
+                      <div
+                        tabIndex={0}
+                        role="button"
+                        className="input text-xs w-25"
+                      >
+                        {formatDate(toDate) || "-- / --- / --"}
+                      </div>
+                      <span>To Date</span>
+                      <div className="dropdown-content z-[999] bg-base-100 rounded-box shadow-sm p-2">
+                        <calendar-date
+                          class="cally"
+                          onchange={(e) =>
+                            setToDate(e.target.value)
+                          }
+                        >
+                          <svg
+                            aria-label="Previous"
+                            className="fill-current size-4"
+                            slot="previous"
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 24 24"
+                          >
+                            <path d="M15.75 19.5 8.25 12l7.5-7.5"></path>
+                          </svg>
+                          <svg
+                            aria-label="Next"
+                            className="fill-current size-4"
+                            slot="next"
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 24 24"
+                          >
+                            <path d="m8.25 4.5 7.5 7.5-7.5 7.5"></path>
+                          </svg>
+                          <calendar-month></calendar-month>
+                        </calendar-date>
+                      </div>
+                    </div>
+
+                    {/* BUTTONS */}
+                    <div className="join">
+                      <button className=" join-item btn btn-soft btn-sm btn-success" onClick={fetchHabits}>
+                        Filter
+                      </button>
+                      <button className="join-item btn btn-sm btn-soft" onClick={resetFilters}>
+                        Reset
+                      </button>
+                    </div>
+
                   </div>
                 </div>
               </th>
             </tr>
+
 
             {/* Heading Row */}
             <tr>
@@ -410,18 +536,23 @@ function HabitTableEntry() {
           <tbody>
             {data.length === 0 ? (
               <tr>
-                <td
-                  colSpan="10"
-                  className="h-[60vh] text-center text-gray-400 align-middle"
-                >
-                  <div className="flex justify-center items-center h-full">
-                    <p className="text-lg">
-                      No habit entries found. Click{" "}
-                      <strong className="text-blue-500">+ Add Entry</strong> to
-                      get started!
-                    </p>
+                <td colSpan="10" className="h-[60vh] text-center align-middle bg-base-100">
+                  <div className="flex flex-col justify-center items-center h-full space-y-4">
+                    <div className="text-2xl font-semibold">
+                      No habit entries found
+                    </div>
+                    <div className="text-md">
+                      Start tracking your progress by adding your first entry.
+                    </div>
+                    <button
+                      className="btn btn-soft btn-primary btn-sm px-6"
+                      onClick={handleAddEntryClick}
+                    >
+                      + Add Entry
+                    </button>
                   </div>
                 </td>
+
               </tr>
             ) : (
               data.map((item) =>
@@ -563,25 +694,57 @@ function HabitTableEntry() {
                   </tr>
                 ) : (
                   <tr key={item.date} className="text-center">
-                    <td className="border border-base-100 text-sm">{formatDate(item.date)}</td>
+                    <td className="border border-base-100 text-sm">
+                      {formatDate(item.date)}
+                    </td>
 
-                    <td className={`text-sm border border-base-100 truncate ${getColorClass("burned", item.burned || 0, settings)}`}>
+                    <td
+                      className={`text-sm border border-base-100 truncate ${getColorClass(
+                        "burned",
+                        item.burned || 0,
+                        settings
+                      )}`}
+                    >
                       {item.burned || 0} Kcal
                     </td>
 
-                    <td className={`text-sm border border-base-100 truncate ${getColorClass("water", item.water || 0, settings)}`}>
+                    <td
+                      className={`text-sm border border-base-100 truncate ${getColorClass(
+                        "water",
+                        item.water || 0,
+                        settings
+                      )}`}
+                    >
                       {item.water || 0} Ltr
                     </td>
 
-                    <td className={`text-sm border border-base-100 truncate ${getColorClass("sleep", item.sleep || 0, settings)}`}>
+                    <td
+                      className={`text-sm border border-base-100 truncate ${getColorClass(
+                        "sleep",
+                        item.sleep || 0,
+                        settings
+                      )}`}
+                    >
                       {item.sleep || 0} Hrs
                     </td>
 
-                    <td className={`text-sm border border-base-100 truncate ${getColorClass("read", item.read || 0, settings)}`}>
+                    <td
+                      className={`text-sm border border-base-100 truncate ${getColorClass(
+                        "read",
+                        item.read || 0,
+                        settings
+                      )}`}
+                    >
                       {item.read || 0} Hrs
                     </td>
 
-                    <td className={`text-sm border border-base-100 truncate ${getColorClass("intake", item.intake || 0, settings)}`}>
+                    <td
+                      className={`text-sm border border-base-100 truncate ${getColorClass(
+                        "intake",
+                        item.intake || 0,
+                        settings
+                      )}`}
+                    >
                       {item.intake || 0} Kcal
                     </td>
 
@@ -595,7 +758,9 @@ function HabitTableEntry() {
 
                     <td>
                       <progress
-                        className={`progress w-20 ${getProgressColorClass(calculateProgress(item))}`}
+                        className={`progress w-20 ${getProgressColorClass(
+                          calculateProgress(item)
+                        )}`}
                         value={calculateProgress(item)}
                         max="100"
                       ></progress>
@@ -618,7 +783,6 @@ function HabitTableEntry() {
                       </div>
                     </td>
                   </tr>
-
                 )
               )
             )}
