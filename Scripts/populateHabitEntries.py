@@ -47,7 +47,7 @@ for i in range(30):
     intake = random.randint(1800, 2500)
     selfcare = "BNF"
     mood = random.choice(["Good", "Average", "Sad", "Amazing","Depressed","Productive"])
-    progress = random.randint(50, 100)
+    progress = 100
 
     habit_payload = {
         "date": str(current_date),

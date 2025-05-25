@@ -3,8 +3,11 @@ import Chart from 'react-apexcharts';
 import axios from 'axios';
 import dayjs from 'dayjs';
 import axiosInstance from '../../../../Context/AxiosInstance';
+import { useLoading } from '../../../../Context/LoadingContext';
+
 
 const HeatmapChart = () => {
+  const { setLoading } = useLoading();
   const [series, setSeries] = useState([]);
   const [min, setMin] = useState(0);
   const [max, setMax] = useState(100);
@@ -30,7 +33,6 @@ const HeatmapChart = () => {
   const fetchData = async () => {
     try {
       const res = await axiosInstance.get("/v1/dashboard/habit/table-entry?page=1&limit=372")
-
       const entries = res.data.data.formattedEntries;
 
       // Initialize empty heatmap data structure
@@ -57,14 +59,16 @@ const HeatmapChart = () => {
   };
 
   useEffect(() => {
+    setLoading(true)
     fetchData();
     fetchHabitSettings();
+    setLoading(false)
   }, []);
 
   const options = {
     chart: {
       type: 'heatmap',
-      toolbar: { show: false },
+      toolbar: { show: true },
       height: 588,
     },
     plotOptions: {

@@ -87,6 +87,15 @@ const createHabitTableEntry = asynchandler(async (req, res, next) => {
     throw new ApiError(401, "Unauthorized: User Not Found")
   }
 
+  const getStatusFromProgress = (progress) => {
+    if (progress < 25) return "inconsistent";
+    if (progress < 50) return "uncertain";
+    if (progress < 75) return "moderate";
+    return "consistent";
+  };
+
+  const status = getStatusFromProgress(progress);
+
   try {
     const newHabit = await HabitTracker.create({
       userId: user._id,
@@ -101,6 +110,7 @@ const createHabitTableEntry = asynchandler(async (req, res, next) => {
         mood,
       },
       progress,
+      status
       // score, completionRate, streak will take default values
     });
 
@@ -121,24 +131,24 @@ const createHabitTableEntry = asynchandler(async (req, res, next) => {
 });
 
 const deleteHabitTableEntry = asynchandler(async (req, res, next) => {
-    const date = req.query.date; // Expecting format: "YYYY-MM-DD"
-    const userId = req.user._id;
+  const date = req.query.date; // Expecting format: "YYYY-MM-DD"
+  const userId = req.user._id;
 
-    if (!date) {
-      throw new ApiError(400, "Date query parameter is required")
-    }
+  if (!date) {
+    throw new ApiError(400, "Date query parameter is required")
+  }
 
-    const deletedDoc = await HabitTracker.findOneAndDelete({
-      userId: userId,
-      date: date,
-    });
+  const deletedDoc = await HabitTracker.findOneAndDelete({
+    userId: userId,
+    date: date,
+  });
 
-    if (!deletedDoc) {
-      throw new ApiError(404, "Habit entry not found for this date")
-    }
-    return res.status(200).json(
-      new ApiResponse(200, `Habit entry for ${date} deleted successfully`)
-    )
+  if (!deletedDoc) {
+    throw new ApiError(404, "Habit entry not found for this date")
+  }
+  return res.status(200).json(
+    new ApiResponse(200, `Habit entry for ${date} deleted successfully`)
+  )
 
 });
 
@@ -160,7 +170,14 @@ const updateHabitTableEntry = asynchandler(async (req, res, next) => {
   if (!date) {
     throw new ApiError(400, "Date query parameter is required");
   }
+  const getStatusFromProgress = (progress) => {
+    if (progress < 25) return "inconsistent";
+    if (progress < 50) return "uncertain";
+    if (progress < 75) return "moderate"; // short form for "partially consistent"
+    return "consistent";
+  };
 
+  const status = getStatusFromProgress(progress);
   const updatedDoc = await HabitTracker.findOneAndUpdate(
     { userId, date },
     {
@@ -173,6 +190,7 @@ const updateHabitTableEntry = asynchandler(async (req, res, next) => {
         "habits.selfcare": selfcare,
         "habits.mood": mood,
         progress: progress,
+        status: status,
       },
     },
     { new: true } // return the updated document

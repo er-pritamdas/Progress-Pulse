@@ -76,6 +76,19 @@ function HabitTableEntry() {
     // Optionally re-fetch or show all data
   };
 
+  const getConsistencyLabel = (percentage) => {
+    if (percentage <= 25) return "Inconsistent";
+    if (percentage <= 50) return "Uncertain";
+    if (percentage <= 75) return "Moderate";
+    return "Consistent";
+  };
+  const getConsistencyColor = (percentage) => {
+    if (percentage < 25) return "text-error";
+    if (percentage < 50) return "text-warning";
+    if (percentage < 75) return "text-info";
+    return "text-success";
+  };
+
   const getColorClass = (field, value, settings) => {
     if (!settings[field]) return "text-gray-500"; // fallback
     const { min, max } = settings[field];
@@ -140,12 +153,13 @@ function HabitTableEntry() {
     };
   }, [editingItem]);
 
+
   // Progress Color function
   const getProgressColorClass = (percentage) => {
-    if (percentage === 100) return "progress-success"; // ✅ Full
-    if (percentage >= 70) return "progress-info"; // 🟡 Almost there
-    if (percentage >= 30) return "progress-warning"; // 🟠 Midway
-    return "progress-error"; // 🔴 Low
+    if (percentage >= 75) return "progress-success";      // 75–100% → consistent → 🟢
+    if (percentage >= 50) return "progress-info";         // 50–74% → moderate → 🔵
+    if (percentage >= 25) return "progress-warning";      // 25–49% → uncertain → 🟠
+    return "progress-error";                              // 00–24% → inconsistent → 🔴
   };
 
   // calculate Progress Function
@@ -348,6 +362,7 @@ function HabitTableEntry() {
         <table className="bg-base-300 table table-fixed   w-full">
           {/* Headings */}
           <thead>
+            {/* ToolBar */}
             <tr>
               <th colSpan="10" className="py-3 px-4 bg-base-200">
                 <div className="flex justify-between items-center flex-wrap gap-4 text-sm font-normal">
@@ -466,7 +481,6 @@ function HabitTableEntry() {
               </th>
             </tr>
 
-
             {/* Heading Row */}
             <tr>
               <th className="w-[80px] text-center border border-base-100">
@@ -535,6 +549,7 @@ function HabitTableEntry() {
           {/* Table Body */}
           <tbody>
             {data.length === 0 ? (
+              // Message Row for empty Data
               <tr>
                 <td colSpan="10" className="h-[60vh] text-center align-middle bg-base-100">
                   <div className="flex flex-col justify-center items-center h-full space-y-4">
@@ -557,6 +572,7 @@ function HabitTableEntry() {
             ) : (
               data.map((item) =>
                 editingItem?.date === item.date ? (
+                  // Input Row
                   <tr key={item.date} className="text-center">
                     <td className="text-sm">{formatDate(item.date)}</td>
                     <td>
@@ -632,6 +648,8 @@ function HabitTableEntry() {
                         onChange={handleChange}
                       />
                     </td>
+                    
+                    {/* Mood */}
                     <td>
                       <div className="dropdown dropdown-bottom dropdown-center">
                         <div
@@ -666,14 +684,19 @@ function HabitTableEntry() {
                         </ul>
                       </div>
                     </td>
+
+                    {/* Progress */}
                     <td>
-                      <progress
-                        className={`progress w-20 ${getProgressColorClass(
-                          calculateProgress(editingItem)
-                        )}`}
-                        value={calculateProgress(editingItem)}
-                        max="100"
-                      ></progress>
+                      <td className="flex flex-col items-center justify-center gap-2 py-2">
+                        <span className={`text-xs ${getConsistencyColor(calculateProgress(editingItem))}`}>
+                          {getConsistencyLabel(calculateProgress(editingItem))}
+                        </span>
+                        <progress
+                          className={`progress w-20 ${getProgressColorClass(calculateProgress(editingItem))}`}
+                          value={calculateProgress(editingItem)}
+                          max="100"
+                        ></progress>
+                      </td>
                     </td>
                     <td className="text-center w-[120px]">
                       <div className="flex justify-center gap-2">
@@ -693,6 +716,7 @@ function HabitTableEntry() {
                     </td>
                   </tr>
                 ) : (
+                  // Normal Row 
                   <tr key={item.date} className="text-center">
                     <td className="border border-base-100 text-sm">
                       {formatDate(item.date)}
@@ -751,16 +775,19 @@ function HabitTableEntry() {
                     <td className="text-sm border border-base-100 truncate">
                       {item.selfcare || "---"}
                     </td>
-
+                    
+                    {/* Mood */}
                     <td className="text-sm border border-base-100 truncate">
                       {item.mood || "---"}
                     </td>
 
-                    <td>
+                    {/* Progress Bar */}
+                    <td className="flex flex-col items-center justify-center gap-2 py-2">
+                      <span className={`text-xs ${getConsistencyColor(calculateProgress(item))}`}>
+                        {getConsistencyLabel(calculateProgress(item))}
+                      </span>
                       <progress
-                        className={`progress w-20 ${getProgressColorClass(
-                          calculateProgress(item)
-                        )}`}
+                        className={`progress w-20 ${getProgressColorClass(calculateProgress(item))}`}
                         value={calculateProgress(item)}
                         max="100"
                       ></progress>

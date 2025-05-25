@@ -86,7 +86,7 @@ const dailyHabitSchema = new mongoose.Schema(
 
     status: {
       type: String,
-      enum: ["inconsistent", "uncertain", "partiallyconsistent", "consistent"],
+      enum: ["inconsistent", "uncertain", "moderate", "consistent"],
       default: "inconsistent",
     },
 

@@ -20,7 +20,29 @@ function HabitDashboard() {
         <div className="col-span-4 row-span-3 col-start-9 row-start-2 border border-gray-500 p-4">7</div>
 
         <div className="col-span-12 row-span-4 row-start-5 border border-gray-500 p-4">
-          <HeatMap />
+          {/* name of each tab group should be unique */}
+          <div className="tabs tabs-lift">
+
+            {/* Water Heatmap */}
+            <label className="tab">
+              <input type="radio" name="my_tabs_1" defaultChecked />
+              Heatmap
+            </label>
+            <div className="tab-content bg-base-100 border-base-300 p-6">
+              <HeatMap />
+            </div>
+
+            {/* Water Bar Chart */}
+            <label className="tab">
+              <input type="radio" name="my_tabs_1" />
+              Bar Chart
+            </label>
+            <div className="tab-content bg-base-100 border-base-300 p-6">
+              <HeatMap />
+            </div>
+
+          </div>
+
         </div>
         <div className="col-span-12 row-span-4 row-start-9 border border-gray-500 p-4">9</div>
       </div>
