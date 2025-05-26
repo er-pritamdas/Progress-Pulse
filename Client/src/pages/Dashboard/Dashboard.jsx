@@ -1,13 +1,44 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Chart from "react-apexcharts";
 import Navbar from "../../components/Dashboard/Navbar/Navbar.jsx";
 import { TitleChanger } from "../../utils/TitleChanger.jsx";
+import { fetchHabitSettings } from "../../services/redux/slice/habitSlice.js";
+import { useLoading } from "../../Context/LoadingContext.jsx";
+import { useSelector, useDispatch } from "react-redux";
 
 const Dashboard = () => {
   TitleChanger("Progress Pulse | Dashboard");
   const user = localStorage.getItem("username");
+
+  const { setLoading } = useLoading();
+  const dispatch = useDispatch();
+
+
   const [dateRange, setDateRange] = useState("month");
-  
+  // Alerts
+  const [showErrorAlert, setShowErrorAlert] = useState(false);
+  const [alertErrorMessage, setAlertErrorMessage] = useState("");
+  const [showSuccessAlert, setShowSuccessAlert] = useState(false);
+  const [alertSuccessMessage, setalertSuccessMessage] = useState("");
+
+  useEffect(() => {
+    console.log("Running Dashboard settings")
+    const fetchSettings = async () => {
+      try {
+        setLoading(true);
+        await dispatch(fetchHabitSettings()).unwrap();
+      } catch (err) {
+        setAlertErrorMessage("Failed to load settings");
+        setShowErrorAlert(true);
+        setTimeout(() => setShowErrorAlert(false), 4000);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSettings();
+  }, []);
+
   // Hardcoded color palette (replace with your preferred colors)
   const colors = {
     primary: "#4f46e5",    // Indigo-600

@@ -175,15 +175,29 @@ function HabitTableEntry() {
       "selfcare",
       "mood",
     ];
-    const filled = fields.filter(
-      (key) => item[key] && item[key].toString().trim() !== "0"
-    );
+
+    const filled = fields.filter((key) => {
+      const value = item[key];
+
+      // Special handling for selfcare
+      if (key === "selfcare") {
+        const requiredLength = settings.selfcare.length;
+        const emptySelfcare = "_".repeat(requiredLength);
+        return value && value !== emptySelfcare;
+      }
+
+      // Regular check for other fields
+      return value && value.toString().trim() !== "0";
+    });
+
     const progressPercentage = Math.round(
       (filled.length / fields.length) * 100
     );
+
     item["progress"] = progressPercentage;
     return progressPercentage;
   };
+
 
   // Delection Data Function
   const handleDeleteClick = (date) => {
@@ -226,14 +240,13 @@ function HabitTableEntry() {
 
   // Edit Data Function
   const handleEdit = (item) => {
+    // console.log(item)
     setEditingItem({ ...item });
   };
 
   // Save Data Function
   const handleSave = async () => {
     const originalItem = data.find((item) => item.date === editingItem.date);
-    console.log(originalItem);
-
     if (JSON.stringify(originalItem) === JSON.stringify(editingItem)) {
       setalertSuccessMessage("Already up to date!");
       setShowSuccessAlert(true);
@@ -637,18 +650,65 @@ function HabitTableEntry() {
                       />
                     </td>
                     <td>
-                      <input
-                        type="text"
-                        pattern="^[B_]{1}[S_]{1}[F_]{1}$"
-                        title="Only B, S, F or _ in respective positions. Example: BSF, B_F, _SF"
-                        onKeyDown={handleKeyDown}
-                        name="selfcare"
-                        className="btn btn-sm w-full max-w-[80px] hover:cursor-text bg-base-100"
-                        value={editingItem.selfcare}
-                        onChange={handleChange}
-                      />
+                      <div className="dropdown dropdown-bottom dropdown-center">
+                        <div
+                          tabIndex={0}
+                          role="button"
+                          className="btn btn-sm m-1 w-[100px] text-center"
+                        >
+                          {editingItem.selfcare || "_".repeat(settings.selfcare.length)}
+                        </div>
+
+                        <ul
+                          tabIndex={0}
+                          className="dropdown-content menu bg-base-200 rounded-box z-[1] w-48 p-2 shadow"
+                        >
+                          {[...settings.selfcare].map((habit, index) => {
+                            const currentValue =
+                              editingItem.selfcare || "_".repeat(settings.selfcare.length);
+
+                            const isChecked =
+                              currentValue[index] === habit[0].toUpperCase();
+
+                            return (
+                              <li key={habit}>
+                                <label className="label cursor-pointer justify-start gap-2">
+                                  <input
+                                    type="checkbox"
+                                    className="checkbox checkbox-sm"
+                                    checked={isChecked}
+                                    onChange={(e) => {
+                                      const updated = currentValue
+                                        .padEnd(settings.selfcare.length, "_")
+                                        .split("")
+                                        .map((char, i) =>
+                                          i === index
+                                            ? e.target.checked
+                                              ? habit[0].toUpperCase()
+                                              : "_"
+                                            : char
+                                        )
+                                        .join("");
+
+                                      handleChange({
+                                        target: {
+                                          name: "selfcare",
+                                          value: updated,
+                                        },
+                                      });
+                                    }}
+                                  />
+                                  <span className="label-text">{habit}</span>
+                                </label>
+                              </li>
+                            );
+                          })}
+                        </ul>
+
+                      </div>
                     </td>
-                    
+
+
                     {/* Mood */}
                     <td>
                       <div className="dropdown dropdown-bottom dropdown-center">
@@ -773,9 +833,9 @@ function HabitTableEntry() {
                     </td>
 
                     <td className="text-sm border border-base-100 truncate">
-                      {item.selfcare || "---"}
+                      {item.selfcare || "_".repeat(settings.selfcare.length)}
                     </td>
-                    
+
                     {/* Mood */}
                     <td className="text-sm border border-base-100 truncate">
                       {item.mood || "---"}
