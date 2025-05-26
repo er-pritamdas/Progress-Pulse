@@ -11,7 +11,7 @@ import { useLoading } from "../../../Context/LoadingContext";
 import DeleteHabitPopUp from "../../../components/Dashboard/Habit/DeleteHabitPopUp";
 import Refresh from "../../../utils/Icons/Refresh";
 import { TitleChanger } from "../../../utils/TitleChanger";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import {
   AlertTriangle,
   CheckCircle,
@@ -26,11 +26,15 @@ import {
   Smile,
   BarChart3,
   MoreHorizontal,
+  Settings,
 } from "lucide-react";
 
 function HabitTableEntry() {
   TitleChanger("Progress Pulse | Habit Entry");
   const settings = useSelector((state) => state.habit.settings);
+
+  const dispatch = useDispatch();
+
 
   // Format Date Function
   const formatDate = (dateString) => {
@@ -649,6 +653,8 @@ function HabitTableEntry() {
                         onChange={handleChange}
                       />
                     </td>
+
+                    {/* Self Care */}
                     <td>
                       <div className="dropdown dropdown-bottom dropdown-center">
                         <div
@@ -656,55 +662,65 @@ function HabitTableEntry() {
                           role="button"
                           className="btn btn-sm m-1 w-[100px] text-center"
                         >
-                          {editingItem.selfcare || "_".repeat(settings.selfcare.length)}
+                          {editingItem.selfcare || "_".repeat(settings.selfcare.length || 3)}
                         </div>
 
                         <ul
                           tabIndex={0}
                           className="dropdown-content menu bg-base-200 rounded-box z-[1] w-48 p-2 shadow"
                         >
-                          {[...settings.selfcare].map((habit, index) => {
-                            const currentValue =
-                              editingItem.selfcare || "_".repeat(settings.selfcare.length);
+                          {settings.selfcare && settings.selfcare.length > 0 ? (
+                            [...settings.selfcare].map((habit, index) => {
+                              const currentValue =
+                                editingItem.selfcare || "_".repeat(settings.selfcare.length);
 
-                            const isChecked =
-                              currentValue[index] === habit[0].toUpperCase();
+                              const isChecked =
+                                currentValue[index] === habit[0].toUpperCase();
 
-                            return (
-                              <li key={habit}>
-                                <label className="label cursor-pointer justify-start gap-2">
-                                  <input
-                                    type="checkbox"
-                                    className="checkbox checkbox-sm"
-                                    checked={isChecked}
-                                    onChange={(e) => {
-                                      const updated = currentValue
-                                        .padEnd(settings.selfcare.length, "_")
-                                        .split("")
-                                        .map((char, i) =>
-                                          i === index
-                                            ? e.target.checked
-                                              ? habit[0].toUpperCase()
-                                              : "_"
-                                            : char
-                                        )
-                                        .join("");
+                              return (
+                                <li key={habit}>
+                                  <label className="label cursor-pointer justify-start gap-2">
+                                    <input
+                                      type="checkbox"
+                                      className="checkbox checkbox-sm"
+                                      checked={isChecked}
+                                      onChange={(e) => {
+                                        const updated = currentValue
+                                          .padEnd(settings.selfcare.length, "_")
+                                          .split("")
+                                          .map((char, i) =>
+                                            i === index
+                                              ? e.target.checked
+                                                ? habit[0].toUpperCase()
+                                                : "_"
+                                              : char
+                                          )
+                                          .join("");
 
-                                      handleChange({
-                                        target: {
-                                          name: "selfcare",
-                                          value: updated,
-                                        },
-                                      });
-                                    }}
-                                  />
-                                  <span className="label-text">{habit}</span>
-                                </label>
-                              </li>
-                            );
-                          })}
+                                        handleChange({
+                                          target: {
+                                            name: "selfcare",
+                                            value: updated,
+                                          },
+                                        });
+                                      }}
+                                    />
+                                    <span className="label-text">{habit}</span>
+                                  </label>
+                                </li>
+                              );
+                            })
+                          ) : (
+                            <li className="text-sm text-center text-gray-400 px-2 py-1 flex flex-col items-center gap-1">
+                              No Self Care Habits has been set, Please click the setting button to set the Self Care Habits
+                              <a href="/settings" className="text-primary hover:text-primary-focus">
+                                <Settings className="w-5 h-5" />
+                              </a>
+                            </li>
+
+
+                          )}
                         </ul>
-
                       </div>
                     </td>
 
