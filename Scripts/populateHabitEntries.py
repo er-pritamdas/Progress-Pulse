@@ -48,6 +48,7 @@ for i in range(30):
     selfcare = ""
     mood = random.choice(["Good", "Average", "Sad", "Amazing","Depressed","Productive"])
     progress = 100
+    score = 6
 
     habit_payload = {
         "date": str(current_date),
@@ -59,7 +60,8 @@ for i in range(30):
         "selfcare": selfcare,
         "mood": mood,
         "progress": progress,
-        "currentPage": "1"
+        "currentPage": "1",
+        "score" : score,
     }
 
     res = requests.post(HABIT_ENTRY_URL, headers=headers, json=habit_payload)

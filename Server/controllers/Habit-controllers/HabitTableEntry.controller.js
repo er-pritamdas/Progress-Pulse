@@ -51,6 +51,7 @@ const readHabitTableData = asynchandler(async (req, res, next) => {
     selfcare: entry.habits.selfcare?.toString() || "",
     mood: entry.habits.mood?.toString() || "",
     progress: entry.progress?.toString() || "",
+    score: entry.score?.toString() || "",
   }));
 
   return res.status(200).json(
@@ -79,6 +80,7 @@ const createHabitTableEntry = asynchandler(async (req, res, next) => {
     selfcare,
     mood,
     progress,
+    score
   } = req.body;
 
   const user = req.user;
@@ -110,7 +112,8 @@ const createHabitTableEntry = asynchandler(async (req, res, next) => {
         mood,
       },
       progress,
-      status
+      status,
+      score
       // score, completionRate, streak will take default values
     });
 
@@ -165,6 +168,7 @@ const updateHabitTableEntry = asynchandler(async (req, res, next) => {
     selfcare,
     mood,
     progress,
+    score,
   } = req.body;
 
   if (!date) {
@@ -191,6 +195,7 @@ const updateHabitTableEntry = asynchandler(async (req, res, next) => {
         "habits.mood": mood,
         progress: progress,
         status: status,
+        score: score,
       },
     },
     { new: true } // return the updated document

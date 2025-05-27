@@ -27,6 +27,7 @@ import {
   BarChart3,
   MoreHorizontal,
   Settings,
+  Sparkles,
 } from "lucide-react";
 
 function HabitTableEntry() {
@@ -48,7 +49,6 @@ function HabitTableEntry() {
   // variables
   const [itemToDelete, setItemToDelete] = useState(null);
   const [itemPerPage, setItemPerPage] = useState(7)
-  const ITEMS_PER_PAGE = 7;
   const { setLoading } = useLoading();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -99,6 +99,14 @@ function HabitTableEntry() {
     return "Consistent";
   };
   const getConsistencyColor = (percentage) => {
+    if (percentage < 25) return "text-error";
+    if (percentage < 50) return "text-warning";
+    if (percentage < 75) return "text-info";
+    return "text-success";
+  };
+
+  const getScoreColor = (score) => {
+    const percentage = (score / 7) * 100
     if (percentage < 25) return "text-error";
     if (percentage < 50) return "text-warning";
     if (percentage < 75) return "text-info";
@@ -211,8 +219,43 @@ function HabitTableEntry() {
       (filled.length / fields.length) * 100
     );
 
+    item["score"] = filled.length
     item["progress"] = progressPercentage;
     return progressPercentage;
+  };
+
+  // Calculate Score
+  const calculateScore = (item) => {
+    if (!item) return 0;
+
+    const fields = [
+      "burned",
+      "water",
+      "sleep",
+      "read",
+      "intake",
+      "selfcare",
+      "mood",
+    ];
+
+    const filled = fields.filter((key) => {
+      const value = item[key];
+
+      // Special handling for selfcare
+      if (key === "selfcare") {
+        // console.log(settings.selfcare.length)
+        const requiredLength = settings.selfcare.length;
+        const emptySelfcare = "_".repeat(requiredLength);
+        return value && value !== emptySelfcare;
+      }
+
+      // Regular check for other fields
+      return value && value.toString().trim() !== "0";
+    });
+    const score = filled.length
+    item["score"] = filled.length
+    return score
+
   };
 
 
@@ -392,9 +435,9 @@ function HabitTableEntry() {
           <thead className="sticky top-10 z-30 bg-opacity-90 backdrop-blur-md shadow-sm mb-1 p-2 pt-3">
             {/* ToolBar */}
             <tr>
-              <th colSpan="10" className="py-3 px-4">
+              <th colSpan="11" className="py-3 px-4">
                 <div className="flex justify-between items-center flex-wrap gap-4 text-sm font-normal">
-                  
+
                   {/* Left: Badges */}
                   <div className="flex items-center gap-3">
                     <div className="badge badge-sm badge-soft badge-warning flex items-center gap-1">
@@ -545,31 +588,31 @@ function HabitTableEntry() {
               <th className="w-[80px] text-center border border-base-100">
                 <div className="flex items-center justify-center gap-1">
                   <Flame className="w-4 h-4" />
-                  Burned [Kcal]
+                  Burned
                 </div>
               </th>
               <th className="w-[80px] text-center border border-base-100">
                 <div className="flex items-center justify-center gap-1">
                   <Droplet className="w-4 h-4" />
-                  Water [L]
+                  Water
                 </div>
               </th>
               <th className="w-[80px] text-center border border-base-100">
                 <div className="flex items-center justify-center gap-1">
                   <BedDouble className="w-4 h-4" />
-                  Sleep [Hrs]
+                  Sleep
                 </div>
               </th>
               <th className="w-[80px] text-center border border-base-100">
                 <div className="flex items-center justify-center gap-1">
                   <BookOpen className="w-4 h-4" />
-                  Read [Hrs]
+                  Read
                 </div>
               </th>
               <th className="w-[80px] text-center border border-base-100">
                 <div className="flex items-center justify-center gap-1">
                   <Utensils className="w-4 h-4" />
-                  Intake [Kcal]
+                  Intake
                 </div>
               </th>
               <th className="w-[80px] text-center border border-base-100">
@@ -590,12 +633,21 @@ function HabitTableEntry() {
                   Progress
                 </div>
               </th>
+
+              <th className="w-[80px] text-center border border-base-100">
+                <div className="flex justify-center items-center justify-center gap-1">
+                  <Sparkles className="w-4 h-4" />
+                  Score
+                </div>
+              </th>
+
               <th className="w-[80px] text-center border border-base-100">
                 <div className="flex justify-center items-center justify-center gap-1">
                   <MoreHorizontal className="w-4 h-4" />
                   Actions
                 </div>
               </th>
+
             </tr>
           </thead>
 
@@ -604,7 +656,7 @@ function HabitTableEntry() {
             {data.length === 0 ? (
               // Message Row for empty Data
               <tr>
-                <td colSpan="10" className="h-[60vh] text-center align-middle bg-base-100">
+                <td colSpan="11" className="h-[60vh] text-center align-middle bg-base-200">
                   <div className="flex flex-col justify-center items-center h-full space-y-4">
                     <div className="text-2xl font-semibold">
                       No habit entries found
@@ -810,6 +862,15 @@ function HabitTableEntry() {
                         ></progress>
                       </td>
                     </td>
+
+                    <td>
+                      <div className="tooltip" data-tip="Daily Score out of 7">
+                        <span className={`badge badge-lg ${getScoreColor(calculateScore(item))}`}>
+                          {calculateScore(item)} / 7
+                        </span>
+                      </div>
+                    </td>
+
                     <td className="text-center w-[120px]">
                       <div className="flex justify-center gap-2">
                         <button
@@ -904,6 +965,15 @@ function HabitTableEntry() {
                         max="100"
                       ></progress>
                     </td>
+
+                    <td>
+                      <div className="tooltip" data-tip="Daily Score out of 7">
+                        <span className={`badge badge-lg ${getScoreColor(calculateScore(item))}`}>
+                          {calculateScore(item)} / 7
+                        </span>
+                      </div>
+                    </td>
+
 
                     <td className="text-center w-[120px]">
                       <div className="flex justify-center gap-2">

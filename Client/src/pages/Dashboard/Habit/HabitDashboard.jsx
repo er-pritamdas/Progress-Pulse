@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import { TitleChanger } from '../../../utils/TitleChanger'
 import HeatMap from '../../../components/Dashboard/Habit/Charts/HeatMap'
 import CurrentStreakCard from '../../../components/Dashboard/Habit/Charts/CurrentStreakCard'
@@ -8,6 +9,42 @@ import HabitSummaryCard from '../../../components/Dashboard/Habit/Charts/HabitSu
 function HabitDashboard() {
   TitleChanger("Progress Pulse | Habit Dashboard")
 
+  // Format Date Function
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    const day = String(date.getDate()).padStart(2, "0");
+    const month = date.toLocaleString("default", { month: "short" });
+    const year = String(date.getFullYear()).slice(2);
+    return `${day}-${month}-${year}`;
+  };
+
+  function formatDateLocal(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0'); // add 1 because month is 0-indexed
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth(); // 0-indexed
+
+  const startOfMonth = new Date(currentYear, currentMonth, 1);
+  const endOfMonth = new Date(currentYear, currentMonth + 1, 0);
+
+  const startDate = formatDateLocal(startOfMonth);
+  const endDate = formatDateLocal(endOfMonth);
+
+  // 🔹 Set in state
+  const [fromDate, setFromDate] = useState(startDate);
+  const [toDate, setToDate] = useState(endDate);
+
+  const resetFilters = () => {
+    setFromDate(startDate);
+    setToDate(endDate);
+    // Optionally re-fetch or show all data
+  };
+
   return (
     <>
       {/* Sticky Heading */}
@@ -17,101 +54,104 @@ function HabitDashboard() {
             {/* <UserCheck size={26} /> */}
             Habit Dashboard
           </h1>
-          <div className="join join-vertical lg:join-horizontal">
-            <div className="flex items-center gap-4 ml-auto">
-              {/* FROM DATE PICKER */}
-              <div className="dropdown dropdown-end floating-label">
-                <div
-                  tabIndex={0}
-                  role="button"
-                  className="input text-xs w-25"
-                >
-                  {"-- / --- / --"}
-                </div>
-                <span>From Date</span>
-                <div className="dropdown-content z-[999] bg-base-100 rounded-box shadow-sm p-2">
-                  <calendar-date
-                    // class="cally"
-                    // onchange={(e) =>
-                    //   setFromDate(e.target.value)
-                    // }
-                  >
-                    <svg
-                      aria-label="Previous"
-                      className="fill-current size-4"
-                      slot="previous"
-                      xmlns="http://www.w3.org/2000/svg"
-                      viewBox="0 0 24 24"
-                    >
-                      <path d="M15.75 19.5 8.25 12l7.5-7.5"></path>
-                    </svg>
-                    <svg
-                      aria-label="Next"
-                      className="fill-current size-4"
-                      slot="next"
-                      xmlns="http://www.w3.org/2000/svg"
-                      viewBox="0 0 24 24"
-                    >
-                      <path d="m8.25 4.5 7.5 7.5-7.5 7.5"></path>
-                    </svg>
-                    <calendar-month></calendar-month>
-                  </calendar-date>
-                </div>
-              </div>
-              -
 
-              {/* TO DATE PICKER */}
-              <div className="dropdown dropdown-end floating-label">
-                <div
-                  tabIndex={0}
-                  role="button"
-                  className="input text-xs w-25"
-                >
-                  {"-- / --- / --"}
-                </div>
-                <span>To Date</span>
-                <div className="dropdown-content z-[999] bg-base-100 rounded-box shadow-sm p-2">
-                  <calendar-date
-                    class="cally"
-                    // onchange={(e) =>
-                    //   setToDate(e.target.value)
-                    // }
-                  >
-                    <svg
-                      aria-label="Previous"
-                      className="fill-current size-4"
-                      slot="previous"
-                      xmlns="http://www.w3.org/2000/svg"
-                      viewBox="0 0 24 24"
-                    >
-                      <path d="M15.75 19.5 8.25 12l7.5-7.5"></path>
-                    </svg>
-                    <svg
-                      aria-label="Next"
-                      className="fill-current size-4"
-                      slot="next"
-                      xmlns="http://www.w3.org/2000/svg"
-                      viewBox="0 0 24 24"
-                    >
-                      <path d="m8.25 4.5 7.5 7.5-7.5 7.5"></path>
-                    </svg>
-                    <calendar-month></calendar-month>
-                  </calendar-date>
-                </div>
+          {/* Right: From/To Date Pickers */}
+          <div className="flex items-center gap-4 ml-auto">
+            {/* FROM DATE PICKER */}
+            <div className="dropdown dropdown-end floating-label">
+              <div
+                tabIndex={0}
+                role="button"
+                className="input text-xs w-25"
+              >
+                {formatDate(fromDate) || "-- / --- / --"}
               </div>
+              <span>From Date</span>
+              <div className="dropdown-content z-[999] bg-base-100 rounded-box shadow-sm p-2">
+                <calendar-date
+                  class="cally"
+                  onchange={(e) =>
+                    setFromDate(e.target.value)
+                  }
+                >
+                  <svg
+                    aria-label="Previous"
+                    className="fill-current size-4"
+                    slot="previous"
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                  >
+                    <path d="M15.75 19.5 8.25 12l7.5-7.5"></path>
+                  </svg>
+                  <svg
+                    aria-label="Next"
+                    className="fill-current size-4"
+                    slot="next"
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                  >
+                    <path d="m8.25 4.5 7.5 7.5-7.5 7.5"></path>
+                  </svg>
+                  <calendar-month></calendar-month>
+                </calendar-date>
+              </div>
+            </div>
+            -
 
-              {/* BUTTONS */}
-              <div className="join">
-                <button className=" join-item btn btn-soft btn-sm btn-success" >
-                  Filter
-                </button>
-                <button className="join-item btn btn-sm btn-soft" >
-                  Reset
-                </button>
+            {/* TO DATE PICKER */}
+            <div className="dropdown dropdown-end floating-label">
+              <div
+                tabIndex={0}
+                role="button"
+                className="input text-xs w-25"
+              >
+                {formatDate(toDate) || "-- / --- / --"}
+              </div>
+              <span>To Date</span>
+              <div className="dropdown-content z-[999] bg-base-100 rounded-box shadow-sm p-2">
+                <calendar-date
+                  class="cally"
+                  onchange={(e) =>
+                    setToDate(e.target.value)
+                  }
+                >
+                  <svg
+                    aria-label="Previous"
+                    className="fill-current size-4"
+                    slot="previous"
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                  >
+                    <path d="M15.75 19.5 8.25 12l7.5-7.5"></path>
+                  </svg>
+                  <svg
+                    aria-label="Next"
+                    className="fill-current size-4"
+                    slot="next"
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                  >
+                    <path d="m8.25 4.5 7.5 7.5-7.5 7.5"></path>
+                  </svg>
+                  <calendar-month></calendar-month>
+                </calendar-date>
               </div>
             </div>
 
+            {/* BUTTONS */}
+            <div className="join">
+              <button className=" join-item btn btn-soft btn-sm btn-success">
+                Filter
+              </button>
+              <button className="join-item btn btn-sm btn-soft" onClick={resetFilters}>
+                Reset
+              </button>
+            </div>
+
           </div>
+
+
+
         </div>
       </div>
 
