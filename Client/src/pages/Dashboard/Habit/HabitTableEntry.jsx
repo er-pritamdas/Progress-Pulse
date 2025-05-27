@@ -864,7 +864,7 @@ function HabitTableEntry() {
                     </td>
 
                     <td>
-                      <div className="tooltip" data-tip="Daily Score out of 7">
+                      <div className="tooltip tooltip-right" data-tip="Daily Score out of 7">
                         <span className={`badge badge-lg ${getScoreColor(calculateScore(item))}`}>
                           {calculateScore(item)} / 7
                         </span>
@@ -967,7 +967,7 @@ function HabitTableEntry() {
                     </td>
 
                     <td>
-                      <div className="tooltip" data-tip="Daily Score out of 7">
+                      <div className="tooltip tooltip-right" data-tip="Daily Score out of 7">
                         <span className={`badge badge-lg ${getScoreColor(calculateScore(item))}`}>
                           {calculateScore(item)} / 7
                         </span>
