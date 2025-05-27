@@ -276,23 +276,25 @@ function HabitSettings() {
       )}
 
       {/* Heading */}
-      <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-2xl font-bold flex items-center gap-2">
-          <UserCheck size={26} />
-          Habit Settings
-        </h1>
-        <div className="join join-vertical lg:join-horizontal">
-          <button className="btn btn-info join-item" onClick={UpdateSettings}>
-            <SaveAll size={17} />
-            Save
-          </button>
-          <button className="btn btn-soft join-item" onClick={ResetSettings}>
-            <ListRestart size={17} />
-            Reset to Default
-          </button>
+      <div className="sticky top-[-17px] z-30 bg-opacity-90 backdrop-blur-md shadow-sm">
+        <div className="flex items-center justify-between p-3">
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <UserCheck size={26} />
+            Habit Settings
+          </h1>
+          <div className="join join-vertical lg:join-horizontal">
+            <button className="btn btn-info join-item" onClick={UpdateSettings}>
+              <SaveAll size={17} />
+              Save
+            </button>
+            <button className="btn btn-soft join-item" onClick={ResetSettings}>
+              <ListRestart size={17} />
+              Reset to Default
+            </button>
+          </div>
         </div>
-
       </div>
+
 
       {/* Settings Container */}
       <div className="bg-base-300 rounded-xl p-6 shadow-md">

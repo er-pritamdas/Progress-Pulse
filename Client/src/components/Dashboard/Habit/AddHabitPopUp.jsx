@@ -11,13 +11,12 @@ const initialFormData = {
   mood: '',
 };
 
-const AddHabitPopUp = ({ isOpen, onClose, onAdd, progress, progresscolor }) => {
+const AddHabitPopUp = ({ isOpen, onClose, onAdd, progress, progresscolor, settings }) => {
   const [formData, setFormData] = useState(initialFormData);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-    // setTimeout(() => console.log(formData), 5000);
   };
 
   const handleSubmit = () => {
@@ -36,26 +35,26 @@ const AddHabitPopUp = ({ isOpen, onClose, onAdd, progress, progresscolor }) => {
 
   return (
     <div className="fixed inset-0 bg-black/10 backdrop-blur-xs flex justify-center items-center z-50">
-      <div className="bg-base-200 p-6 rounded-xl shadow-lg w-[90%] max-w-2xl">
+      <div className="bg-base-300 p-6 rounded-xl shadow-lg w-[90%] max-w-2xl">
         <h2 className="text-2xl font-bold mb-4 text-center">Add New Habit Entry</h2>
         <div className="flex justify-center mt-4 mb-4">
           <progress
-            className={`progress w-150 ${progresscolor(progress(formData))}`}
+            className={`progress w-full h-3 ${progresscolor(progress(formData))}`}
             value={progress(formData)}
             max="100"
-          ></progress>
+          />
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="dropdown dropdown-bottom">
-            <label className="label">Date</label>
-            <div tabIndex={0} role="button" className="input input-bordered w-full">
+          <div className="dropdown dropdown-bottom ">
+            <label>Date</label>
+            <div tabIndex={0} role="button" className="input  input-bordered w-full">
               {formData.date || "Pick a date"}
             </div>
             <div className="dropdown-content z-[999] bg-base-100 rounded-box shadow-sm p-2 ">
               <calendar-date
-                class="cally"
-                onchange={(e) => {
+                className="cally"
+                onChange={(e) => {
                   handleChange({ target: { name: "date", value: e.target.value } });
                 }}
               >
@@ -82,65 +81,65 @@ const AddHabitPopUp = ({ isOpen, onClose, onAdd, progress, progresscolor }) => {
             </div>
           </div>
 
-          <div>
-            <label className="label">Burned [Kcal]</label>
+          <div >
+            <label>Burned [Kcal]</label>
             <input
               name="burned"
               type="number"
               min="0"
               max="2000"
               step="10"
-              className="input input-bordered w-full"
+              className="input  input-bordered w-full"
               value={formData.burned}
               onChange={handleChange}
             />
           </div>
 
-          <div>
-            <label className="label">Water [L]</label>
+          <div >
+            <label>Water [L]</label>
             <input
               name="water"
               type="number"
               min="0"
               max="10"
               step="0.1"
-              className="input input-bordered w-full"
+              className="input  input-bordered w-full"
               value={formData.water}
               onChange={handleChange}
               required
             />
           </div>
 
-          <div>
-            <label className="label">Sleep [Hrs]</label>
+          <div >
+            <label>Sleep [Hrs]</label>
             <input
               name="sleep"
               type="number"
               min="0"
               max="24"
               step="0.5"
-              className="input input-bordered w-full"
+              className="input  input-bordered w-full"
               value={formData.sleep}
               onChange={handleChange}
             />
           </div>
 
-          <div>
-            <label className="label">Read [Hrs]</label>
+          <div >
+            <label>Read [Hrs]</label>
             <input
               name="read"
               type="number"
               min="0"
               max="12"
               step="0.5"
-              className="input input-bordered w-full"
+              className="input  input-bordered w-full"
               value={formData.read}
               onChange={handleChange}
             />
           </div>
 
-          <div>
-            <label className="label">Intake [Kcal]</label>
+          <div >
+            <label>Intake [Kcal]</label>
             <input
               name="intake"
               type="number"
@@ -153,33 +152,109 @@ const AddHabitPopUp = ({ isOpen, onClose, onAdd, progress, progresscolor }) => {
             />
           </div>
 
-          <div>
-            <label className="label">Selfcare</label>
-            <input
-              name="selfcare"
-              type="text"
-              placeholder="Eg: BNF, Journaling"
-              className="input input-bordered w-full"
-              value={formData.selfcare}
-              onChange={handleChange}
-            />
+          {/* SelfCare */}
+          <div className="form-control w-full">
+            <label >
+              <label className="label-text">Self Care</label>
+            </label>
+
+            <div className="dropdown dropdown-bottom w-full">
+              <div
+                tabIndex={0}
+                role="button"
+                className="input input-bordered w-full cursor-pointer"
+              >
+                {formData.selfcare || "_".repeat(settings.selfcare?.length || 3)}
+              </div>
+
+              <ul
+                tabIndex={0}
+                className="dropdown-content z-[999] menu p-2 shadow bg-base-200 rounded-box w-full max-w-xs"
+              >
+                {settings.selfcare && settings.selfcare.length > 0 ? (
+                  settings.selfcare.map((habit, index) => {
+                    const currentValue = formData.selfcare.padEnd(settings.selfcare.length, "_");
+                    const isChecked = currentValue[index] === habit[0].toUpperCase();
+
+                    return (
+                      <li key={habit}>
+                        <label className="label cursor-pointer gap-2">
+                          <input
+                            type="checkbox"
+                            className="checkbox checkbox-sm"
+                            checked={isChecked}
+                            onChange={(e) => {
+                              const updated = currentValue
+                                .split("")
+                                .map((char, i) =>
+                                  i === index
+                                    ? e.target.checked
+                                      ? habit[0].toUpperCase()
+                                      : "_"
+                                    : char
+                                )
+                                .join("");
+
+                              handleChange({
+                                target: {
+                                  name: "selfcare",
+                                  value: updated,
+                                },
+                              });
+                            }}
+                          />
+                          <label className="label-text">{habit}</label>
+                        </label>
+                      </li>
+                    );
+                  })
+                ) : (
+                  <li className="text-sm text-center text-gray-400 px-2 py-1 flex flex-col items-center gap-1">
+                    No Self Care Habits set. Please set them in{' '}
+                    <a href="/settings" className="text-primary hover:text-primary-focus">
+                      Settings
+                    </a>
+                  </li>
+                )}
+              </ul>
+            </div>
           </div>
 
-          <div>
-            <label className="label">Mood</label>
-            <select
-              name="mood"
-              className="select select-bordered w-full"
-              value={formData.mood}
-              onChange={handleChange}
-            >
-              <option value="">Select Mood</option>
-              {['Amazing', 'Good', 'Average', 'Sad', 'Depressed', 'Productive'].map((m) => (
-                <option key={m} value={m}>
-                  {m}
-                </option>
-              ))}
-            </select>
+          {/* Mood Dropdown */}
+          <div className="form-control w-full">
+            <label >
+              <label className="label-text">Mood</label>
+            </label>
+
+            <div className="dropdown dropdown-bottom w-full">
+              <div
+                tabIndex={0}
+                role="button"
+                className="input  input-bordered w-full cursor-pointer"
+              >
+                {formData.mood || "Select Mood"}
+              </div>
+
+              <ul
+                tabIndex={0}
+                className="dropdown-content z-[999] menu p-2 shadow bg-base-200 rounded-box w-full max-w-xs"
+              >
+                {['Amazing', 'Good', 'Average', 'Sad', 'Depressed', 'Productive'].map((mood) => (
+                  <li key={mood}>
+                    <button
+                      onClick={() =>
+                        handleChange({
+                          target: { name: "mood", value: mood },
+                        })
+                      }
+                      className={`text-sm px-2 py-1 rounded ${formData.mood === mood ? "bg-primary text-primary-content" : ""}`}
+                    >
+                      {mood}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
         </div>
 
@@ -194,7 +269,6 @@ const AddHabitPopUp = ({ isOpen, onClose, onAdd, progress, progresscolor }) => {
       </div>
     </div>
   );
-
 };
 
 export default AddHabitPopUp;

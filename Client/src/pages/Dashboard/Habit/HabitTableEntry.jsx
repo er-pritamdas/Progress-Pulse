@@ -47,6 +47,7 @@ function HabitTableEntry() {
 
   // variables
   const [itemToDelete, setItemToDelete] = useState(null);
+  const [itemPerPage, setItemPerPage] = useState(7)
   const ITEMS_PER_PAGE = 7;
   const { setLoading } = useLoading();
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -64,19 +65,30 @@ function HabitTableEntry() {
 
   // -------------------------------------------------------------------- Functions ---------------------------------------------------------------
 
-  const currentYear = new Date().getFullYear();
+  function formatDateLocal(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0'); // add 1 because month is 0-indexed
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
 
-  // 🔹 Generate raw date strings for Jan 1 and Dec 31
-  const firstDateRaw = `${currentYear}-01-01`;
-  const lastDateRaw = `${currentYear}-12-31`;
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth(); // 0-indexed
+
+  const startOfMonth = new Date(currentYear, currentMonth, 1);
+  const endOfMonth = new Date(currentYear, currentMonth + 1, 0);
+
+  const startDate = formatDateLocal(startOfMonth);
+  const endDate = formatDateLocal(endOfMonth);
 
   // 🔹 Set in state
-  const [fromDate, setFromDate] = useState(firstDateRaw);
-  const [toDate, setToDate] = useState(lastDateRaw);
+  const [fromDate, setFromDate] = useState(startDate);
+  const [toDate, setToDate] = useState(endDate);
 
   const resetFilters = () => {
-    setFromDate(firstDateRaw);
-    setToDate(lastDateRaw);
+    setFromDate(startDate);
+    setToDate(endDate);
     // Optionally re-fetch or show all data
   };
 
@@ -111,7 +123,7 @@ function HabitTableEntry() {
       response = await axiosInstance.get("/v1/dashboard/habit/table-entry", {
         params: {
           page: currentPage,
-          limit: ITEMS_PER_PAGE,
+          limit: itemPerPage,
           startDate: fromDate,
           endDate: toDate,
         },
@@ -135,7 +147,7 @@ function HabitTableEntry() {
       // only compute totalPages if we got a response
       if (response?.data?.data?.totalEntries != null) {
         setTotalPages(
-          Math.ceil(response.data.data.totalEntries / ITEMS_PER_PAGE)
+          Math.ceil(response.data.data.totalEntries / itemPerPage)
         );
       }
       setLoading(false);
@@ -144,7 +156,7 @@ function HabitTableEntry() {
 
   useEffect(() => {
     fetchHabits(currentPage);
-  }, []); // re-run when currentPage changes
+  }, [itemPerPage]); // re-run when currentPage changes
 
   // Key Down Function
   useEffect(() => {
@@ -185,6 +197,7 @@ function HabitTableEntry() {
 
       // Special handling for selfcare
       if (key === "selfcare") {
+        // console.log(settings.selfcare.length)
         const requiredLength = settings.selfcare.length;
         const emptySelfcare = "_".repeat(requiredLength);
         return value && value !== emptySelfcare;
@@ -343,47 +356,45 @@ function HabitTableEntry() {
       )}
 
       {/* Heading and Add Button */}
-      <div className="flex justify-between mb-4 flex-wrap gap-4">
-        <h1 className="text-2xl font-bold">Habit Tracker Table Entry</h1>
 
-        {/* <div className="flex items-center gap-2">
-          <div className="badge badge-sm badge-warning">Below Min</div>
-          <div className="badge badge-sm badge-success">Within Range</div>
-          <div className="badge badge-sm badge-error">Above Max</div>
-        </div> */}
+      {/* Sticky Heading for Habit Tracker Table Entry */}
+      <div className="sticky top-[-20px] z-30 bg-opacity-90 backdrop-blur-md shadow-sm mb-1 p-2 pt-3">
+        <div className="flex justify-between items-center flex-wrap gap-4">
+          <h1 className="text-2xl font-bold">Habit Tracker Table Entry</h1>
 
-        <div className="join join-vertical lg:join-horizontal">
-          <button
-            className="btn btn-primary join-item"
-            onClick={handleAddEntryClick}
-          >
-            + Add Entry
-          </button>
-          <button
-            className="btn btn-soft join-item"
-            onClick={() => {
-              // if (!data || data.length === 0) return;
-              fetchHabits(currentPage);
-              setalertSuccessMessage("Refreshed!");
-              setShowSuccessAlert(true);
-              setTimeout(() => setShowSuccessAlert(false), 4000);
-            }}
-          >
-            <Refresh /> Refresh
-          </button>
+          <div className="join join-vertical lg:join-horizontal">
+            <button
+              className="btn btn-primary join-item"
+              onClick={handleAddEntryClick}
+            >
+              + Add Entry
+            </button>
+            <button
+              className="btn btn-soft join-item"
+              onClick={() => {
+                fetchHabits(currentPage);
+                setalertSuccessMessage("Refreshed!");
+                setShowSuccessAlert(true);
+                setTimeout(() => setShowSuccessAlert(false), 4000);
+              }}
+            >
+              <Refresh /> Refresh
+            </button>
+          </div>
         </div>
       </div>
 
+
       {/* Table */}
-      <div className="overflow-x-auto overflow-y-auto scroll-hidden">
-        <table className="bg-base-300 table table-fixed   w-full">
+      <div>
+        <table className="bg-base-300 table table-fixed table-md">
           {/* Headings */}
-          <thead>
+          <thead className="sticky top-10 z-30 bg-opacity-90 backdrop-blur-md shadow-sm mb-1 p-2 pt-3">
             {/* ToolBar */}
             <tr>
-              <th colSpan="10" className="py-3 px-4 bg-base-200">
+              <th colSpan="10" className="py-3 px-4">
                 <div className="flex justify-between items-center flex-wrap gap-4 text-sm font-normal">
-
+                  
                   {/* Left: Badges */}
                   <div className="flex items-center gap-3">
                     <div className="badge badge-sm badge-soft badge-warning flex items-center gap-1">
@@ -399,6 +410,30 @@ function HabitTableEntry() {
                       Above Max
                     </div>
                   </div>
+
+                  {/* ENTRIES LIMIT DROPDOWN */}
+                  <div className="dropdown dropdown-center">
+                    <div tabIndex={0} role="button" className="btn btn-sm btn-soft text-xs">
+                      Entries: {itemPerPage}
+                    </div>
+                    <ul
+                      tabIndex={0}
+                      className="dropdown-content z-[999] menu p-2 shadow-md bg-base-100 rounded-box w-20 text-xs"
+                    >
+                      {[7, 14, 21, 28, 31].map((value) => (
+                        <li key={value}>
+                          <a
+                            className={`justify-center ${itemPerPage === value ? "active" : ""}`}
+                            onClick={() => setItemPerPage(value)}
+                          >
+                            {value}
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+
 
                   {/* Right: From/To Date Pickers */}
                   <div className="flex items-center gap-4 ml-auto">
@@ -494,6 +529,7 @@ function HabitTableEntry() {
                     </div>
 
                   </div>
+
                 </div>
               </th>
             </tr>
@@ -931,6 +967,7 @@ function HabitTableEntry() {
         onAdd={handleAdd}
         progress={calculateProgress}
         progresscolor={getProgressColorClass}
+        settings={settings}
       />
       <DeleteHabitPopUp
         isDeletePopupOpen={isDeleteModalOpen}

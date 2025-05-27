@@ -34,7 +34,7 @@ headers = {
 }
 
 # Step 2: Generate and send habit entries for a month
-start_date = datetime.date(2025, 4, 1)
+start_date = datetime.date(2025, 5, 1)
 
 for i in range(30):
     current_date = start_date + datetime.timedelta(days=i)
@@ -45,7 +45,7 @@ for i in range(30):
     sleep = round(random.uniform(6.0, 9.0), 1)
     read = round(random.uniform(0.5, 2.0), 1)
     intake = random.randint(1800, 2500)
-    selfcare = "BNF"
+    selfcare = ""
     mood = random.choice(["Good", "Average", "Sad", "Amazing","Depressed","Productive"])
     progress = 100
 

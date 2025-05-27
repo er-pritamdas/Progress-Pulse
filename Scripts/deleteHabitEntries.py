@@ -10,8 +10,8 @@ USERNAME = "Pritam Das"
 PASSWORD = "Versa@123"
 
 # === Date Range to Delete ===
-START_DATE = datetime.date(2025, 4, 1)
-END_DATE = datetime.date(2025, 4, 30)
+START_DATE = datetime.date(2025, 5, 1)
+END_DATE = datetime.date(2025, 5, 30)
 
 # === Step 1: Login and get access token ===
 login_payload = {
