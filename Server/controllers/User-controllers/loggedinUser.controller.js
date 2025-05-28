@@ -4,6 +4,7 @@ import asynchandler from "../../utils/asyncHandler.js";
 import RegisteredUsers from "../../models/User-models/registeredUser.model.js";
 import { ApiError } from "../../utils/ApiError.js";
 import { ApiResponse } from "../../utils/ApiResponse.js";
+import logger from "../../utils/Logging.js";
 
 const isUserNamePresent = asynchandler(
     async (req, res, next) => {
@@ -18,6 +19,8 @@ const isUserNamePresent = asynchandler(
         if (!userExist) {
             throw new ApiError(404, "User Not Found")
         }
+        logger.info(`User ${username} login successful`);
+
         req.user = userExist
         next()
     }
