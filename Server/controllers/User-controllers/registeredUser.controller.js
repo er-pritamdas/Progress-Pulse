@@ -6,11 +6,13 @@ import { ApiError } from "../../utils/ApiError.js";
 import { ApiResponse } from "../../utils/ApiResponse.js";
 import logger from "../../utils/Logging.js";
 
-// ✅ Middleware: Check if User is Already Present
+// Check if User is Already Present
 const isUserPresent = asyncHandler(
     async (req, res, next) => {
+
         const { username, email, password } = req.body;
         logger.info("")
+        logger.info(`NEW USER - ${username}`)
         logger.info("---------- Is User Present ----------");
         logger.info("API HIT -> /api/v1/users/registered/");
 
@@ -39,11 +41,13 @@ const isUserPresent = asyncHandler(
     }
 );
 
-// ✅ Middleware: Create New User Entry
+// Create New User Entry
 const newUserEntry = asyncHandler(
     async (req, res, next) => {
-        const { username, email, password } = req.body;
 
+        const { username, email, password } = req.body;
+        logger.info("")
+        logger.info(`NEW USER - ${username}`)
         logger.info("---------- New User Entry ----------");
         logger.info(`API HIT -> /api/v1/users/registered/`);
         logger.info(`Creating user entry for '${username}'`);
@@ -57,16 +61,13 @@ const newUserEntry = asyncHandler(
                 email,
                 passwordHash: encryptPassword,
             });
-
             logger.info(`USER - '${username}' created successfully in DB`);
 
-            res.status(201).json(
-                new ApiResponse(201, createUser, "User Registered successfully")
-            );
-
+            res.status(201).json(new ApiResponse(201, {username, email}, "User Registered successfully"));
             logger.info(`USER - '${username}' Registered Successfully`);
-            next();
+
             logger.info("---------- Next Middleware ----------");
+            next();
 
         } catch (error) {
             logger.error(`Error creating user '${username}': ${error.message}`, {
@@ -77,4 +78,5 @@ const newUserEntry = asyncHandler(
     }
 );
 
+// Exports
 export { isUserPresent, newUserEntry };

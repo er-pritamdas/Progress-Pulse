@@ -8,7 +8,6 @@ import cookieParser from "cookie-parser";
 import cors from "cors";
 import loggedOutUserRoutes from "../routes/User-routes/loggedOutUser.routes.js";
 import existingUserRoutes from "../routes/User-routes/existingUser.routes.js";
-// import nodemailer from "nodemailer";
 
 const app = express()
 
@@ -18,12 +17,10 @@ app.use(cors({
     credentials: true, // allow cookies to be sent
   }));
 
-
 // using builtin MiddleWares
 app.use(express.json({limit: "16kb"}))
 app.use(express.urlencoded({extended: true, limit: "16kb"}))
 app.use(cookieParser());
-
 
 // ------------------------------Public Routes---------------------------
 // Registered User Routes
@@ -41,9 +38,7 @@ app.use("/api/v1/dashboard", dashboardRoutes)
 // Habit Tracker Routes
 app.use("/api/v1/dashboard/habit",habitTrackerRoutes)
 // Expense Tracker Routes
-
 // Investment Tracker Routes
-
 
 // ------------------------ Global Error Handling -----------------------
 app.use((err, req, res, next) => {

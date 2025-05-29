@@ -1,45 +1,56 @@
+// Imports
 import RegisteredUsers from "../models/User-models/registeredUser.model.js";
 import { ApiError } from "../utils/ApiError.js";
-import { ApiResponse } from "../utils/ApiResponse.js"
+import { ApiResponse } from "../utils/ApiResponse.js";
 import asyncHandler from "../utils/asyncHandler.js";
+import logger from "../utils/Logging.js"; // ✅ Added logger
 
-
-const OtpVerfication = asyncHandler(async (req, res) => {
+const OtpVerification = asyncHandler(async (req, res) => {
     const { username, otp } = req.body;
 
+    logger.info("");
+    logger.info(`USER - ${username}`);
+    logger.info("---------- OTP Verification ----------");
+    logger.info("API HIT -> /api/v1/users/registered/verify-otp");
+
     if (!username) {
-        throw new ApiError(400, "Username requied");
-    }
-    if (!otp) {
-        throw new ApiError(400, "OTP requied");
+        logger.warn("Validation Error: Username is missing");
+        throw new ApiError(400, "Username required");
     }
 
-    // Find user by username
+    if (!otp) {
+        logger.warn("Validation Error: OTP is missing");
+        throw new ApiError(400, "OTP required");
+    }
+
     const user = await RegisteredUsers.findOne({ username });
 
     if (!user) {
-        throw new ApiError(409, "User not found")
+        logger.warn(`Not Found: User '${username}' not found`);
+        throw new ApiError(409, "User not found");
     }
 
-    // Check if OTP is valid and not expired
     if (Date.now() > user.otpValidTill) {
-        throw new ApiError(400, "OTP expired")
+        logger.warn(`Expired OTP: OTP for '${username}' has expired`);
+        throw new ApiError(400, "OTP expired");
     }
 
-    // Check if OTP matches
     if (user.otp !== otp) {
-        throw new ApiError(409, "Invalid OTP")
+        logger.warn(`Invalid OTP: Provided OTP for '${username}' does not match`);
+        throw new ApiError(409, "Invalid OTP");
     }
 
-    // Nullify OTP and verify user
     user.otp = null;
     user.otpValidTill = null;
     user.isVerified = true;
     await user.save();
 
-    return res.status(201).json(
+    logger.info(`Success: OTP verified for '${username}'`);
+
+    res.status(201).json(
         new ApiResponse(201, "OTP Verified")
-    )
+    );
+    logger.info("---------- OTP Verification Complete ----------");
 });
 
-export default OtpVerfication;
+export default OtpVerification;
