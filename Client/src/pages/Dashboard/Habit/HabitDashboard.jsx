@@ -5,9 +5,54 @@ import CurrentStreakCard from '../../../components/Dashboard/Habit/Charts/Curren
 import GoalProgressCard from '../../../components/Dashboard/Habit/Charts/GoalProgressCard'
 import HabitScoreCard from '../../../components/Dashboard/Habit/Charts/HabitScoreCard'
 import HabitSummaryCard from '../../../components/Dashboard/Habit/Charts/HabitSummaryCard'
+import { useLoading } from '../../../Context/LoadingContext'
+import axiosInstance from '../../../Context/AxiosInstance'
 
 function HabitDashboard() {
   TitleChanger("Progress Pulse | Habit Dashboard")
+
+  const { setLoading } = useLoading()
+  const [habitData, setHabitData] = useState([])
+  const [waterMin, setWaterMin] = useState(0)
+  const [waterMax, setWaterMax] = useState(100)
+
+
+  const fetchHabitSettings = async () => {
+    try {
+      setLoading(true)
+      const res = await axiosInstance.get("/v1/dashboard/habit/settings")
+      setWaterMin(res.data.data.settings.water.min)
+      setWaterMax(res.data.data.settings.water.max)
+      setLoading(false)
+
+    } catch (err) {
+      console.error('Error fetching heatmap Settings data:', err);
+      setLoading(false)
+    }
+  }
+
+  const fetchData = async () => {
+    try {
+      setLoading(true)
+      const res = await axiosInstance.get("/v1/dashboard/habit/table-entry?page=1&limit=372")
+      setHabitData(res.data.data.formattedEntries)
+      setLoading(false)
+    } catch (err) {
+      console.error('Error fetching heatmap data:', err);
+      setLoading(false)
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+    fetchHabitSettings();
+  }, []);
+
+
+
+
+
+
 
   // Format Date Function
   const formatDate = (dateString) => {
@@ -149,13 +194,8 @@ function HabitDashboard() {
             </div>
 
           </div>
-
-
-
         </div>
       </div>
-
-
 
       <div className="w-full h-full overflow-y-auto overflow-x-hidden p-6 bg-base-200">
 
@@ -170,9 +210,9 @@ function HabitDashboard() {
           </div>
         </section>
 
-        {/* Insights Section */}
+        {/* Calorie Section */}
         <section>
-          <h2 className="text-xl font-semibold mb-4">📊 Habit Insights</h2>
+          <h2 className="text-xl font-semibold mb-4">Calorie Analysis</h2>
           <div className="grid grid-cols-12 gap-4 mb-8">
             <div className="col-span-4 row-span-2 bg-base-100 rounded-2xl shadow-md p-4">
               <h3 className="text-lg font-semibold mb-2">📅 Daily Tracker</h3>
@@ -195,20 +235,26 @@ function HabitDashboard() {
         <section>
           <h2 className="text-xl font-semibold mb-4">📊 Visualizations</h2>
           <div className="bg-base-100 rounded-2xl shadow-md p-6">
-            <div className="tabs tabs-lifted">
-
-              <input type="radio" name="chart-tabs" id="tab1" className="tab" defaultChecked />
-              <label htmlFor="tab1" className="tab tab-bordered">Heatmap</label>
-              <div className="tab-content mt-4">
-                <HeatMap />
+            {/* name of each tab group should be unique */}
+            <div className="tabs tabs-border">
+              <input type="radio" name="my_tabs_2" className="tab" aria-label="Tab 1" />
+              <div className="tab-content border-base-300 bg-base-100 p-10">
+                <HeatMap
+                  habitData={habitData}
+                  waterMin={waterMin}
+                  waterMax={waterMax}
+                />
               </div>
 
-              <input type="radio" name="chart-tabs" id="tab2" className="tab" />
-              <label htmlFor="tab2" className="tab tab-bordered">Bar Chart</label>
-              <div className="tab-content mt-4">
-                <HeatMap />
+              <input type="radio" name="my_tabs_2" className="tab" aria-label="Tab 2" defaultChecked />
+              <div className="tab-content border-base-300 bg-base-100 p-10">
+
               </div>
 
+              <input type="radio" name="my_tabs_2" className="tab" aria-label="Tab 3" />
+              <div className="tab-content border-base-300 bg-base-100 p-10">
+
+              </div>
             </div>
           </div>
         </section>
