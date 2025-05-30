@@ -1,45 +1,49 @@
-import { useState, useEffect } from 'react'
-import { TitleChanger } from '../../../utils/TitleChanger'
-import HeatMap from '../../../components/Dashboard/Habit/Charts/HeatMap'
-import CurrentStreakCard from '../../../components/Dashboard/Habit/Charts/CurrentStreakCard'
-import GoalProgressCard from '../../../components/Dashboard/Habit/Charts/GoalProgressCard'
-import HabitScoreCard from '../../../components/Dashboard/Habit/Charts/HabitScoreCard'
-import HabitSummaryCard from '../../../components/Dashboard/Habit/Charts/HabitSummaryCard'
-import { useLoading } from '../../../Context/LoadingContext'
-import axiosInstance from '../../../Context/AxiosInstance'
+import { useState, useEffect } from "react";
+import { TitleChanger } from "../../../utils/TitleChanger";
+import HeatMap from "../../../components/Dashboard/Habit/Charts/WaterHeatMap";
+import CurrentStreakCard from "../../../components/Dashboard/Habit/CurrentStreakCard";
+import GoalProgressCard from "../../../components/Dashboard/Habit/GoalProgressCard";
+import HabitScoreCard from "../../../components/Dashboard/Habit/HabitScoreCard";
+import HabitSummaryCard from "../../../components/Dashboard/Habit/HabitSummaryCard";
+import { useLoading } from "../../../Context/LoadingContext";
+import axiosInstance from "../../../Context/AxiosInstance";
+import BurnedVsConsumedCalorieRadialChart from "../../../components/Dashboard/Habit/Charts/BurnedVsConsumedCalorieRadialChart";
+import CalorieBurnedRadialChart from "../../../components/Dashboard/Habit/Charts/CalorieBurnedRadialChart";
+import CalorieConsumedRadialChart from "../../../components/Dashboard/Habit/Charts/CalorieConsumedRadialChart";
+
 
 function HabitDashboard() {
-  TitleChanger("Progress Pulse | Habit Dashboard")
+  TitleChanger("Progress Pulse | Habit Dashboard");
 
-  const { setLoading } = useLoading()
-  const [habitData, setHabitData] = useState([])
-  const [waterMin, setWaterMin] = useState(0)
-  const [waterMax, setWaterMax] = useState(100)
-
+  const { setLoading } = useLoading();
+  const [habitData, setHabitData] = useState([]);
+  const [waterMin, setWaterMin] = useState(0);
+  const [waterMax, setWaterMax] = useState(100);
 
   const fetchHabitSettings = async () => {
     try {
-      setLoading(true)
-      const res = await axiosInstance.get("/v1/dashboard/habit/settings")
-      setWaterMin(res.data.data.settings.water.min)
-      setWaterMax(res.data.data.settings.water.max)
-      setLoading(false)
-
+      setLoading(true);
+      const res = await axiosInstance.get("/v1/dashboard/habit/settings");
+      setWaterMin(res.data.data.settings.water.min);
+      setWaterMax(res.data.data.settings.water.max);
+      setLoading(false);
     } catch (err) {
-      console.error('Error fetching heatmap Settings data:', err);
-      setLoading(false)
+      console.error("Error fetching heatmap Settings data:", err);
+      setLoading(false);
     }
-  }
+  };
 
   const fetchData = async () => {
     try {
-      setLoading(true)
-      const res = await axiosInstance.get("/v1/dashboard/habit/table-entry?page=1&limit=372")
-      setHabitData(res.data.data.formattedEntries)
-      setLoading(false)
+      setLoading(true);
+      const res = await axiosInstance.get(
+        "/v1/dashboard/habit/table-entry?page=1&limit=372"
+      );
+      setHabitData(res.data.data.formattedEntries);
+      setLoading(false);
     } catch (err) {
-      console.error('Error fetching heatmap data:', err);
-      setLoading(false)
+      console.error("Error fetching heatmap data:", err);
+      setLoading(false);
     }
   };
 
@@ -47,12 +51,6 @@ function HabitDashboard() {
     fetchData();
     fetchHabitSettings();
   }, []);
-
-
-
-
-
-
 
   // Format Date Function
   const formatDate = (dateString) => {
@@ -65,8 +63,8 @@ function HabitDashboard() {
 
   function formatDateLocal(date) {
     const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0'); // add 1 because month is 0-indexed
-    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, "0"); // add 1 because month is 0-indexed
+    const day = String(date.getDate()).padStart(2, "0");
     return `${year}-${month}-${day}`;
   }
 
@@ -104,20 +102,14 @@ function HabitDashboard() {
           <div className="flex items-center gap-4 ml-auto">
             {/* FROM DATE PICKER */}
             <div className="dropdown dropdown-end floating-label">
-              <div
-                tabIndex={0}
-                role="button"
-                className="input text-xs w-25"
-              >
+              <div tabIndex={0} role="button" className="input text-xs w-25">
                 {formatDate(fromDate) || "-- / --- / --"}
               </div>
               <span>From Date</span>
               <div className="dropdown-content z-[999] bg-base-100 rounded-box shadow-sm p-2">
                 <calendar-date
                   class="cally"
-                  onchange={(e) =>
-                    setFromDate(e.target.value)
-                  }
+                  onchange={(e) => setFromDate(e.target.value)}
                 >
                   <svg
                     aria-label="Previous"
@@ -141,24 +133,16 @@ function HabitDashboard() {
                 </calendar-date>
               </div>
             </div>
-            -
-
-            {/* TO DATE PICKER */}
+            -{/* TO DATE PICKER */}
             <div className="dropdown dropdown-end floating-label">
-              <div
-                tabIndex={0}
-                role="button"
-                className="input text-xs w-25"
-              >
+              <div tabIndex={0} role="button" className="input text-xs w-25">
                 {formatDate(toDate) || "-- / --- / --"}
               </div>
               <span>To Date</span>
               <div className="dropdown-content z-[999] bg-base-100 rounded-box shadow-sm p-2">
                 <calendar-date
                   class="cally"
-                  onchange={(e) =>
-                    setToDate(e.target.value)
-                  }
+                  onchange={(e) => setToDate(e.target.value)}
                 >
                   <svg
                     aria-label="Previous"
@@ -182,31 +166,39 @@ function HabitDashboard() {
                 </calendar-date>
               </div>
             </div>
-
             {/* BUTTONS */}
             <div className="join">
               <button className=" join-item btn btn-soft btn-sm btn-success">
                 Filter
               </button>
-              <button className="join-item btn btn-sm btn-soft" onClick={resetFilters}>
+              <button
+                className="join-item btn btn-sm btn-soft"
+                onClick={resetFilters}
+              >
                 Reset
               </button>
             </div>
-
           </div>
         </div>
       </div>
 
       <div className="w-full h-full overflow-y-auto overflow-x-hidden p-6 bg-base-200">
-
         {/* Overview Section */}
         <section>
           <h2 className="text-xl font-semibold mb-4">Overview</h2>
           <div className="grid grid-cols-12 gap-4 mb-8">
-            <div className="col-span-3"><HabitSummaryCard /></div>
-            <div className="col-span-3"><CurrentStreakCard /></div>
-            <div className="col-span-3"><GoalProgressCard /></div>
-            <div className="col-span-3"><HabitScoreCard /></div>
+            <div className="col-span-3">
+              <HabitSummaryCard />
+            </div>
+            <div className="col-span-3">
+              <CurrentStreakCard />
+            </div>
+            <div className="col-span-3">
+              <GoalProgressCard />
+            </div>
+            <div className="col-span-3">
+              <HabitScoreCard />
+            </div>
           </div>
         </section>
 
@@ -214,19 +206,107 @@ function HabitDashboard() {
         <section>
           <h2 className="text-xl font-semibold mb-4">Calorie Analysis</h2>
           <div className="grid grid-cols-12 gap-4 mb-8">
-            <div className="col-span-4 row-span-2 bg-base-100 rounded-2xl shadow-md p-4">
-              <h3 className="text-lg font-semibold mb-2">📅 Daily Tracker</h3>
-              <div className="h-72 flex items-center justify-center text-gray-500">Coming Soon</div>
+            {/* Consumed Vs Burned Chart */}
+            <div className="col-span-5 row-span-1 bg-base-100 rounded-2xl shadow-md p-4">
+              <h3 className="text-lg font-semibold mb-2">Consumed Vs Burned</h3>
+              <div>
+                <div className="tabs tabs-border">
+                  <input
+                    type="radio"
+                    name="ConsumedVsBurned_Calories"
+                    className="tab"
+                    aria-label="Consumed"
+                  />
+                  <div className="tab-content border-base-300 bg-base-100 p-10">
+                    <div className="h-72 flex items-center justify-center text-gray-500">
+                      {<CalorieConsumedRadialChart /> || "Coming Soon"}
+                    </div>
+                  </div>
+
+                  <input
+                    type="radio"
+                    name="ConsumedVsBurned_Calories"
+                    className="tab"
+                    aria-label="Burned"
+                  />
+                  <div className="tab-content border-base-300 bg-base-100 p-10">
+                    <div className="h-72 flex items-center justify-center text-gray-500">
+                      {<CalorieBurnedRadialChart /> || "Coming Soon"}
+                    </div>
+                  </div>
+
+                  <input
+                    type="radio"
+                    name="ConsumedVsBurned_Calories"
+                    className="tab"
+                    aria-label="Consumed Vs Burned"
+                    defaultChecked
+                  />
+                  <div className="tab-content border-base-300 bg-base-100 p-10">
+                    <div className="h-72 flex items-center justify-center text-gray-500">
+                      {<BurnedVsConsumedCalorieRadialChart /> || "Coming Soon"}
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
 
-            <div className="col-span-4 row-span-2 bg-base-100 rounded-2xl shadow-md p-4">
+            {/* Effective Vs Actual */}
+            <div className="col-span-3 row-span-1 bg-base-100 rounded-2xl shadow-md p-4">
               <h3 className="text-lg font-semibold mb-2">🧠 Category Stats</h3>
-              <div className="h-72 flex items-center justify-center text-gray-500">Coming Soon</div>
+              <div className="h-72 flex items-center justify-center text-gray-500">
+                <div className="stats stats-vertical shadow">
+                  <div className="stat">
+                    <div className="stat-figure text-primary">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        className="inline-block h-8 w-8 stroke-current"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                        ></path>
+                      </svg>
+                    </div>
+                    <div className="stat-title">Total Likes</div>
+                    <div className="stat-value text-primary">25.6K</div>
+                    <div className="stat-desc">21% more than last month</div>
+                  </div>
+
+                  <div className="stat">
+                    <div className="stat-figure text-secondary">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        className="inline-block h-8 w-8 stroke-current"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M13 10V3L4 14h7v7l9-11h-7z"
+                        ></path>
+                      </svg>
+                    </div>
+                    <div className="stat-title">Page Views</div>
+                    <div className="stat-value text-secondary">2.6M</div>
+                    <div className="stat-desc">21% more than last month</div>
+                  </div>
+                </div>
+              </div>
             </div>
 
-            <div className="col-span-4 row-span-2 bg-base-100 rounded-2xl shadow-md p-4">
+            {/* Demo */}
+            <div className="col-span-4 row-span-1 bg-base-100 rounded-2xl shadow-md p-4">
               <h3 className="text-lg font-semibold mb-2">📈 Habit Trends</h3>
-              <div className="h-72 flex items-center justify-center text-gray-500">Coming Soon</div>
+              <div className="h-72 flex items-center justify-center text-gray-500">
+                Coming Soon
+              </div>
             </div>
           </div>
         </section>
@@ -235,9 +315,14 @@ function HabitDashboard() {
         <section>
           <h2 className="text-xl font-semibold mb-4">📊 Visualizations</h2>
           <div className="bg-base-100 rounded-2xl shadow-md p-6">
-            {/* name of each tab group should be unique */}
             <div className="tabs tabs-border">
-              <input type="radio" name="my_tabs_2" className="tab" aria-label="Tab 1" />
+              <input
+                type="radio"
+                name="Water"
+                className="tab"
+                aria-label="Tab 1"
+                
+              />
               <div className="tab-content border-base-300 bg-base-100 p-10">
                 <HeatMap
                   habitData={habitData}
@@ -246,14 +331,33 @@ function HabitDashboard() {
                 />
               </div>
 
-              <input type="radio" name="my_tabs_2" className="tab" aria-label="Tab 2" defaultChecked />
+              <input
+                type="radio"
+                name="Water"
+                className="tab"
+                aria-label="Tab 2"
+                defaultChecked
+              />
               <div className="tab-content border-base-300 bg-base-100 p-10">
-
+                {/* <HeatMap
+                  habitData={habitData}
+                  waterMin={waterMin}
+                  waterMax={waterMax}
+                /> */}
               </div>
 
-              <input type="radio" name="my_tabs_2" className="tab" aria-label="Tab 3" />
+              <input
+                type="radio"
+                name="Water"
+                className="tab"
+                aria-label="Tab 3"
+              />
               <div className="tab-content border-base-300 bg-base-100 p-10">
-
+                {/* <HeatMap
+                  habitData={habitData}
+                  waterMin={waterMin}
+                  waterMax={waterMax}
+                /> */}
               </div>
             </div>
           </div>
@@ -263,12 +367,14 @@ function HabitDashboard() {
         <section className="mt-8">
           <h2 className="text-xl font-semibold mb-4">📋 Habit Logs</h2>
           <div className="bg-base-100 rounded-2xl shadow-md p-4 min-h-[300px]">
-            <div className="h-full flex items-center justify-center text-gray-500">Table or logs coming soon</div>
+            <div className="h-full flex items-center justify-center text-gray-500">
+              Table or logs coming soon
+            </div>
           </div>
         </section>
       </div>
     </>
-  )
+  );
 }
 
-export default HabitDashboard
+export default HabitDashboard;

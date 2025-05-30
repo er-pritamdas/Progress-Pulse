@@ -1,20 +1,23 @@
-import React, { useEffect, useState } from 'react';
+// Import Statements
+import { useEffect, useState } from 'react';
 import Chart from 'react-apexcharts';
 import dayjs from 'dayjs';
 
-const HeatmapChart = ({ habitData, waterMin, waterMax }) => {
+const WaterHeatMap = ({ habitData, waterMin, waterMax }) => {
 
+  // Variables
   const [series, setSeries] = useState([]);
   const days = Array.from({ length: 31 }, (_, i) => (i + 1).toString());
   const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
+  // Series
   useEffect(() => {
 
     // Initialize empty heatmap data structure
     const dataByMonth = months.map((month) => ({
       name: month,
       data: days.map(day => ({ x: day, y: 0 }))
-    }));  
+    }));
 
     // Fill in values from the API
     habitData.forEach(entry => {
@@ -29,9 +32,9 @@ const HeatmapChart = ({ habitData, waterMin, waterMax }) => {
 
     setSeries(dataByMonth);
 
-  }, [])
+  }, [habitData])
 
-
+  // Options
   const options = {
     chart: {
       type: 'heatmap',
@@ -81,6 +84,7 @@ const HeatmapChart = ({ habitData, waterMin, waterMax }) => {
     }
   };
 
+  // ---------- Return JSX ----------
   return (
     <div style={{ width: '100%', overflowX: 'auto' }} className="p-4">
       <Chart options={options} series={series} type="heatmap" height={588} />
@@ -88,4 +92,5 @@ const HeatmapChart = ({ habitData, waterMin, waterMax }) => {
   );
 };
 
-export default HeatmapChart;
+// Exports
+export default WaterHeatMap;
