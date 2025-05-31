@@ -1,32 +1,39 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 
 const initialFormData = {
-  date: new Date().toISOString().split('T')[0],
-  burned: '',
-  water: '',
-  sleep: '',
-  read: '',
-  intake: '',
-  selfcare: '',
-  mood: '',
+  date: new Date().toISOString().split("T")[0],
+  burned: "",
+  water: "",
+  sleep: "",
+  read: "",
+  intake: "",
+  selfcare: "",
+  mood: "",
 };
 
-const AddHabitPopUp = ({ isOpen, onClose, onAdd, progress, progresscolor, settings }) => {
+const AddHabitPopUp = ({
+  isOpen,
+  onClose,
+  onAdd,
+  progress,
+  progresscolor,
+  settings,
+}) => {
   const [formData, setFormData] = useState(initialFormData);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
     // setTimeout(() => console.log(formData), 5000);
   };
 
   const handleSubmit = () => {
-    const progressPercentage = progress(formData)
+    const progressPercentage = progress(formData);
     const newItem = {
       ...formData,
       progress: progressPercentage,
     };
-    console.log(newItem)
+    console.log(newItem);
     onAdd(newItem);
     setFormData(initialFormData);
     onClose();
@@ -35,9 +42,11 @@ const AddHabitPopUp = ({ isOpen, onClose, onAdd, progress, progresscolor, settin
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/10 backdrop-blur-xs flex justify-center items-center z-50">
+    <div className="fixed inset-0 bg-black/10 backdrop-blur-xs flex justify-center items-center z-50 mt-10">
       <div className="bg-base-200 p-6 rounded-xl shadow-lg w-[90%] max-w-2xl">
-        <h2 className="text-2xl font-bold mb-4 text-center">Add New Habit Entry</h2>
+        <h2 className="text-2xl font-bold text-center">
+          Add New Habit Entry
+        </h2>
         <div className="flex justify-center mt-4 mb-4">
           <progress
             className={`progress w-150 ${progresscolor(progress(formData))}`}
@@ -45,7 +54,6 @@ const AddHabitPopUp = ({ isOpen, onClose, onAdd, progress, progresscolor, settin
             max="100"
           ></progress>
         </div>
-
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {/* Date Picker */}
@@ -90,7 +98,9 @@ const AddHabitPopUp = ({ isOpen, onClose, onAdd, progress, progresscolor, settin
                 </calendar-date>
               </div>
             </div>
-            <p className="label mt-1 text-xs text-gray-400">Required – Choose the date for this entry.</p>
+            <p className="label mt-1 text-xs text-gray-400">
+              Required – Choose the date for this entry.
+            </p>
           </fieldset>
 
           {/* Burned */}
@@ -110,7 +120,9 @@ const AddHabitPopUp = ({ isOpen, onClose, onAdd, progress, progresscolor, settin
               />
               <span className="label">Kcal</span>
             </label>
-            <p className="label mt-1 text-xs text-gray-400">Required – Total calories you burned today.</p>
+            <p className="label mt-1 text-xs text-gray-400">
+              Required – Total calories you burned today.
+            </p>
           </fieldset>
 
           {/* Water */}
@@ -131,7 +143,9 @@ const AddHabitPopUp = ({ isOpen, onClose, onAdd, progress, progresscolor, settin
               />
               <span className="label">L</span>
             </label>
-            <p className="label mt-1 text-xs text-gray-400">Required – Total liters of water consumed.</p>
+            <p className="label mt-1 text-xs text-gray-400">
+              Required – Total liters of water consumed.
+            </p>
           </fieldset>
 
           {/* Sleep */}
@@ -151,7 +165,9 @@ const AddHabitPopUp = ({ isOpen, onClose, onAdd, progress, progresscolor, settin
               />
               <span className="label">Hrs</span>
             </label>
-            <p className="label mt-1 text-xs text-gray-400">Required – Hours of sleep you had last night.</p>
+            <p className="label mt-1 text-xs text-gray-400">
+              Required – Hours of sleep you had last night.
+            </p>
           </fieldset>
 
           {/* Read */}
@@ -171,7 +187,9 @@ const AddHabitPopUp = ({ isOpen, onClose, onAdd, progress, progresscolor, settin
               />
               <span className="label">Hrs</span>
             </label>
-            <p className="label mt-1 text-xs text-gray-400">Required – How many hours did you read today?</p>
+            <p className="label mt-1 text-xs text-gray-400">
+              Required – How many hours did you read today?
+            </p>
           </fieldset>
 
           {/* Intake */}
@@ -191,7 +209,9 @@ const AddHabitPopUp = ({ isOpen, onClose, onAdd, progress, progresscolor, settin
               />
               <span className="label">Kcal</span>
             </label>
-            <p className="label mt-1 text-xs text-gray-400">Required – Total calorie intake today.</p>
+            <p className="label mt-1 text-xs text-gray-400">
+              Required – Total calorie intake today.
+            </p>
           </fieldset>
 
           {/* Selfcare */}
@@ -204,7 +224,8 @@ const AddHabitPopUp = ({ isOpen, onClose, onAdd, progress, progresscolor, settin
                 role="button"
                 className="input input-bordered w-full cursor-pointer"
               >
-                {formData.selfcare || "_".repeat(settings.selfcare?.length || 3)}
+                {formData.selfcare ||
+                  "_".repeat(settings.selfcare?.length || 3)}
               </div>
 
               <ul
@@ -213,8 +234,12 @@ const AddHabitPopUp = ({ isOpen, onClose, onAdd, progress, progresscolor, settin
               >
                 {settings.selfcare && settings.selfcare.length > 0 ? (
                   settings.selfcare.map((habit, index) => {
-                    const currentValue = formData.selfcare.padEnd(settings.selfcare.length, "_");
-                    const isChecked = currentValue[index] === habit[0].toUpperCase();
+                    const currentValue = formData.selfcare.padEnd(
+                      settings.selfcare.length,
+                      "_"
+                    );
+                    const isChecked =
+                      currentValue[index] === habit[0].toUpperCase();
 
                     return (
                       <li key={habit}>
@@ -251,7 +276,10 @@ const AddHabitPopUp = ({ isOpen, onClose, onAdd, progress, progresscolor, settin
                 ) : (
                   <li className="text-sm text-center text-gray-400 px-2 py-1 flex flex-col items-center gap-1">
                     No Self Care Habits set. Please set them in{" "}
-                    <a href="/settings" className="text-primary hover:text-primary-focus">
+                    <a
+                      href="/settings"
+                      className="text-primary hover:text-primary-focus"
+                    >
                       Settings
                     </a>
                   </li>
@@ -263,7 +291,6 @@ const AddHabitPopUp = ({ isOpen, onClose, onAdd, progress, progresscolor, settin
               Required – Track self-care habits like BNF, Journaling, etc.
             </p>
           </fieldset>
-
 
           {/* Mood */}
           <fieldset className="fieldset w-full">
@@ -282,7 +309,14 @@ const AddHabitPopUp = ({ isOpen, onClose, onAdd, progress, progresscolor, settin
                 tabIndex={0}
                 className="dropdown-content z-[999] menu p-2 shadow bg-base-300 rounded-box w-full max-w-xs"
               >
-                {['Amazing', 'Good', 'Average', 'Sad', 'Depressed', 'Productive'].map((mood) => (
+                {[
+                  "Amazing",
+                  "Good",
+                  "Average",
+                  "Sad",
+                  "Depressed",
+                  "Productive",
+                ].map((mood) => (
                   <li key={mood}>
                     <button
                       onClick={() =>
@@ -290,8 +324,11 @@ const AddHabitPopUp = ({ isOpen, onClose, onAdd, progress, progresscolor, settin
                           target: { name: "mood", value: mood },
                         })
                       }
-                      className={`text-sm px-2 py-1 rounded w-full text-left ${formData.mood === mood ? "bg-primary text-primary-content" : ""
-                        }`}
+                      className={`text-sm px-2 py-1 rounded w-full text-left ${
+                        formData.mood === mood
+                          ? "bg-primary text-primary-content"
+                          : ""
+                      }`}
                     >
                       {mood}
                     </button>
@@ -304,13 +341,7 @@ const AddHabitPopUp = ({ isOpen, onClose, onAdd, progress, progresscolor, settin
               Required – Track your daily emotional state.
             </p>
           </fieldset>
-
         </div>
-
-
-
-
-
 
         <div className="flex justify-end mt-6 gap-3">
           <button className="btn btn-success" onClick={handleSubmit}>
@@ -323,7 +354,6 @@ const AddHabitPopUp = ({ isOpen, onClose, onAdd, progress, progresscolor, settin
       </div>
     </div>
   );
-
 };
 
 export default AddHabitPopUp;

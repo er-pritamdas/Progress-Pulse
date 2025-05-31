@@ -1,5 +1,9 @@
-import React, { useState, useEffect } from "react";
-import AddHabitPopUp from "../../../components/Dashboard/Habit/AddHabitPopUp";
+// Import Statements
+import { useState, useEffect } from "react";
+import Heading from "../../../components/Dashboard/Habit/HabitTableEntryPage/Heading.jsx";
+import Pagination from "../../../components/Dashboard/Habit/HabitTableEntryPage/Pagination.jsx";
+
+import AddHabitPopUp from "../../../components/Dashboard/Habit/HabitTableEntryPage/AddHabitPopUp.jsx";
 import Trash from "../../../utils/Icons/Trash";
 import Pencil from "../../../utils/Icons/Pencil";
 import Save from "../../../utils/Icons/Save";
@@ -8,7 +12,7 @@ import ErrorAlert from "../../../utils/Alerts/ErrorAlert";
 import SuccessAlert from "../../../utils/Alerts/SuccessAlert";
 import axiosInstance from "../../../Context/AxiosInstance";
 import { useLoading } from "../../../Context/LoadingContext";
-import DeleteHabitPopUp from "../../../components/Dashboard/Habit/DeleteHabitPopUp";
+import DeleteHabitPopUp from "../../../components/Dashboard/Habit/HabitTableEntryPage/DeleteHabitPopUp.jsx";
 import Refresh from "../../../utils/Icons/Refresh";
 import { TitleChanger } from "../../../utils/TitleChanger";
 import { useSelector, useDispatch } from "react-redux";
@@ -34,9 +38,6 @@ function HabitTableEntry() {
   TitleChanger("Progress Pulse | Habit Entry");
   const settings = useSelector((state) => state.habit.settings);
 
-  const dispatch = useDispatch();
-
-
   // Format Date Function
   const formatDate = (dateString) => {
     const date = new Date(dateString);
@@ -48,7 +49,7 @@ function HabitTableEntry() {
 
   // variables
   const [itemToDelete, setItemToDelete] = useState(null);
-  const [itemPerPage, setItemPerPage] = useState(7)
+  const [itemPerPage, setItemPerPage] = useState(7);
   const { setLoading } = useLoading();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -61,14 +62,14 @@ function HabitTableEntry() {
   const [alertErrorMessage, setAlertErrorMessage] = useState("");
   // Success Alert Variables
   const [showSuccessAlert, setShowSuccessAlert] = useState(false);
-  const [alertSuccessMessage, setalertSuccessMessage] = useState("");
+  const [alertSuccessMessage, setAlertSuccessMessage] = useState("");
 
   // -------------------------------------------------------------------- Functions ---------------------------------------------------------------
 
   function formatDateLocal(date) {
     const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0'); // add 1 because month is 0-indexed
-    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, "0"); // add 1 because month is 0-indexed
+    const day = String(date.getDate()).padStart(2, "0");
     return `${year}-${month}-${day}`;
   }
 
@@ -78,11 +79,10 @@ function HabitTableEntry() {
 
   const startOfMonth = new Date(currentYear, currentMonth, 1);
   const endOfMonth = new Date(currentYear, currentMonth + 1, 0);
-
+  
   const startDate = formatDateLocal(startOfMonth);
   const endDate = formatDateLocal(endOfMonth);
 
-  // 🔹 Set in state
   const [fromDate, setFromDate] = useState(startDate);
   const [toDate, setToDate] = useState(endDate);
 
@@ -106,7 +106,7 @@ function HabitTableEntry() {
   };
 
   const getScoreColor = (score) => {
-    const percentage = (score / 7) * 100
+    const percentage = (score / 7) * 100;
     if (percentage < 25) return "text-error";
     if (percentage < 50) return "text-warning";
     if (percentage < 75) return "text-info";
@@ -148,15 +148,13 @@ function HabitTableEntry() {
         err.response?.data?.message || "Failed to fetch habit data!";
       setAlertErrorMessage(errorMessage);
       setShowErrorAlert(true);
-      setTotalPages(1)
-      setCurrentPage(1)
+      setTotalPages(1);
+      setCurrentPage(1);
       setTimeout(() => setShowErrorAlert(false), 4000);
     } finally {
       // only compute totalPages if we got a response
       if (response?.data?.data?.totalEntries != null) {
-        setTotalPages(
-          Math.ceil(response.data.data.totalEntries / itemPerPage)
-        );
+        setTotalPages(Math.ceil(response.data.data.totalEntries / itemPerPage));
       }
       setLoading(false);
     }
@@ -177,13 +175,12 @@ function HabitTableEntry() {
     };
   }, [editingItem]);
 
-
   // Progress Color function
   const getProgressColorClass = (percentage) => {
-    if (percentage >= 75) return "progress-success";      // 75–100% → consistent → 🟢
-    if (percentage >= 50) return "progress-info";         // 50–74% → moderate → 🔵
-    if (percentage >= 25) return "progress-warning";      // 25–49% → uncertain → 🟠
-    return "progress-error";                              // 00–24% → inconsistent → 🔴
+    if (percentage >= 75) return "progress-success"; // 75–100% → consistent → 🟢
+    if (percentage >= 50) return "progress-info"; // 50–74% → moderate → 🔵
+    if (percentage >= 25) return "progress-warning"; // 25–49% → uncertain → 🟠
+    return "progress-error"; // 00–24% → inconsistent → 🔴
   };
 
   // calculate Progress Function
@@ -219,7 +216,7 @@ function HabitTableEntry() {
       (filled.length / fields.length) * 100
     );
 
-    item["score"] = filled.length
+    item["score"] = filled.length;
     item["progress"] = progressPercentage;
     return progressPercentage;
   };
@@ -252,12 +249,10 @@ function HabitTableEntry() {
       // Regular check for other fields
       return value && value.toString().trim() !== "0";
     });
-    const score = filled.length
-    item["score"] = filled.length
-    return score
-
+    const score = filled.length;
+    item["score"] = filled.length;
+    return score;
   };
-
 
   // Delection Data Function
   const handleDeleteClick = (date) => {
@@ -273,7 +268,7 @@ function HabitTableEntry() {
           date: itemToDelete,
         },
       });
-      setalertSuccessMessage(`Entry For ${itemToDelete} Deleted`);
+      setAlertSuccessMessage(`Entry For ${itemToDelete} Deleted`);
       setShowSuccessAlert(true);
       setTimeout(() => setShowSuccessAlert(false), 4000);
       fetchHabits(currentPage);
@@ -308,7 +303,7 @@ function HabitTableEntry() {
   const handleSave = async () => {
     const originalItem = data.find((item) => item.date === editingItem.date);
     if (JSON.stringify(originalItem) === JSON.stringify(editingItem)) {
-      setalertSuccessMessage("Already up to date!");
+      setAlertSuccessMessage("Already up to date!");
       setShowSuccessAlert(true);
       setTimeout(() => setShowSuccessAlert(false), 4000);
       setEditingItem(null);
@@ -321,7 +316,7 @@ function HabitTableEntry() {
         { ...editingItem }
       );
       console.log(response.data.message);
-      setalertSuccessMessage(response.data.message);
+      setAlertSuccessMessage(response.data.message);
       setShowSuccessAlert(true);
       setTimeout(() => setShowSuccessAlert(false), 4000);
     } catch (err) {
@@ -368,7 +363,7 @@ function HabitTableEntry() {
         { ...newItem, currentPage }
       );
       setData(sortedNewData);
-      setalertSuccessMessage(response.data.message);
+      setAlertSuccessMessage(response.data.message);
       setShowSuccessAlert(true);
       setTimeout(() => setShowSuccessAlert(false), 4000);
     } catch (err) {
@@ -398,46 +393,27 @@ function HabitTableEntry() {
         <SuccessAlert message={alertSuccessMessage} top={20} />
       )}
 
-      {/* Heading and Add Button */}
-
-      {/* Sticky Heading for Habit Tracker Table Entry */}
+      {/* Headings */}
       <div className="sticky top-[-20px] z-30 bg-opacity-90 backdrop-blur-md shadow-sm mb-1 p-2 pt-3">
-        <div className="flex justify-between items-center flex-wrap gap-4">
-          <h1 className="text-2xl font-bold">Habit Tracker Table Entry</h1>
-
-          <div className="join join-vertical lg:join-horizontal">
-            <button
-              className="btn btn-primary join-item"
-              onClick={handleAddEntryClick}
-            >
-              + Add Entry
-            </button>
-            <button
-              className="btn btn-soft join-item"
-              onClick={() => {
-                fetchHabits(currentPage);
-                setalertSuccessMessage("Refreshed!");
-                setShowSuccessAlert(true);
-                setTimeout(() => setShowSuccessAlert(false), 4000);
-              }}
-            >
-              <Refresh /> Refresh
-            </button>
-          </div>
-        </div>
+        <Heading
+          handleAddEntryClick={handleAddEntryClick}
+          currentPage={currentPage}
+          fetchHabits={fetchHabits}
+          setShowErrorAlert={setShowErrorAlert}
+          setAlertErrorMessage={setAlertErrorMessage}
+          setShowSuccessAlert={setShowSuccessAlert}
+          setAlertSuccessMessage={setAlertSuccessMessage}
+        />
       </div>
-
 
       {/* Table */}
       <div>
         <table className="bg-base-300 table table-fixed table-md">
-          {/* Headings */}
           <thead className="sticky top-10 z-30 bg-opacity-90 backdrop-blur-md shadow-sm mb-1 p-2 pt-3">
             {/* ToolBar */}
             <tr>
               <th colSpan="11" className="py-3 px-4">
                 <div className="flex justify-between items-center flex-wrap gap-4 text-sm font-normal">
-
                   {/* Left: Badges */}
                   <div className="flex items-center gap-3">
                     <div className="badge badge-sm badge-soft badge-warning flex items-center gap-1">
@@ -454,9 +430,13 @@ function HabitTableEntry() {
                     </div>
                   </div>
 
-                  {/* ENTRIES LIMIT DROPDOWN */}
+                  {/* Entries Limit Dropdown*/}
                   <div className="dropdown dropdown-center">
-                    <div tabIndex={0} role="button" className="btn btn-sm btn-soft text-xs">
+                    <div
+                      tabIndex={0}
+                      role="button"
+                      className="btn btn-sm btn-soft text-xs"
+                    >
                       Entries: {itemPerPage}
                     </div>
                     <ul
@@ -466,7 +446,9 @@ function HabitTableEntry() {
                       {[7, 14, 21, 28, 31].map((value) => (
                         <li key={value}>
                           <a
-                            className={`justify-center ${itemPerPage === value ? "active" : ""}`}
+                            className={`justify-center ${
+                              itemPerPage === value ? "active" : ""
+                            }`}
                             onClick={() => setItemPerPage(value)}
                           >
                             {value}
@@ -476,11 +458,9 @@ function HabitTableEntry() {
                     </ul>
                   </div>
 
-
-
                   {/* Right: From/To Date Pickers */}
                   <div className="flex items-center gap-4 ml-auto">
-                    {/* FROM DATE PICKER */}
+                    {/* From Date Picker */}
                     <div className="dropdown dropdown-end floating-label">
                       <div
                         tabIndex={0}
@@ -493,9 +473,7 @@ function HabitTableEntry() {
                       <div className="dropdown-content z-[999] bg-base-100 rounded-box shadow-sm p-2">
                         <calendar-date
                           class="cally"
-                          onchange={(e) =>
-                            setFromDate(e.target.value)
-                          }
+                          onchange={(e) => setFromDate(e.target.value)}
                         >
                           <svg
                             aria-label="Previous"
@@ -519,9 +497,10 @@ function HabitTableEntry() {
                         </calendar-date>
                       </div>
                     </div>
-                    -
 
-                    {/* TO DATE PICKER */}
+                    <span>-</span>
+
+                    {/* To Date Picker */}
                     <div className="dropdown dropdown-end floating-label">
                       <div
                         tabIndex={0}
@@ -534,9 +513,7 @@ function HabitTableEntry() {
                       <div className="dropdown-content z-[999] bg-base-100 rounded-box shadow-sm p-2">
                         <calendar-date
                           class="cally"
-                          onchange={(e) =>
-                            setToDate(e.target.value)
-                          }
+                          onchange={(e) => setToDate(e.target.value)}
                         >
                           <svg
                             aria-label="Previous"
@@ -561,18 +538,22 @@ function HabitTableEntry() {
                       </div>
                     </div>
 
-                    {/* BUTTONS */}
+                    {/* Filter reset Buttons*/}
                     <div className="join">
-                      <button className=" join-item btn btn-soft btn-sm btn-success" onClick={fetchHabits}>
+                      <button
+                        className=" join-item btn btn-soft btn-sm btn-success"
+                        onClick={fetchHabits}
+                      >
                         Filter
                       </button>
-                      <button className="join-item btn btn-sm btn-soft" onClick={resetFilters}>
+                      <button
+                        className="join-item btn btn-sm btn-soft"
+                        onClick={resetFilters}
+                      >
                         Reset
                       </button>
                     </div>
-
                   </div>
-
                 </div>
               </th>
             </tr>
@@ -647,7 +628,6 @@ function HabitTableEntry() {
                   Actions
                 </div>
               </th>
-
             </tr>
           </thead>
 
@@ -656,7 +636,10 @@ function HabitTableEntry() {
             {data.length === 0 ? (
               // Message Row for empty Data
               <tr>
-                <td colSpan="11" className="h-[60vh] text-center align-middle bg-base-200">
+                <td
+                  colSpan="11"
+                  className="h-[60vh] text-center align-middle bg-base-200"
+                >
                   <div className="flex flex-col justify-center items-center h-full space-y-4">
                     <div className="text-2xl font-semibold">
                       No habit entries found
@@ -672,14 +655,16 @@ function HabitTableEntry() {
                     </button>
                   </div>
                 </td>
-
               </tr>
             ) : (
               data.map((item) =>
                 editingItem?.date === item.date ? (
-                  // Input Row
+                  // ---------- Input Row --------
                   <tr key={item.date} className="text-center">
+                    {/* Date */}
                     <td className="text-sm">{formatDate(item.date)}</td>
+
+                    {/* Burned */}
                     <td>
                       <input
                         type="number"
@@ -692,6 +677,8 @@ function HabitTableEntry() {
                         onChange={handleChange}
                       />
                     </td>
+
+                    {/* Water */}
                     <td>
                       <input
                         type="number"
@@ -705,6 +692,8 @@ function HabitTableEntry() {
                         onChange={handleChange}
                       />
                     </td>
+
+                    {/* Sleep */}
                     <td>
                       <input
                         type="number"
@@ -717,6 +706,8 @@ function HabitTableEntry() {
                         onChange={handleChange}
                       />
                     </td>
+
+                    {/* Read */}
                     <td>
                       <input
                         type="number"
@@ -729,6 +720,8 @@ function HabitTableEntry() {
                         onChange={handleChange}
                       />
                     </td>
+
+                    {/* Intake */}
                     <td>
                       <input
                         type="number"
@@ -750,7 +743,8 @@ function HabitTableEntry() {
                           role="button"
                           className="btn btn-sm m-1 w-[100px] text-center"
                         >
-                          {editingItem.selfcare || "_".repeat(settings.selfcare.length || 3)}
+                          {editingItem.selfcare ||
+                            "_".repeat(settings.selfcare.length || 3)}
                         </div>
 
                         <ul
@@ -760,7 +754,8 @@ function HabitTableEntry() {
                           {settings.selfcare && settings.selfcare.length > 0 ? (
                             [...settings.selfcare].map((habit, index) => {
                               const currentValue =
-                                editingItem.selfcare || "_".repeat(settings.selfcare.length);
+                                editingItem.selfcare ||
+                                "_".repeat(settings.selfcare.length);
 
                               const isChecked =
                                 currentValue[index] === habit[0].toUpperCase();
@@ -800,18 +795,19 @@ function HabitTableEntry() {
                             })
                           ) : (
                             <li className="text-sm text-center text-gray-400 px-2 py-1 flex flex-col items-center gap-1">
-                              No Self Care Habits has been set, Please click the setting button to set the Self Care Habits
-                              <a href="/settings" className="text-primary hover:text-primary-focus">
+                              No Self Care Habits has been set, Please click the
+                              setting button to set the Self Care Habits
+                              <a
+                                href="/settings"
+                                className="text-primary hover:text-primary-focus"
+                              >
                                 <Settings className="w-5 h-5" />
                               </a>
                             </li>
-
-
                           )}
                         </ul>
                       </div>
                     </td>
-
 
                     {/* Mood */}
                     <td>
@@ -852,25 +848,40 @@ function HabitTableEntry() {
                     {/* Progress */}
                     <td>
                       <td className="flex flex-col items-center justify-center gap-2 py-2">
-                        <span className={`text-xs ${getConsistencyColor(calculateProgress(editingItem))}`}>
+                        <span
+                          className={`text-xs ${getConsistencyColor(
+                            calculateProgress(editingItem)
+                          )}`}
+                        >
                           {getConsistencyLabel(calculateProgress(editingItem))}
                         </span>
                         <progress
-                          className={`progress w-20 ${getProgressColorClass(calculateProgress(editingItem))}`}
+                          className={`progress w-20 ${getProgressColorClass(
+                            calculateProgress(editingItem)
+                          )}`}
                           value={calculateProgress(editingItem)}
                           max="100"
                         ></progress>
                       </td>
                     </td>
 
+                    {/* Score */}
                     <td>
-                      <div className="tooltip tooltip-right" data-tip="Daily Score out of 7">
-                        <span className={`badge badge-lg ${getScoreColor(calculateScore(item))}`}>
+                      <div
+                        className="tooltip tooltip-right"
+                        data-tip="Daily Score out of 7"
+                      >
+                        <span
+                          className={`badge badge-lg ${getScoreColor(
+                            calculateScore(item)
+                          )}`}
+                        >
                           {calculateScore(item)} / 7
                         </span>
                       </div>
                     </td>
 
+                    {/* Actions */}
                     <td className="text-center w-[120px]">
                       <div className="flex justify-center gap-2">
                         <button
@@ -889,12 +900,14 @@ function HabitTableEntry() {
                     </td>
                   </tr>
                 ) : (
-                  // Normal Row 
+                  // ---------- Normal Row ----------
                   <tr key={item.date} className="text-center">
+                    {/* Date */}
                     <td className="border border-base-100 text-sm">
                       {formatDate(item.date)}
                     </td>
 
+                    {/* Burned */}
                     <td
                       className={`text-sm border border-base-100 truncate ${getColorClass(
                         "burned",
@@ -905,6 +918,7 @@ function HabitTableEntry() {
                       {item.burned || 0} Kcal
                     </td>
 
+                    {/* Water */}
                     <td
                       className={`text-sm border border-base-100 truncate ${getColorClass(
                         "water",
@@ -915,6 +929,7 @@ function HabitTableEntry() {
                       {item.water || 0} Ltr
                     </td>
 
+                    {/* Sleep */}
                     <td
                       className={`text-sm border border-base-100 truncate ${getColorClass(
                         "sleep",
@@ -925,6 +940,7 @@ function HabitTableEntry() {
                       {item.sleep || 0} Hrs
                     </td>
 
+                    {/* Read */}
                     <td
                       className={`text-sm border border-base-100 truncate ${getColorClass(
                         "read",
@@ -935,6 +951,7 @@ function HabitTableEntry() {
                       {item.read || 0} Hrs
                     </td>
 
+                    {/* Intake */}
                     <td
                       className={`text-sm border border-base-100 truncate ${getColorClass(
                         "intake",
@@ -945,6 +962,7 @@ function HabitTableEntry() {
                       {item.intake || 0} Kcal
                     </td>
 
+                    {/* SelfCare */}
                     <td className="text-sm border border-base-100 truncate">
                       {item.selfcare || "_".repeat(settings.selfcare.length)}
                     </td>
@@ -956,25 +974,39 @@ function HabitTableEntry() {
 
                     {/* Progress Bar */}
                     <td className="flex flex-col items-center justify-center gap-2 py-2">
-                      <span className={`text-xs ${getConsistencyColor(calculateProgress(item))}`}>
+                      <span
+                        className={`text-xs ${getConsistencyColor(
+                          calculateProgress(item)
+                        )}`}
+                      >
                         {getConsistencyLabel(calculateProgress(item))}
                       </span>
                       <progress
-                        className={`progress w-20 ${getProgressColorClass(calculateProgress(item))}`}
+                        className={`progress w-20 ${getProgressColorClass(
+                          calculateProgress(item)
+                        )}`}
                         value={calculateProgress(item)}
                         max="100"
                       ></progress>
                     </td>
 
+                    {/* Score */}
                     <td>
-                      <div className="tooltip tooltip-right" data-tip="Daily Score out of 7">
-                        <span className={`badge badge-lg ${getScoreColor(calculateScore(item))}`}>
+                      <div
+                        className="tooltip tooltip-right"
+                        data-tip="Daily Score out of 7"
+                      >
+                        <span
+                          className={`badge badge-lg ${getScoreColor(
+                            calculateScore(item)
+                          )}`}
+                        >
                           {calculateScore(item)} / 7
                         </span>
                       </div>
                     </td>
 
-
+                    {/* Actions */}
                     <td className="text-center w-[120px]">
                       <div className="flex justify-center gap-2">
                         <button
@@ -1000,37 +1032,16 @@ function HabitTableEntry() {
       </div>
 
       {/* Pagination */}
-      <div className="mt-4 flex justify-end gap-2">
-        {/* Previous Button */}
-        <button
-          className="btn btn-soft btn-secondary btn-sm"
-          onClick={() => {
-            const prevPageNumber = Math.max(currentPage - 1, 1);
-            setCurrentPage(prevPageNumber);
-            fetchHabits(prevPageNumber);
-          }}
-          disabled={currentPage === 1}
-        >
-          Prev
-        </button>
-
-        <span className="flex items-center px-2">
-          Page {currentPage} of {totalPages}
-        </span>
-
-        {/* Next Button */}
-        <button
-          className="btn btn-soft btn-secondary btn-sm"
-          onClick={() => {
-            const nextPageNumber = Math.min(currentPage + 1, totalPages);
-            setCurrentPage(nextPageNumber);
-            fetchHabits(nextPageNumber);
-          }}
-          disabled={currentPage === totalPages}
-        >
-          Next
-        </button>
+      <div>
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          setCurrentPage={setCurrentPage}
+          fetchHabits={fetchHabits}
+        />
       </div>
+
+      {/* Add Habit Popup */}
       <AddHabitPopUp
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
@@ -1039,6 +1050,7 @@ function HabitTableEntry() {
         progresscolor={getProgressColorClass}
         settings={settings}
       />
+
       <DeleteHabitPopUp
         isDeletePopupOpen={isDeleteModalOpen}
         onClose={() => setIsDeleteModalOpen(false)}

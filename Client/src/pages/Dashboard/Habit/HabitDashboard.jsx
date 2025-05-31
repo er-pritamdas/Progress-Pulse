@@ -1,15 +1,15 @@
 import { useState, useEffect } from "react";
 import { TitleChanger } from "../../../utils/TitleChanger";
-import HeatMap from "../../../components/Dashboard/Habit/Charts/WaterHeatMap";
-import CurrentStreakCard from "../../../components/Dashboard/Habit/CurrentStreakCard";
-import GoalProgressCard from "../../../components/Dashboard/Habit/GoalProgressCard";
-import HabitScoreCard from "../../../components/Dashboard/Habit/HabitScoreCard";
-import HabitSummaryCard from "../../../components/Dashboard/Habit/HabitSummaryCard";
+import WaterHeatMap from "../../../components/Dashboard/Habit/HabitDashboardPage/Charts/WaterChart/WaterHeatMap";
+import CurrentStreakCard from "../../../components/Dashboard/Habit/HabitDashboardPage/CurrentStreakCard"
+import GoalProgressCard from "../../../components/Dashboard/Habit/HabitDashboardPage/GoalProgressCard"
+import HabitScoreCard from "../../../components/Dashboard/Habit/HabitDashboardPage/HabitScoreCard"
+import HabitSummaryCard from "../../../components/Dashboard/Habit/HabitDashboardPage/HabitSummaryCard"
 import { useLoading } from "../../../Context/LoadingContext";
 import axiosInstance from "../../../Context/AxiosInstance";
-import BurnedVsConsumedCalorieRadialChart from "../../../components/Dashboard/Habit/Charts/BurnedVsConsumedCalorieRadialChart";
-import CalorieBurnedRadialChart from "../../../components/Dashboard/Habit/Charts/CalorieBurnedRadialChart";
-import CalorieConsumedRadialChart from "../../../components/Dashboard/Habit/Charts/CalorieConsumedRadialChart";
+import BurnedVsConsumedCalorieRadialChart from "../../../components/Dashboard/Habit/HabitDashboardPage/Charts/CalorieChart/BurnedVsConsumedCalorieRadialChart";
+import CalorieBurnedRadialChart from "../../../components/Dashboard/Habit/HabitDashboardPage/Charts/CalorieChart/CalorieBurnedRadialChart";
+import CalorieConsumedRadialChart from "../../../components/Dashboard/Habit/HabitDashboardPage/Charts/CalorieChart/CalorieConsumedRadialChart";
 
 
 function HabitDashboard() {
@@ -202,7 +202,7 @@ function HabitDashboard() {
           </div>
         </section>
 
-        {/* Calorie Section */}
+        {/* Calorie Overview Section */}
         <section>
           <h2 className="text-xl font-semibold mb-4">Calorie Analysis</h2>
           <div className="grid grid-cols-12 gap-4 mb-8">
@@ -310,8 +310,7 @@ function HabitDashboard() {
             </div>
           </div>
         </section>
-
-        {/* Charts Section */}
+        {/* Calorie Chart Section */}
         <section>
           <h2 className="text-xl font-semibold mb-4">📊 Visualizations</h2>
           <div className="bg-base-100 rounded-2xl shadow-md p-6">
@@ -324,7 +323,7 @@ function HabitDashboard() {
                 
               />
               <div className="tab-content border-base-300 bg-base-100 p-10">
-                <HeatMap
+                <WaterHeatMap
                   habitData={habitData}
                   waterMin={waterMin}
                   waterMax={waterMax}
@@ -339,11 +338,7 @@ function HabitDashboard() {
                 defaultChecked
               />
               <div className="tab-content border-base-300 bg-base-100 p-10">
-                {/* <HeatMap
-                  habitData={habitData}
-                  waterMin={waterMin}
-                  waterMax={waterMax}
-                /> */}
+
               </div>
 
               <input
@@ -353,11 +348,7 @@ function HabitDashboard() {
                 aria-label="Tab 3"
               />
               <div className="tab-content border-base-300 bg-base-100 p-10">
-                {/* <HeatMap
-                  habitData={habitData}
-                  waterMin={waterMin}
-                  waterMax={waterMax}
-                /> */}
+
               </div>
             </div>
           </div>
