@@ -368,7 +368,10 @@ function HabitDashboard() {
                   defaultChecked
                 />
                 <div className="tab-content border-base-300 bg-base-100 p-10">
-                  <EffectiveMixedStackChart />
+                  <EffectiveMixedStackChart 
+                    habitData={habitData}
+                    ConsumedCalorieMax={ConsumedCalorieMax}
+                  />
                 </div>
 
                 <input
@@ -527,7 +530,6 @@ function HabitDashboard() {
                   aria-label="Tab 1"
                 />
                 <div className="tab-content border-base-300 bg-base-100 p-10">
-                  <EffectiveMixedStackChart />
                 </div>
 
                 <input

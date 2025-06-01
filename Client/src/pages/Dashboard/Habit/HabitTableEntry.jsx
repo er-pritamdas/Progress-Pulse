@@ -874,10 +874,10 @@ function HabitTableEntry() {
                       >
                         <span
                           className={`badge badge-lg ${getScoreColor(
-                            calculateScore(item)
+                            calculateScore(editingItem)
                           )}`}
                         >
-                          {calculateScore(item)} / 7
+                          {calculateScore(editingItem)} / 7
                         </span>
                       </div>
                     </td>
