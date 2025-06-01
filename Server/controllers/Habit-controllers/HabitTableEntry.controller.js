@@ -8,9 +8,10 @@ const readHabitTableData = asynchandler(async (req, res, next) => {
   const user = req.user;
   if (!user) throw new ApiError(401, "Username Required");
 
-  const page = parseInt(req.query.page) || 1;
-  const limit = parseInt(req.query.limit) || 7;
+  const page = parseInt(req.query.page) || null;
+  const limit = parseInt(req.query.limit) || null;
   const skip = (page - 1) * limit;
+  console.log(skip)
 
   // Parse optional date filters
   const startDate = req.query.startDate ?? null;

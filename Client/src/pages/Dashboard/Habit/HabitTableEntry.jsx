@@ -79,7 +79,7 @@ function HabitTableEntry() {
 
   const startOfMonth = new Date(currentYear, currentMonth, 1);
   const endOfMonth = new Date(currentYear, currentMonth + 1, 0);
-  
+
   const startDate = formatDateLocal(startOfMonth);
   const endDate = formatDateLocal(endOfMonth);
 
@@ -446,9 +446,8 @@ function HabitTableEntry() {
                       {[7, 14, 21, 28, 31].map((value) => (
                         <li key={value}>
                           <a
-                            className={`justify-center ${
-                              itemPerPage === value ? "active" : ""
-                            }`}
+                            className={`justify-center ${itemPerPage === value ? "active" : ""
+                              }`}
                             onClick={() => setItemPerPage(value)}
                           >
                             {value}
@@ -542,7 +541,9 @@ function HabitTableEntry() {
                     <div className="join">
                       <button
                         className=" join-item btn btn-soft btn-sm btn-success"
-                        onClick={fetchHabits}
+                        onClick={() => {
+                          fetchHabits(currentPage);
+                        }}
                       >
                         Filter
                       </button>

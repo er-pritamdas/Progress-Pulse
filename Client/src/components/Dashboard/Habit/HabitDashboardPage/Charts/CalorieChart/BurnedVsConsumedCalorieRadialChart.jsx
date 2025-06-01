@@ -1,23 +1,45 @@
 import Chart from "react-apexcharts";
+import { useState, useEffect } from "react";
 
-function BurnedVsConsumedCalorieRadialChart() {
-  const rawValues = [1000, 150]; // Consumed & Burned
-  const maxValues = [1500, 300]; // Consumed & Burned
+function BurnedVsConsumedCalorieRadialChart({
+  habitData,
+  ConsumedCalorieMax,
+  BurnedCalorieMax,
+}) {
+  const [series, setSeries] = useState([0, 0]);
+  const [effectiveKcal, setEffectiveKcal] = useState(0);
+  const [rawValues, setRawValues] = useState([0, 0]);
 
-  const totalKcal = rawValues[0] - rawValues[1]
+  useEffect(() => {
+    if (!Array.isArray(habitData)) return;
 
-  // Calculate percentage for radial chart
-  const percentageSeries = rawValues.map((val, i) =>
-    Math.round((val / maxValues[i]) * 100)
-  );
+    let consumed = 0;
+    let burned = 0;
+
+    for (const { intake, burned: burnedVal } of habitData) {
+      consumed += Number(intake) || 0;
+      burned += Number(burnedVal) || 0;
+    }
+
+    const totalDays = habitData.length || 1;
+    const totalConsumedMax = (Number(ConsumedCalorieMax) || 1) * totalDays;
+    const totalBurnedMax = (Number(BurnedCalorieMax) || 1) * totalDays;
+
+    const consumedPercent = Math.min(100, Math.round((consumed / totalConsumedMax) * 100));
+    const burnedPercent = Math.min(100, Math.round((burned / totalBurnedMax) * 100));
+
+    // ✅ Use local values directly, no stale state involved
+    setSeries([consumedPercent, burnedPercent]);
+    setEffectiveKcal(consumed - burned);
+    setRawValues([consumed, burned]); // used only for tooltip
+  }, [habitData, ConsumedCalorieMax, BurnedCalorieMax]);
+
 
   const options = {
     chart: {
       height: 450,
       type: "radialBar",
-      toolbar: {
-        show: true,
-      },
+      toolbar: { show: true },
     },
     plotOptions: {
       radialBar: {
@@ -28,23 +50,17 @@ function BurnedVsConsumedCalorieRadialChart() {
           margin: 0,
           size: "60%",
           background: "transparent",
-          image: undefined,
-          imageWidth: 0,
-          imageHeight: 0,
-          position: "front",
-          dropShadow: {
-            enabled: false,
-          },
+          dropShadow: { enabled: false },
         },
         track: {
-          background: "#1f2937", // Tailwind gray-800
+          background: "#1f2937",
           strokeWidth: "97%",
         },
         dataLabels: {
           show: true,
           name: {
             show: true,
-            color: "#d1d5db", // Tailwind gray-300
+            color: "#d1d5db",
             fontSize: "14px",
           },
           value: {
@@ -58,9 +74,7 @@ function BurnedVsConsumedCalorieRadialChart() {
             label: "Effective",
             color: "#3abcf7",
             fontSize: "18px",
-            formatter: function () {
-              return `${totalKcal} kcal`;
-            },
+            formatter: () => `${effectiveKcal} kcal`,
           },
         },
       },
@@ -68,27 +82,19 @@ function BurnedVsConsumedCalorieRadialChart() {
     tooltip: {
       enabled: true,
       y: {
-        formatter: function (_, opts) {
-          const kcal = rawValues[opts.seriesIndex];
-          return `${kcal} kcal`;
-        },
+        formatter: (_, opts) => `${rawValues[opts.seriesIndex]} kcal`,
         title: {
           formatter: (seriesName) => seriesName,
         },
       },
     },
-    colors: ["#1E3A8A", "#3abcf7"], // Tailwind blue-900 & blue-300
+    colors: ["#1E3A8A", "#3abcf7"],
     labels: ["Calories Consumed", "Calories Burned"],
   };
 
   return (
     <div style={{ width: "100%", overflowX: "auto" }} className="p-4">
-      <Chart
-        options={options}
-        series={percentageSeries}
-        type="radialBar"
-        height={450}
-      />
+      <Chart options={options} series={series} type="radialBar" height={450} key={series.join("-")}/>
     </div>
   );
 }

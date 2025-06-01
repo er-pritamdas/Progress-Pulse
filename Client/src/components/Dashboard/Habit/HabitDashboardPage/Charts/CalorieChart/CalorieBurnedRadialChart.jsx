@@ -1,9 +1,25 @@
 import Chart from "react-apexcharts";
+import { useState, useEffect } from "react";
 
-function CalorieBurnedRadialChart() {
-  const rawValue = 600;
-  const maxValue = 1000;
-  const percentage = Math.round((rawValue / maxValue) * 100);
+function CalorieBurnedRadialChart({ habitData, BurnedCalorieMax }) {
+  const [rawValue, setRawValue] = useState(0);
+  const [percentage, setPercentage] = useState(0);
+
+  useEffect(() => {
+    if (!Array.isArray(habitData)) return;
+
+    let burned = 0;
+    for (const { burned: burnedVal } of habitData) {
+      burned += Number(burnedVal) || 0;
+    }
+
+    const totalDays = habitData.length || 1;
+    const totalBurnedMax = (Number(BurnedCalorieMax) || 1) * totalDays;
+    const burnedPercent = Math.min(100, Math.round((burned / totalBurnedMax) * 100));
+
+    setRawValue(burned);
+    setPercentage(burnedPercent);
+  }, [habitData, BurnedCalorieMax]);
 
   const options = {
     chart: {
@@ -19,11 +35,13 @@ function CalorieBurnedRadialChart() {
         startAngle: -135,
         endAngle: 135,
         hollow: {
-          size: "70%", // ✅ Increase size from default ~60% to 70% for a larger radius
+          margin: 0,
+          size: "60%",
           background: "transparent",
+          dropShadow: { enabled: false },
         },
         track: {
-          background: "#1f2937", // Tailwind gray-800
+          background: "#1f2937",
           strokeWidth: "97%",
         },
         dataLabels: {
@@ -33,20 +51,19 @@ function CalorieBurnedRadialChart() {
             fontSize: "14px",
           },
           value: {
-            color: "#ffffff",
             show: true,
+            color: "#ffffff",
             fontSize: "20px",
+            formatter: () => `${percentage}%`,
           },
         },
       },
     },
     tooltip: {
       enabled: true,
-      theme: "light",
+      theme: "dark",
       y: {
-        formatter: function () {
-          return `${rawValue} kcal`;
-        },
+        formatter: () => `${rawValue} kcal`,
         title: {
           formatter: () => "Calories Burned",
         },
@@ -57,8 +74,8 @@ function CalorieBurnedRadialChart() {
   };
 
   return (
-    <div className="w-full bg-gray-900 rounded-xl shadow p-4">
-      <Chart options={options} series={[percentage]} type="radialBar" height={450} />
+    <div style={{ width: "100%", overflowX: "auto" }} className="p-4">
+      <Chart options={options} series={[percentage]} type="radialBar" height={450} key={percentage} />
     </div>
   );
 }
