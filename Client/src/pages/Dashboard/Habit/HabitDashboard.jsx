@@ -208,7 +208,11 @@ function HabitDashboard() {
               <HabitSummaryCard />
             </div>
             <div className="col-span-3 bg-base-100 rounded-2xl shadow-lg border border-error p-6 w-full max-w-xs">
-              <CurrentStreakCard />
+              <CurrentStreakCard 
+              habitData={habitData}
+              fromDate={fromDate}
+              toDate={toDate}
+              />
             </div>
             <div className="col-span-3 bg-base-100 rounded-2xl shadow-lg border border-success p-6 w-full max-w-xs">
               <GoalProgressCard />
