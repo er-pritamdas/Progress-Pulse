@@ -10,6 +10,8 @@ const HabitSummaryCard = ({ total = 0 }) => {
       ? "You're building momentum!"
       : "You're on fire! 🔥";
 
+
+      
   return (
     <div className="flex flex-col items-center justify-center">
       <Flame className="text-primary mb-2" size={32} />
@@ -19,5 +21,7 @@ const HabitSummaryCard = ({ total = 0 }) => {
     </div>
   );
 };
+
+
 
 export default HabitSummaryCard;
