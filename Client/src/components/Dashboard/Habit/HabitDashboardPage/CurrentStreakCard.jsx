@@ -62,10 +62,10 @@ const CurrentStreakCard = ({ habitData = [], fromDate, toDate }) => {
   }, [habitData, fromDate, toDate]);
 
   return (
-    <div className="flex flex-col items-center justify-center bg-base-100 rounded-2xl shadow-md p-4">
+    <div className="flex flex-col items-center justify-center">
       <Flame className="text-orange-500 mb-2" size={32} />
       <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Longest Streak</h2>
-      <p className="text-3xl font-extrabold text-orange-500 mt-2 mb-3">
+      <p className="text-3xl font-extrabold text-orange-500 mt-2 mb-6">
         {streak} Day{streak !== 1 ? "s" : ""}
       </p>
       <p className="text-sm text-gray-600 dark:text-gray-400">{message.emoji} {message.text}</p>

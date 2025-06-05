@@ -203,22 +203,41 @@ function HabitDashboard() {
         {/* Overview Section */}
         <section className="mb-12">
           <h2 className="text-xl font-semibold mb-4">Overview</h2>
-          <div className="grid grid-cols-12 gap-4 mb-8">
-            <div className="col-span-3 bg-base-100 rounded-2xl shadow-lg border border-primary p-6 w-full max-w-xs">
-              <HabitSummaryCard />
-            </div>
-            <div className="col-span-3 bg-base-100 rounded-2xl shadow-lg border border-error p-6 w-full max-w-xs">
-              <CurrentStreakCard 
-              habitData={habitData}
-              fromDate={fromDate}
-              toDate={toDate}
+          <div className="grid grid-cols-15 gap-3 mb-8">
+            <div className="col-span-3 bg-base-100 rounded-2xl shadow-lg p-6">
+              <HabitSummaryCard
+                habitData={habitData}
+                fromDate={fromDate}
+                toDate={toDate}
               />
             </div>
-            <div className="col-span-3 bg-base-100 rounded-2xl shadow-lg border border-success p-6 w-full max-w-xs">
-              <GoalProgressCard />
+            <div className="col-span-3 bg-base-100 rounded-2xl shadow-lg p-6">
+              <HabitSummaryCard
+                habitData={habitData}
+                fromDate={fromDate}
+                toDate={toDate}
+              />
             </div>
-            <div className="col-span-3 bg-base-100 rounded-2xl shadow-lg border border-warning p-6 w-full max-w-xs">
-              <HabitScoreCard />
+            <div className="col-span-3 bg-base-100 rounded-2xl shadow-lg p-6">
+              <CurrentStreakCard
+                habitData={habitData}
+                fromDate={fromDate}
+                toDate={toDate}
+              />
+            </div>
+            <div className="col-span-3 bg-base-100 rounded-2xl shadow-lg p-6">
+              <GoalProgressCard
+                habitData={habitData}
+                fromDate={fromDate}
+                toDate={toDate}
+              />
+            </div>
+            <div className="col-span-3 bg-base-100 rounded-2xl shadow-lg p-6">
+              <HabitScoreCard
+                habitData={habitData}
+                fromDate={fromDate}
+                toDate={toDate}
+              />
             </div>
           </div>
         </section>

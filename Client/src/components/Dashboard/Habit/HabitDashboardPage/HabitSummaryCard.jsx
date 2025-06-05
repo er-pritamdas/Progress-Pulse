@@ -16,7 +16,7 @@ const HabitSummaryCard = ({ total = 0 }) => {
     <div className="flex flex-col items-center justify-center">
       <Flame className="text-primary mb-2" size={32} />
       <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Total Habits</h2>
-      <p className="text-3xl font-bold text-primary mt-2">{total}</p>
+      <p className="text-3xl font-bold text-primary mt-2 mb-5">{total}</p>
       <p className="text-sm text-gray-600 dark:text-gray-400 text-center">{message}</p>
     </div>
   );
