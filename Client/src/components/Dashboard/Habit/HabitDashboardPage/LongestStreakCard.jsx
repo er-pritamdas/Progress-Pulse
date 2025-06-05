@@ -4,11 +4,9 @@ import dayjs from "dayjs";
 import isBetween from "dayjs/plugin/isBetween";
 dayjs.extend(isBetween);
 
-// 🔁 Current Streak Calculator
-const getCurrentStreak = (habitData, fromDate, toDate) => {
+// 🔁 Longest Streak Calculator
+const getLongestStreak = (habitData, fromDate, toDate) => {
   if (!habitData || habitData.length === 0) return 0;
-
-  const today = dayjs().startOf("day");
 
   const validDates = habitData
     .map((entry) => dayjs(entry.date))
@@ -21,38 +19,40 @@ const getCurrentStreak = (habitData, fromDate, toDate) => {
     .map((d) => dayjs(d))
     .sort((a, b) => a.diff(b));
 
-  let currentStreak = 0;
+  let longestStreak = 0;
+  let currentStreak = 1;
 
-  for (let i = sortedDates.length - 1; i >= 0; i--) {
-    const expectedDate = today.subtract(currentStreak, "day");
-    if (sortedDates[i].isSame(expectedDate, "day")) {
+  for (let i = 1; i < sortedDates.length; i++) {
+    const diff = sortedDates[i].diff(sortedDates[i - 1], "day");
+    if (diff === 1) {
       currentStreak++;
     } else {
-      break;
+      longestStreak = Math.max(longestStreak, currentStreak);
+      currentStreak = 1;
     }
   }
 
-  return currentStreak;
+  return Math.max(longestStreak, currentStreak);
 };
 
 // 🔥 Dynamic Streak Messages
 const getStreakMessage = (streak) => {
-  if (streak === 0) return { text: "Let’s get back on track!", emoji: "🛤️" };
-  if (streak <= 2) return { text: "Keep it up!", emoji: "💫" };
-  if (streak <= 6) return { text: "Solid consistency!", emoji: "🔥" };
-  if (streak <= 13) return { text: "On a roll!", emoji: "🏃‍♂️" };
-  if (streak <= 29) return { text: "Almost a month straight!", emoji: "📅" };
-  if (streak <= 59) return { text: "You're unstoppable!", emoji: "⚡" };
-  return { text: "Streak master!", emoji: "👑" };
+  if (streak === 0) return { text: "Let’s start today!", emoji: "🌱" };
+  if (streak <= 2) return { text: "Off to a good start!", emoji: "✨" };
+  if (streak <= 6) return { text: "You're on fire!", emoji: "🔥" };
+  if (streak <= 13) return { text: "1 week strong!", emoji: "🚀" };
+  if (streak <= 29) return { text: "Nearly a month!", emoji: "💪" };
+  if (streak <= 59) return { text: "This is real progress!", emoji: "🧠" };
+  return { text: "You're a legend!", emoji: "🏆" };
 };
 
-const CurrentStreakCard = ({ habitData = [], fromDate, toDate }) => {
+const LongestStreakCard = ({ habitData = [], fromDate, toDate }) => {
   const [streak, setStreak] = useState(0);
   const [message, setMessage] = useState({ text: "", emoji: "" });
 
   useEffect(() => {
     if (habitData.length && fromDate && toDate) {
-      const streakCount = getCurrentStreak(habitData, fromDate, toDate);
+      const streakCount = getLongestStreak(habitData, fromDate, toDate);
       setStreak(streakCount);
       setMessage(getStreakMessage(streakCount));
     } else {
@@ -63,9 +63,9 @@ const CurrentStreakCard = ({ habitData = [], fromDate, toDate }) => {
 
   return (
     <div className="flex flex-col items-center justify-center">
-      <Flame className="text-red-500 mb-2" size={32} />
-      <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Current Streak</h2>
-      <p className="text-3xl font-extrabold text-red-500 mt-2 mb-6">
+      <Flame className="text-orange-500 mb-2" size={32} />
+      <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Longest Streak</h2>
+      <p className="text-3xl font-extrabold text-orange-500 mt-2 mb-6">
         {streak} Day{streak !== 1 ? "s" : ""}
       </p>
       <p className="text-sm text-gray-600 dark:text-gray-400">{message.emoji} {message.text}</p>
@@ -73,4 +73,4 @@ const CurrentStreakCard = ({ habitData = [], fromDate, toDate }) => {
   );
 };
 
-export default CurrentStreakCard;
+export default LongestStreakCard;

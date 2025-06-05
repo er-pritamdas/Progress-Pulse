@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { TitleChanger } from "../../../utils/TitleChanger";
 import WaterHeatMap from "../../../components/Dashboard/Habit/HabitDashboardPage/Charts/WaterChart/WaterHeatMap";
-import CurrentStreakCard from "../../../components/Dashboard/Habit/HabitDashboardPage/CurrentStreakCard";
+import LongestStreakCard from "../../../components/Dashboard/Habit/HabitDashboardPage/LongestStreakCard";
 import GoalProgressCard from "../../../components/Dashboard/Habit/HabitDashboardPage/GoalProgressCard";
 import HabitScoreCard from "../../../components/Dashboard/Habit/HabitDashboardPage/HabitScoreCard";
 import HabitSummaryCard from "../../../components/Dashboard/Habit/HabitDashboardPage/HabitSummaryCard";
@@ -11,12 +11,13 @@ import BurnedVsConsumedCalorieRadialChart from "../../../components/Dashboard/Ha
 import CalorieBurnedRadialChart from "../../../components/Dashboard/Habit/HabitDashboardPage/Charts/CalorieChart/CalorieBurnedRadialChart";
 import CalorieConsumedRadialChart from "../../../components/Dashboard/Habit/HabitDashboardPage/Charts/CalorieChart/CalorieConsumedRadialChart";
 import EffectiveMixedStackChart from "../../../components/Dashboard/Habit/HabitDashboardPage/Charts/CalorieChart/EffectiveMixedStackChart";
-
+import CurrentStreakCard from "../../../components/Dashboard/Habit/HabitDashboardPage/CurrentStreakCard";
 function HabitDashboard() {
   TitleChanger("Progress Pulse | Habit Dashboard");
 
   const { setLoading } = useLoading();
   const [habitData, setHabitData] = useState([]);
+  const [totalEntries, setTotalEntries] = useState(0)
   const [waterMin, setWaterMin] = useState(0);
   const [waterMax, setWaterMax] = useState(100);
   const [ConsumedCalorieMax, setConsumedCalorieMax] = useState(0);
@@ -88,6 +89,7 @@ function HabitDashboard() {
         },
       });
       setHabitData(res.data.data.formattedEntries);
+      setTotalEntries(res.data.data.totalEntries)
       setLoading(false);
     } catch (err) {
       console.error("Error fetching heatmap data:", err);
@@ -212,14 +214,14 @@ function HabitDashboard() {
               />
             </div>
             <div className="col-span-3 bg-base-100 rounded-2xl shadow-lg p-6">
-              <HabitSummaryCard
+              <CurrentStreakCard
                 habitData={habitData}
                 fromDate={fromDate}
                 toDate={toDate}
               />
             </div>
             <div className="col-span-3 bg-base-100 rounded-2xl shadow-lg p-6">
-              <CurrentStreakCard
+              <LongestStreakCard
                 habitData={habitData}
                 fromDate={fromDate}
                 toDate={toDate}
