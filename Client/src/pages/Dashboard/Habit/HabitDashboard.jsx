@@ -12,6 +12,8 @@ import CalorieBurnedRadialChart from "../../../components/Dashboard/Habit/HabitD
 import CalorieConsumedRadialChart from "../../../components/Dashboard/Habit/HabitDashboardPage/Charts/CalorieChart/CalorieConsumedRadialChart";
 import EffectiveMixedStackChart from "../../../components/Dashboard/Habit/HabitDashboardPage/Charts/CalorieChart/EffectiveMixedStackChart";
 import CurrentStreakCard from "../../../components/Dashboard/Habit/HabitDashboardPage/CurrentStreakCard";
+import CalorieScoreBoard from "../../../components/Dashboard/Habit/HabitDashboardPage/CalorieScoreBoard";
+
 function HabitDashboard() {
   TitleChanger("Progress Pulse | Habit Dashboard");
 
@@ -254,7 +256,7 @@ function HabitDashboard() {
           <section>
             <div className="grid grid-cols-12 gap-4 mb-8">
               {/* Consumed Vs Burned Chart */}
-              <div className="col-span-5 row-span-1 bg-base-100 rounded-2xl shadow-md p-4">
+              <div className="col-span-6 row-span-1 bg-base-100 rounded-2xl shadow-md p-4">
                 <h3 className="text-lg font-semibold mb-2">
                   Consumed Vs Burned
                 </h3>
@@ -320,64 +322,35 @@ function HabitDashboard() {
               </div>
 
               {/* Effective Vs Actual */}
-              <div className="col-span-3 row-span-1 bg-base-100 rounded-2xl shadow-md p-4">
+              <div className="col-span-6 row-span-1 bg-base-100 rounded-2xl shadow-md p-4">
                 <h3 className="text-lg font-semibold mb-2">
-                  🧠 Category Stats
+                  💯 Calorie Score Board
                 </h3>
-                <div className="h-72 flex items-center justify-center text-gray-500">
-                  <div className="stats stats-vertical shadow">
-                    <div className="stat">
-                      <div className="stat-figure text-primary">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          className="inline-block h-8 w-8 stroke-current"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth="2"
-                            d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-                          ></path>
-                        </svg>
-                      </div>
-                      <div className="stat-title">Total Likes</div>
-                      <div className="stat-value text-primary">25.6K</div>
-                      <div className="stat-desc">21% more than last month</div>
-                    </div>
-
-                    <div className="stat">
-                      <div className="stat-figure text-secondary">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          className="inline-block h-8 w-8 stroke-current"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth="2"
-                            d="M13 10V3L4 14h7v7l9-11h-7z"
-                          ></path>
-                        </svg>
-                      </div>
-                      <div className="stat-title">Page Views</div>
-                      <div className="stat-value text-secondary">2.6M</div>
-                      <div className="stat-desc">21% more than last month</div>
-                    </div>
-                  </div>
+                <div className="h-101 flex items-center justify-center text-gray-500">
+                  <CalorieScoreBoard
+                    habitData={habitData}
+                    ConsumedCalorieMax={ConsumedCalorieMax}
+                    BurnedCalorieMax={BurnedCalorieMax}
+                    fromDate={fromDate}
+                    toDate={toDate}
+                  />
                 </div>
+                {/* <div className="mt-4 text-sm text-gray-600 dark:text-gray-400">
+                  <p>📅 <strong>From / To</strong>: The selected date range for tracking your calorie activity.</p>
+                  <p>🔥 <strong>Burned</strong>: Total calories burned via workouts or activities. Compared to your goal.</p>
+                  <p>🍽️ <strong>Consumed</strong>: Total calories eaten during the period. Compared to your upper limit.</p>
+                  <p>⚖️ <strong>Effective</strong>: Net calories = Consumed - Burned (lower is better for fat loss).</p>
+                  <p>🎯 <strong>Offset</strong>: Difference from 2000 kcal benchmark. Helps assess surplus/deficit.</p>
+                </div> */}
               </div>
 
               {/* Demo */}
-              <div className="col-span-4 row-span-1 bg-base-100 rounded-2xl shadow-md p-4">
+              {/* <div className="col-span-4 row-span-1 bg-base-100 rounded-2xl shadow-md p-4">
                 <h3 className="text-lg font-semibold mb-2">📈 Habit Trends</h3>
                 <div className="h-72 flex items-center justify-center text-gray-500">
                   Coming Soon
                 </div>
-              </div>
+              </div> */}
             </div>
           </section>
           {/* Calorie Chart Section */}

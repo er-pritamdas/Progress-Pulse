@@ -11,27 +11,37 @@ const getScoreMessage = (percentage) => {
 };
 
 // 🎯 Calculate average percentage score (out of 7)
-const getAverageScorePercentage = (habitData) => {
+const getAverageScorePercentage = (habitData, fromDate, toDate) => {
   if (!habitData || habitData.length === 0) return 0;
 
+  const start = new Date(fromDate);
+  const end = new Date(toDate);
+
+  // Calculate number of days (inclusive)
+  const timeDiff = end.getTime() - start.getTime();
+  const numDays = Math.floor(timeDiff / (1000 * 60 * 60 * 24)) + 1;
+
+  if (numDays <= 0) return 0;
+
+  // Extract and sum valid scores
   const validScores = habitData
     .map((entry) => Number(entry.score))
     .filter((score) => !isNaN(score));
 
-  if (validScores.length === 0) return 0;
-
   const total = validScores.reduce((sum, score) => sum + score, 0);
-  const avg = total / validScores.length;
+
+  const avg = total / numDays;
   const percentage = (avg / 7) * 100;
 
   return Math.round(percentage);
 };
 
-const HabitScoreCard = ({ habitData = [] }) => {
+
+const HabitScoreCard = ({ habitData = [], fromDate, toDate }) => {
   const [percentageScore, setPercentageScore] = useState(0);
 
   useEffect(() => {
-    const avgPercent = getAverageScorePercentage(habitData);
+    const avgPercent = getAverageScorePercentage(habitData, fromDate, toDate);
     setPercentageScore(avgPercent);
   }, [habitData]);
 
