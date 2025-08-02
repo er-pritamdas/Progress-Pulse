@@ -6,8 +6,7 @@ const countHabitEntries = (habitData) => {
   if (!habitData || habitData.length === 0) return 0;
 
   return habitData.filter((entry) => {
-    // Check if at least one habit field has a non-empty value
-    const keysToIgnore = ["date", "score", "progress"]; // not habits
+    const keysToIgnore = ["date", "score", "progress"];
     return Object.entries(entry).some(
       ([key, value]) => !keysToIgnore.includes(key) && value !== ""
     );
@@ -32,6 +31,13 @@ const HabitSummaryCard = ({ habitData = [] }) => {
     setCount(total);
     setMessage(getMessage(total));
   }, [habitData]);
+
+  // Show skeleton if count is zero
+  if (count === 0) {
+    return (
+      <div className="loading loading-infinity loading-xl"></div>
+    );
+  }
 
   return (
     <div className="flex flex-col items-center justify-center">
