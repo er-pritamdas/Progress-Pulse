@@ -94,8 +94,6 @@ const router = createBrowserRouter(
           <Route path="settings" element={<InvSettings />} />
         </Route>
       </Route>
-
-
     </>
   )
 )
