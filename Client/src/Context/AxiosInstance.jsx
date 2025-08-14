@@ -49,11 +49,8 @@ axiosInstance.interceptors.response.use(
         localStorage.setItem("token", newAccessToken);
 
         // Update headers for retry
-        // console.log("Setting Headers")
         axiosInstance.defaults.headers.common["Authorization"] = `Bearer ${newAccessToken}`;
-        // console.log("settings")
         originalRequest.headers["Authorization"] = `Bearer ${newAccessToken}`;
-
         // Retry original request
         // console.log("Refreshed")
         return axiosInstance(originalRequest);
