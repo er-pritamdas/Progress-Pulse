@@ -28,7 +28,7 @@ RUN npm install
 # Copy the rest of the frontend code
 COPY . .
 # Expose port 3000 (React dev server default)
-EXPOSE 3000
+EXPOSE 5173
 # Run the frontend dev server
 CMD ["npm", "run", "dev"]
 

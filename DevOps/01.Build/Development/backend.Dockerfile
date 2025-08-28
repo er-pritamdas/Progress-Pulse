@@ -30,4 +30,4 @@ COPY . .
 # Expose backend port (e.g., 5000)
 EXPOSE 5000
 # Run backend in dev mode (hot reload with nodemon)
-CMD ["npm", "run", "dev"]
+CMD ["npm", "run", "start"]
