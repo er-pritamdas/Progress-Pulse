@@ -1,6 +1,6 @@
 # ---------------------------------------- How to run this file ---------------------------------
 # How to run this File :
-    # docker build -t ImageName-f DevOps/01.Build/DockerFiles/Development/frontend.Dockerfile Client/
+    # docker build -t ImageName-f DevOps/01.Build/Development/frontend.Dockerfile Client/
 # You see the image by below command :
     # docker images
 # To run the Container
@@ -30,4 +30,5 @@ COPY . .
 # Expose port 3000 (React dev server default)
 EXPOSE 3000
 # Run the frontend dev server
-CMD ["npm", "start"]
+CMD ["npm", "run", "start"]
+
