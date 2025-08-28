@@ -30,5 +30,5 @@ COPY . .
 # Expose port 3000 (React dev server default)
 EXPOSE 3000
 # Run the frontend dev server
-CMD ["npm", "run", "start"]
+CMD ["npm", "run", "dev"]
 
