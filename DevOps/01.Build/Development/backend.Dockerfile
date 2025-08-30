@@ -1,6 +1,6 @@
 # ---------------------------------------- How to run this file ---------------------------------
 # How to run this File :
-    # docker build -t ImageName-f DevOps/01.Build/DockerFiles/Development/backend.Dockerfile Client/
+    # docker build -t ImageName -f DevOps/01.Build/DockerFiles/Development/backend.Dockerfile Server/
 # You see the image by below command :
     # docker images
 # To run the Container
