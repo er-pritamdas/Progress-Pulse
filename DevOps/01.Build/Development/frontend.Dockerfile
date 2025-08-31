@@ -1,15 +1,15 @@
 # ---------------------------------------- How to run this file ---------------------------------
 # How to run this File :
-    # docker build -t frontendImage -f DevOps/01.Build/Development/frontend.Dockerfile Client/
+    # docker build -t frontendimage -f DevOps/01.Build/Development/frontend.Dockerfile Client/
 # You see the image by below command :
     # docker images
 # To run the Container
-    # docker run -d -p 5173:5173 --name frontend -v Client:/app --network mern-network frontendImage
+    # docker run -dit -p 5173:5173 --name frontend --network mern-network -v frontend_data:/app frontendimage
 
 
 # --------------------------------------- How to push to Docker hub ------------------------------
 # Tag for Docker Hub
-    #docker tag frontendImage username/Reponame:latest
+    #docker tag frontendimage username/Reponame:latest
 # Login (first time only)
     #docker login
 # Push

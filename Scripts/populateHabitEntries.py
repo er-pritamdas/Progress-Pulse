@@ -7,7 +7,7 @@ LOGIN_URL = "http://localhost:3000/api/v1/users/loggedin"
 HABIT_ENTRY_URL = "http://localhost:3000/api/v1/dashboard/habit/table-entry"
 
 # Credentials
-USERNAME = "Pritam Das"
+USERNAME = "Pritam"
 PASSWORD = "Versa@123"
 
 # Step 1: Login to get the access token
@@ -34,7 +34,7 @@ headers = {
 }
 
 # Step 2: Generate and send habit entries for a month
-start_date = datetime.date(2025, 7, 1)
+start_date = datetime.date(2025, 8, 1)
 
 for i in range(30):
     current_date = start_date + datetime.timedelta(days=i)

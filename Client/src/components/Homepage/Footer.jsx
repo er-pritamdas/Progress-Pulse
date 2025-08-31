@@ -23,7 +23,7 @@ function Footer() {
             <p className="text-xl text-left max-w-xs">
               "Progress Pulse — where every step forward beats with purpose."
               <br />
-              – Jassi
+              – Pritam
             </p>
           </aside>
 

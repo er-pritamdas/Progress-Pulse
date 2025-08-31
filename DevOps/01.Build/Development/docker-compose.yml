@@ -1,0 +1,38 @@
+# docker-compose.yml
+version: "3.9"
+
+services:
+  backend:
+    build:
+      context: ../../../Server   # path to your backend folder
+      dockerfile: ../DevOps/01.Build/Development/backend.Dockerfile
+    container_name: backend
+    networks:
+      - mern-network
+    volumes:
+      - backend_data:/app   # Named volume
+    env_file:
+      - ../../../Server/.env
+
+
+  frontend:
+    build:
+      context: ../../../Client  # path to your frontend folder
+      dockerfile: ../DevOps/01.Build/Development/frontend.Dockerfile
+    container_name: frontend
+    ports:
+      - "5173:5173"
+    networks:
+      - mern-network
+    volumes:
+      - frontend_data:/app   # Named volume
+    depends_on:
+      - backend
+
+networks:
+  mern-network:
+    driver: bridge
+
+volumes:
+  backend_data:   # Define named volume
+  frontend_data:  # Define named volume
