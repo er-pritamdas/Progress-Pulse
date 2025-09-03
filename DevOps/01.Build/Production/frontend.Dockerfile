@@ -26,7 +26,10 @@ RUN rm -rf /usr/share/nginx/html/*
 COPY --from=build /app/dist /usr/share/nginx/html
 # Copy custom nginx config (optional, e.g. for SPA routing)
 # Below path is in the context of the docker-compose.yml
-# Example : if this docker file is runnig by the docker-copmose.yml, then in the ocker-compose.yml we mention the context and all the path will be relative to that path  
+# Example : if this docker file is runnig by the docker-copmose.yml, then in the ocker-compose.yml we mention the context and all the path will be relative to that path
+# But in the docker file, we cannot go back from the context so the :
+    # COPY command must be relative to the Dockerfile location
+    # Thats why ../DevOps/01.Build/Production/nginx.conf Will not work
 COPY ../DevOps/01.Build/Production/nginx.conf /etc/nginx/conf.d/default.conf
 
 # Expose port 80 for Nginx
