@@ -5,6 +5,7 @@ services:
   backend:
     build:
       context: ../../../Server   # path to your backend folder
+      # This path is from the above context : ../../../Server
       dockerfile: ../DevOps/01.Build/Development/backend.Dockerfile
     container_name: backend
     networks:
@@ -18,6 +19,7 @@ services:
   frontend:
     build:
       context: ../../../Client  # path to your frontend folder
+      # This path is from the above context : ../../../Client
       dockerfile: ../DevOps/01.Build/Development/frontend.Dockerfile
     container_name: frontend
     ports:

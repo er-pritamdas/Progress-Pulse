@@ -25,7 +25,9 @@ RUN rm -rf /usr/share/nginx/html/*
 # Copy build files from previous stage to Nginx html directory
 COPY --from=build /app/dist /usr/share/nginx/html
 # Copy custom nginx config (optional, e.g. for SPA routing)
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Below path is in the context of the docker-compose.yml
+# Example : if this docker file is runnig by the docker-copmose.yml, then in the ocker-compose.yml we mention the context and all the path will be relative to that path  
+COPY ../DevOps/01.Build/Production/nginx.conf /etc/nginx/conf.d/default.conf
 
 # Expose port 80 for Nginx
 EXPOSE 80

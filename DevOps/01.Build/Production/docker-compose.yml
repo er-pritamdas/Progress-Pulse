@@ -4,7 +4,8 @@ services:
   backend:
     build:
       context: ../../../Server   # adjust path
-      dockerfile: ../DevOps/01.Build/Production/backend.Dockerfile
+      # This path is from the above context : ../../../Server
+      dockerfile: ../DevOps/01.Build/Production/backend.Dockerfile 
     container_name: backend
     networks:
       - mern-network
@@ -16,6 +17,7 @@ services:
   frontend:
     build:
       context: ../../../Client    # adjust path
+      # This path is from the above context : ../../../Client
       dockerfile: ../DevOps/01.Build/Production/frontend.Dockerfile
     container_name: frontend
     networks:
