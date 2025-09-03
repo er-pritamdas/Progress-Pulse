@@ -1,31 +1,33 @@
 # This File is a Multi-Stage Dockerfile
 
-
-# Stage 1: Build React app
+# ------------------------
+# Stage 1: Build frontend
+# ------------------------
 FROM node:18 AS build
-
+# Set working directory
 WORKDIR /app
-
-# Install deps
+# Copy package.json and package-lock.json
 COPY package*.json ./
-RUN npm ci
-
-# Copy source code and build
+# Install dependencies
+RUN npm install
+# Copy the rest of the app
 COPY . .
+# Build the app (Vite/CRA → "dist" or "build" folder)
 RUN npm run build
 
 
-# Stage 2: Nginx server
-FROM nginx:latest
+# ------------------------
+# Stage 2: Serve with Nginx
+# ------------------------
+FROM nginx:alpine
+# Remove default nginx static assets
+RUN rm -rf /usr/share/nginx/html/*
+# Copy build files from previous stage to Nginx html directory
+COPY --from=build /app/dist /usr/share/nginx/html
+# Copy custom nginx config (optional, e.g. for SPA routing)
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# Remove default nginx config
-RUN rm /etc/nginx/conf.d/default.conf
-
-# Copy custom nginx config
-COPY nginx.conf /etc/nginx/conf.d/
-
-# Copy React build from first stage
-COPY --from=build /app/build /usr/share/nginx/html
-
+# Expose port 80 for Nginx
 EXPOSE 80
+# Start Nginx in foreground
 CMD ["nginx", "-g", "daemon off;"]

@@ -1,0 +1,30 @@
+version: "3.9"
+
+services:
+  backend:
+    build:
+      context: ../../../Server   # adjust path
+      dockerfile: ../DevOps/01.Build/Production/backend.Dockerfile
+    container_name: backend
+    networks:
+      - mern-network
+    env_file:
+      - ../../../Server/.env
+    ports:
+      - "3000:3000"   # expose to host (optional)
+
+  frontend:
+    build:
+      context: ../../../Client    # adjust path
+      dockerfile: ../DevOps/01.Build/Production/frontend.Dockerfile
+    container_name: frontend
+    networks:
+      - mern-network
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+networks:
+  mern-network:
+    driver: bridge
