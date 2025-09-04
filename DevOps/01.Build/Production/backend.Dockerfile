@@ -1,9 +1,9 @@
 # Use official Node.js LTS image
 FROM node:18
 # Set working directory
-# WORKDIR /app
+WORKDIR /app
 # Declare /app as a volume
-VOLUME /app
+# VOLUME /app
 # Copy package.json and package-lock.json
 COPY package*.json ./
 # Install dependencies

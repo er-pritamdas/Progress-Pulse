@@ -10,11 +10,18 @@ connectDB()
 
 .then(() => {
     // Maker Server listen on port 
-    app.listen(process.env.PORT || 8000, () => {
+    const PORT = process.env.PORT || 8000;
+    app.listen(PORT, '0.0.0.0', () => {
         console.log("---------------------------------------------------------------");
-        console.log(`⚙️  Server is running at port : ${process.env.PORT}`);
+        console.log(`⚙️  Server is running at port : ${PORT}`);
         console.log("---------------------------------------------------------------");
-    })
+    });
+
+    // app.listen(process.env.PORT || 8000, () => {
+    //     console.log("---------------------------------------------------------------");
+    //     console.log(`⚙️  Server is running at port : ${process.env.PORT}`);
+    //     console.log("---------------------------------------------------------------");
+    // })
 })
 .catch((err) => {
     // If Server Failed to listen, log the error
