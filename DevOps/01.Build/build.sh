@@ -43,18 +43,7 @@ cd Progress-Pulse
 
 # Create .env file in Server directory
 cat <<EOF > Server/.env
-PORT=3000
-MONGO_URI=mongodb+srv://pritam:OSQ0RH9ChfTth0IH@pulse.dg0ag.mongodb.net/?retryWrites=true&w=majority&appName=Pulse
-USER_DB=User
-HABIT_DB=Habit-Tracker
-EXPENSE_DB=Expense-Tracker
-EMAIL_USER=thepulseofprogress@gmail.com
-EMAIL_PASS=khhu rwgy ggzj lhzz
-JWT_SECRET_KEY=progress_pulse
-REFRESH_TOKEN_SECRET_KEY=progress_pulse_refresh
-ACCESS_TOKEN_EXPIRY=15m
-REFRESH_TOKEN_EXPIRY=7d
-NODE_ENV=development
+Your environment variables here
 EOF
 
 # Move into Production build directory and start containers
