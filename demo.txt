@@ -1,0 +1,1 @@
+hello from ec2
