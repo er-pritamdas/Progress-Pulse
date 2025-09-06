@@ -1,10 +1,22 @@
 pipeline {
-    agent any
+    agent none   // No global agent, stages decide where to run
 
     stages {
-        stage('Hello') {
+
+        stage('Run Bash Script') {
+            agent { label 'agent' }   // Only this stage runs on ephemeral EC2
             steps {
-                echo 'Hello World'
+                echo '🚀 Running Bash script on EC2 agent...'
+                sh 'cd Progress-Pulse'
+                sh 'chmod +x DevOps/01.Build/build.sh'
+                sh 'DevOps/01.Build/build.sh'
+            }
+        }
+
+        stage('Post-Processing') {
+            agent { label 'agent' }   // Back to normal Jenkins agent
+            steps {
+                echo '📊 Doing post-processing on default agent...'
             }
         }
     }
