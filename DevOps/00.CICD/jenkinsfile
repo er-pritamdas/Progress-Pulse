@@ -4,7 +4,7 @@ pipeline {
     stages {
 
         stage('Run Bash Script') {
-            agent { label 'agent' }   // Only this stage runs on ephemeral EC2
+            agent { label 'awsagent' }   // Only this stage runs on ephemeral EC2
             steps {
                 echo '🚀 Running Bash script on EC2 agent...'
                 sh 'cd Progress-Pulse'
