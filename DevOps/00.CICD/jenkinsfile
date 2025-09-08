@@ -1,15 +1,42 @@
+// pipeline {
+//     agent none   // No global agent, stages decide where to run
+
+//     stages {
+
+//         stage('Run Bash Script') {
+//             agent { label 'awsagent' }   // Only this stage runs on ephemeral EC2
+//             steps {
+//                 echo '🚀 Running Bash script on EC2 agent...'
+//                 sh 'cd Progress-Pulse'
+//                 sh 'chmod +x DevOps/01.Build/build.sh'
+//                 sh 'DevOps/01.Build/build.sh'
+//             }
+//         }
+
+//         stage('Post-Processing') {
+//             agent { label 'agent' }   // Back to normal Jenkins agent
+//             steps {
+//                 echo '📊 Doing post-processing on default agent...'
+//             }
+//         }
+//     }
+// }
+
 pipeline {
-    agent none   // No global agent, stages decide where to run
+    agent any   // No global agent, stages decide where to run
 
     stages {
 
-        stage('Run Bash Script') {
-            agent { label 'awsagent' }   // Only this stage runs on ephemeral EC2
+        stage('Git cloning'){
+            steps{
+                echo 'Cloning the repository'
+                sh 'git clone https://github.com/er-pritamdas/Progress-Pulse.git'
+            }
+        }
+        stage('Build Stage') {
             steps {
-                echo '🚀 Running Bash script on EC2 agent...'
-                sh 'cd Progress-Pulse'
-                sh 'chmod +x DevOps/01.Build/build.sh'
-                sh 'DevOps/01.Build/build.sh'
+                echo 'Building the project...'
+                sh 'cd Progress-Pulse && ./DevOps/01.Build/build.sh'
             }
         }
 
