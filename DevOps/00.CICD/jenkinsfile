@@ -27,6 +27,13 @@ pipeline {
 
     stages {
 
+        stage('Cleaning Workspace'){
+            steps{
+                echo 'Cleaning the workspace'
+                sh 'rm -rf Progress-Pulse'
+            }
+        }
+
         stage('Git cloning'){
             steps{
                 echo 'Cloning the repository'
