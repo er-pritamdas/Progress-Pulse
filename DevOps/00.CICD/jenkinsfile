@@ -43,7 +43,7 @@ pipeline {
         stage('Build Stage') {
             steps {
                 echo 'Building the project...'
-                sh 'cd Progress-Pulse && ./DevOps/01.Build/build.sh'
+                sh 'cd Progress-Pulse && bash ./DevOps/01.Build/build.sh'
             }
         }
 
