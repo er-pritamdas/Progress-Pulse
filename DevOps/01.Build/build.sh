@@ -33,11 +33,11 @@ sudo curl -L "https://github.com/docker/compose/releases/download/${DOCKER_COMPO
 sudo chmod +x /usr/local/bin/docker-compose
 docker-compose --version
 
-# Add ubuntu user to docker group (so no sudo needed)
-sudo usermod -aG docker ubuntu
+# Add mcp_server user to docker group (so no sudo needed)
+sudo usermod -aG docker mcp_server
 
 # Clone repository
-cd /home/ubuntu
+cd /home/mcp_server
 git clone https://github.com/er-pritamdas/Progress-Pulse.git
 cd Progress-Pulse
 
