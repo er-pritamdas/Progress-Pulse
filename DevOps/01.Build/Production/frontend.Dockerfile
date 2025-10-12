@@ -28,7 +28,7 @@ COPY --from=build /app/dist /usr/share/nginx/html
 # Below path is in the context of the docker-compose.yml
 # Example : if this docker file is runnig by the docker-copmose.yml, then in the ocker-compose.yml we mention the context and all the path will be relative to that path
 # But in the docker file, we cannot go back from the context so the :
-    # COPY command must be relative to the Dockerfile location
+    # COPY command must be relative to the Dockerfile context
     # Thats why ../DevOps/01.Build/Production/nginx.conf Will not work
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 

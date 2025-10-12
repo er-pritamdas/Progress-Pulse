@@ -92,7 +92,7 @@ cd Progress-Pulse
 
 # Create .env file in Server directory
 cat <<EOF > Server/.env
-Your environment variables here
+Your environment variables goes here
 EOF
 
 # Move into Production build directory and start containers

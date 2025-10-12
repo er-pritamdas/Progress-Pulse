@@ -6,12 +6,12 @@ LOGIN_URL = "http://localhost:3000/api/v1/users/loggedin"
 DELETE_URL_TEMPLATE = "http://localhost:3000/api/v1/dashboard/habit/table-entry?date={}"
 
 # === Credentials ===
-USERNAME = "Pritam Das"
+USERNAME = "Pritam"
 PASSWORD = "Versa@123"
 
 # === Date Range to Delete ===
-START_DATE = datetime.date(2025, 5, 1)
-END_DATE = datetime.date(2025, 5, 30)
+START_DATE = datetime.date(2025, 10, 1)
+END_DATE = datetime.date(2025, 10, 31)
 
 # === Step 1: Login and get access token ===
 login_payload = {
