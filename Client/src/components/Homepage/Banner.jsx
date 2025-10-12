@@ -48,7 +48,7 @@ function Banner() {
                 animate={{ opacity: 1 }}
                 transition={{ duration: 1, delay: 0.9 }}
             >
-                <Spline scene="https://prod.spline.design/ygWsrKKNKB2jrrog/scene.splinecode" />
+                {/* <Spline scene="https://prod.spline.design/ygWsrKKNKB2jrrog/scene.splinecode" /> */}
                 {/* <Spline scene="https://prod.spline.design/q6cctcncdNPywGIE/scene.splinecode" />  */}
                 {/* <Spline scene="https://prod.spline.design/ZqRMNBQACiEVDTee/scene.splinecode" />  */}
             </motion.div>
