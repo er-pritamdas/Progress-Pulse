@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   jenkins:
-    image: progresspulse/pulse:jenkins-v2
+    image: progresspulse/pulse:jenkins-v5
     container_name: jenkins
     ports:
       - "8080:8080"

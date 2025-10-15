@@ -43,12 +43,10 @@ pipeline {
         stage('Build Stage') {
             steps {
                 echo 'Building the project...'
-                sh 'cd Progress-Pulse && bash ./DevOps/01.Build/build.sh'
             }
         }
 
         stage('Post-Processing') {
-            agent { label 'agent' }   // Back to normal Jenkins agent
             steps {
                 echo '📊 Doing post-processing on default agent...'
             }
