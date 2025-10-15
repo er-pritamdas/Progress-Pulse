@@ -13,6 +13,7 @@ services:
       - ../../../Server/.env
     ports:
       - "3000:3000"   # expose to host (optional)
+    restart: unless-stopped
 
   frontend:
     build:
@@ -26,6 +27,7 @@ services:
       - "80:80"
     depends_on:
       - backend
+    restart: unless-stopped
 
 networks:
   mern-network:
