@@ -6,6 +6,19 @@ pipeline {
         DOCKER_IMAGE = 'progresspulse/pulse'
         BUILD_TAG = "build-${env.BUILD_NUMBER}"
         RELEASE_TAG = "release-${env.BUILD_NUMBER}"
+
+        MONGO_URI = credentials('MONGO_URI')
+        PORT = credentials('PORT')
+        USER_DB = credentials('USER_DB')
+        HABIT_DB = credentials('HABIT_DB')
+        EXPENSE_DB = credentials('EXPENSE_DB')
+        EMAIL_USER = credentials('EMAIL_USER')
+        EMAIL_PASS = credentials('EMAIL_PASS')
+        JWT_SECRET_KEY = credentials('JWT_SECRET_KEY')
+        REFRESH_TOKEN_SECRET_KEY = credentials('REFRESH_TOKEN_SECRET_KEY')
+        ACCESS_TOKEN_EXPIRY = credentials('ACCESS_TOKEN_EXPIRY')
+        REFRESH_TOKEN_EXPIRY = credentials('REFRESH_TOKEN_EXPIRY')
+        NODE_ENV = credentials('NODE_ENV')
     }
 
     stages {
@@ -83,29 +96,30 @@ pipeline {
             }
         }
 
-        // stage('Setting Up Backend') {
-        //     steps {
-        //         script {
-        //             sh '''
-        //             cat <<EOF | sudo tee $REPO_PATH/Server/.env
-        //             PORT=3000
-        //             MONGO_URI=mongodb+srv://pritam:OSQ0RH9ChfTth0IH@pulse.dg0ag.mongodb.net/?retryWrites=true&w=majority&appName=Pulse
-        //             USER_DB=User
-        //             HABIT_DB=Habit-Tracker
-        //             EXPENSE_DB=Expense-Tracker
-        //             EMAIL_USER=thepulseofprogress@gmail.com
-        //             EMAIL_PASS=khhu rwgy ggzj lhzz
-        //             JWT_SECRET_KEY=progress_pulse
-        //             REFRESH_TOKEN_SECRET_KEY=progress_pulse_refresh
-        //             ACCESS_TOKEN_EXPIRY=15m
-        //             REFRESH_TOKEN_EXPIRY=7d
-        //             NODE_ENV=development
-        //             EOF
-        //             echo ".env file created successfully."
-        //             '''
-        //         }
-        //     }
-        // }
+        stage('Setting Up Backend') {
+            steps {
+                script {
+                    sh '''
+                    cat <<EOF | sudo tee $REPO_PATH/Server/.env
+                    PORT=$PORT
+                    MONGO_URI=$MONGO_URI
+                    USER_DB=$USER_DB
+                    HABIT_DB=$HABIT_DB
+                    EXPENSE_DB=$EXPENSE_DB
+                    EMAIL_USER=$EMAIL_USER
+                    EMAIL_PASS=$EMAIL_PASS
+                    JWT_SECRET_KEY=$JWT_SECRET_KEY
+                    REFRESH_TOKEN_SECRET_KEY=$REFRESH_TOKEN_SECRET_KEY
+                    ACCESS_TOKEN_EXPIRY=$ACCESS_TOKEN_EXPIRY
+                    REFRESH_TOKEN_EXPIRY=$REFRESH_TOKEN_EXPIRY
+                    NODE_ENV=$NODE_ENV
+                    EOF
+
+                    echo ".env file created successfully."
+                    '''
+                }
+            }
+        }
 
         // stage('Build Docker Image') {
         //     steps {
