@@ -1,55 +1,188 @@
-// pipeline {
-//     agent none   // No global agent, stages decide where to run
-
-//     stages {
-
-//         stage('Run Bash Script') {
-//             agent { label 'awsagent' }   // Only this stage runs on ephemeral EC2
-//             steps {
-//                 echo '🚀 Running Bash script on EC2 agent...'
-//                 sh 'cd Progress-Pulse'
-//                 sh 'chmod +x DevOps/01.Build/build.sh'
-//                 sh 'DevOps/01.Build/build.sh'
-//             }
-//         }
-
-//         stage('Post-Processing') {
-//             agent { label 'agent' }   // Back to normal Jenkins agent
-//             steps {
-//                 echo '📊 Doing post-processing on default agent...'
-//             }
-//         }
-//     }
-// }
-
 pipeline {
-    agent any   // No global agent, stages decide where to run
+    agent { label 'local' }
+
+    environment {
+        REPO_PATH = '/var/lib/jenkins/Progress-Pulse'
+        DOCKER_IMAGE = 'progresspulse/pulse'
+        BUILD_TAG = "build-${env.BUILD_NUMBER}"
+        RELEASE_TAG = "release-${env.BUILD_NUMBER}"
+    }
 
     stages {
-
-        stage('Cleaning Workspace'){
-            steps{
-                echo 'Cleaning the workspace'
-                sh 'rm -rf Progress-Pulse'
-            }
-        }
-
-        stage('Git cloning'){
-            steps{
-                echo 'Cloning the repository'
-                sh 'git clone https://github.com/er-pritamdas/Progress-Pulse.git'
-            }
-        }
-        stage('Build Stage') {
+        stage('Install Prerequisites') {
             steps {
-                echo 'Building the project...'
+                script {
+                    echo "=== Starting Progress Pulse Setup ==="
+
+                    // Ensure required packages are installed
+                    sh '''
+                    set -e
+                    echo "Checking prerequisites..."
+                    sudo apt-get update -y
+                    for pkg in apt-transport-https ca-certificates curl software-properties-common gnupg lsb-release git; do
+                        if ! dpkg -s "$pkg" &>/dev/null; then
+                            echo "Installing missing package: $pkg"
+                            sudo apt-get install -y "$pkg"
+                        fi
+                    done
+                    '''
+                }
             }
         }
 
-        stage('Post-Processing') {
+        stage('Docker Setup') {
             steps {
-                echo '📊 Doing post-processing on default agent...'
+                script {
+                    sh '''
+                    set -e
+                    echo "Checking Docker installation..."
+                    if ! command -v docker &> /dev/null; then
+                        echo "Installing Docker..."
+                        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo tee /usr/share/keyrings/docker-archive-keyring.gpg > /dev/null
+                        echo \
+                          "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] \
+                          https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+                        sudo apt-get update -y
+                        sudo apt-get install -y docker-ce docker-ce-cli containerd.io
+                        sudo systemctl enable docker
+                        sudo systemctl start docker
+                    else
+                        echo "Docker already installed."
+                    fi
+
+                    echo "Checking Docker Compose..."
+                    if ! command -v docker-compose &> /dev/null; then
+                        echo "Installing Docker Compose..."
+                        DOCKER_COMPOSE_VERSION=$(curl -s https://api.github.com/repos/docker/compose/releases/latest | grep tag_name | cut -d '"' -f 4)
+                        sudo curl -L "https://github.com/docker/compose/releases/download/${DOCKER_COMPOSE_VERSION}/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+                        sudo chmod +x /usr/local/bin/docker-compose
+                    fi
+                    docker-compose --version
+                    '''
+                }
             }
+        }
+
+        stage('Update GitHub Repository') {
+            steps {
+                script {
+                    sh '''
+                    set -e
+                    if [ ! -d "$REPO_PATH" ]; then
+                        echo "Cloning repository..."
+                        sudo mkdir -p /var/lib/jenkins
+                        cd /var/lib/jenkins
+                        sudo git clone https://github.com/er-pritamdas/Progress-Pulse.git
+                    else
+                        echo "Repository already exists. Pulling latest changes..."
+                        cd "$REPO_PATH"
+                        sudo git pull
+                    fi
+                    '''
+                }
+            }
+        }
+
+        // stage('Setting Up Backend') {
+        //     steps {
+        //         script {
+        //             sh '''
+        //             cat <<EOF | sudo tee $REPO_PATH/Server/.env
+        //             PORT=3000
+        //             MONGO_URI=mongodb+srv://pritam:OSQ0RH9ChfTth0IH@pulse.dg0ag.mongodb.net/?retryWrites=true&w=majority&appName=Pulse
+        //             USER_DB=User
+        //             HABIT_DB=Habit-Tracker
+        //             EXPENSE_DB=Expense-Tracker
+        //             EMAIL_USER=thepulseofprogress@gmail.com
+        //             EMAIL_PASS=khhu rwgy ggzj lhzz
+        //             JWT_SECRET_KEY=progress_pulse
+        //             REFRESH_TOKEN_SECRET_KEY=progress_pulse_refresh
+        //             ACCESS_TOKEN_EXPIRY=15m
+        //             REFRESH_TOKEN_EXPIRY=7d
+        //             NODE_ENV=development
+        //             EOF
+        //             echo ".env file created successfully."
+        //             '''
+        //         }
+        //     }
+        // }
+
+        // stage('Build Docker Image') {
+        //     steps {
+        //         script {
+        //             sh '''
+        //             cd $REPO_PATH/DevOps/01.Build/Production
+        //             echo "Building Docker image..."
+        //             docker build -t $DOCKER_IMAGE:$BUILD_TAG .
+        //             '''
+        //         }
+        //     }
+        // }
+
+        // stage('Push Build Image to DockerHub') {
+        //     steps {
+        //         script {
+        //             withCredentials([usernamePassword(credentialsId: 'dockerhub-cred', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+        //                 sh '''
+        //                 echo "Logging into DockerHub..."
+        //                 echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+        //                 docker push $DOCKER_IMAGE:$BUILD_TAG
+        //                 docker logout
+        //                 '''
+        //             }
+        //         }
+        //     }
+        // }
+
+        // stage('Test Image') {
+        //     steps {
+        //         script {
+        //             sh '''
+        //             echo "Pulling image for testing..."
+        //             docker pull $DOCKER_IMAGE:$BUILD_TAG
+        //             echo "Running test container..."
+        //             docker run --rm $DOCKER_IMAGE:$BUILD_TAG /bin/sh -c "echo 'Testing container... All good!'"
+        //             echo "Tests completed."
+        //             '''
+        //         }
+        //     }
+        // }
+
+        // stage('Push Release Image') {
+        //     steps {
+        //         script {
+        //             withCredentials([usernamePassword(credentialsId: 'dockerhub-cred', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+        //                 sh '''
+        //                 docker tag $DOCKER_IMAGE:$BUILD_TAG $DOCKER_IMAGE:$RELEASE_TAG
+        //                 echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+        //                 docker push $DOCKER_IMAGE:$RELEASE_TAG
+        //                 docker logout
+        //                 '''
+        //             }
+        //         }
+        //     }
+        // }
+
+        // stage('Deploy Release Locally') {
+        //     steps {
+        //         script {
+        //             sh '''
+        //             echo "Pulling and running release image..."
+        //             docker pull $DOCKER_IMAGE:$RELEASE_TAG
+        //             docker stop progress_pulse || true
+        //             docker rm progress_pulse || true
+        //             docker run -d --name progress_pulse -p 3000:3000 $DOCKER_IMAGE:$RELEASE_TAG
+        //             echo "Application deployed and running at http://localhost:3000"
+        //             '''
+        //         }
+        //     }
+        // }
+    }
+
+    post {
+        always {
+            echo "Pipeline completed."
+            // sh 'docker ps'
         }
     }
 }
