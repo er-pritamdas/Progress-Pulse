@@ -100,7 +100,7 @@ stage('Setting Up Backend') {
     steps {
         script {
             sh """
-            sudo bash -c 'cat > $REPO_PATH/Server/.env <<EOF
+            sudo bash -c "cat > $REPO_PATH/Server/.env <<EOF
 PORT=${PORT}
 MONGO_URI=${MONGO_URI}
 USER_DB=${USER_DB}
@@ -113,12 +113,13 @@ REFRESH_TOKEN_SECRET_KEY=${REFRESH_TOKEN_SECRET_KEY}
 ACCESS_TOKEN_EXPIRY=${ACCESS_TOKEN_EXPIRY}
 REFRESH_TOKEN_EXPIRY=${REFRESH_TOKEN_EXPIRY}
 NODE_ENV=${NODE_ENV}
-EOF
+EOF"
             echo ".env file created successfully."
             """
         }
     }
 }
+
 
 
         // stage('Build Docker Image') {
