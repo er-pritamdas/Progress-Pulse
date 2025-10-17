@@ -112,20 +112,19 @@ pipeline {
             }
         }
 
-        // stage('Build Docker Image') {
-        //     steps {
-        //         script {
-        //             sh '''
-        //             cd $REPO_PATH/DevOps/01.Build/Production
-        //             echo "Building Docker image..."
-        //             docker build -t $DOCKER_IMAGE:$BUILD_TAG .
-                       docker build -t backend -f $BACKEND_DOCKER_FILE Server/
-                       docker build -t frontend -f $FRONTEND_DOCKER_FILE Client/
+        stage('Build') {
+            steps {
+                script {
+                    sh '''
+                    cd $REPO_PATH/DevOps/01.Build/Production
+                    echo "Building Docker image..."
+                    docker build -t backend -f $BACKEND_DOCKER_FILE Server/
+                    docker build -t frontend -f $FRONTEND_DOCKER_FILE Client/
 
-        //             '''
-        //         }
-        //     }
-        // }
+                    '''
+                }
+            }
+        }
 
         // stage('Push Build Image to DockerHub') {
         //     steps {
