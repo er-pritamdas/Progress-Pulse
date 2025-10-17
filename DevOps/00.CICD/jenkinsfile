@@ -145,45 +145,34 @@ pipeline {
                     // Push Build Image to DockerHub
                     echo "=== Pushing Build Image to DockerHub ==="
                     sh '''
-                    docker tag backend $DOCKER_USER/$DOCKER_REPO_NAME:${BUILD_TAG}-backend
-                    docker tag frontend $DOCKER_USER/$DOCKER_REPO_NAME:${BUILD_TAG}-frontend
-                    docker push $DOCKER_USER/$DOCKER_REPO_NAME:${BUILD_TAG}-backend
-                    docker push $DOCKER_USER/$DOCKER_REPO_NAME:${BUILD_TAG}-frontend
+                    docker tag backend $DOCKER_USER/$DOCKER_REPO_NAME:$backend-{BUILD_TAG}
+                    docker tag frontend $DOCKER_USER/$DOCKER_REPO_NAME:$frontend-{BUILD_TAG}
+                    docker push $DOCKER_USER/$DOCKER_REPO_NAME:$backend-{BUILD_TAG}
+                    docker push $DOCKER_USER/$DOCKER_REPO_NAME:$frontend-{BUILD_TAG}
                     '''
                 }
             }
         }
 
-        // stage('Push Build Image to DockerHub') {
-        //     steps {
-        //         script {
-        //             withCredentials([usernamePassword(credentialsId: 'dockerhub-cred', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-        //                 sh '''
-        //                 echo "Logging into DockerHub..."
-        //                 echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
-        //                 docker push $DOCKER_IMAGE:$BUILD_TAG
-        //                 docker logout
-        //                 '''
-        //             }
-        //         }
-        //     }
-        // }
+        stage('Test') {
+            steps {
+                script {
+                    // ---------------------------------------------------------------------------------------------------------------------------
+                    // Test Docker Images
+                    echo "=== Testing Docker Images ==="
+                    sh '''
+                    echo "Pulling image for testing..."
+                    docker pull $DOCKER_USER/$DOCKER_REPO_NAME:$backend-{BUILD_TAG}
+                    docker pull $DOCKER_USER/$DOCKER_REPO_NAME:$frontend-{BUILD_TAG}
+                    BACKEND_IMAGE=$DOCKER_USER/$DOCKER_REPO_NAME:$backend-{BUILD_TAG} FRONTEND_IMAGE=$DOCKER_USER/$DOCKER_REPO_NAME:$frontend-{BUILD_TAG} docker-compose -f $REPO_PATH/DevOps/02.Test/docker-compose.yml up -d
+                    '''
+                    echo "=== Testing Envirnment Created Successfully ==="
+                    echo "=== HAPPY TESTING ==="
+                }
+            }
+        }
 
-        // stage('Test Image') {
-        //     steps {
-        //         script {
-        //             sh '''
-        //             echo "Pulling image for testing..."
-        //             docker pull $DOCKER_IMAGE:$BUILD_TAG
-        //             echo "Running test container..."
-        //             docker run --rm $DOCKER_IMAGE:$BUILD_TAG /bin/sh -c "echo 'Testing container... All good!'"
-        //             echo "Tests completed."
-        //             '''
-        //         }
-        //     }
-        // }
-
-        // stage('Push Release Image') {
+        // stage('Release') {
         //     steps {
         //         script {
         //             withCredentials([usernamePassword(credentialsId: 'dockerhub-cred', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
@@ -198,7 +187,7 @@ pipeline {
         //     }
         // }
 
-        // stage('Deploy Release Locally') {
+        // stage('Deploy') {
         //     steps {
         //         script {
         //             sh '''
