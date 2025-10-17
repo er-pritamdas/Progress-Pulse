@@ -117,7 +117,7 @@ pipeline {
             steps {
                 script {
                     sh '''
-                    cd $REPO_PATH/DevOps/01.Build/Production
+                    cd $REPO_PATH
                     echo "Building Docker image..."
                     docker build -t backend -f $BACKEND_DOCKER_FILE Server/
                     docker build -t frontend -f $FRONTEND_DOCKER_FILE Client/
