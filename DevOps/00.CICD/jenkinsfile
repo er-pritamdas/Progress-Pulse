@@ -45,30 +45,40 @@ pipeline {
                     // Ensure Docker and Docker Compose are installed
                     echo "=== Installing Docker and Docker Compose ==="
                     sh '''
-                    set -e
-                    echo "Checking Docker installation..."
+                    section "Checking Docker installation"
 
+                    # Check if Docker is installed
                     if ! command -v docker &> /dev/null; then
-                        echo "Installing Docker..."
-                        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo tee /usr/share/keyrings/docker-archive-keyring.gpg > /dev/null
-                        echo \
-                          "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] \
-                          https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-                        sudo apt-get update -y
-                        sudo apt-get install -y docker-ce docker-ce-cli containerd.io
-                        sudo systemctl enable docker
-                        sudo systemctl start docker
+                    echo "Docker not found. Installing Docker..."
+
+                    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | tee /usr/share/keyrings/docker-archive-keyring.gpg > /dev/null
+
+                    echo \
+                        "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] \
+                        https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" \
+                        | tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+                    apt-get update -y
+                    apt-get install -y docker-ce docker-ce-cli containerd.io
+
+                    systemctl enable docker
+                    systemctl start docker
                     else
-                        echo "Docker already installed."
+                    echo "Docker already installed, skipping..."
                     fi
 
-                    echo "Checking Docker Compose..."
+                    section "Checking Docker Compose installation"
+
+                    # Check if Docker Compose is installed
                     if ! command -v docker-compose &> /dev/null; then
-                        echo "Installing Docker Compose..."
-                        DOCKER_COMPOSE_VERSION=$(curl -s https://api.github.com/repos/docker/compose/releases/latest | grep tag_name | cut -d '"' -f 4)
-                        sudo curl -L "https://github.com/docker/compose/releases/download/${DOCKER_COMPOSE_VERSION}/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-                        sudo chmod +x /usr/local/bin/docker-compose
+                    echo "Installing Docker Compose..."
+                    DOCKER_COMPOSE_VERSION=$(curl -s https://api.github.com/repos/docker/compose/releases/latest | grep tag_name | cut -d '"' -f 4)
+                    curl -L "https://github.com/docker/compose/releases/download/${DOCKER_COMPOSE_VERSION}/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+                    chmod +x /usr/local/bin/docker-compose
+                    else
+                    echo "Docker Compose already installed, skipping..."
                     fi
+
                     docker-compose --version
                     '''
                     // ---------------------------------------------------------------------------------------------------------------------------
