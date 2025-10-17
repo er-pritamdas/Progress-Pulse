@@ -4,6 +4,8 @@ pipeline {
     environment {
         REPO_PATH = '/var/lib/jenkins/Progress-Pulse'
         DOCKER_IMAGE = 'progresspulse/pulse'
+        BACKEND_DOCKER_FILE = 'DevOps/01.Build/Production/backend.Dockerfile'
+        FRONTEND_DOCKER_FILE = 'DevOps/01.Build/Production/frontend.Dockerfile'
         BUILD_TAG = "build-${env.BUILD_NUMBER}"
         RELEASE_TAG = "release-${env.BUILD_NUMBER}"
 
@@ -22,12 +24,12 @@ pipeline {
     }
 
     stages {
-        stage('Install Prerequisites') {
+        stage('Setting Up Progress Pulse System') {
             steps {
                 script {
-                    echo "=== Starting Progress Pulse Setup ==="
-
+                    // ---------------------------------------------------------------------------------------------------------------------------
                     // Ensure required packages are installed
+                    echo "=== Installting Prerequisites ==="
                     sh '''
                     set -e
                     echo "Checking prerequisites..."
@@ -38,17 +40,14 @@ pipeline {
                             sudo apt-get install -y "$pkg"
                         fi
                     done
-                    '''
-                }
-            }
-        }
-
-        stage('Docker Setup') {
-            steps {
-                script {
+                    ''' 
+                    // ---------------------------------------------------------------------------------------------------------------------------
+                    // Ensure Docker and Docker Compose are installed
+                    echo "=== Installing Docker and Docker Compose ==="
                     sh '''
                     set -e
                     echo "Checking Docker installation..."
+
                     if ! command -v docker &> /dev/null; then
                         echo "Installing Docker..."
                         curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo tee /usr/share/keyrings/docker-archive-keyring.gpg > /dev/null
@@ -72,13 +71,9 @@ pipeline {
                     fi
                     docker-compose --version
                     '''
-                }
-            }
-        }
-
-        stage('Update GitHub Repository') {
-            steps {
-                script {
+                    // ---------------------------------------------------------------------------------------------------------------------------
+                    // Ensure the Progress Pulse repository is cloned or updated
+                    echo "=== Update Progress Pulse Repository ==="
                     sh '''
                     set -e
                     if [ ! -d "$REPO_PATH" ]; then
@@ -92,35 +87,30 @@ pipeline {
                         sudo git pull
                     fi
                     '''
+
+                    // ---------------------------------------------------------------------------------------------------------------------------
+                    // Update Enviornment Variables
+                    echo "=== Setting Up Environment Variables ==="
+                    sh """
+                    sudo bash -c "cat > $REPO_PATH/Server/.env <<EOF
+                    PORT=${PORT}
+                    MONGO_URI=${MONGO_URI}
+                    USER_DB=${USER_DB}
+                    HABIT_DB=${HABIT_DB}
+                    EXPENSE_DB=${EXPENSE_DB}
+                    EMAIL_USER=${EMAIL_USER}
+                    EMAIL_PASS=${EMAIL_PASS}
+                    JWT_SECRET_KEY=${JWT_SECRET_KEY}
+                    REFRESH_TOKEN_SECRET_KEY=${REFRESH_TOKEN_SECRET_KEY}
+                    ACCESS_TOKEN_EXPIRY=${ACCESS_TOKEN_EXPIRY}
+                    REFRESH_TOKEN_EXPIRY=${REFRESH_TOKEN_EXPIRY}
+                    NODE_ENV=${NODE_ENV}
+                    EOF"
+                    echo ".env file created successfully."
+                    """
                 }
             }
         }
-
-stage('Setting Up Backend') {
-    steps {
-        script {
-            sh """
-            sudo bash -c "cat > $REPO_PATH/Server/.env <<EOF
-PORT=${PORT}
-MONGO_URI=${MONGO_URI}
-USER_DB=${USER_DB}
-HABIT_DB=${HABIT_DB}
-EXPENSE_DB=${EXPENSE_DB}
-EMAIL_USER=${EMAIL_USER}
-EMAIL_PASS=${EMAIL_PASS}
-JWT_SECRET_KEY=${JWT_SECRET_KEY}
-REFRESH_TOKEN_SECRET_KEY=${REFRESH_TOKEN_SECRET_KEY}
-ACCESS_TOKEN_EXPIRY=${ACCESS_TOKEN_EXPIRY}
-REFRESH_TOKEN_EXPIRY=${REFRESH_TOKEN_EXPIRY}
-NODE_ENV=${NODE_ENV}
-EOF"
-            echo ".env file created successfully."
-            """
-        }
-    }
-}
-
-
 
         // stage('Build Docker Image') {
         //     steps {
@@ -129,6 +119,9 @@ EOF"
         //             cd $REPO_PATH/DevOps/01.Build/Production
         //             echo "Building Docker image..."
         //             docker build -t $DOCKER_IMAGE:$BUILD_TAG .
+                       docker build -t backend -f $BACKEND_DOCKER_FILE Server/
+                       docker build -t frontend -f $FRONTEND_DOCKER_FILE Client/
+
         //             '''
         //         }
         //     }
