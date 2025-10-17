@@ -145,10 +145,10 @@ pipeline {
                     // Push Build Image to DockerHub
                     echo "=== Pushing Build Image to DockerHub ==="
                     sh '''
-                    docker tag backend $DOCKER_USER/$DOCKER_REPO_NAME:$backend-${BUILD_TAG}
-                    docker tag frontend $DOCKER_USER/$DOCKER_REPO_NAME:$frontend-${BUILD_TAG}
-                    docker push $DOCKER_USER/$DOCKER_REPO_NAME:$backend-${BUILD_TAG}
-                    docker push $DOCKER_USER/$DOCKER_REPO_NAME:$frontend-${BUILD_TAG}
+                    docker tag backend $DOCKER_USER/$DOCKER_REPO_NAME:backend-${BUILD_TAG}
+                    docker tag frontend $DOCKER_USER/$DOCKER_REPO_NAME:frontend-${BUILD_TAG}
+                    docker push $DOCKER_USER/$DOCKER_REPO_NAME:backend-${BUILD_TAG}
+                    docker push $DOCKER_USER/$DOCKER_REPO_NAME:frontend-${BUILD_TAG}
                     '''
                 }
             }
@@ -162,9 +162,9 @@ pipeline {
                     echo "=== Testing Docker Images ==="
                     sh '''
                     echo "Pulling image for testing..."
-                    docker pull $DOCKER_USER/$DOCKER_REPO_NAME:$backend-${BUILD_TAG}
-                    docker pull $DOCKER_USER/$DOCKER_REPO_NAME:$frontend-${BUILD_TAG}
-                    BACKEND_IMAGE=$DOCKER_USER/$DOCKER_REPO_NAME:$backend-${BUILD_TAG} FRONTEND_IMAGE=$DOCKER_USER/$DOCKER_REPO_NAME:$frontend-${BUILD_TAG} docker-compose -f $REPO_PATH/DevOps/02.Test/docker-compose.yml up -d
+                    docker pull $DOCKER_USER/$DOCKER_REPO_NAME:backend-${BUILD_TAG}
+                    docker pull $DOCKER_USER/$DOCKER_REPO_NAME:frontend-${BUILD_TAG}
+                    BACKEND_IMAGE=$DOCKER_USER/$DOCKER_REPO_NAME:backend-${BUILD_TAG} FRONTEND_IMAGE=$DOCKER_USER/$DOCKER_REPO_NAME:frontend-${BUILD_TAG} docker-compose -f $REPO_PATH/DevOps/02.Test/docker-compose.yml up -d
                     '''
                     echo "=== Testing Envirnment Created Successfully ==="
                     echo "=== HAPPY TESTING ==="
