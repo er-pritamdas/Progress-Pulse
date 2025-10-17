@@ -3,11 +3,16 @@ pipeline {
 
     environment {
         REPO_PATH = '/var/lib/jenkins/Progress-Pulse'
-        DOCKER_IMAGE = 'progresspulse/pulse'
         BACKEND_DOCKER_FILE = 'DevOps/01.Build/Production/backend.Dockerfile'
         FRONTEND_DOCKER_FILE = 'DevOps/01.Build/Production/frontend.Dockerfile'
         BUILD_TAG = "build-${env.BUILD_NUMBER}"
         RELEASE_TAG = "release-${env.BUILD_NUMBER}"
+
+        // Docker Hub Credentials
+        DOCKER_PASS = credentials('DOCKER_PASS')
+        DOCKER_USER = credentials('DOCKER_USER')
+        DOCKER_REPO_NAME = credentials('DOCKER_REPO_NAME')
+
 
         MONGO_URI = credentials('MONGO_URI')
         PORT = credentials('PORT')
@@ -21,6 +26,7 @@ pipeline {
         ACCESS_TOKEN_EXPIRY = credentials('ACCESS_TOKEN_EXPIRY')
         REFRESH_TOKEN_EXPIRY = credentials('REFRESH_TOKEN_EXPIRY')
         NODE_ENV = credentials('NODE_ENV')
+
     }
 
     stages {
@@ -58,9 +64,9 @@ pipeline {
                     else
                         echo "Docker already installed, skipping..."
                     fi
+                    docker --version
 
                     echo "Checking Docker Compose installation"
-
                     if ! command -v docker-compose &> /dev/null; then
                         echo "Installing Docker Compose..."
                         DOCKER_COMPOSE_VERSION=$(curl -s https://api.github.com/repos/docker/compose/releases/latest | grep tag_name | cut -d '"' -f 4)
@@ -69,7 +75,6 @@ pipeline {
                     else
                         echo "Docker Compose already installed, skipping..."
                     fi
-
                     docker-compose --version
                     '''
                     // ---------------------------------------------------------------------------------------------------------------------------
@@ -106,6 +111,9 @@ pipeline {
                     ACCESS_TOKEN_EXPIRY=${ACCESS_TOKEN_EXPIRY}
                     REFRESH_TOKEN_EXPIRY=${REFRESH_TOKEN_EXPIRY}
                     NODE_ENV=${NODE_ENV}
+                    DOCKER_USER=${DOCKER_USER}
+                    DOCKER_PASS=${DOCKER_PASS}
+                    DOCKER_REPO_NAME=${DOCKER_REPO_NAME}
                     EOF"
                     echo ".env file created successfully."
                     """
@@ -116,12 +124,31 @@ pipeline {
         stage('Build') {
             steps {
                 script {
+                    // ---------------------------------------------------------------------------------------------------------------------------
+                    // Build Docker Images
+                    echo "=== Building Docker Images ==="
                     sh '''
                     cd $REPO_PATH
                     echo "Building Docker image..."
                     docker build -t backend -f $BACKEND_DOCKER_FILE Server/
                     docker build -t frontend -f $FRONTEND_DOCKER_FILE Client/
+                    '''
 
+                    // ---------------------------------------------------------------------------------------------------------------------------
+                    // Docker Hub Login
+                    echo "=== Logging into DockerHub ==="
+                    sh '''
+                    echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
+                    '''
+
+                    // ---------------------------------------------------------------------------------------------------------------------------
+                    // Push Build Image to DockerHub
+                    echo "=== Pushing Build Image to DockerHub ==="
+                    sh '''
+                    docker tag backend $DOCKER_USER/$DOCKER_REPO_NAME:${BUILD_TAG}-backend
+                    docker tag frontend $DOCKER_USER/$DOCKER_REPO_NAME:${BUILD_TAG}-frontend
+                    docker push $DOCKER_USER/$DOCKER_REPO_NAME:${BUILD_TAG}-backend
+                    docker push $DOCKER_USER/$DOCKER_REPO_NAME:${BUILD_TAG}-frontend
                     '''
                 }
             }
