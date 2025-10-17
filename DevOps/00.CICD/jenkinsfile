@@ -36,7 +36,7 @@ pipeline {
                     // ---------------------------------------------------------------------------------------------------------------------------
                     // Ensure required packages are installed
                     echo "=== Installting Prerequisites ==="
-                    sh """
+                    sh '''
                     set -e
                     echo "Checking prerequisites..."
                     sudo apt-get update -y
@@ -46,11 +46,11 @@ pipeline {
                             sudo apt-get install -y "$pkg"
                         fi
                     done
-                    """ 
+                    ''' 
                     // ---------------------------------------------------------------------------------------------------------------------------
                     // Ensure Docker and Docker Compose are installed
                     echo "=== Installing Docker and Docker Compose ==="
-                    sh """
+                    sh '''
                     echo "Checking Docker installation"
                     if ! command -v docker &> /dev/null; then
                         echo "Docker not found. Installing Docker..."
@@ -76,11 +76,11 @@ pipeline {
                         echo "Docker Compose already installed, skipping..."
                     fi
                     docker-compose --version
-                    """
+                    '''
                     // ---------------------------------------------------------------------------------------------------------------------------
                     // Ensure the Progress Pulse repository is cloned or updated
                     echo "=== Update Progress Pulse Repository ==="
-                    sh """
+                    sh '''
                     set -e
                     if [ ! -d "$REPO_PATH" ]; then
                         echo "Cloning repository..."
@@ -92,12 +92,12 @@ pipeline {
                         cd "$REPO_PATH"
                         sudo git pull
                     fi
-                    """
+                    '''
 
                     // ---------------------------------------------------------------------------------------------------------------------------
                     // Update Enviornment Variables
                     echo "=== Setting Up Environment Variables ==="
-                    sh """
+                    sh '''
                     sudo bash -c "cat > $REPO_PATH/Server/.env <<EOF
                     PORT=${PORT}
                     MONGO_URI=${MONGO_URI}
@@ -116,7 +116,7 @@ pipeline {
                     DOCKER_REPO_NAME=${DOCKER_REPO_NAME}
                     EOF"
                     echo ".env file created successfully."
-                    """
+                    '''
                 }
             }
         }
@@ -127,29 +127,29 @@ pipeline {
                     // ---------------------------------------------------------------------------------------------------------------------------
                     // Build Docker Images
                     echo "=== Building Docker Images ==="
-                    sh """
+                    sh '''
                     cd $REPO_PATH
                     echo "Building Docker image..."
                     docker build -t backend -f $BACKEND_DOCKER_FILE Server/
                     docker build -t frontend -f $FRONTEND_DOCKER_FILE Client/
-                    """
+                    '''
 
                     // ---------------------------------------------------------------------------------------------------------------------------
                     // Docker Hub Login
                     echo "=== Logging into DockerHub ==="
-                    sh """
+                    sh '''
                     echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
-                    """
+                    '''
 
                     // ---------------------------------------------------------------------------------------------------------------------------
                     // Push Build Image to DockerHub
                     echo "=== Pushing Build Image to DockerHub ==="
-                    sh """
+                    sh '''
                     docker tag backend $DOCKER_USER/$DOCKER_REPO_NAME:$backend-${BUILD_TAG}
                     docker tag frontend $DOCKER_USER/$DOCKER_REPO_NAME:$frontend-${BUILD_TAG}
                     docker push $DOCKER_USER/$DOCKER_REPO_NAME:$backend-${BUILD_TAG}
                     docker push $DOCKER_USER/$DOCKER_REPO_NAME:$frontend-${BUILD_TAG}
-                    """
+                    '''
                 }
             }
         }
@@ -160,12 +160,12 @@ pipeline {
                     // ---------------------------------------------------------------------------------------------------------------------------
                     // Test Docker Images
                     echo "=== Testing Docker Images ==="
-                    sh """
+                    sh '''
                     echo "Pulling image for testing..."
                     docker pull $DOCKER_USER/$DOCKER_REPO_NAME:$backend-${BUILD_TAG}
                     docker pull $DOCKER_USER/$DOCKER_REPO_NAME:$frontend-${BUILD_TAG}
                     BACKEND_IMAGE=$DOCKER_USER/$DOCKER_REPO_NAME:$backend-${BUILD_TAG} FRONTEND_IMAGE=$DOCKER_USER/$DOCKER_REPO_NAME:$frontend-${BUILD_TAG} docker-compose -f $REPO_PATH/DevOps/02.Test/docker-compose.yml up -d
-                    """
+                    '''
                     echo "=== Testing Envirnment Created Successfully ==="
                     echo "=== HAPPY TESTING ==="
                 }
@@ -176,12 +176,12 @@ pipeline {
         //     steps {
         //         script {
         //             withCredentials([usernamePassword(credentialsId: 'dockerhub-cred', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-        //                 sh """
+        //                 sh '''
         //                 docker tag $DOCKER_IMAGE:$BUILD_TAG $DOCKER_IMAGE:$RELEASE_TAG
         //                 echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
         //                 docker push $DOCKER_IMAGE:$RELEASE_TAG
         //                 docker logout
-        //                 """
+        //                 '''
         //             }
         //         }
         //     }
@@ -190,14 +190,14 @@ pipeline {
         // stage('Deploy') {
         //     steps {
         //         script {
-        //             sh """
+        //             sh '''
         //             echo "Pulling and running release image..."
         //             docker pull $DOCKER_IMAGE:$RELEASE_TAG
         //             docker stop progress_pulse || true
         //             docker rm progress_pulse || true
         //             docker run -d --name progress_pulse -p 3000:3000 $DOCKER_IMAGE:$RELEASE_TAG
         //             echo "Application deployed and running at http://localhost:3000"
-        //             """
+        //             '''
         //         }
         //     }
         // }
