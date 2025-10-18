@@ -2,7 +2,7 @@ pipeline {
     agent { label 'local' }
 
     environment {
-        ENV = 'Staging'
+        ENV = 'staging'
         REPO_PATH = '/var/lib/jenkins/Progress-Pulse'
         BACKEND_DOCKER_FILE = 'DevOps/01.Build/Production/backend.Dockerfile'
         FRONTEND_DOCKER_FILE = 'DevOps/01.Build/Production/frontend.Dockerfile'
