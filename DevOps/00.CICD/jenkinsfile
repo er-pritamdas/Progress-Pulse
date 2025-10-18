@@ -127,6 +127,7 @@ pipeline {
                 script {
 
                     def PREV_BUILD_TAG = env.BUILD_NUMBER.toInteger() > 1 ? "build-${env.BUILD_NUMBER.toInteger() - 1}" : null
+                    
                     // ---------------------------------------------------------------------------------------------------------------------------
                     // Clean Previous Build Docker Images
                     echo "=== Cleaning Up Previous Build Docker Images ==="
@@ -134,22 +135,13 @@ pipeline {
                     if (PREV_BUILD_TAG) {
                     sh """
                     echo "Cleaning previous build images with tag: ${PREV_BUILD_TAG}"
-                    docker rmi $DOCKER_USER/$DOCKER_REPO_NAME:$ENV-frontend-${PREV_BUILD_TAG} || true
-                    docker rmi $DOCKER_USER/$DOCKER_REPO_NAME:$ENV-backend-${PREV_BUILD_TAG} || true
+                    docker rmi -f $DOCKER_USER/$DOCKER_REPO_NAME:$ENV-frontend-${PREV_BUILD_TAG} || true
+                    docker rmi -f $DOCKER_USER/$DOCKER_REPO_NAME:$ENV-backend-${PREV_BUILD_TAG} || true
                     docker image prune -f || true
                     """
                     } else {
                     echo "No previous build to clean."
                     }
-                    // sh '''
-                    // if [ -n "$PREV_BUILD_TAG" ]; then
-                    //     docker rmi $DOCKER_USER/$DOCKER_REPO_NAME:$ENV-frontend-${PREV_BUILD_TAG} || true
-                    //     docker rmi $DOCKER_USER/$DOCKER_REPO_NAME:$ENV-backend-${PREV_BUILD_TAG} || true
-                    //     docker image prune -f || true
-                    // else
-                    //     echo "No previous build to clean."
-                    // fi
-                    // '''
 
                     // ---------------------------------------------------------------------------------------------------------------------------
                     // Build Docker Images
