@@ -3,7 +3,7 @@ version: "3.9"
 services:
   backend:
     image: "${BACKEND_IMAGE}"
-    container_name: backend
+    container_name: ${BE_CONTAINER_NAME}
     networks:
       - mern-network
     env_file:
@@ -14,7 +14,7 @@ services:
 
   frontend:
     image: "${FRONTEND_IMAGE}"
-    container_name: frontend
+    container_name: ${FE_CONTAINER_NAME}
     networks:
       - mern-network
     ports:

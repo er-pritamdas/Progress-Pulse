@@ -2,6 +2,7 @@ pipeline {
     agent { label 'local' }
 
     environment {
+        ENV = 'Staging'
         REPO_PATH = '/var/lib/jenkins/Progress-Pulse'
         BACKEND_DOCKER_FILE = 'DevOps/01.Build/Production/backend.Dockerfile'
         FRONTEND_DOCKER_FILE = 'DevOps/01.Build/Production/frontend.Dockerfile'
@@ -130,8 +131,8 @@ pipeline {
                     sh '''
                     cd $REPO_PATH
                     echo "Building Docker image..."
-                    docker build -t backend -f $BACKEND_DOCKER_FILE Server/
-                    docker build -t frontend -f $FRONTEND_DOCKER_FILE Client/
+                    docker build -t $ENV_backend -f $BACKEND_DOCKER_FILE Server/
+                    docker build -t $ENV_frontend -f $FRONTEND_DOCKER_FILE Client/
                     '''
 
                     // ---------------------------------------------------------------------------------------------------------------------------
@@ -145,10 +146,10 @@ pipeline {
                     // Push Build Image to DockerHub
                     echo "=== Pushing Build Image to DockerHub ==="
                     sh '''
-                    docker tag backend $DOCKER_USER/$DOCKER_REPO_NAME:backend-${BUILD_TAG}
-                    docker tag frontend $DOCKER_USER/$DOCKER_REPO_NAME:frontend-${BUILD_TAG}
-                    docker push $DOCKER_USER/$DOCKER_REPO_NAME:backend-${BUILD_TAG}
-                    docker push $DOCKER_USER/$DOCKER_REPO_NAME:frontend-${BUILD_TAG}
+                    docker tag $ENV_backend $DOCKER_USER/$DOCKER_REPO_NAME:$ENV_backend-${BUILD_TAG}
+                    docker tag $ENV_frontend $DOCKER_USER/$DOCKER_REPO_NAME:$ENV_frontend-${BUILD_TAG}
+                    docker push $DOCKER_USER/$DOCKER_REPO_NAME:$ENV_backend-${BUILD_TAG}
+                    docker push $DOCKER_USER/$DOCKER_REPO_NAME:$ENV_frontend-${BUILD_TAG}
                     '''
                 }
             }
@@ -162,9 +163,9 @@ pipeline {
                     echo "=== Testing Docker Images ==="
                     sh '''
                     echo "Pulling image for testing..."
-                    docker pull $DOCKER_USER/$DOCKER_REPO_NAME:backend-${BUILD_TAG}
-                    docker pull $DOCKER_USER/$DOCKER_REPO_NAME:frontend-${BUILD_TAG}
-                    BACKEND_IMAGE=$DOCKER_USER/$DOCKER_REPO_NAME:backend-${BUILD_TAG} FRONTEND_IMAGE=$DOCKER_USER/$DOCKER_REPO_NAME:frontend-${BUILD_TAG} docker-compose -f $REPO_PATH/DevOps/02.Test/docker-compose.yml up -d
+                    docker pull $DOCKER_USER/$DOCKER_REPO_NAME:$ENV_backend-${BUILD_TAG}
+                    docker pull $DOCKER_USER/$DOCKER_REPO_NAME:$ENV_frontend-${BUILD_TAG}
+                    BACKEND_IMAGE=$DOCKER_USER/$DOCKER_REPO_NAME:$ENV_backend-${BUILD_TAG} FRONTEND_IMAGE=$DOCKER_USER/$DOCKER_REPO_NAME:$ENV_frontend-${BUILD_TAG} FE_CONTAINER_NAME=$ENV_frontend BE_CONTAINER_NAME=$ENV_backend docker-compose -f $REPO_PATH/DevOps/02.Test/docker-compose.yml up -d
                     '''
                     echo "=== Testing Envirnment Created Successfully ==="
                     echo "=== HAPPY TESTING ==="
