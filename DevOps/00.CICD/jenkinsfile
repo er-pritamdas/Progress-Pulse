@@ -206,41 +206,12 @@ pipeline {
             }
         }
 
-        // stage('Release') {
-        //     steps {
-        //         script {
-        //             withCredentials([usernamePassword(credentialsId: 'dockerhub-cred', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-        //                 sh '''
-        //                 docker tag $DOCKER_IMAGE:$BUILD_TAG $DOCKER_IMAGE:$RELEASE_TAG
-        //                 echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
-        //                 docker push $DOCKER_IMAGE:$RELEASE_TAG
-        //                 docker logout
-        //                 '''
-        //             }
-        //         }
-        //     }
-        // }
-
-        // stage('Deploy') {
-        //     steps {
-        //         script {
-        //             sh '''
-        //             echo "Pulling and running release image..."
-        //             docker pull $DOCKER_IMAGE:$RELEASE_TAG
-        //             docker stop progress_pulse || true
-        //             docker rm progress_pulse || true
-        //             docker run -d --name progress_pulse -p 3000:3000 $DOCKER_IMAGE:$RELEASE_TAG
-        //             echo "Application deployed and running at http://localhost:3000"
-        //             '''
-        //         }
-        //     }
-        // }
     }
 
     post {
         always {
-            echo "Pipeline completed."
-            // sh 'docker ps'
+            echo "Testing Environment Setup Completed."
+            sh 'docker ps'
         }
     }
 }

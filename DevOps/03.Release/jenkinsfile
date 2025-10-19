@@ -1,1 +1,73 @@
-Progress-Pulse/DevOps/03.Release/jenkinsfile
+// pipeline {
+//     agent { label 'local' }
+
+//     environment {
+//         ENV = 'production'
+//         REPO_PATH = '/var/lib/jenkins/Progress-Pulse'
+//         BACKEND_DOCKER_FILE = 'DevOps/01.Build/Production/backend.Dockerfile'
+//         FRONTEND_DOCKER_FILE = 'DevOps/01.Build/Production/frontend.Dockerfile'
+//         BUILD_TAG = "build-${env.BUILD_NUMBER}"
+//         RELEASE_TAG = "release-${env.BUILD_NUMBER}"
+//         LATEST_BUILD_TAG = ""
+
+//         // Docker Hub Credentials
+//         DOCKER_PASS = credentials('DOCKER_PASS')
+//         DOCKER_USER = credentials('DOCKER_USER')
+//         DOCKER_REPO_NAME = credentials('DOCKER_REPO_NAME')
+
+
+//         MONGO_URI = credentials('MONGO_URI')
+//         PORT = credentials('PORT')
+//         USER_DB = credentials('USER_DB')
+//         HABIT_DB = credentials('HABIT_DB')
+//         EXPENSE_DB = credentials('EXPENSE_DB')
+//         EMAIL_USER = credentials('EMAIL_USER')
+//         EMAIL_PASS = credentials('EMAIL_PASS')
+//         JWT_SECRET_KEY = credentials('JWT_SECRET_KEY')
+//         REFRESH_TOKEN_SECRET_KEY = credentials('REFRESH_TOKEN_SECRET_KEY')
+//         ACCESS_TOKEN_EXPIRY = credentials('ACCESS_TOKEN_EXPIRY')
+//         REFRESH_TOKEN_EXPIRY = credentials('REFRESH_TOKEN_EXPIRY')
+//         NODE_ENV = credentials('NODE_ENV')
+
+//     }
+
+//     stages {
+//         stage('Release') {
+//             steps {
+//                 script {
+//                     withCredentials([usernamePassword(credentialsId: 'dockerhub-cred', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+//                         sh '''
+//                         docker tag $DOCKER_IMAGE:$BUILD_TAG $DOCKER_IMAGE:$RELEASE_TAG
+//                         echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+//                         docker push $DOCKER_IMAGE:$RELEASE_TAG
+//                         docker logout
+//                         '''
+//                     }
+//                 }
+//             }
+//         }
+
+//         stage('Deploy') {
+//             steps {
+//                 script {
+//                     sh '''
+//                     echo "Pulling and running release image..."
+//                     docker pull $DOCKER_IMAGE:$RELEASE_TAG
+//                     docker stop progress_pulse || true
+//                     docker rm progress_pulse || true
+//                     docker run -d --name progress_pulse -p 3000:3000 $DOCKER_IMAGE:$RELEASE_TAG
+//                     echo "Application deployed and running at http://localhost:3000"
+//                     '''
+//                 }
+//             }
+//         }
+
+//     }
+
+//     post {
+//         always {
+//             echo "Progress Pulse Application Deployed Successfully!"
+//             // sh 'docker ps'
+//         }
+//     }
+// }
