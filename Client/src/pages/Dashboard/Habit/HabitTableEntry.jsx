@@ -437,7 +437,7 @@ function HabitTableEntry() {
                       role="button"
                       className="btn btn-sm btn-soft text-xs"
                     >
-                      Entries: {itemPerPage}
+                      Max Entries: {itemPerPage}
                     </div>
                     <ul
                       tabIndex={0}
