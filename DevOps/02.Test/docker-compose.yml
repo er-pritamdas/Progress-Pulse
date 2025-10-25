@@ -22,6 +22,18 @@ services:
     depends_on:
       - backend
     restart: unless-stopped
+  
+  prometheus:
+    image: "${PROMETHEUS_IMAGE}"
+    container_name: ${PROM_CONTAINER_NAME}
+    networks:
+      - mern-network
+    ports:
+      - "9090:9090"
+    depends_on:
+      - backend
+      - frontend
+    restart: unless-stopped
 
 networks:
   mern-network:

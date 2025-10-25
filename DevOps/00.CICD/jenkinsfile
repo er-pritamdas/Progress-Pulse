@@ -193,7 +193,7 @@ pipeline {
             }
         }
 
-        stage('Test') {
+        stage('Test and Monitor') {
             steps {
                 script {
                     // ---------------------------------------------------------------------------------------------------------------------------
@@ -203,29 +203,31 @@ pipeline {
                     echo "Pulling image for testing..."
                     docker pull $DOCKER_USER/$DOCKER_REPO_NAME:$ENV-backend-${BUILD_TAG}
                     docker pull $DOCKER_USER/$DOCKER_REPO_NAME:$ENV-frontend-${BUILD_TAG}
-                    BACKEND_IMAGE=$DOCKER_USER/$DOCKER_REPO_NAME:$ENV-backend-${BUILD_TAG} FRONTEND_IMAGE=$DOCKER_USER/$DOCKER_REPO_NAME:$ENV-frontend-${BUILD_TAG} FE_CONTAINER_NAME=$ENV-frontend BE_CONTAINER_NAME=$ENV-backend docker-compose -f $REPO_PATH/DevOps/02.Test/docker-compose.yml up -d
+                    docker pull $DOCKER_USER/$DOCKER_REPO_NAME:$ENV-prometheus-${BUILD_TAG}
+                    BACKEND_IMAGE=$DOCKER_USER/$DOCKER_REPO_NAME:$ENV-backend-${BUILD_TAG} FRONTEND_IMAGE=$DOCKER_USER/$DOCKER_REPO_NAME:$ENV-frontend-${BUILD_TAG} FE_CONTAINER_NAME=$ENV-frontend BE_CONTAINER_NAME=$ENV-backend PROMETHEUS_IMAGE=$DOCKER_USER/$DOCKER_REPO_NAME:$ENV-prometheus-${BUILD_TAG} PROM_CONTAINER_NAME=$ENV-prometheus docker-compose -f $REPO_PATH/DevOps/02.Test/docker-compose.yml up -d
                     '''
-                    echo "=== Testing Envirnment Created Successfully ==="
+                    echo "=== Testing Environment Created Successfully ==="
+                    echo "=== Monitoring Environment Created Successfully ==="
                     echo "=== HAPPY TESTING ==="
                 }
             }
         }
-        stage('Monitor'){
-            steps{
-                script{
-                    // ---------------------------------------------------------------------------------------------------------------------------
-                    // Setup Prometheus Monitoring
-                    echo "=== Setting Up Prometheus Monitoring ==="
-                    sh '''
-                    echo "Pulling Prometheus image for monitoring..."
-                    docker pull $DOCKER_USER/$DOCKER_REPO_NAME:$ENV-prometheus-${BUILD_TAG}
-                    PROMETHEUS_IMAGE=$DOCKER_USER/$DOCKER_REPO_NAME:$ENV-prometheus-${BUILD_TAG} PROM_CONTAINER_NAME=$ENV-prometheus docker-compose -f $REPO_PATH/DevOps/05.Monitoring/docker-compose.yml up -d
-                    '''
-                    echo "=== Prometheus Monitoring Setup Successfully ==="
+        // stage('Monitor'){
+        //     steps{
+        //         script{
+        //             // ---------------------------------------------------------------------------------------------------------------------------
+        //             // Setup Prometheus Monitoring
+        //             echo "=== Setting Up Prometheus Monitoring ==="
+        //             sh '''
+        //             echo "Pulling Prometheus image for monitoring..."
+        //             docker pull $DOCKER_USER/$DOCKER_REPO_NAME:$ENV-prometheus-${BUILD_TAG}
+        //             PROMETHEUS_IMAGE=$DOCKER_USER/$DOCKER_REPO_NAME:$ENV-prometheus-${BUILD_TAG} PROM_CONTAINER_NAME=$ENV-prometheus docker-compose -f $REPO_PATH/DevOps/05.Monitoring/docker-compose.yml up -d
+        //             '''
+        //             echo "=== Prometheus Monitoring Setup Successfully ==="
 
-                }
-            }
-        }
+        //         }
+        //     }
+        // }
 
     }
 
