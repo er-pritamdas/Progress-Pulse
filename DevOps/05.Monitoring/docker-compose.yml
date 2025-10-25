@@ -12,4 +12,4 @@ services:
 
 networks:
   mern-network:
-    driver: bridge
+    external: true

@@ -138,6 +138,7 @@ pipeline {
                     echo "Cleaning previous build images with tag: ${PREV_BUILD_TAG}"
                     docker rmi -f $DOCKER_USER/$DOCKER_REPO_NAME:$ENV-frontend-${PREV_BUILD_TAG} || true
                     docker rmi -f $DOCKER_USER/$DOCKER_REPO_NAME:$ENV-backend-${PREV_BUILD_TAG} || true
+                    docker rmi -f $DOCKER_USER/$DOCKER_REPO_NAME:$ENV-prometheus-${PREV_BUILD_TAG} || true
                     docker image prune -f || true
                     """
                     } else {
