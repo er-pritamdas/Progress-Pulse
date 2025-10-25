@@ -8,8 +8,13 @@ import cookieParser from "cookie-parser";
 import cors from "cors";
 import loggedOutUserRoutes from "../routes/User-routes/loggedOutUser.routes.js";
 import existingUserRoutes from "../routes/User-routes/existingUser.routes.js";
+import client from "prom-client"
 
 const app = express()
+
+// ------------------- Prometheus Setup -------------------
+const register = new client.Registry();
+client.collectDefaultMetrics({ register });
 
 // -------------------- CORS SETUP --------------------
 app.use(cors({
@@ -21,6 +26,14 @@ app.use(cors({
 app.use(express.json({limit: "16kb"}))
 app.use(express.urlencoded({extended: true, limit: "16kb"}))
 app.use(cookieParser());
+
+
+// ---------------------------- Prometheus Metrics Endpoint ---------------------------
+app.get('/metrics', async (req, res) => {
+    res.set('Content-Type', register.contentType);
+    const metrics = await register.metrics();
+    res.end(metrics);
+});
 
 // ------------------------------Public Routes---------------------------
 // Registered User Routes

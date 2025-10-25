@@ -1,0 +1,15 @@
+version: "3.9"
+
+services:
+  prometheus:
+    image: "${PROMETHEUS_IMAGE}"
+    container_name: ${PROM_CONTAINER_NAME}
+    networks:
+      - mern-network
+    ports:
+      - "9090:9090"
+    restart: unless-stopped
+
+networks:
+  mern-network:
+    driver: bridge

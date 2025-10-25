@@ -6,6 +6,7 @@ pipeline {
         REPO_PATH = '/var/lib/jenkins/Progress-Pulse'
         BACKEND_DOCKER_FILE = 'DevOps/01.Build/Production/backend.Dockerfile'
         FRONTEND_DOCKER_FILE = 'DevOps/01.Build/Production/frontend.Dockerfile'
+        PROMETHEUS_DOCKER_FILE = 'DevOps/01.Build/Production/prometheus.Dockerfile'
         BUILD_TAG = "build-${env.BUILD_NUMBER}"
         RELEASE_TAG = "release-${env.BUILD_NUMBER}"
 
@@ -151,6 +152,7 @@ pipeline {
                     echo "Building Docker image..."
                     docker build -t $ENV-backend -f $BACKEND_DOCKER_FILE Server/
                     docker build -t $ENV-frontend -f $FRONTEND_DOCKER_FILE Client/
+                    docker build -t $ENV-prometheus -f $PROMETHEUS_DOCKER_FILE DevOps/05.Monitoring/
                     '''
 
                     // ---------------------------------------------------------------------------------------------------------------------------
@@ -166,8 +168,10 @@ pipeline {
                     sh '''
                     docker tag $ENV-backend $DOCKER_USER/$DOCKER_REPO_NAME:$ENV-backend-${BUILD_TAG}
                     docker tag $ENV-frontend $DOCKER_USER/$DOCKER_REPO_NAME:$ENV-frontend-${BUILD_TAG}
+                    docker tag $ENV-prometheus $DOCKER_USER/$DOCKER_REPO_NAME:$ENV-prometheus-${BUILD_TAG}
                     docker push $DOCKER_USER/$DOCKER_REPO_NAME:$ENV-backend-${BUILD_TAG}
                     docker push $DOCKER_USER/$DOCKER_REPO_NAME:$ENV-frontend-${BUILD_TAG}
+                    docker push $DOCKER_USER/$DOCKER_REPO_NAME:$ENV-prometheus-${BUILD_TAG}
                     '''
 
                     // ---------------------------------------------------------------------------------------------------------------------------
@@ -205,6 +209,22 @@ pipeline {
                 }
             }
         }
+        stage('Monitor'){
+            steps{
+                script{
+                    // ---------------------------------------------------------------------------------------------------------------------------
+                    // Setup Prometheus Monitoring
+                    echo "=== Setting Up Prometheus Monitoring ==="
+                    sh '''
+                    echo "Pulling Prometheus image for monitoring..."
+                    docker pull $DOCKER_USER/$DOCKER_REPO_NAME:$ENV-prometheus-${BUILD_TAG}
+                    PROMETHEUS_IMAGE=$DOCKER_USER/$DOCKER_REPO_NAME:$ENV-prometheus-${BUILD_TAG} PROM_CONTAINER_NAME=$ENV-prometheus docker-compose -f $REPO_PATH/DevOps/05.Monitoring/docker-compose.yml up -d
+                    '''
+                    echo "=== Prometheus Monitoring Setup Successfully ==="
+
+                }
+            }
+        }
 
     }
 
@@ -212,6 +232,7 @@ pipeline {
         always {
             echo "Testing Environment Setup Completed."
             sh 'docker ps'
+            sh 'docker images'
         }
     }
 }
