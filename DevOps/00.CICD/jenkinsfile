@@ -116,6 +116,7 @@ pipeline {
                     DOCKER_USER=${DOCKER_USER}
                     DOCKER_PASS=${DOCKER_PASS}
                     DOCKER_REPO_NAME=${DOCKER_REPO_NAME}
+                    PRACTICEKEY=${PRACTICEKEY}
                     EOF"
                     echo ".env file created successfully."
                     '''
