@@ -6,6 +6,7 @@ pipeline {
         REPO_PATH = '/var/lib/jenkins/Progress-Pulse'
         BACKEND_DOCKER_FILE = 'DevOps/01.Build/Production/backend.Dockerfile'
         FRONTEND_DOCKER_FILE = 'DevOps/01.Build/Production/frontend.Dockerfile'
+        DATABASE_DOCKER_FILE = 'DevOps/01.Build/Production/database.Dockerfile'
         PROMETHEUS_DOCKER_FILE = 'DevOps/01.Build/Production/prometheus.Dockerfile'
         BUILD_TAG = "build-${env.BUILD_NUMBER}"
         RELEASE_TAG = "release-${env.BUILD_NUMBER}"
@@ -139,6 +140,7 @@ pipeline {
                     echo "Cleaning previous build images with tag: ${PREV_BUILD_TAG}"
                     docker rmi -f $DOCKER_USER/$DOCKER_REPO_NAME:$ENV-frontend-${PREV_BUILD_TAG} || true
                     docker rmi -f $DOCKER_USER/$DOCKER_REPO_NAME:$ENV-backend-${PREV_BUILD_TAG} || true
+                    docker rmi -f $DOCKER_USER/$DOCKER_REPO_NAME:$ENV-database-${PREV_BUILD_TAG} || true
                     docker rmi -f $DOCKER_USER/$DOCKER_REPO_NAME:$ENV-prometheus-${PREV_BUILD_TAG} || true
                     docker image prune -f || true
                     """
@@ -154,6 +156,7 @@ pipeline {
                     echo "Building Docker image..."
                     docker build -t $ENV-backend -f $BACKEND_DOCKER_FILE Server/
                     docker build -t $ENV-frontend -f $FRONTEND_DOCKER_FILE Client/
+                    docker build -t $ENV-database -f $DATABASE_DOCKER_FILE DevOps/01.Build/Production/
                     docker build -t $ENV-prometheus -f $PROMETHEUS_DOCKER_FILE DevOps/05.Monitoring/
                     '''
 
@@ -170,9 +173,12 @@ pipeline {
                     sh '''
                     docker tag $ENV-backend $DOCKER_USER/$DOCKER_REPO_NAME:$ENV-backend-${BUILD_TAG}
                     docker tag $ENV-frontend $DOCKER_USER/$DOCKER_REPO_NAME:$ENV-frontend-${BUILD_TAG}
+                    docker tag $ENV-database $DOCKER_USER/$DOCKER_REPO_NAME:$ENV-database-${BUILD_TAG}
                     docker tag $ENV-prometheus $DOCKER_USER/$DOCKER_REPO_NAME:$ENV-prometheus-${BUILD_TAG}
+
                     docker push $DOCKER_USER/$DOCKER_REPO_NAME:$ENV-backend-${BUILD_TAG}
                     docker push $DOCKER_USER/$DOCKER_REPO_NAME:$ENV-frontend-${BUILD_TAG}
+                    docker push $DOCKER_USER/$DOCKER_REPO_NAME:$ENV-database-${BUILD_TAG}
                     docker push $DOCKER_USER/$DOCKER_REPO_NAME:$ENV-prometheus-${BUILD_TAG}
                     '''
 
@@ -205,7 +211,8 @@ pipeline {
                     docker pull $DOCKER_USER/$DOCKER_REPO_NAME:$ENV-backend-${BUILD_TAG}
                     docker pull $DOCKER_USER/$DOCKER_REPO_NAME:$ENV-frontend-${BUILD_TAG}
                     docker pull $DOCKER_USER/$DOCKER_REPO_NAME:$ENV-prometheus-${BUILD_TAG}
-                    BACKEND_IMAGE=$DOCKER_USER/$DOCKER_REPO_NAME:$ENV-backend-${BUILD_TAG} FRONTEND_IMAGE=$DOCKER_USER/$DOCKER_REPO_NAME:$ENV-frontend-${BUILD_TAG} FE_CONTAINER_NAME=$ENV-frontend BE_CONTAINER_NAME=$ENV-backend PROMETHEUS_IMAGE=$DOCKER_USER/$DOCKER_REPO_NAME:$ENV-prometheus-${BUILD_TAG} PROM_CONTAINER_NAME=$ENV-prometheus docker-compose -f $REPO_PATH/DevOps/02.Test/docker-compose.yml up -d
+                    docker pull $DOCKER_USER/$DOCKER_REPO_NAME:$ENV-database-${BUILD_TAG}
+                    BACKEND_IMAGE=$DOCKER_USER/$DOCKER_REPO_NAME:$ENV-backend-${BUILD_TAG} FRONTEND_IMAGE=$DOCKER_USER/$DOCKER_REPO_NAME:$ENV-frontend-${BUILD_TAG} FE_CONTAINER_NAME=$ENV-frontend BE_CONTAINER_NAME=$ENV-backend PROMETHEUS_IMAGE=$DOCKER_USER/$DOCKER_REPO_NAME:$ENV-prometheus-${BUILD_TAG} PROM_CONTAINER_NAME=$ENV-prometheus DATABASE_IMAGE=$DOCKER_USER/$DOCKER_REPO_NAME:$ENV-database-${BUILD_TAG} DB_CONTAINER_NAME=$ENV-database docker-compose -f $REPO_PATH/DevOps/02.Test/docker-compose.yml up -d
                     '''
                     echo "=== Testing Environment Created Successfully ==="
                     echo "=== Monitoring Environment Created Successfully ==="

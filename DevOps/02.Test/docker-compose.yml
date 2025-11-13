@@ -23,6 +23,15 @@ services:
       - backend
     restart: unless-stopped
   
+  database:
+    image: "${DATABASE_IMAGE}"
+    container_name: ${DB_CONTAINER_NAME}
+    networks:
+      - mern-network
+    ports:
+      - "27017:27017"
+    restart: unless-stopped
+  
   prometheus:
     image: "${PROMETHEUS_IMAGE}"
     container_name: ${PROM_CONTAINER_NAME}
