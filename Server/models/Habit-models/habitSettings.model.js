@@ -55,6 +55,32 @@ const habitSettingsSchema = new mongoose.Schema(
             type: Boolean,
             default: false
         },
+        age: {
+            type: Number,
+            default: 0
+        },
+        gender: {
+            type: String,
+            enum: ["male", "female"],
+            default: "male"
+        },
+        weight: {
+            type: Number,
+            default: 0
+        },
+        height: {
+            type: Number,
+            default: 0
+        },
+        activityLevel: {
+            type: String,
+            enum: ["light", "moderate", "active", "very_active"],
+            default: "light"
+        },
+        maintenanceCalories: {
+            type: Number,
+            default: 0
+        },
     },
     {
         timestamps: true,

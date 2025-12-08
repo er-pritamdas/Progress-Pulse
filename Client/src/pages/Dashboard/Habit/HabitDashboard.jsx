@@ -24,6 +24,7 @@ function HabitDashboard() {
   const [waterMax, setWaterMax] = useState(100);
   const [ConsumedCalorieMax, setConsumedCalorieMax] = useState(0);
   const [BurnedCalorieMax, setBurnedCalorieMax] = useState(0);
+  const [maintenanceCalories, setMaintenanceCalories] = useState(0);
 
 
   // Format Date Function
@@ -74,6 +75,7 @@ function HabitDashboard() {
       setWaterMax(res.data.data.settings.water.max);
       setConsumedCalorieMax(res.data.data.settings.intake.max);
       setBurnedCalorieMax(res.data.data.settings.burned.max);
+      setMaintenanceCalories(res.data.data.maintenanceCalories);
       setTimeout(() => setLoading(false), 4000);
     } catch (err) {
       console.error("Error fetching heatmap Settings data:", err);
@@ -331,6 +333,7 @@ function HabitDashboard() {
                     habitData={habitData}
                     ConsumedCalorieMax={ConsumedCalorieMax}
                     BurnedCalorieMax={BurnedCalorieMax}
+                    maintenanceCalories={maintenanceCalories}
                     fromDate={fromDate}
                     toDate={toDate}
                   />

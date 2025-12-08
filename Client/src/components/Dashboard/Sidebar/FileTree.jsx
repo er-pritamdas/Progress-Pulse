@@ -1,5 +1,7 @@
+
 import React from 'react';
 import { Link, useLocation } from "react-router-dom";
+import { Tooltip } from '@mui/material';
 
 import AlarmClockCheck from '../../../utils/Icons/AlarmClockCheck';
 import CreditCard from '../../../utils/Icons/CreditCard';
@@ -22,40 +24,76 @@ function FileTree({ open, setOpen }) {
         return isActive(path) ? `${baseClass} btn-active` : baseClass;
     };
 
+    // DaisyUI style for MUI Tooltip
+    const tooltipSlotProps = {
+        tooltip: {
+            className: "bg-neutral text-neutral-content rounded px-2 py-1 text-sm font-medium shadow-lg"
+        },
+        arrow: {
+            className: "text-neutral"
+        }
+    };
+
     return (
         <>
             {/* Habit Tracker */}
             <ul>
                 <li>
                     <details>
-                        <summary className="btn btn-ghost justify-start m-1">
-                            <AlarmClockCheck />
-                            {open && <span className="ml-2">Habit Tracker</span>}
+                        <summary
+                            className="btn btn-ghost justify-start m-1"
+                        >
+                            <Tooltip title={!open ? "Habit Tracker" : ""} placement="right" arrow slotProps={tooltipSlotProps}>
+                                <div className="flex items-center">
+                                    <AlarmClockCheck />
+                                    {open && <span className="ml-2">Habit Tracker</span>}
+                                </div>
+                            </Tooltip>
                         </summary>
                         <ul className='ml-0'>
                             <li>
-                                <Link to="/dashboard/habit/table-entry" className={getLinkClass("/dashboard/habit/table-entry")}>
-                                    <TableEntry />
-                                    {open && <span className="ml-2">Table Entry</span>}
-                                </Link>
+                                <Tooltip title={!open ? "Table Entry" : ""} placement="right" arrow slotProps={tooltipSlotProps}>
+                                    <Link
+                                        to="/dashboard/habit/table-entry"
+                                        className={getLinkClass("/dashboard/habit/table-entry")}
+                                    >
+                                        <TableEntry />
+                                        {open && <span className="ml-2">Table Entry</span>}
+                                    </Link>
+                                </Tooltip>
                             </li>
                             <li>
-                                <Link to="/dashboard/habit/dashboard" className={getLinkClass("/dashboard/habit/dashboard")}>
-                                    <Dashboard />
-                                    {open && <span className="ml-2">Dashboard</span>}
-                                </Link>
+                                <Tooltip title={!open ? "Dashboard" : ""} placement="right" arrow slotProps={tooltipSlotProps}>
+                                    <Link
+                                        to="/dashboard/habit/dashboard"
+                                        className={getLinkClass("/dashboard/habit/dashboard")}
+                                    >
+                                        <Dashboard />
+                                        {open && <span className="ml-2">Dashboard</span>}
+                                    </Link>
+                                </Tooltip>
                             </li>
                             <li>
-                                <Link to="/dashboard/habit/table-view" className={getLinkClass("/dashboard/habit/table-view")}>
-                                    <TableView />
-                                    {open && <span className="ml-2">Table View</span>}
-                                </Link>
+                                <Tooltip title={!open ? "Table View" : ""} placement="right" arrow slotProps={tooltipSlotProps}>
+                                    <Link
+                                        to="/dashboard/habit/table-view"
+                                        className={getLinkClass("/dashboard/habit/table-view")}
+                                    >
+                                        <TableView />
+                                        {open && <span className="ml-2">Table View</span>}
+                                    </Link>
+                                </Tooltip>
                             </li>
                             <li>
-                                <Link to="/dashboard/habit/settings" className={getLinkClass("/dashboard/habit/settings")}>
-                                    <Settings />
-                                    {open && <span className="ml-2">Settings</span>}
-                                </Link>
+                                <Tooltip title={!open ? "Settings" : ""} placement="right" arrow slotProps={tooltipSlotProps}>
+                                    <Link
+                                        to="/dashboard/habit/settings"
+                                        className={getLinkClass("/dashboard/habit/settings")}
+                                    >
+                                        <Settings />
+                                        {open && <span className="ml-2">Settings</span>}
+                                    </Link>
+                                </Tooltip>
                             </li>
                         </ul>
                     </details>
@@ -66,34 +104,60 @@ function FileTree({ open, setOpen }) {
             <ul>
                 <li>
                     <details>
-                        <summary className="btn btn-ghost justify-start m-1">
-                            <CreditCard />
-                            {open && <span className="ml-2">Expense Tracker</span>}
+                        <summary
+                            className="btn btn-ghost justify-start m-1"
+                        >
+                            <Tooltip title={!open ? "Expense Tracker" : ""} placement="right" arrow slotProps={tooltipSlotProps}>
+                                <div className="flex items-center">
+                                    <CreditCard />
+                                    {open && <span className="ml-2">Expense Tracker</span>}
+                                </div>
+                            </Tooltip>
                         </summary>
                         <ul className='ml-0'>
                             <li>
-                                <Link to="/dashboard/expense/table-entry" className={getLinkClass("/dashboard/expense/table-entry")}>
-                                    <TableEntry />
-                                    {open && <span className="ml-2">Table Entry</span>}
-                                </Link>
+                                <Tooltip title={!open ? "Table Entry" : ""} placement="right" arrow slotProps={tooltipSlotProps}>
+                                    <Link
+                                        to="/dashboard/expense/table-entry"
+                                        className={getLinkClass("/dashboard/expense/table-entry")}
+                                    >
+                                        <TableEntry />
+                                        {open && <span className="ml-2">Table Entry</span>}
+                                    </Link>
+                                </Tooltip>
                             </li>
                             <li>
-                                <Link to="/dashboard/expense/dashboard" className={getLinkClass("/dashboard/expense/dashboard")}>
-                                    <Dashboard />
-                                    {open && <span className="ml-2">Dashboard</span>}
-                                </Link>
+                                <Tooltip title={!open ? "Dashboard" : ""} placement="right" arrow slotProps={tooltipSlotProps}>
+                                    <Link
+                                        to="/dashboard/expense/dashboard"
+                                        className={getLinkClass("/dashboard/expense/dashboard")}
+                                    >
+                                        <Dashboard />
+                                        {open && <span className="ml-2">Dashboard</span>}
+                                    </Link>
+                                </Tooltip>
                             </li>
                             <li>
-                                <Link to="/dashboard/expense/table-view" className={getLinkClass("/dashboard/expense/table-view")}>
-                                    <TableView />
-                                    {open && <span className="ml-2">Table View</span>}
-                                </Link>
+                                <Tooltip title={!open ? "Table View" : ""} placement="right" arrow slotProps={tooltipSlotProps}>
+                                    <Link
+                                        to="/dashboard/expense/table-view"
+                                        className={getLinkClass("/dashboard/expense/table-view")}
+                                    >
+                                        <TableView />
+                                        {open && <span className="ml-2">Table View</span>}
+                                    </Link>
+                                </Tooltip>
                             </li>
                             <li>
-                                <Link to="/dashboard/expense/settings" className={getLinkClass("/dashboard/expense/settings")}>
-                                    <Settings />
-                                    {open && <span className="ml-2">Settings</span>}
-                                </Link>
+                                <Tooltip title={!open ? "Settings" : ""} placement="right" arrow slotProps={tooltipSlotProps}>
+                                    <Link
+                                        to="/dashboard/expense/settings"
+                                        className={getLinkClass("/dashboard/expense/settings")}
+                                    >
+                                        <Settings />
+                                        {open && <span className="ml-2">Settings</span>}
+                                    </Link>
+                                </Tooltip>
                             </li>
                         </ul>
                     </details>
@@ -104,34 +168,60 @@ function FileTree({ open, setOpen }) {
             <ul>
                 <li>
                     <details>
-                        <summary className="btn btn-ghost justify-start m-1">
-                            <Wallet />
-                            {open && <span className="ml-2">Investment Tracker</span>}
+                        <summary
+                            className="btn btn-ghost justify-start m-1"
+                        >
+                            <Tooltip title={!open ? "Investment Tracker" : ""} placement="right" arrow slotProps={tooltipSlotProps}>
+                                <div className="flex items-center">
+                                    <Wallet />
+                                    {open && <span className="ml-2">Investment Tracker</span>}
+                                </div>
+                            </Tooltip>
                         </summary>
                         <ul className='ml-0'>
                             <li>
-                                <Link to="/dashboard/investment/table-entry" className={getLinkClass("/dashboard/investment/table-entry")}>
-                                    <TableEntry />
-                                    {open && <span className="ml-2">Table Entry</span>}
-                                </Link>
+                                <Tooltip title={!open ? "Table Entry" : ""} placement="right" arrow slotProps={tooltipSlotProps}>
+                                    <Link
+                                        to="/dashboard/investment/table-entry"
+                                        className={getLinkClass("/dashboard/investment/table-entry")}
+                                    >
+                                        <TableEntry />
+                                        {open && <span className="ml-2">Table Entry</span>}
+                                    </Link>
+                                </Tooltip>
                             </li>
                             <li>
-                                <Link to="/dashboard/investment/dashboard" className={getLinkClass("/dashboard/investment/dashboard")}>
-                                    <Dashboard />
-                                    {open && <span className="ml-2">Dashboard</span>}
-                                </Link>
+                                <Tooltip title={!open ? "Dashboard" : ""} placement="right" arrow slotProps={tooltipSlotProps}>
+                                    <Link
+                                        to="/dashboard/investment/dashboard"
+                                        className={getLinkClass("/dashboard/investment/dashboard")}
+                                    >
+                                        <Dashboard />
+                                        {open && <span className="ml-2">Dashboard</span>}
+                                    </Link>
+                                </Tooltip>
                             </li>
                             <li>
-                                <Link to="/dashboard/investment/table-view" className={getLinkClass("/dashboard/investment/table-view")}>
-                                    <TableView />
-                                    {open && <span className="ml-2">Table View</span>}
-                                </Link>
+                                <Tooltip title={!open ? "Table View" : ""} placement="right" arrow slotProps={tooltipSlotProps}>
+                                    <Link
+                                        to="/dashboard/investment/table-view"
+                                        className={getLinkClass("/dashboard/investment/table-view")}
+                                    >
+                                        <TableView />
+                                        {open && <span className="ml-2">Table View</span>}
+                                    </Link>
+                                </Tooltip>
                             </li>
                             <li>
-                                <Link to="/dashboard/investment/settings" className={getLinkClass("/dashboard/investment/settings")}>
-                                    <Settings />
-                                    {open && <span className="ml-2">Settings</span>}
-                                </Link>
+                                <Tooltip title={!open ? "Settings" : ""} placement="right" arrow slotProps={tooltipSlotProps}>
+                                    <Link
+                                        to="/dashboard/investment/settings"
+                                        className={getLinkClass("/dashboard/investment/settings")}
+                                    >
+                                        <Settings />
+                                        {open && <span className="ml-2">Settings</span>}
+                                    </Link>
+                                </Tooltip>
                             </li>
                         </ul>
                     </details>

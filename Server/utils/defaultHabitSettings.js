@@ -13,4 +13,10 @@ export const defaultHabitSettings = {
   emailNotification: false,
   darkMode: false,
   streakReminders: false,
+  age: 18,
+  gender: "male",
+  weight: 80,
+  height: 180,
+  activityLevel: "light",
+  maintenanceCalories: 0,
 };

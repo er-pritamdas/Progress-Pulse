@@ -20,7 +20,7 @@ export const updateHabitSettings = createAsyncThunk(
   async (updatedData, thunkAPI) => {
     try {
       // console.log("Updated Data : ",updatedData)
-      const res = await axiosInstance.put('/v1/dashboard/habit/settings', {... updatedData})
+      const res = await axiosInstance.put('/v1/dashboard/habit/settings', { ...updatedData })
       return res.data.data
     } catch (err) {
       return thunkAPI.rejectWithValue(err.response?.data?.message || 'Failed to update settings')
@@ -53,7 +53,15 @@ const initialState = {
   subscribeToNewsletter: false,
   emailNotification: false,
   darkMode: false,
+  emailNotification: false,
+  darkMode: false,
   streakReminders: false,
+  age: 18,
+  gender: "male",
+  weight: 80,
+  height: 180,
+  activityLevel: "light",
+  maintenanceCalories: 0,
   loading: false,
   error: null,
 }

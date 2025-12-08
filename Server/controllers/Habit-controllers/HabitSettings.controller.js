@@ -24,11 +24,17 @@ const getHabitSettings = asynchandler(async (req, res) => {
   }
   console.log(Settings)
   const Data = {
-    settings: Settings.settings, 
-    subscribeToNewsletter: Settings.subscribeToNewsletter ,
+    settings: Settings.settings,
+    subscribeToNewsletter: Settings.subscribeToNewsletter,
     emailNotification: Settings.emailNotification,
     darkMode: Settings.darkMode,
     streakReminders: Settings.streakReminders,
+    age: Settings.age,
+    gender: Settings.gender,
+    weight: Settings.weight,
+    height: Settings.height,
+    activityLevel: Settings.activityLevel,
+    maintenanceCalories: Settings.maintenanceCalories,
   }
   return res.status(200).json(
     new ApiResponse(200, Data, "Habit settings fetched successfully")
@@ -48,14 +54,20 @@ const updateHabitSettings = asynchandler(async (req, res) => {
   const Settings = await HabitSettings.findOneAndUpdate(
     { userId: user._id },
     { $set: updates },
-    { new: true} // upsert: true create if doesn't exist
+    { new: true } // upsert: true create if doesn't exist
   );
   const Data = {
-    settings: Settings.settings, 
-    subscribeToNewsletter: Settings.subscribeToNewsletter ,
+    settings: Settings.settings,
+    subscribeToNewsletter: Settings.subscribeToNewsletter,
     emailNotification: Settings.emailNotification,
     darkMode: Settings.darkMode,
     streakReminders: Settings.streakReminders,
+    age: Settings.age,
+    gender: Settings.gender,
+    weight: Settings.weight,
+    height: Settings.height,
+    activityLevel: Settings.activityLevel,
+    maintenanceCalories: Settings.maintenanceCalories,
   }
   return res.status(200).json(
     new ApiResponse(200, Data, "Habit settings updated successfully")
@@ -76,11 +88,17 @@ const resetHabitSettingsToDefault = asynchandler(async (req, res) => {
     { new: true, upsert: true }
   );
   const Data = {
-    settings: Settings.settings, 
-    subscribeToNewsletter: Settings.subscribeToNewsletter ,
+    settings: Settings.settings,
+    subscribeToNewsletter: Settings.subscribeToNewsletter,
     emailNotification: Settings.emailNotification,
     darkMode: Settings.darkMode,
     streakReminders: Settings.streakReminders,
+    age: Settings.age,
+    gender: Settings.gender,
+    weight: Settings.weight,
+    height: Settings.height,
+    activityLevel: Settings.activityLevel,
+    maintenanceCalories: Settings.maintenanceCalories,
   }
   return res.status(200).json(
     new ApiResponse(200, Data, "Habit settings reset to default")

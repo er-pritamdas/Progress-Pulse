@@ -4,8 +4,9 @@ import { CalendarDays, CalendarCheck2, Flame, Utensils, Scale, Target } from 'lu
 
 const CalorieScoreBoard = ({
     habitData = [],
-    ConsumedCalorieMax = 2500,
-    BurnedCalorieMax = 1000,
+    ConsumedCalorieMax = 0,
+    BurnedCalorieMax = 0,
+    maintenanceCalories = 0,
 }) => {
     const {
         fromDate,
@@ -43,7 +44,7 @@ const CalorieScoreBoard = ({
         const days = dayjs(toDate).diff(dayjs(fromDate), 'day') + 1;
 
         const effective = consumed - burned;
-        const offset = effective - (2000 * days);
+        const offset = effective - (maintenanceCalories * days);
 
         return {
             fromDate,
@@ -54,7 +55,7 @@ const CalorieScoreBoard = ({
             offset,
             totalDays: days,
         };
-    }, [habitData, ConsumedCalorieMax, BurnedCalorieMax]);
+    }, [habitData, ConsumedCalorieMax, BurnedCalorieMax, maintenanceCalories]);
 
     const consumedGoal = totalDays * ConsumedCalorieMax;
     const burnedGoal = totalDays * BurnedCalorieMax;
@@ -116,7 +117,7 @@ const CalorieScoreBoard = ({
                     <div className={`stat-figure ${offset >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
                         <Target className="h-6 w-6" />
                     </div>
-                    <div className="stat-title">Offset from 2000</div>
+                    <div className="stat-title">Offset from {maintenanceCalories}</div>
                     <div className={`stat-value ${offset >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
                         {offset >= 0 ? '+' : ''}
                         {offset}
@@ -132,7 +133,7 @@ const CalorieScoreBoard = ({
                 <p className='mb-1'>🔥 <strong>Burned</strong>: Total calories burned via workouts or activities. Compared to your goal for {totalDays} days.</p>
                 <p className='mb-1'>🍽️ <strong>Consumed</strong>: Total calories eaten. Compared to your max allowed intake for {totalDays} days.</p>
                 <p className='mb-1'>⚖️ <strong>Effective</strong>: Net calories = Consumed - Burned.</p>
-                <p className='mb-1'>🎯 <strong>Offset</strong>: Difference from 2000 kcal reference. Positive = surplus, Negative = deficit.</p>
+                <p className='mb-1'>🎯 <strong>Offset</strong>: Difference from {maintenanceCalories} kcal reference. Positive = surplus, Negative = deficit.</p>
             </div>
         </div>
     );
