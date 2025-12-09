@@ -59,7 +59,7 @@ const EffectiveMixedStackChart = ({ habitData, ConsumedCalorieMax }) => {
       toolbar: {
         show: true,
         tools: {
-          download: true,
+          download: false,
           selection: true,
           zoom: true,
           zoomin: true,
@@ -70,44 +70,45 @@ const EffectiveMixedStackChart = ({ habitData, ConsumedCalorieMax }) => {
       },
       zoom: { enabled: true },
     },
-    title: {
-      text: "Weekly Calorie Stats",
-      align: "left",
-      style: { color: "#FFFFFF" },
-    },
-    subtitle: {
-      text: "Stacked Bars + Line with Limit",
-      align: "left",
-      style: { color: "#CCCCCC" },
-    },
+    // title: {
+    //   text: "Weekly Calorie Stats",
+    //   align: "left",
+    //   style: { color: "#FFFFFF" },
+    // },
+    // subtitle: {
+    //   text: "Stacked Bars + Line with Limit",
+    //   align: "left",
+    //   style: { color: "#CCCCCC" },
+    // },
     stroke: {
-      width: [0, 0, 3, 2],
+      width: [0, 0, 1, 1],
       curve: "smooth",
       dashArray: [0, 0, 0, 5],
     },
-    colors: ["#00E396", "#FEB019", "#008FFB", "#FF4560"],
+    colors: ["#008a5ca4", "#008a5c34", "#005494b0", "#fd00269c"],
     plotOptions: {
       bar: {
-        columnWidth: "50%",
+        columnWidth: "80%",
         dataLabels: { position: "top" },
         distributed: false,
       },
     },
     dataLabels: {
-      enabled: false,
+      enabled: true,
+      enabledOnSeries: [0,1,2],
       style: {
         fontSize: "10px",
         fontWeight: "400",
-        colors: ["#fff"],
+        colors: ["#ffffffcc"],
       },
-      offsetY: -4,
+      offsetY: 0,
       background: {
-        enabled: true,
-        foreColor: "#fff",
+        enabled: false,
+        foreColor: "#ffffffff",
         padding: 2,
         borderRadius: 3,
         opacity: 0.4,
-        color: "#000000",
+        color: "#000000ff",
       },
     },
     markers: {
@@ -118,11 +119,11 @@ const EffectiveMixedStackChart = ({ habitData, ConsumedCalorieMax }) => {
     },
     legend: {
       show: true,
-      position: "top",
+      position: "bottom",
       horizontalAlign: "right",
       labels: { colors: "#FFFFFF" },
       markers: {
-        fillColors: ["#00E396", "#FEB019", "#008FFB", "#FF4560"],
+        fillColors: ["#008a5ca4", "#008a5c34", "#005494b0", "#fd00269c"],
       },
       itemMargin: { horizontal: 10, vertical: 5 },
     },
@@ -130,7 +131,7 @@ const EffectiveMixedStackChart = ({ habitData, ConsumedCalorieMax }) => {
       categories: sortedData.map((e) =>
         new Date(e.date).toLocaleDateString("en-GB", {
           day: "numeric",
-          month: "short",
+          // month: "short",
         })
       ),
       labels: {
@@ -158,6 +159,8 @@ const EffectiveMixedStackChart = ({ habitData, ConsumedCalorieMax }) => {
       theme: "dark",
       shared: true,
       intersect: false,
+      fillSeriesColor: false,
+      marker: { show: true },
       style: { fontSize: "13px" },
       y: {
         formatter: (val) => `${val} Kcal`,

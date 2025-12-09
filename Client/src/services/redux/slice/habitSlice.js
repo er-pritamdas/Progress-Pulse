@@ -62,6 +62,7 @@ const initialState = {
   height: 180,
   activityLevel: "light",
   maintenanceCalories: 0,
+  bmr: 0,
   loading: false,
   error: null,
 }

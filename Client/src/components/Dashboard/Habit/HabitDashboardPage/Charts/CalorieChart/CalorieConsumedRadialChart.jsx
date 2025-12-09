@@ -75,7 +75,7 @@ function CalorieConsumedRadialChart({ habitData, ConsumedCalorieMax }) {
 
   return (
     <div style={{ width: "100%", overflowX: "auto" }} className="p-4">
-      <Chart options={options} series={[percentage]} type="radialBar" height={450} key={percentage}/>
+      <Chart options={options} series={[percentage]} type="radialBar" height={450} key={percentage} />
     </div>
   );
 }

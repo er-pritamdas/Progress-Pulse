@@ -19,4 +19,5 @@ export const defaultHabitSettings = {
   height: 180,
   activityLevel: "light",
   maintenanceCalories: 0,
+  bmr: 0,
 };

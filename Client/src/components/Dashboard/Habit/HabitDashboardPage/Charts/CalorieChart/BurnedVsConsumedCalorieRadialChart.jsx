@@ -94,7 +94,7 @@ function BurnedVsConsumedCalorieRadialChart({
 
   return (
     <div style={{ width: "100%", overflowX: "auto" }} className="p-4">
-      <Chart options={options} series={series} type="radialBar" height={450} key={series.join("-")}/>
+      <Chart options={options} series={series} type="radialBar" height={450} key={series.join("-")} />
     </div>
   );
 }

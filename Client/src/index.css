@@ -36,9 +36,13 @@ html {
 }
 
 .apexcharts-tooltip {
-  background:rgb(0, 0, 0) !important;
-  color: white !important;
-  border: 1px solid #ccc !important;
-  font-weight: 500;
+  background: rgba(0, 0, 0, 0.5) !important; /* 20% black */
+  backdrop-filter: blur(6px);
+  border: none !important;
+}
+
+.apexcharts-tooltip-title {
+  background: transparent !important;
+  border: none !important;
 }
 

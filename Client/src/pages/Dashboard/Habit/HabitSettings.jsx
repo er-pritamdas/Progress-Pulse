@@ -28,7 +28,8 @@ function HabitSettings() {
     weight: reduxWeight,
     height: reduxHeight,
     activityLevel: reduxActivityLevel,
-    maintenanceCalories: reduxMaintenanceCalories
+    maintenanceCalories: reduxMaintenanceCalories,
+    bmr: reduxBmr
   } = useSelector((state) => state.habit);
 
   // Alerts
@@ -85,6 +86,7 @@ function HabitSettings() {
   const [height, setHeight] = useState(reduxHeight);
   const [activityLevel, setActivityLevel] = useState(reduxActivityLevel);
   const [maintenanceCalories, setMaintenanceCalories] = useState(reduxMaintenanceCalories);
+  const [bmr, setBmr] = useState(reduxBmr);
 
 
   const handleRangeChange = (field, type, value) => {
@@ -124,6 +126,7 @@ function HabitSettings() {
       height,
       activityLevel,
       maintenanceCalories,
+      bmr,
     };
     try {
       await dispatch(updateHabitSettings(localState)).unwrap();
@@ -299,8 +302,9 @@ function HabitSettings() {
     setHeight(reduxHeight || 180);
     setActivityLevel(reduxActivityLevel || "light");
     setMaintenanceCalories(reduxMaintenanceCalories || 0);
+    setBmr(reduxBmr || 0);
 
-  }, [settings, subscribeToNewsletter, emailNotification, darkMode, streakReminders, reduxAge, reduxGender, reduxWeight, reduxHeight, reduxActivityLevel, reduxMaintenanceCalories]);
+  }, [settings, subscribeToNewsletter, emailNotification, darkMode, streakReminders, reduxAge, reduxGender, reduxWeight, reduxHeight, reduxActivityLevel, reduxMaintenanceCalories, reduxBmr]);
 
   // Check for unsaved changes
   const isDirty = useMemo(() => {
@@ -320,11 +324,12 @@ function HabitSettings() {
     // maintenanceCalories is derived, so we don't strictly check it, but if inputs change it implies change.
     // However, if user calculated but didn't save, it's dirty.
     const isMaintenanceCaloriesChanged = maintenanceCalories !== (reduxMaintenanceCalories || 0);
+    const isBmrChanged = bmr !== (reduxBmr || 0);
 
     return isRangesChanged || isSubscribedChanged || isEmailNotifOnChanged || isDarkModeChanged || isStreakReminderOnChanged ||
-      isAgeChanged || isGenderChanged || isWeightChanged || isHeightChanged || isActivityLevelChanged || isMaintenanceCaloriesChanged;
+      isAgeChanged || isGenderChanged || isWeightChanged || isHeightChanged || isActivityLevelChanged || isMaintenanceCaloriesChanged || isBmrChanged;
   }, [ranges, settings, isSubscribed, subscribeToNewsletter, isEmailNotifOn, emailNotification, isDarkMode, darkMode, isStreakReminderOn, streakReminders,
-    age, reduxAge, gender, reduxGender, weight, reduxWeight, height, reduxHeight, activityLevel, reduxActivityLevel, maintenanceCalories, reduxMaintenanceCalories]);
+    age, reduxAge, gender, reduxGender, weight, reduxWeight, height, reduxHeight, activityLevel, reduxActivityLevel, maintenanceCalories, reduxMaintenanceCalories, bmr, reduxBmr]);
 
   // Block internal navigation
   const blocker = useBlocker(
@@ -351,6 +356,7 @@ function HabitSettings() {
     } else {
       bmr = 10 * weight + 6.25 * height - 5 * age - 161;
     }
+    setBmr(Math.round(bmr));
 
     const multipliers = {
       light: 1.375,
@@ -379,7 +385,8 @@ function HabitSettings() {
       weight,
       height,
       activityLevel,
-      maintenanceCalories: calories
+      maintenanceCalories: calories,
+      bmr: Math.round(bmr)
     };
 
     dispatch(updateHabitSettings(localState)).unwrap()
@@ -402,6 +409,7 @@ function HabitSettings() {
     setHeight(0);
     setActivityLevel("light");
     setMaintenanceCalories(0);
+    setBmr(0);
   };
 
 
@@ -586,7 +594,23 @@ function HabitSettings() {
               </div>
             </div>
 
-            {/* Column 2: Results Display */}
+            {/* Column 2: BMR Display (Center) */}
+            <div className="flex flex-col items-center justify-center space-y-4">
+              <div className="radial-progress text-primary" style={{ "--value": 100, "--size": "12rem", "--thickness": "1rem" }} role="progressbar">
+                <div className="flex flex-col items-center">
+                  <span className="text-4xl font-bold">{bmr || 0}</span>
+                  <span className="text-sm opacity-70">BMR</span>
+                </div>
+              </div>
+              <div className="text-center">
+                <h3 className="text-lg font-semibold">Basal Metabolic Rate</h3>
+                <p className="text-sm text-base-content/70 max-w-xs">
+                  Calories your body burns at rest.
+                </p>
+              </div>
+            </div>
+
+            {/* Column 3: Results Display (Right) */}
             <div className="flex flex-col gap-2">
               {/* Maintain Weight */}
               <div className="flex bg-base-100 rounded-lg overflow-hidden border border-base-300">
@@ -634,28 +658,6 @@ function HabitSettings() {
                   <span className="text-xs text-secondary-content/70">56% Calories/day</span>
                 </div>
               </div>
-            </div>
-
-            {/* Column 3: Goal Inputs */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold mb-2 flex items-center gap-2">
-                <Target size={20} /> Calorie Goals
-              </h3>
-
-              {/* Maintenance Calories Input */}
-              <label className="floating-label w-full">
-                <input
-                  type="number"
-                  placeholder="Maintenance Calories"
-                  className="input input-md w-full"
-                  value={maintenanceCalories}
-                  onChange={(e) => setMaintenanceCalories(Number(e.target.value))}
-                />
-                <span>Maintenance Calories</span>
-              </label>
-              <p className="text-xs text-gray-500 mb-4">
-                Used to calculate your daily surplus/deficit offset.
-              </p>
             </div>
           </div>
         </div>

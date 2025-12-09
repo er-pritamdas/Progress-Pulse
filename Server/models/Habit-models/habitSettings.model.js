@@ -81,6 +81,10 @@ const habitSettingsSchema = new mongoose.Schema(
             type: Number,
             default: 0
         },
+        bmr: {
+            type: Number,
+            default: 0
+        },
     },
     {
         timestamps: true,

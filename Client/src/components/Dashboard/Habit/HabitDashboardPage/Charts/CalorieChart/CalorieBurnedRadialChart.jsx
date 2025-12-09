@@ -16,6 +16,10 @@ function CalorieBurnedRadialChart({ habitData, BurnedCalorieMax }) {
     const totalDays = habitData.length || 1;
     const totalBurnedMax = (Number(BurnedCalorieMax) || 1) * totalDays;
     const burnedPercent = Math.min(100, Math.round((burned / totalBurnedMax) * 100));
+    console.log("Burned Percent", burnedPercent);
+    console.log("Burned", burned);
+    console.log("Total Burned Max", totalBurnedMax);
+    console.log("Total Days", totalDays);
 
     setRawValue(burned);
     setPercentage(burnedPercent);
