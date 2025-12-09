@@ -5,6 +5,7 @@ function BurnedVsConsumedCalorieRadialChart({
   habitData,
   ConsumedCalorieMax,
   BurnedCalorieMax,
+  totalEntries,
 }) {
   const [series, setSeries] = useState([0, 0]);
   const [effectiveKcal, setEffectiveKcal] = useState(0);
@@ -39,7 +40,7 @@ function BurnedVsConsumedCalorieRadialChart({
     chart: {
       height: 450,
       type: "radialBar",
-      toolbar: { show: true },
+      // toolbar: { show: true },
     },
     plotOptions: {
       radialBar: {
@@ -66,14 +67,14 @@ function BurnedVsConsumedCalorieRadialChart({
           value: {
             show: true,
             color: "#ffffff",
-            fontSize: "16px",
+            fontSize: "15px",
             offsetY: 8,
           },
           total: {
             show: true,
             label: "Effective",
             color: "#3abcf7",
-            fontSize: "18px",
+            fontSize: "15px",
             formatter: () => `${effectiveKcal} kcal`,
           },
         },
@@ -81,6 +82,7 @@ function BurnedVsConsumedCalorieRadialChart({
     },
     tooltip: {
       enabled: true,
+      theme: "dark",
       y: {
         formatter: (_, opts) => `${rawValues[opts.seriesIndex]} kcal`,
         title: {
@@ -88,8 +90,8 @@ function BurnedVsConsumedCalorieRadialChart({
         },
       },
     },
-    colors: ["#1E3A8A", "#3abcf7"],
-    labels: ["Calories Consumed", "Calories Burned"],
+    colors: ["#1E3A8A", "#52baff75"],
+    labels: [`${totalEntries} Day${totalEntries === 1 ? "" : "s"} of Consumption`, `${totalEntries} Day${totalEntries === 1 ? "" : "s"} of Burning`],
   };
 
   return (

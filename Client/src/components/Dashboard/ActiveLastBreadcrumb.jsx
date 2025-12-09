@@ -16,7 +16,8 @@ export default function ThemedBreadcrumbs() {
     'Table Entry': <Grid2x2Plus className="w-4 h-4" />,
     'Dashboard': <Dashboard />,
     'Table View': <Grid2x2Check className="w-4 h-4" />,
-    'Settings' : <Settings2 className="w-4 h-4" />,
+    'Settings': <Settings2 className="w-4 h-4" />,
+    'Logging': <Grid2x2Check className="w-4 h-4" />,
   };
 
   const mainCategoryRaw = pathnames[1]; // habit, expense, investment
@@ -28,9 +29,9 @@ export default function ThemedBreadcrumbs() {
 
   const subCategory = subCategoryRaw
     ? subCategoryRaw
-        .split('-')
-        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-        .join(' ')
+      .split('-')
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ')
     : null;
 
   return (

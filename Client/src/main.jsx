@@ -22,7 +22,7 @@ import ForgotPasswordOTPverification from './pages/Authentication/ForgotPassword
 import Habit from './pages/Dashboard/Habit/Habit.jsx'
 import HabitTableEntry from './pages/Dashboard/Habit/HabitTableEntry.jsx'
 import HabitDashboard from './pages/Dashboard/Habit/HabitDashboard.jsx'
-import HabitTableView from './pages/Dashboard/Habit/HabitTableView.jsx'
+import HabitLogging from './pages/Dashboard/Habit/HabitLogging.jsx'
 import HabitSettings from './pages/Dashboard/Habit/HabitSettings.jsx'
 
 // Expense Pages
@@ -58,7 +58,7 @@ const router = createBrowserRouter(
         <Route path='login' element={<Login />} />
         <Route path='signup' element={<Signup />} />
         <Route path='otp' element={<Otp />} />
-        <Route path='forgot_Password_Verify' element={<ForgotPasswordVerification />} /> 
+        <Route path='forgot_Password_Verify' element={<ForgotPasswordVerification />} />
         <Route path='forgot_Password-otp' element={<ForgotPasswordOTPverification />} />
         <Route path='reset-password' element={<ResetPassword />} />
       </Route>
@@ -72,7 +72,7 @@ const router = createBrowserRouter(
           <Route index element={<Habit />} />
           <Route path="table-entry" element={<HabitTableEntry />} />
           <Route path="dashboard" element={<HabitDashboard />} />
-          <Route path="table-view" element={<HabitTableView />} />
+          <Route path="logging" element={<HabitLogging />} />
           <Route path="settings" element={<HabitSettings />} />
         </Route>
 

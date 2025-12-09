@@ -69,11 +69,11 @@ const CalorieScoreBoard = ({
     const infoData = {
         from: {
             title: "From Date",
-            description: "The start date of the selected date range for your habit tracking."
+            description: "The First logged Habit Date of the selected date range for your habit tracking."
         },
         to: {
             title: "To Date",
-            description: "The end date of the selected date range for your habit tracking."
+            description: "The Last logged Habit Date of the selected date range for your habit tracking."
         },
         burned: {
             title: "Total Burned",
@@ -85,7 +85,7 @@ const CalorieScoreBoard = ({
         },
         effective: {
             title: "Effective Calories",
-            description: "Your net calorie balance calculated as: Total Consumed - Total Burned."
+            description: "Your net calorie balance calculated as: (Total Consumed - Total Burned)."
         },
         offset: {
             title: "Offset",
@@ -204,13 +204,82 @@ const CalorieScoreBoard = ({
 
             </div>
 
-            {/* Notes */}
-            <div className="mt-4 text-sm text-gray-600 dark:text-gray-500">
-                <p className='mb-1'>📅 <strong>From / To</strong>: Automatically picked from habit data (latest to oldest).</p>
-                <p className='mb-1'>🔥 <strong>Burned</strong>: Total calories burned via workouts or activities. Compared to your goal for {totalDays} days.</p>
-                <p className='mb-1'>🍽️ <strong>Consumed</strong>: Total calories eaten. Compared to your max allowed intake for {totalDays} days.</p>
-                <p className='mb-1'>⚖️ <strong>Effective</strong>: Net calories = Consumed - Burned.</p>
-                <p className='mb-1'>🎯 <strong>Offset</strong>: Difference from {basalMetabolicRate} kcal reference. Positive = surplus, Negative = deficit.</p>
+            {/* Scales Section */}
+            <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                <CalorieScale
+                    label="Total Consumed"
+                    value={consumedSum}
+                    min={consumedMinGoal}
+                    max={consumedGoal}
+                    color="bg-green-500"
+                    textColor="text-green-500"
+                    icon={Utensils}
+                />
+                <CalorieScale
+                    label="Total Burned"
+                    value={burnedSum}
+                    min={burnedMinGoal}
+                    max={burnedGoal}
+                    color="bg-red-500"
+                    textColor="text-red-500"
+                    icon={Flame}
+                />
+
+            </div>
+        </div>
+    );
+};
+
+const CalorieScale = ({ label, value, min, max, color, textColor, icon: Icon }) => {
+    const range = max - min;
+    let percentage = 0;
+
+    if (range > 0) {
+        percentage = ((value - min) / range) * 100;
+    } else if (value >= max) {
+        percentage = 100;
+    }
+
+    // Clamp percentage between 0 and 100 for visual consistency
+    const clampedPercentage = Math.min(Math.max(percentage, 0), 100);
+
+    return (
+        <div className="bg-base-100 rounded-xl p-4 shadow-sm border border-base-200">
+            <div className="flex justify-between items-center mb-3">
+                <div className="flex items-center gap-2">
+                    <span className="font-semibold text-sm">{label}</span>
+                </div>
+                <span className={`font-bold text-lg ${textColor}`}>
+                    {value.toLocaleString()} <span className="text-xs text-base-content/60 font-normal">kcal</span>
+                </span>
+            </div>
+
+            <div className="relative h-3 bg-base-300 rounded-full w-full mt-2">
+                {/* Progress Bar Background (Range) */}
+                <div
+                    className={`absolute top-0 left-0 h-full rounded-full ${color} opacity-20`}
+                    style={{ width: '100%' }}
+                ></div>
+
+                {/* Sliding Marker */}
+                <div
+                    className={`absolute top-1/2 -translate-y-1/2 transition-all duration-700 ease-out z-10`}
+                    style={{ left: `calc(${clampedPercentage}% - 12px)` }}
+                >
+                    <div className={`bg-base-100 rounded-full p-1 shadow-md border border-base-200 ${textColor}`}>
+                        <Icon size={16} fill="currentColor" />
+                    </div>
+
+                    {/* Tooltip on Hover (Optional, but nice) */}
+                    <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-base-300 text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap border border-base-200 shadow-sm">
+                        {value}
+                    </div>
+                </div>
+            </div>
+
+            <div className="flex justify-between text-xs text-base-content/50 mt-2 font-medium">
+                <span>Min: {min.toLocaleString()}</span>
+                <span>Max: {max.toLocaleString()}</span>
             </div>
         </div>
     );

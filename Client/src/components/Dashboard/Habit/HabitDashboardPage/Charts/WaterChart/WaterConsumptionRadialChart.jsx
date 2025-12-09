@@ -1,40 +1,33 @@
 import Chart from "react-apexcharts";
 import { useState, useEffect } from "react";
 
-function CalorieBurnedRadialChart({ habitData, BurnedCalorieMax, totalEntries }) {
+function WaterConsumptionRadialChart({ habitData, ConsumedCalorieMax }) {
   const [rawValue, setRawValue] = useState(0);
   const [percentage, setPercentage] = useState(0);
-  const [totalBurnedMax, setTotalBurnedMax] = useState(0);
 
   useEffect(() => {
     if (!Array.isArray(habitData)) return;
 
-    let burned = 0;
-    for (const { burned: burnedVal } of habitData) {
-      burned += Number(burnedVal) || 0;
+    let consumed = 0;
+    for (const { intake } of habitData) {
+      consumed += Number(intake) || 0;
     }
 
     const totalDays = habitData.length || 1;
-    const total_BurnedMax = (Number(BurnedCalorieMax) || 1) * totalDays;
-    const burnedPercent = Math.min(100, Math.round((burned / total_BurnedMax) * 100));
-    console.log("Burned Percent", burnedPercent);
-    console.log("Burned", burned);
-    console.log("Total Burned Max", totalBurnedMax);
-    console.log("Total Days", totalDays);
+    const totalConsumedMax = (Number(ConsumedCalorieMax) || 1) * totalDays;
+    const consumedPercent = Math.min(100, Math.round((consumed / totalConsumedMax) * 100));
 
-    setRawValue(burned);
-    setPercentage(burnedPercent);
-    setTotalBurnedMax(total_BurnedMax);
-
-  }, [habitData, BurnedCalorieMax, totalEntries]);
+    setRawValue(consumed);
+    setPercentage(consumedPercent);
+  }, [habitData, ConsumedCalorieMax]);
 
   const options = {
     chart: {
       height: 450,
       type: "radialBar",
-      // toolbar: {
-      //   show: true,
-      // },
+      toolbar: {
+        show: true,
+      },
     },
     plotOptions: {
       radialBar: {
@@ -48,20 +41,20 @@ function CalorieBurnedRadialChart({ habitData, BurnedCalorieMax, totalEntries })
           dropShadow: { enabled: false },
         },
         track: {
-          background: "#1f2937",
+          background: "#1f2937", // Tailwind gray-800
           strokeWidth: "97%",
         },
         dataLabels: {
           name: {
             show: true,
-            color: "#52bafff5",
+            color: "#d1d5db",
             fontSize: "14px",
           },
           value: {
+            color: "#ffffff",
             show: true,
-            color: "#ffffffc5",
-            fontSize: "15px",
-            formatter: () => `${percentage}% of ${totalBurnedMax} Kcal`,
+            fontSize: "20px",
+            formatter: () => `${percentage}%`,
           },
         },
       },
@@ -72,12 +65,12 @@ function CalorieBurnedRadialChart({ habitData, BurnedCalorieMax, totalEntries })
       y: {
         formatter: () => `${rawValue} kcal`,
         title: {
-          formatter: () => "Calories Burned",
+          formatter: () => "Calories Consumed",
         },
       },
     },
-    colors: ["#52baff75"], // Tailwind blue-300
-    labels: [`${totalEntries} Day${totalEntries === 1 ? "" : "s"} of Burning`],
+    colors: ["#1E3A8A"], // Tailwind blue-900
+    labels: ["Calories Consumed"],
   };
 
   return (
@@ -87,4 +80,4 @@ function CalorieBurnedRadialChart({ habitData, BurnedCalorieMax, totalEntries })
   );
 }
 
-export default CalorieBurnedRadialChart;
+export default WaterConsumptionRadialChart;

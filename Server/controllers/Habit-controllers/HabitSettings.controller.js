@@ -36,6 +36,7 @@ const getHabitSettings = asynchandler(async (req, res) => {
     activityLevel: Settings.activityLevel,
     maintenanceCalories: Settings.maintenanceCalories,
     bmr: Settings.bmr,
+    bmi: Settings.bmi,
   }
   return res.status(200).json(
     new ApiResponse(200, Data, "Habit settings fetched successfully")
@@ -70,6 +71,7 @@ const updateHabitSettings = asynchandler(async (req, res) => {
     activityLevel: Settings.activityLevel,
     maintenanceCalories: Settings.maintenanceCalories,
     bmr: Settings.bmr,
+    bmi: Settings.bmi,
   }
   return res.status(200).json(
     new ApiResponse(200, Data, "Habit settings updated successfully")
@@ -101,6 +103,8 @@ const resetHabitSettingsToDefault = asynchandler(async (req, res) => {
     height: Settings.height,
     activityLevel: Settings.activityLevel,
     maintenanceCalories: Settings.maintenanceCalories,
+    bmr: Settings.bmr,
+    bmi: Settings.bmi,
   }
   return res.status(200).json(
     new ApiResponse(200, Data, "Habit settings reset to default")

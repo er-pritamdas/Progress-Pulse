@@ -14,6 +14,7 @@ import EffectiveMixedStackChart from "../../../components/Dashboard/Habit/HabitD
 import DeficitVsSurplusMixedStackChart from "../../../components/Dashboard/Habit/HabitDashboardPage/Charts/CalorieChart/DeficitVsSurplusMixedStackChart";
 import CurrentStreakCard from "../../../components/Dashboard/Habit/HabitDashboardPage/CurrentStreakCard";
 import CalorieScoreBoard from "../../../components/Dashboard/Habit/HabitDashboardPage/CalorieScoreBoard";
+import WaterConsumptionRadialChart from "../../../components/Dashboard/Habit/HabitDashboardPage/Charts/WaterChart/WaterConsumptionRadialChart";
 
 function HabitDashboard() {
   TitleChanger("Progress Pulse | Habit Dashboard");
@@ -264,7 +265,7 @@ function HabitDashboard() {
           <section>
             <div className="grid grid-cols-12 gap-4 mb-8">
               {/* Consumed Vs Burned Chart */}
-              <div className="col-span-6 row-span-1 bg-base-100 rounded-2xl shadow-md p-4">
+              <div className="col-span-5 row-span-1 bg-base-100 rounded-2xl shadow-md p-4">
                 <h3 className="text-lg font-semibold mb-2">
                   Consumed Vs Burned
                 </h3>
@@ -284,6 +285,7 @@ function HabitDashboard() {
                             key={JSON.stringify(habitData)}
                             habitData={habitData}
                             ConsumedCalorieMax={ConsumedCalorieMax}
+                            totalEntries={totalEntries}
                           /> ||
                           "Coming Soon"}
                       </div>
@@ -301,6 +303,7 @@ function HabitDashboard() {
                           key={JSON.stringify(habitData)}
                           habitData={habitData}
                           BurnedCalorieMax={BurnedCalorieMax}
+                          totalEntries={totalEntries}
                         /> ||
                           "Coming Soon"}
                       </div>
@@ -321,6 +324,7 @@ function HabitDashboard() {
                             habitData={habitData}
                             ConsumedCalorieMax={ConsumedCalorieMax}
                             BurnedCalorieMax={BurnedCalorieMax}
+                            totalEntries={totalEntries}
                           />
                         ) || "Coming Soon"}
                       </div>
@@ -330,7 +334,7 @@ function HabitDashboard() {
               </div>
 
               {/* Effective Vs Actual */}
-              <div className="col-span-6 row-span-1 bg-base-100 rounded-2xl shadow-md p-4">
+              <div className="col-span-7 row-span-1 bg-base-100 rounded-2xl shadow-md p-4">
                 <h3 className="text-lg font-semibold mb-2">
                   💯 Calorie Score Board
                 </h3>
@@ -346,22 +350,7 @@ function HabitDashboard() {
                     toDate={toDate}
                   />
                 </div>
-                {/* <div className="mt-4 text-sm text-gray-600 dark:text-gray-400">
-                  <p>📅 <strong>From / To</strong>: The selected date range for tracking your calorie activity.</p>
-                  <p>🔥 <strong>Burned</strong>: Total calories burned via workouts or activities. Compared to your goal.</p>
-                  <p>🍽️ <strong>Consumed</strong>: Total calories eaten during the period. Compared to your upper limit.</p>
-                  <p>⚖️ <strong>Effective</strong>: Net calories = Consumed - Burned (lower is better for fat loss).</p>
-                  <p>🎯 <strong>Offset</strong>: Difference from 2000 kcal benchmark. Helps assess surplus/deficit.</p>
-                </div> */}
               </div>
-
-              {/* Demo */}
-              {/* <div className="col-span-4 row-span-1 bg-base-100 rounded-2xl shadow-md p-4">
-                <h3 className="text-lg font-semibold mb-2">📈 Habit Trends</h3>
-                <div className="h-72 flex items-center justify-center text-gray-500">
-                  Coming Soon
-                </div>
-              </div> */}
             </div>
           </section>
           {/* Calorie Chart Section */}
@@ -400,12 +389,64 @@ function HabitDashboard() {
             </div>
           </section>
         </div>
-        
+
         <div className="mb-12">
           {/* Water Analysis Heading */}
           <div className="py-3 text-2xl text-primary font-semibold divider mb-12">
             Water Analysis
           </div>
+          {/* Water Overview Section */}
+          <section>
+            <div className="grid grid-cols-12 gap-4 mb-8">
+              {/* Consumed Vs Burned Chart */}
+              <div className="col-span-6 row-span-1 bg-base-100 rounded-2xl shadow-md p-4">
+                <h3 className="text-lg font-semibold mb-2">
+                  Water Consumption
+                </h3>
+                <div>
+                  <div className="tabs tabs-border">
+                    {/* Tab1 : Water Consumed */}
+                    <input
+                      type="radio"
+                      name="WaterConsumption"
+                      className="tab"
+                      aria-label="Water Consumed"
+                    />
+                    <div className="tab-content border-base-300 bg-base-100 p-10">
+                      <div className="h-72 flex items-center justify-center text-gray-500">
+                        {
+                          <WaterConsumptionRadialChart
+                            key={JSON.stringify(habitData)}
+                            habitData={habitData}
+                            waterMax={waterMax}
+                          /> ||
+                          "Coming Soon"}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Effective Vs Actual */}
+              <div className="col-span-6 row-span-1 bg-base-100 rounded-2xl shadow-md p-4">
+                <h3 className="text-lg font-semibold mb-2">
+                  💯 Calorie Score Board
+                </h3>
+                <div className="h-101 flex items-center justify-center text-gray-500">
+                  <CalorieScoreBoard
+                    habitData={habitData}
+                    ConsumedCalorieMax={ConsumedCalorieMax}
+                    ConsumedCalorieMin={ConsumedCalorieMin}
+                    BurnedCalorieMax={BurnedCalorieMax}
+                    BurnedCalorieMin={BurnedCalorieMin}
+                    basalMetabolicRate={basalMetabolicRate}
+                    fromDate={fromDate}
+                    toDate={toDate}
+                  />
+                </div>
+              </div>
+            </div>
+          </section>
 
         </div>
         {/* Log Section */}

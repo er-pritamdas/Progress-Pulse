@@ -40,6 +40,42 @@ export const resetHabitSettings = createAsyncThunk(
   }
 )
 
+export const fetchPhysicalLogs = createAsyncThunk(
+  'habit/fetchPhysicalLogs',
+  async (_, thunkAPI) => {
+    try {
+      const res = await axiosInstance.get('/v1/dashboard/habit/logging')
+      return res.data.data
+    } catch (err) {
+      return thunkAPI.rejectWithValue(err.response?.data?.message || 'Failed to fetch physical logs')
+    }
+  }
+)
+
+export const addPhysicalLog = createAsyncThunk(
+  'habit/addPhysicalLog',
+  async (logData, thunkAPI) => {
+    try {
+      const res = await axiosInstance.post('/v1/dashboard/habit/logging', logData)
+      return res.data.data
+    } catch (err) {
+      return thunkAPI.rejectWithValue(err.response?.data?.message || 'Failed to add physical log')
+    }
+  }
+)
+
+export const deletePhysicalLog = createAsyncThunk(
+  'habit/deletePhysicalLog',
+  async (logId, thunkAPI) => {
+    try {
+      await axiosInstance.delete(`/v1/dashboard/habit/logging/${logId}`)
+      return logId
+    } catch (err) {
+      return thunkAPI.rejectWithValue(err.response?.data?.message || 'Failed to delete physical log')
+    }
+  }
+)
+
 const initialState = {
   settings: {
     burned: { min: 300, max: 500 },
@@ -63,6 +99,9 @@ const initialState = {
   activityLevel: "light",
   maintenanceCalories: 0,
   bmr: 0,
+  bmr: 0,
+  bmi: 0,
+  physicalLogs: [],
   loading: false,
   error: null,
 }
@@ -107,6 +146,7 @@ const habitSlice = createSlice({
       })
       .addCase(fetchHabitSettings.fulfilled, (state, action) => {
         return {
+          ...state,
           ...action.payload,
           loading: false,
           error: null,
@@ -123,6 +163,7 @@ const habitSlice = createSlice({
       })
       .addCase(updateHabitSettings.fulfilled, (state, action) => {
         return {
+          ...state,
           ...action.payload,
           loading: false,
           error: null,
@@ -139,12 +180,55 @@ const habitSlice = createSlice({
       })
       .addCase(resetHabitSettings.fulfilled, (state, action) => {
         return {
+          ...state,
           ...action.payload,
           loading: false,
           error: null,
         };
       })
       .addCase(resetHabitSettings.rejected, (state, action) => {
+        state.loading = false
+        state.error = action.payload
+      })
+
+      .addCase(fetchPhysicalLogs.pending, (state) => {
+        state.loading = true
+        state.error = null
+      })
+      .addCase(fetchPhysicalLogs.fulfilled, (state, action) => {
+        state.physicalLogs = action.payload
+        state.loading = false
+        state.error = null
+      })
+      .addCase(fetchPhysicalLogs.rejected, (state, action) => {
+        state.loading = false
+        state.error = action.payload
+      })
+
+      .addCase(addPhysicalLog.pending, (state) => {
+        state.loading = true
+        state.error = null
+      })
+      .addCase(addPhysicalLog.fulfilled, (state, action) => {
+        state.physicalLogs.push(action.payload)
+        state.loading = false
+        state.error = null
+      })
+      .addCase(addPhysicalLog.rejected, (state, action) => {
+        state.loading = false
+        state.error = action.payload
+      })
+
+      .addCase(deletePhysicalLog.pending, (state) => {
+        state.loading = true
+        state.error = null
+      })
+      .addCase(deletePhysicalLog.fulfilled, (state, action) => {
+        state.physicalLogs = state.physicalLogs.filter(log => log._id !== action.payload)
+        state.loading = false
+        state.error = null
+      })
+      .addCase(deletePhysicalLog.rejected, (state, action) => {
         state.loading = false
         state.error = action.payload
       })

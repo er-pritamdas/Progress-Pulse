@@ -85,6 +85,10 @@ const habitSettingsSchema = new mongoose.Schema(
             type: Number,
             default: 0
         },
+        bmi: {
+            type: Number,
+            default: 0
+        },
     },
     {
         timestamps: true,

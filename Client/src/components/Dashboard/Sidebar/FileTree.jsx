@@ -74,13 +74,13 @@ function FileTree({ open, setOpen }) {
                                 </Tooltip>
                             </li>
                             <li>
-                                <Tooltip title={!open ? "Table View" : ""} placement="right" arrow slotProps={tooltipSlotProps}>
+                                <Tooltip title={!open ? "Logging" : ""} placement="right" arrow slotProps={tooltipSlotProps}>
                                     <Link
-                                        to="/dashboard/habit/table-view"
-                                        className={getLinkClass("/dashboard/habit/table-view")}
+                                        to="/dashboard/habit/logging"
+                                        className={getLinkClass("/dashboard/habit/logging")}
                                     >
                                         <TableView />
-                                        {open && <span className="ml-2">Table View</span>}
+                                        {open && <span className="ml-2">Logging</span>}
                                     </Link>
                                 </Tooltip>
                             </li>

@@ -54,7 +54,7 @@ const HabitScoreCard = ({ habitData = [], fromDate, toDate }) => {
   return (
     <div className="flex flex-col items-center justify-center">
       <Trophy className="text-yellow-500 mb-2" size={32} />
-      <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Habit Score</h2>
+      <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Consistency</h2>
       <p className={`text-3xl font-bold ${color} mt-2`}>{percentageScore}%</p>
       <p className="text-sm text-gray-600 dark:text-gray-400">{message}</p>
 

@@ -1,9 +1,11 @@
 import Chart from "react-apexcharts";
 import { useState, useEffect } from "react";
 
-function CalorieConsumedRadialChart({ habitData, ConsumedCalorieMax }) {
+function CalorieConsumedRadialChart({ habitData, ConsumedCalorieMax, totalEntries }) {
+  console.log(habitData)
   const [rawValue, setRawValue] = useState(0);
   const [percentage, setPercentage] = useState(0);
+  const [totalConsumedMax, setTotalConsumedMax] = useState(0);
 
   useEffect(() => {
     if (!Array.isArray(habitData)) return;
@@ -14,20 +16,22 @@ function CalorieConsumedRadialChart({ habitData, ConsumedCalorieMax }) {
     }
 
     const totalDays = habitData.length || 1;
-    const totalConsumedMax = (Number(ConsumedCalorieMax) || 1) * totalDays;
-    const consumedPercent = Math.min(100, Math.round((consumed / totalConsumedMax) * 100));
+    const total_ConsumedMax = (Number(ConsumedCalorieMax) || 1) * totalDays;
+    const consumedPercent = Math.min(100, Math.round((consumed / total_ConsumedMax) * 100));
 
     setRawValue(consumed);
     setPercentage(consumedPercent);
-  }, [habitData, ConsumedCalorieMax]);
+    setTotalConsumedMax(total_ConsumedMax);
+
+  }, [habitData, ConsumedCalorieMax, totalEntries]);
 
   const options = {
     chart: {
       height: 450,
       type: "radialBar",
-      toolbar: {
-        show: true,
-      },
+      // toolbar: {
+      //   show: true,
+      // },
     },
     plotOptions: {
       radialBar: {
@@ -47,14 +51,14 @@ function CalorieConsumedRadialChart({ habitData, ConsumedCalorieMax }) {
         dataLabels: {
           name: {
             show: true,
-            color: "#d1d5db",
+            color: "#72abffe0",
             fontSize: "14px",
           },
           value: {
-            color: "#ffffff",
+            color: "#ffffffc5",
             show: true,
-            fontSize: "20px",
-            formatter: () => `${percentage}%`,
+            fontSize: "15px",
+            formatter: () => `${percentage}% of ${totalConsumedMax} Kcal`,
           },
         },
       },
@@ -70,7 +74,7 @@ function CalorieConsumedRadialChart({ habitData, ConsumedCalorieMax }) {
       },
     },
     colors: ["#1E3A8A"], // Tailwind blue-900
-    labels: ["Calories Consumed"],
+    labels: [`${totalEntries} Day${totalEntries === 1 ? "" : "s"} of Consumption`],
   };
 
   return (
