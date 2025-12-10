@@ -15,6 +15,8 @@ import DeficitVsSurplusMixedStackChart from "../../../components/Dashboard/Habit
 import CurrentStreakCard from "../../../components/Dashboard/Habit/HabitDashboardPage/CurrentStreakCard";
 import CalorieScoreBoard from "../../../components/Dashboard/Habit/HabitDashboardPage/CalorieScoreBoard";
 import WaterConsumptionRadialChart from "../../../components/Dashboard/Habit/HabitDashboardPage/Charts/WaterChart/WaterConsumptionRadialChart";
+import WaterScoreBoard from "../../../components/Dashboard/Habit/HabitDashboardPage/WaterScoreBoard";
+import DeficitVsSurplusLitreMixedStackChart from "../../../components/Dashboard/Habit/HabitDashboardPage/Charts/WaterChart/DeficitVsSurplusLitreMixedStackChart";
 
 function HabitDashboard() {
   TitleChanger("Progress Pulse | Habit Dashboard");
@@ -376,7 +378,7 @@ function HabitDashboard() {
                   type="radio"
                   name="CalorieVisualization"
                   className="tab"
-                  aria-label="Deficit / Surplus"
+                  aria-label="Deficit / Surplus (Kcal)"
                 />
                 <div className="tab-content border-base-300 bg-base-100 p-10">
                   <DeficitVsSurplusMixedStackChart
@@ -408,9 +410,10 @@ function HabitDashboard() {
                     {/* Tab1 : Water Consumed */}
                     <input
                       type="radio"
-                      name="WaterConsumption"
+                      name="WaterConsumptionRadialChart"
                       className="tab"
                       aria-label="Water Consumed"
+                      defaultChecked
                     />
                     <div className="tab-content border-base-300 bg-base-100 p-10">
                       <div className="h-72 flex items-center justify-center text-gray-500">
@@ -419,6 +422,7 @@ function HabitDashboard() {
                             key={JSON.stringify(habitData)}
                             habitData={habitData}
                             waterMax={waterMax}
+                            totalEntries={totalEntries}
                           /> ||
                           "Coming Soon"}
                       </div>
@@ -430,18 +434,55 @@ function HabitDashboard() {
               {/* Effective Vs Actual */}
               <div className="col-span-6 row-span-1 bg-base-100 rounded-2xl shadow-md p-4">
                 <h3 className="text-lg font-semibold mb-2">
-                  💯 Calorie Score Board
+                  💯 Water Score Board
                 </h3>
                 <div className="h-101 flex items-center justify-center text-gray-500">
-                  <CalorieScoreBoard
+                  <WaterScoreBoard
                     habitData={habitData}
-                    ConsumedCalorieMax={ConsumedCalorieMax}
-                    ConsumedCalorieMin={ConsumedCalorieMin}
-                    BurnedCalorieMax={BurnedCalorieMax}
-                    BurnedCalorieMin={BurnedCalorieMin}
+                    waterMax={waterMax}
+                    waterMin={waterMin}
                     basalMetabolicRate={basalMetabolicRate}
                     fromDate={fromDate}
                     toDate={toDate}
+                  />
+                </div>
+              </div>
+            </div>
+          </section>
+
+
+          {/* Water Chart Section */}
+          <section>
+            <h2 className="text-xl font-semibold mb-4"></h2>
+            <div className="bg-base-100 rounded-2xl shadow-md p-6">
+              <div className="tabs tabs-border">
+                <input
+                  type="radio"
+                  name="WaterConsumption"
+                  className="tab"
+                  aria-label="Water Consumption"
+                  defaultChecked
+                />
+                <div className="tab-content border-base-300 bg-base-100 p-10">
+                  <WaterHeatMap
+                    habitData={habitData}
+                    waterMax={waterMax}
+                    waterMin={waterMin}
+                  />
+                </div>
+
+                <input
+                  type="radio"
+                  name="WaterConsumption"
+                  className="tab"
+                  aria-label="Deficit / Surplus (Liters)"
+                />
+                <div className="tab-content border-base-300 bg-base-100 p-10">
+                  <DeficitVsSurplusLitreMixedStackChart
+                    habitData={habitData}
+                    waterMax={waterMax}
+                    waterMin={waterMin}
+                    basalMetabolicRate={basalMetabolicRate}
                   />
                 </div>
               </div>

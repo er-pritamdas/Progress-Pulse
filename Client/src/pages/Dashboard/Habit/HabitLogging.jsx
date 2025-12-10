@@ -3,7 +3,7 @@ import { useSelector, useDispatch } from "react-redux";
 import { TitleChanger } from "../../../utils/TitleChanger";
 import { updateHabitSettings, fetchPhysicalLogs, addPhysicalLog, deletePhysicalLog } from "../../../services/redux/slice/habitSlice";
 import { useLoading } from "../../../Context/LoadingContext";
-import { Calculator, Play, UserCheck, Plus, History, Trash2 } from "lucide-react";
+import { Calculator, Play, UserCheck, Plus, History, Trash2, Info } from "lucide-react";
 import ReactApexChart from "react-apexcharts";
 import ErrorAlert from "../../../utils/Alerts/ErrorAlert";
 import SuccessAlert from "../../../utils/Alerts/SuccessAlert";
@@ -50,7 +50,7 @@ function HabitLogging() {
     const activityLabels = {
         light: "Light: exercise 1-3 times/week",
         moderate: "Moderate: exercise 4-5 times/week",
-        active: "Active: daily exercise or intense exercise 3-4 times/week",
+        active: "Active: daily exercise 5-6 times/week",
         very_active: "Very Active: intense exercise 6-7 times/week",
     };
 
@@ -69,15 +69,7 @@ function HabitLogging() {
         dispatch(fetchPhysicalLogs());
     }, [dispatch]);
 
-    useEffect(() => {
-        let bmiValue = 0;
-        if (weight && height) {
-            bmiValue = weight / ((height / 100) * (height / 100));
-            setBmi(parseFloat(bmiValue.toFixed(1)));
-        } else {
-            setBmi(0);
-        }
-    }, [weight, height]);
+
 
     const calculateCalories = () => {
         let calculatedBmr = 0;
@@ -102,6 +94,7 @@ function HabitLogging() {
         if (weight && height) {
             bmiValue = weight / ((height / 100) * (height / 100));
         }
+        setBmi(parseFloat(bmiValue.toFixed(1)));
 
         // Save to Redux/Backend
         const localState = {
@@ -269,64 +262,7 @@ function HabitLogging() {
         grid: { borderColor: '#3f3f3f42' }
     };
 
-    // Chart Options
-    const chartOptions = {
-        chart: {
-            type: 'radialBar',
-            offsetY: -20,
-            sparkline: {
-                enabled: true
-            }
-        },
-        plotOptions: {
-            radialBar: {
-                startAngle: -90,
-                endAngle: 90,
-                track: {
-                    background: "#e7e7e7",
-                    strokeWidth: '97%',
-                    margin: 5, // margin is in pixels
-                    dropShadow: {
-                        enabled: true,
-                        top: 2,
-                        left: 0,
-                        color: '#999',
-                        opacity: 1,
-                        blur: 2
-                    }
-                },
-                dataLabels: {
-                    name: {
-                        show: false
-                    },
-                    value: {
-                        offsetY: -2,
-                        fontSize: '22px'
-                    }
-                }
-            }
-        },
-        grid: {
-            padding: {
-                top: -10
-            }
-        },
-        fill: {
-            type: 'gradient',
-            gradient: {
-                shade: 'light',
-                shadeIntensity: 0.4,
-                inverseColors: false,
-                opacityFrom: 1,
-                opacityTo: 1,
-                stops: [0, 50, 53, 91]
-            },
-        },
-        labels: ['Average Results'],
-        colors: [bmi < 18.5 ? "#3ABFF8" : bmi < 25 ? "#36D399" : bmi < 30 ? "#FBBD23" : "#F87272"]
-    };
 
-    const chartSeries = [Math.min((bmi / 40) * 100, 100)];
 
 
     return (
@@ -347,14 +283,14 @@ function HabitLogging() {
                 <div className="card bg-base-200 p-6 shadow-md mb-8">
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                         {/* Inputs */}
-                        <div className="space-y-4">
+                        <div className="space-y-4 mt-10">
                             <label className="floating-label w-full">
                                 <input
                                     type="number"
                                     placeholder="Age"
                                     className="input input-md w-full"
                                     value={age}
-                                    onChange={(e) => setAge(Number(e.target.value))}
+                                    onChange={(e) => setAge(e.target.value === "" ? "" : Number(e.target.value))}
                                 />
                                 <span>Age (15-80)</span>
                             </label>
@@ -393,7 +329,7 @@ function HabitLogging() {
                                     placeholder="Height"
                                     className="input input-md w-full"
                                     value={height}
-                                    onChange={(e) => setHeight(Number(e.target.value))}
+                                    onChange={(e) => setHeight(e.target.value === "" ? "" : Number(e.target.value))}
                                 />
                                 <span>Height (cm)</span>
                             </label>
@@ -405,7 +341,7 @@ function HabitLogging() {
                                     placeholder="Weight"
                                     className="input input-md w-full"
                                     value={weight}
-                                    onChange={(e) => setWeight(Number(e.target.value))}
+                                    onChange={(e) => setWeight(e.target.value === "" ? "" : Number(e.target.value))}
                                 />
                                 <span>Weight (kg)</span>
                             </label>
@@ -442,31 +378,123 @@ function HabitLogging() {
                             </div>
                         </div>
 
-                        {/* BMR & BMI Display */}
-                        <div className="flex flex-col items-center justify-center space-y-8">
-                            {/* BMR */}
-                            <div className="flex flex-col items-center">
-                                <div className="radial-progress text-primary" style={{ "--value": 100, "--size": "10rem", "--thickness": "0.8rem" }} role="progressbar">
-                                    <div className="flex flex-col items-center">
-                                        <span className="text-3xl font-bold">{bmr || 0}</span>
-                                        <span className="text-sm opacity-70">BMR</span>
+
+                        <div className="tabs tabs-border">
+
+                            {/* TAB 1 — BMR */}
+                            <input
+                                type="radio"
+                                name="stats_tabs"
+                                className="tab"
+                                aria-label="BMR"
+                                defaultChecked
+                            />
+                            <div className="tab-content mt-15">
+                                {/* BMR Content */}
+                                <div className="flex flex-col items-center">
+                                    <div
+                                        className="radial-progress text-primary/80"
+                                        style={{
+                                            "--value": 100,
+                                            "--size": "10rem",
+                                            "--thickness": "0.8rem",
+                                        }}
+                                        role="progressbar"
+                                    >
+                                        <div className="flex flex-col items-center">
+                                            <span className="text-3xl font-bold">{bmr || 0}</span>
+                                            <div className="flex items-center gap-1 opacity-70">
+                                                <span className="text-sm">BMR</span>
+                                                <button
+                                                    className="btn btn-ghost btn-xs btn-circle h-5 w-5 min-h-0"
+                                                    onClick={() =>
+                                                        document
+                                                            .getElementById("bmr_info_modal")
+                                                            .showModal()
+                                                    }
+                                                >
+                                                    <Info size={14} />
+                                                </button>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* BMI Chart */}
-                            <div className="flex flex-col items-center w-full">
-                                <h3 className="text-lg font-semibold mb-2">BMI Meter</h3>
-                                <div id="chart" className="w-full flex justify-center">
-                                    <ReactApexChart options={chartOptions} series={chartSeries} type="radialBar" height={250} />
-                                </div>
-                                <div className="text-center mt-[-20px]">
-                                    <span className="text-2xl font-bold">{bmi}</span>
-                                    <p className="text-sm text-base-content/70">
-                                        {bmi < 18.5 ? "Underweight" : bmi < 25 ? "Normal" : bmi < 30 ? "Overweight" : "Obese"}
-                                    </p>
+                            {/* TAB 2 — BMI */}
+                            <input
+                                type="radio"
+                                name="stats_tabs"
+                                className="tab"
+                                aria-label="BMI"
+                            />
+                            {/* BMI Content */}
+                            <div className="tab-content mt-15">
+                                {/* BMI Content */}
+                                <div className="flex flex-col items-center w-full">
+                                    <h3 className="text-lg font-semibold mb-4">BMI Meter</h3>
+
+                                    <div className="w-full max-w-xs relative mb-6">
+                                        {/* SCALE BAR */}
+                                        <div className="h-4 w-full rounded-full flex overflow-hidden">
+                                            <div className="h-full bg-info w-[46.25%]"></div>
+                                            <div className="h-full bg-success w-[16.25%]"></div>
+                                            <div className="h-full bg-warning w-[12.5%]"></div>
+                                            <div className="h-full bg-error flex-1"></div>
+                                        </div>
+
+                                        {/* MARKER */}
+                                        <div
+                                            className="absolute top-0 w-2 h-6 bg-black -mt-1 transition-all duration-500 ease-out"
+                                            style={{
+                                                left: `${Math.min(
+                                                    Math.max((bmi / 40) * 100, 0),
+                                                    100
+                                                )}%`,
+                                                transform: "translateX(-50%)",
+                                            }}
+                                        ></div>
+
+                                        {/* LABELS */}
+                                        <div className="flex justify-between text-xs text-base-content mt-2 font-mono relative h-4">
+                                            <span className="absolute left-0 -translate-x-1/2">0</span>
+                                            <span className="absolute left-[46.25%] -translate-x-1/2">
+                                                18.5
+                                            </span>
+                                            <span className="absolute left-[62.5%] -translate-x-1/2">
+                                                25
+                                            </span>
+                                            <span className="absolute left-[75%] -translate-x-1/2">
+                                                30
+                                            </span>
+                                            <span className="absolute right-0 translate-x-1/2">40</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="text-center">
+                                        <span className="text-2xl font-bold">{bmi}</span>
+                                        <p
+                                            className={`text-sm font-medium ${bmi < 18.5
+                                                    ? "text-info"
+                                                    : bmi < 25
+                                                        ? "text-success"
+                                                        : bmi < 30
+                                                            ? "text-warning"
+                                                            : "text-error"
+                                                }`}
+                                        >
+                                            {bmi < 18.5
+                                                ? "Underweight"
+                                                : bmi < 25
+                                                    ? "Normal"
+                                                    : bmi < 30
+                                                        ? "Overweight"
+                                                        : "Obese"}
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
+
                         </div>
 
                         {/* Results Display (Right) */}
@@ -474,7 +502,7 @@ function HabitLogging() {
                             <div className="tabs tabs-border w-full">
                                 {/* Weight Loss Tab */}
                                 <input type="radio" name="weight_tabs" className="tab" aria-label="Weight Loss" defaultChecked />
-                                <div className="tab-content border-base-300 bg-base-100 p-4 rounded-b-lg">
+                                <div className="tab-content mt-5">
                                     <div className="flex flex-col gap-2">
                                         {/* Maintain Weight */}
                                         <div className="flex bg-base-100 rounded-lg overflow-hidden border border-base-300">
@@ -527,7 +555,7 @@ function HabitLogging() {
 
                                 {/* Weight Gain Tab */}
                                 <input type="radio" name="weight_tabs" className="tab" aria-label="Weight Gain" />
-                                <div className="tab-content border-base-300 bg-base-100 p-4 rounded-b-lg">
+                                <div className="tab-content mt-5">
                                     <div className="flex flex-col gap-2">
                                         {/* Maintain Weight */}
                                         <div className="flex bg-base-100 rounded-lg overflow-hidden border border-base-300">
@@ -706,7 +734,58 @@ function HabitLogging() {
                     </div>
                 </div>
             </div>
-        </div>
+
+
+            {/* BMR Info Modal */}
+            <dialog id="bmr_info_modal" className="modal">
+                <div className="modal-box">
+                    <h3 className="font-bold text-lg flex items-center gap-2">
+                        <Info size={20} /> Basal Metabolic Rate (BMR)
+                    </h3>
+                    <p className="py-4">
+                        BMR is the number of calories your body needs to accomplish its most basic (basal) life-sustaining functions.
+                    </p>
+
+                    <div className="bg-base-200 p-4 rounded-lg mb-4">
+                        <h4 className="font-semibold text-sm mb-2">Mifflin-St Jeor Equation</h4>
+                        <ul className="text-xs space-y-2 font-mono">
+                            <li><span className="font-bold">Men:</span> (10 × weight) + (6.25 × height) - (5 × age) + 5</li>
+                            <li><span className="font-bold">Women:</span> (10 × weight) + (6.25 × height) - (5 × age) - 161</li>
+                        </ul>
+                    </div>
+
+                    <div className="space-y-2">
+                        <h4 className="font-semibold text-sm">Activity Multipliers</h4>
+                        <div className="overflow-x-auto">
+                            <table className="table table-xs">
+                                <thead>
+                                    <tr>
+                                        <th>Level</th>
+                                        <th>Multiplier</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td>Sedentary</td><td>1.2</td></tr>
+                                    <tr><td>Light</td><td>1.375</td></tr>
+                                    <tr><td>Moderate</td><td>1.55</td></tr>
+                                    <tr><td>Active</td><td>1.725</td></tr>
+                                    <tr><td>Very Active</td><td>1.9</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div className="modal-action">
+                        <form method="dialog">
+                            <button className="btn">Close</button>
+                        </form>
+                    </div>
+                </div>
+                <form method="dialog" className="modal-backdrop">
+                    <button>close</button>
+                </form>
+            </dialog>
+        </div >
     );
 }
 
