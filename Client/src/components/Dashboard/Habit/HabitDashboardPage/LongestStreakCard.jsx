@@ -1,5 +1,5 @@
 import { Flame } from "lucide-react";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import dayjs from "dayjs";
 import isBetween from "dayjs/plugin/isBetween";
 dayjs.extend(isBetween);
@@ -46,7 +46,7 @@ const getStreakMessage = (streak) => {
   return { text: "You're a legend!", emoji: "🏆" };
 };
 
-const LongestStreakCard = ({ habitData = [], fromDate, toDate }) => {
+const LongestStreakCard = React.memo(({ habitData = [], fromDate, toDate }) => {
   const [streak, setStreak] = useState(0);
   const [message, setMessage] = useState({ text: "", emoji: "" });
 
@@ -71,6 +71,6 @@ const LongestStreakCard = ({ habitData = [], fromDate, toDate }) => {
       <p className="text-sm text-gray-600 dark:text-gray-400">{message.emoji} {message.text}</p>
     </div>
   );
-};
+});
 
 export default LongestStreakCard;

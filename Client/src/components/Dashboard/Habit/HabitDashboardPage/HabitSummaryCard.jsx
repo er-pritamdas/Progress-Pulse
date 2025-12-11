@@ -1,5 +1,5 @@
 import { Flame } from "lucide-react";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 
 // 🔁 Entry Counter (counts non-empty entries for any habit)
 const countHabitEntries = (habitData) => {
@@ -22,7 +22,7 @@ const getMessage = (count) => {
   return { emoji: "🚀", text: "Incredible dedication" };
 };
 
-const HabitSummaryCard = ({ habitData = [] }) => {
+const HabitSummaryCard = React.memo(({ habitData = [] }) => {
   const [count, setCount] = useState(0);
   const [message, setMessage] = useState({ emoji: "", text: "" });
 
@@ -49,6 +49,6 @@ const HabitSummaryCard = ({ habitData = [] }) => {
       </p>
     </div>
   );
-};
+});
 
 export default HabitSummaryCard;

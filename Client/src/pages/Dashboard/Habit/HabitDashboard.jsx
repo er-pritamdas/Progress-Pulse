@@ -230,8 +230,6 @@ function HabitDashboard() {
             <div className="col-span-3 bg-base-100 rounded-2xl shadow-lg p-6">
               <HabitSummaryCard
                 habitData={habitData}
-                fromDate={fromDate}
-                toDate={toDate}
               />
             </div>
             <div className="col-span-3 bg-base-100 rounded-2xl shadow-lg p-6">
@@ -292,7 +290,6 @@ function HabitDashboard() {
                       <div className="h-72 flex items-center justify-center text-gray-500">
                         {
                           <CalorieConsumedRadialChart
-                            key={JSON.stringify(habitData)}
                             habitData={habitData}
                             ConsumedCalorieMax={ConsumedCalorieMax}
                             totalEntries={totalEntries}
@@ -310,7 +307,6 @@ function HabitDashboard() {
                     <div className="tab-content border-base-300 bg-base-100 p-10">
                       <div className="h-72 flex items-center justify-center text-gray-500">
                         {<CalorieBurnedRadialChart
-                          key={JSON.stringify(habitData)}
                           habitData={habitData}
                           BurnedCalorieMax={BurnedCalorieMax}
                           totalEntries={totalEntries}
@@ -330,7 +326,6 @@ function HabitDashboard() {
                       <div className="h-72 flex items-center justify-center text-gray-500">
                         {(
                           <BurnedVsConsumedCalorieRadialChart
-                            key={JSON.stringify(habitData)}
                             habitData={habitData}
                             ConsumedCalorieMax={ConsumedCalorieMax}
                             BurnedCalorieMax={BurnedCalorieMax}
@@ -427,7 +422,6 @@ function HabitDashboard() {
                       <div className="h-72 flex items-center justify-center text-gray-500">
                         {
                           <WaterConsumptionHex
-                            key={JSON.stringify(habitData)}
                             habitData={habitData}
                             waterMax={waterMax}
                             totalEntries={totalEntries}
@@ -524,7 +518,6 @@ function HabitDashboard() {
                         <div className="h-72 flex items-center justify-center text-gray-500">
                           {
                             <SleepDurationRadialChart
-                              key={JSON.stringify(habitData)}
                               habitData={habitData}
                               sleepMax={sleepMax}
                               totalEntries={totalEntries}

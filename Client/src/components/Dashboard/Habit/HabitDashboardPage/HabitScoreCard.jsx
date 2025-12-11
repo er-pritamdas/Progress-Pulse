@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Trophy } from "lucide-react";
 
 // 🎯 Get message based on percentage score
@@ -37,19 +37,19 @@ const getAverageScorePercentage = (habitData, fromDate, toDate) => {
 };
 
 
-const HabitScoreCard = ({ habitData = [], fromDate, toDate }) => {
+const HabitScoreCard = React.memo(({ habitData = [], fromDate, toDate }) => {
   const [percentageScore, setPercentageScore] = useState(0);
 
   useEffect(() => {
     const avgPercent = getAverageScorePercentage(habitData, fromDate, toDate);
     setPercentageScore(avgPercent);
-  }, [habitData]);
+  }, [habitData, fromDate, toDate]);
 
   const message = getScoreMessage(percentageScore);
   const color =
     percentageScore >= 90 ? "text-yellow-400" :
-    percentageScore >= 70 ? "text-yellow-500" :
-    percentageScore >= 40 ? "text-yellow-600" : "text-yellow-700";
+      percentageScore >= 70 ? "text-yellow-500" :
+        percentageScore >= 40 ? "text-yellow-600" : "text-yellow-700";
 
   return (
     <div className="flex flex-col items-center justify-center">
@@ -65,6 +65,6 @@ const HabitScoreCard = ({ habitData = [], fromDate, toDate }) => {
       ></progress>
     </div>
   );
-};
+});
 
 export default HabitScoreCard;

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Target } from "lucide-react";
 
 // 🎯 Get average score (out of 7, 1 decimal)
@@ -36,16 +36,15 @@ const getGoalMessage = (avg) => {
   return { text: "Goal achieved! Well done!", emoji: "🏆" };
 };
 
-const GoalProgressCard = ({ habitData = [], fromDate, toDate }) => {
+const GoalProgressCard = React.memo(({ habitData = [], fromDate, toDate }) => {
   const [average, setAverage] = useState(0);
   const [message, setMessage] = useState({ text: "", emoji: "" });
 
   useEffect(() => {
     const avg = getAverageScore(habitData, fromDate, toDate);
-    console.log(fromDate, toDate)
     setAverage(avg);
     setMessage(getGoalMessage(avg));
-  }, [habitData]);
+  }, [habitData, fromDate, toDate]);
 
   const percent = Math.min((average / 7) * 100, 100);
 
@@ -67,6 +66,6 @@ const GoalProgressCard = ({ habitData = [], fromDate, toDate }) => {
       ></progress>
     </div>
   );
-};
+});
 
 export default GoalProgressCard;
