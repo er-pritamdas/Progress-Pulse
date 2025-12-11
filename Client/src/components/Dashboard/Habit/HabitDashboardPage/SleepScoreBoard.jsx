@@ -1,19 +1,18 @@
 import React, { useMemo, useState } from 'react';
 import dayjs from 'dayjs';
-import { CalendarDays, CalendarCheck2, Droplet, Info, X, Target } from 'lucide-react';
+import { CalendarDays, CalendarCheck2, Moon, Info, X, Target } from 'lucide-react';
 
-const WaterScoreBoard = ({
+const SleepScoreBoard = ({
     habitData = [],
-    waterMax = 0,
-    waterMin = 0,
-    basalMetabolicRate = 0,
+    sleepMax = 0,
+    sleepMin = 0,
 }) => {
     const [activeInfo, setActiveInfo] = useState(null);
 
     const {
         fromDate,
         toDate,
-        consumedSum,
+        sleepSum,
         totalDays,
         offset,
     } = useMemo(() => {
@@ -21,14 +20,14 @@ const WaterScoreBoard = ({
             return {
                 fromDate: null,
                 toDate: null,
-                consumedSum: 0,
+                sleepSum: 0,
                 totalDays: 0,
                 offset: 0,
             };
         }
 
-        const consumed = habitData
-            .map((entry) => Number(entry.water))
+        const sleepTotal = habitData
+            .map((entry) => Number(entry.sleep))
             .filter((val) => !isNaN(val))
             .reduce((sum, val) => sum + val, 0);
 
@@ -36,40 +35,40 @@ const WaterScoreBoard = ({
         const toDate = habitData[0].date;
 
         const days = dayjs(toDate).diff(dayjs(fromDate), 'day') + 1;
-        const offset = consumed - (days * waterMin);
+        const offset = sleepTotal - (days * sleepMin);
 
         return {
             fromDate,
             toDate,
-            consumedSum: consumed,
+            sleepSum: sleepTotal,
             totalDays: days,
             offset,
         };
-    }, [habitData, waterMin, waterMax]);
+    }, [habitData, sleepMin, sleepMax]);
 
-    const consumedGoal = totalDays * waterMax;
-    const consumedMinGoal = totalDays * waterMin;
+    const sleepGoal = totalDays * sleepMax;
+    const sleepMinGoal = totalDays * sleepMin;
 
     const infoData = {
         from: {
             title: "From Date",
-            description: "The first day where water intake was logged for the selected period."
+            description: "The first day where sleep was logged for the selected period."
         },
         to: {
             title: "To Date",
-            description: "The most recent day where water intake was logged for the selected period."
+            description: "The most recent day where sleep was logged for the selected period."
         },
         consumed: {
-            title: "Total Water Consumed",
-            description: "Total quantity of water you have consumed in the selected period."
+            title: "Total Sleep Duration",
+            description: "Total hours slept in the selected period."
         },
         goal: {
-            title: "Daily Water Goal",
-            description: `Your daily water intake target ranging between ${waterMin}L and ${waterMax}L.`
+            title: "Daily Sleep Goal",
+            description: `Your daily sleep target ranging between ${sleepMin}h and ${sleepMax}h.`
         },
         offset: {
-            title: "Water Offset",
-            description: "The difference between the total water consumed and the total water goal."
+            title: "Sleep Offset",
+            description: "The difference between total sleep duration and the minimum sleep goal."
         }
     };
 
@@ -111,7 +110,7 @@ const WaterScoreBoard = ({
                 </div>
             )}
 
-            {/* Water Scoreboard Grid */}
+            {/* Sleep Scoreboard Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
 
                 {/* From Date */}
@@ -150,7 +149,7 @@ const WaterScoreBoard = ({
                     <div className="stat-desc">End Date</div>
                 </div>
 
-                {/* Total Water Consumed */}
+                {/* Total Sleep */}
                 <div className="stat shadow relative group">
                     <button
                         onClick={() => handleInfoClick('consumed')}
@@ -159,21 +158,21 @@ const WaterScoreBoard = ({
                         <Info size={16} />
                     </button>
 
-                    <div className="stat-figure text-sky-500">
-                        <Droplet className="h-6 w-6" />
+                    <div className="stat-figure text-violet-500">
+                        <Moon className="h-6 w-6" />
                     </div>
 
-                    <div className="stat-title pr-6">Total Water</div>
-                    <div className="stat-value text-sky-500">
-                        {consumedSum.toFixed(2)}L
+                    <div className="stat-title pr-6">Total Sleep</div>
+                    <div className="stat-value text-violet-500">
+                        {sleepSum.toFixed(1)}h
                     </div>
 
                     <div className="stat-desc">
-                        Min: {consumedMinGoal.toFixed(2)}L | Max: {consumedGoal.toFixed(2)}L
+                        Min: {sleepMinGoal.toFixed(1)}h | Max: {sleepGoal.toFixed(1)}h
                     </div>
                 </div>
 
-                {/* Deficit / Surplus Water */}
+                {/* Deficit / Surplus Sleep */}
                 <div
                     className="stat shadow relative group"
                 >
@@ -183,24 +182,24 @@ const WaterScoreBoard = ({
                     <div className={`stat-figure ${offset >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
                         <Target className="h-6 w-6" />
                     </div>
-                    <div className="stat-title pr-6">Offset from {totalDays * waterMin}L</div>
+                    <div className="stat-title pr-6">Offset from {totalDays * sleepMin}h</div>
                     <div className={`stat-value ${offset >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
                         {offset >= 0 ? '+' : ''}
-                        {offset.toFixed(2)} L
+                        {offset.toFixed(1)} h
                     </div>
                     <div className="stat-desc">{offset >= 0 ? 'In Surplus' : 'In Deficit'}</div>
                 </div>
 
                 {/* Scale Section */}
                 <div className="col-span-2 stat shadow relative group">
-                    <WaterScale
-                        label="Water Intake"
-                        value={consumedSum}
-                        min={consumedMinGoal}
-                        max={consumedGoal}
-                        color="bg-sky-500"
-                        textColor="text-sky-500"
-                        icon={Droplet}
+                    <SleepScale
+                        label="Sleep Duration"
+                        value={sleepSum}
+                        min={sleepMinGoal}
+                        max={sleepGoal}
+                        color="bg-violet-500"
+                        textColor="text-violet-500"
+                        icon={Moon}
                     />
                 </div>
 
@@ -213,7 +212,7 @@ const WaterScoreBoard = ({
 };
 
 /* SCALE COMPONENT */
-const WaterScale = ({ label, value, min, max, color, textColor, icon: Icon }) => {
+const SleepScale = ({ label, value, min, max, color, textColor, icon: Icon }) => {
     const range = max - min;
     let percentage = 0;
 
@@ -227,7 +226,7 @@ const WaterScale = ({ label, value, min, max, color, textColor, icon: Icon }) =>
             <div className="flex justify-between items-center mb-3">
                 <span className="font-semibold text-sm">{label}</span>
                 <span className={`font-bold text-lg ${textColor}`}>
-                    {value.toFixed(2)}L
+                    {value.toFixed(1)}h
                 </span>
             </div>
 
@@ -249,11 +248,11 @@ const WaterScale = ({ label, value, min, max, color, textColor, icon: Icon }) =>
             </div>
 
             <div className="flex justify-between text-xs text-base-content/50 mt-2 font-medium">
-                <span>Min: {min.toFixed(2)}L</span>
-                <span>Max: {max.toFixed(2)}L</span>
+                <span>Min: {min.toFixed(1)}h</span>
+                <span>Max: {max.toFixed(1)}h</span>
             </div>
         </div>
     );
 };
 
-export default React.memo(WaterScoreBoard);
+export default React.memo(SleepScoreBoard);

@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from "react";
 import Chart from "react-apexcharts";
 
-const DeficitVsSurplusLitreMixedStackChart = ({ habitData, bmr }) => {
+const DeficitVsSurplusLitreMixedStackChart = ({ habitData, waterMin }) => {
   const [series, setSeries] = useState([]);
   const [sortedData, setSortedData] = useState([]);
 
   useEffect(() => {
-    const effectiveCalories = [];
-    const intake = [];
+    const effectiveWaterIntake = [];
+
 
     const sortedEntries = [...habitData].sort(
       (a, b) => new Date(a.date) - new Date(b.date)
@@ -16,29 +16,23 @@ const DeficitVsSurplusLitreMixedStackChart = ({ habitData, bmr }) => {
     setSortedData(sortedEntries);
 
     sortedEntries.forEach((entry) => {
-      const burned = parseInt(entry.burned || 0, 10);
-      const intakeVal = parseInt(entry.intake || 0, 10);
+      const WaterIntake = parseInt(entry.water || 0, 10);
 
       // deficit / surplus calc
-      const effective = (intakeVal - burned) - bmr;
+      const effective = (WaterIntake - waterMin);
 
-      effectiveCalories.push(effective);
-      intake.push(intakeVal);
+      effectiveWaterIntake.push(effective);
+
     });
 
     setSeries([
       {
         name: "Deficit / Surplus",
         type: "bar",
-        data: effectiveCalories,
+        data: effectiveWaterIntake,
       },
-      // {
-      //   name: "Intake",
-      //   type: "line",
-      //   data: intake,
-      // },
     ]);
-  }, [habitData, bmr]);
+  }, [habitData]);
 
   const options = {
     chart: {
@@ -116,7 +110,7 @@ const DeficitVsSurplusLitreMixedStackChart = ({ habitData, bmr }) => {
     yaxis: {
       labels: { style: { colors: "#FFFFFF" } },
       title: {
-        text: "Calories",
+        text: "Liters",
         style: { color: "#FFFFFF" },
       },
     },
@@ -134,7 +128,7 @@ const DeficitVsSurplusLitreMixedStackChart = ({ habitData, bmr }) => {
       marker: { show: false },
       style: { fontSize: "13px" },
       y: {
-        formatter: (val) => `${val} Kcal`,
+        formatter: (val) => `${val} Litre`,
       },
     },
 

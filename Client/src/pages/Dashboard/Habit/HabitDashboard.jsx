@@ -14,9 +14,13 @@ import EffectiveMixedStackChart from "../../../components/Dashboard/Habit/HabitD
 import DeficitVsSurplusMixedStackChart from "../../../components/Dashboard/Habit/HabitDashboardPage/Charts/CalorieChart/DeficitVsSurplusMixedStackChart";
 import CurrentStreakCard from "../../../components/Dashboard/Habit/HabitDashboardPage/CurrentStreakCard";
 import CalorieScoreBoard from "../../../components/Dashboard/Habit/HabitDashboardPage/CalorieScoreBoard";
-import WaterConsumptionRadialChart from "../../../components/Dashboard/Habit/HabitDashboardPage/Charts/WaterChart/WaterConsumptionRadialChart";
+import WaterConsumptionHex from "../../../components/Dashboard/Habit/HabitDashboardPage/Charts/WaterChart/WaterConsumptionRadialChart";
 import WaterScoreBoard from "../../../components/Dashboard/Habit/HabitDashboardPage/WaterScoreBoard";
 import DeficitVsSurplusLitreMixedStackChart from "../../../components/Dashboard/Habit/HabitDashboardPage/Charts/WaterChart/DeficitVsSurplusLitreMixedStackChart";
+import SleepDurationRadialChart from "../../../components/Dashboard/Habit/HabitDashboardPage/Charts/SleepChart/SleepDurationRadialChart";
+import SleepScoreBoard from "../../../components/Dashboard/Habit/HabitDashboardPage/SleepScoreBoard";
+import SleepHeatMap from "../../../components/Dashboard/Habit/HabitDashboardPage/Charts/SleepChart/SleepHeatMap";
+import DeficitVsSurplusHoursMixedStackChart from "../../../components/Dashboard/Habit/HabitDashboardPage/Charts/SleepChart/DeficitVsSurplusHoursMixedStackChart";
 
 function HabitDashboard() {
   TitleChanger("Progress Pulse | Habit Dashboard");
@@ -26,6 +30,8 @@ function HabitDashboard() {
   const [totalEntries, setTotalEntries] = useState(0)
   const [waterMin, setWaterMin] = useState(0);
   const [waterMax, setWaterMax] = useState(100);
+  const [sleepMin, setSleepMin] = useState(0);
+  const [sleepMax, setSleepMax] = useState(0);
   const [ConsumedCalorieMax, setConsumedCalorieMax] = useState(0);
   const [ConsumedCalorieMin, setConsumedCalorieMin] = useState(0);
   const [BurnedCalorieMax, setBurnedCalorieMax] = useState(0);
@@ -80,6 +86,8 @@ function HabitDashboard() {
       const res = await axiosInstance.get("/v1/dashboard/habit/settings");
       setWaterMin(res.data.data.settings.water.min);
       setWaterMax(res.data.data.settings.water.max);
+      setSleepMin(res.data.data.settings.sleep.min);
+      setSleepMax(res.data.data.settings.sleep.max);
       setConsumedCalorieMax(res.data.data.settings.intake.max);
       setConsumedCalorieMin(res.data.data.settings.intake.min);
       setBurnedCalorieMax(res.data.data.settings.burned.max);
@@ -418,7 +426,7 @@ function HabitDashboard() {
                     <div className="tab-content border-base-300 bg-base-100 p-10">
                       <div className="h-72 flex items-center justify-center text-gray-500">
                         {
-                          <WaterConsumptionRadialChart
+                          <WaterConsumptionHex
                             key={JSON.stringify(habitData)}
                             habitData={habitData}
                             waterMax={waterMax}
@@ -488,6 +496,101 @@ function HabitDashboard() {
               </div>
             </div>
           </section>
+
+          <div className="mb-12">
+            {/* Sleep Analysis Heading */}
+            <div className="py-3 text-2xl text-primary font-semibold divider mb-12">
+              Sleep Analysis
+            </div>
+            {/* Sleep Overview Section */}
+            <section>
+              <div className="grid grid-cols-12 gap-4 mb-8">
+                {/* Sleep Duration Glass */}
+                <div className="col-span-6 row-span-1 bg-base-100 rounded-2xl shadow-md p-4">
+                  <h3 className="text-lg font-semibold mb-2">
+                    Sleep Duration
+                  </h3>
+                  <div>
+                    <div className="tabs tabs-border">
+                      {/* Tab1 : Sleep Duration */}
+                      <input
+                        type="radio"
+                        name="SleepDurationRadialChart"
+                        className="tab"
+                        aria-label="Sleep Duration"
+                        defaultChecked
+                      />
+                      <div className="tab-content border-base-300 bg-base-100 p-10">
+                        <div className="h-72 flex items-center justify-center text-gray-500">
+                          {
+                            <SleepDurationRadialChart
+                              key={JSON.stringify(habitData)}
+                              habitData={habitData}
+                              sleepMax={sleepMax}
+                              totalEntries={totalEntries}
+                            /> ||
+                            "Coming Soon"}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Effective Vs Actual */}
+                <div className="col-span-6 row-span-1 bg-base-100 rounded-2xl shadow-md p-4">
+                  <h3 className="text-lg font-semibold mb-2">
+                    💯 Sleep Score Board
+                  </h3>
+                  <div className="h-101 flex items-center justify-center text-gray-500">
+                    <SleepScoreBoard
+                      habitData={habitData}
+                      sleepMax={sleepMax}
+                      sleepMin={sleepMin}
+                      fromDate={fromDate}
+                      toDate={toDate}
+                    />
+                  </div>
+                </div>
+              </div>
+            </section>
+
+
+            {/* Sleep Chart Section */}
+            <section>
+              <h2 className="text-xl font-semibold mb-4"></h2>
+              <div className="bg-base-100 rounded-2xl shadow-md p-6">
+                <div className="tabs tabs-border">
+                  <input
+                    type="radio"
+                    name="SleepCharts"
+                    className="tab"
+                    aria-label="Sleep Heatmap"
+                    defaultChecked
+                  />
+                  <div className="tab-content border-base-300 bg-base-100 p-10">
+                    <SleepHeatMap
+                      habitData={habitData}
+                      sleepMax={sleepMax}
+                      sleepMin={sleepMin}
+                    />
+                  </div>
+
+                  <input
+                    type="radio"
+                    name="SleepCharts"
+                    className="tab"
+                    aria-label="Deficit / Surplus (Hrs)"
+                  />
+                  <div className="tab-content border-base-300 bg-base-100 p-10">
+                    <DeficitVsSurplusHoursMixedStackChart
+                      habitData={habitData}
+                      sleepMin={sleepMin}
+                    />
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
 
         </div>
         {/* Log Section */}

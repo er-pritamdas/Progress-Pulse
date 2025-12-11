@@ -7,6 +7,7 @@ import { Calculator, Play, UserCheck, Plus, History, Trash2, Info } from "lucide
 import ReactApexChart from "react-apexcharts";
 import ErrorAlert from "../../../utils/Alerts/ErrorAlert";
 import SuccessAlert from "../../../utils/Alerts/SuccessAlert";
+import MacroMicroCalculator from "../../../components/Dashboard/Habit/MacroMicroCalculator";
 
 function HabitLogging() {
     TitleChanger("Progress Pulse | Habit Logging");
@@ -475,12 +476,12 @@ function HabitLogging() {
                                         <span className="text-2xl font-bold">{bmi}</span>
                                         <p
                                             className={`text-sm font-medium ${bmi < 18.5
-                                                    ? "text-info"
-                                                    : bmi < 25
-                                                        ? "text-success"
-                                                        : bmi < 30
-                                                            ? "text-warning"
-                                                            : "text-error"
+                                                ? "text-info"
+                                                : bmi < 25
+                                                    ? "text-success"
+                                                    : bmi < 30
+                                                        ? "text-warning"
+                                                        : "text-error"
                                                 }`}
                                         >
                                             {bmi < 18.5
@@ -609,6 +610,13 @@ function HabitLogging() {
                         </div>
                     </div>
                 </div>
+
+                {/* Macro & Micro Nutrient Calculator */}
+                <MacroMicroCalculator
+                    maintenanceCalories={maintenanceCalories}
+                    age={age}
+                    gender={gender}
+                />
             </div>
 
             {/* Physical Logs Section */}

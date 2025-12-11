@@ -1,15 +1,4 @@
-import React, { useState } from "react";
-
-const initialFormData = {
-  date: new Date().toISOString().split("T")[0],
-  burned: "",
-  water: "",
-  sleep: "",
-  read: "",
-  intake: "",
-  selfcare: "",
-  mood: "",
-};
+import React, { useState, useEffect } from "react";
 
 const AddHabitPopUp = ({
   isOpen,
@@ -19,12 +8,35 @@ const AddHabitPopUp = ({
   progresscolor,
   settings,
 }) => {
-  const [formData, setFormData] = useState(initialFormData);
+  const [formData, setFormData] = useState({
+    date: new Date().toISOString().split("T")[0],
+    burned: "",
+    water: "",
+    sleep: "",
+    read: "",
+    intake: "",
+    selfcare: "",
+    mood: "",
+  });
+
+  useEffect(() => {
+    if (isOpen && settings) {
+      setFormData({
+        date: new Date().toISOString().split("T")[0],
+        burned: settings.burned?.min || "",
+        water: settings.water?.min || "",
+        sleep: settings.sleep?.min || "",
+        read: settings.read?.min || "",
+        intake: settings.intake?.min || "",
+        selfcare: "_".repeat(settings.selfcare?.length || 0),
+        mood: "",
+      });
+    }
+  }, [isOpen, settings]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-    // setTimeout(() => console.log(formData), 5000);
   };
 
   const handleSubmit = () => {
@@ -35,7 +47,8 @@ const AddHabitPopUp = ({
     };
     console.log(newItem);
     onAdd(newItem);
-    setFormData(initialFormData);
+    // Reset form to defaults for next time, though useEffect will likely handle it on re-open. 
+    // But if we want it to reset immediately after submit even if still open (though onClose is called):
     onClose();
   };
 
@@ -324,11 +337,10 @@ const AddHabitPopUp = ({
                           target: { name: "mood", value: mood },
                         })
                       }
-                      className={`text-sm px-2 py-1 rounded w-full text-left ${
-                        formData.mood === mood
-                          ? "bg-primary text-primary-content"
-                          : ""
-                      }`}
+                      className={`text-sm px-2 py-1 rounded w-full text-left ${formData.mood === mood
+                        ? "bg-primary text-primary-content"
+                        : ""
+                        }`}
                     >
                       {mood}
                     </button>

@@ -57,7 +57,7 @@ const habitSettingsSchema = new mongoose.Schema(
         },
         age: {
             type: Number,
-            default: 0
+            default: 21
         },
         gender: {
             type: String,
@@ -66,28 +66,28 @@ const habitSettingsSchema = new mongoose.Schema(
         },
         weight: {
             type: Number,
-            default: 0
+            default: 74
         },
         height: {
             type: Number,
-            default: 0
+            default: 174
         },
         activityLevel: {
             type: String,
             enum: ["light", "moderate", "active", "very_active"],
-            default: "light"
+            default: "active"
         },
         maintenanceCalories: {
             type: Number,
-            default: 0
+            default: 2980
         },
         bmr: {
             type: Number,
-            default: 0
+            default: 1728
         },
         bmi: {
             type: Number,
-            default: 0
+            default: 24.4
         },
     },
     {
