@@ -43,7 +43,7 @@ const WaterHeatMap = ({ habitData, waterMin, waterMax }) => {
     },
     plotOptions: {
       heatmap: {
-        radius: 21,
+        radius: 2,
         shadeIntensity: 1,
         useFillColorAsStroke: false,
         colorScale: {

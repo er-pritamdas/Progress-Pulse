@@ -59,7 +59,7 @@ function SleepDurationOrb({ habitData, sleepMax, totalEntries }) {
                     </motion.div>
 
                     {/* Fill Body */}
-                    <div className="w-full h-full bg-gradient-to-t from-violet-900 via-violet-600 to-violet-500 opacity-80"></div>
+                    <div className="w-full h-full bg-gradient-to-t from-violet-900 via-violet-800 to-violet-700 opacity-40"></div>
                 </div>
 
                 {/* Content Overlay */}
@@ -79,7 +79,7 @@ function SleepDurationOrb({ habitData, sleepMax, totalEntries }) {
             <div className="text-center mt-6 text-gray-300">
                 <p className="text-xl font-medium text-white">{rawValue}h <span className="text-sm text-gray-400 font-normal">Slept</span></p>
                 <p className="text-sm opacity-60">
-                    Target: {totalSleepMax.toFixed(1)}h
+                    Max Target: {totalSleepMax.toFixed(1)}h
                 </p>
             </div>
         </div>

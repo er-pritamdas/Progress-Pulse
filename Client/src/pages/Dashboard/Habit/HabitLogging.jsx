@@ -209,7 +209,7 @@ function HabitLogging() {
             type: 'line',
             height: 160,
             toolbar: { show: false },
-            zoom: { enabled: true }
+            zoom: { enabled: false }
         },
         dataLabels: {
             enabled: true,

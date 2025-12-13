@@ -20,11 +20,11 @@ client.collectDefaultMetrics({ register });
 app.use(cors({
     origin: "*", // frontend origin (Vite)
     credentials: true, // allow cookies to be sent
-  }));
+}));
 
 // using builtin MiddleWares
-app.use(express.json({limit: "16kb"}))
-app.use(express.urlencoded({extended: true, limit: "16kb"}))
+app.use(express.json({ limit: "16kb" }))
+app.use(express.urlencoded({ extended: true, limit: "16kb" }))
 app.use(cookieParser());
 
 
@@ -39,17 +39,17 @@ app.get('/metrics', async (req, res) => {
 // Registered User Routes
 app.use("/api/v1/users/registered", registeredUserRoutes)
 // LoggedIn User Routes
-app.use("/api/v1/users/loggedin",loggedInUserRoutes)
+app.use("/api/v1/users/loggedin", loggedInUserRoutes)
 // Logout Routes
 app.use("/api/v1/users/logout", loggedOutUserRoutes)
 // Porgot password Routes
-app.use("/api/v1/users/forgot-password-verification", existingUserRoutes )
+app.use("/api/v1/users/forgot-password-verification", existingUserRoutes)
 
 // --------------------------- Protected Routes --------------------------
 // Dashboard Routes
 app.use("/api/v1/dashboard", dashboardRoutes)
 // Habit Tracker Routes
-app.use("/api/v1/dashboard/habit",habitTrackerRoutes)
+app.use("/api/v1/dashboard/habit", habitTrackerRoutes)
 // Expense Tracker Routes
 // Investment Tracker Routes
 

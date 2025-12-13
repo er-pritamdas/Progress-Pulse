@@ -1,26 +1,20 @@
 import { useState, useEffect } from "react";
 import { TitleChanger } from "../../../utils/TitleChanger";
-import WaterHeatMap from "../../../components/Dashboard/Habit/HabitDashboardPage/Charts/WaterChart/WaterHeatMap";
 import LongestStreakCard from "../../../components/Dashboard/Habit/HabitDashboardPage/LongestStreakCard";
 import GoalProgressCard from "../../../components/Dashboard/Habit/HabitDashboardPage/GoalProgressCard";
 import HabitScoreCard from "../../../components/Dashboard/Habit/HabitDashboardPage/HabitScoreCard";
 import HabitSummaryCard from "../../../components/Dashboard/Habit/HabitDashboardPage/HabitSummaryCard";
+import CurrentStreakCard from "../../../components/Dashboard/Habit/HabitDashboardPage/CurrentStreakCard";
 import { useLoading } from "../../../Context/LoadingContext";
 import axiosInstance from "../../../Context/AxiosInstance";
-import BurnedVsConsumedCalorieRadialChart from "../../../components/Dashboard/Habit/HabitDashboardPage/Charts/CalorieChart/BurnedVsConsumedCalorieRadialChart";
-import CalorieBurnedRadialChart from "../../../components/Dashboard/Habit/HabitDashboardPage/Charts/CalorieChart/CalorieBurnedRadialChart";
-import CalorieConsumedRadialChart from "../../../components/Dashboard/Habit/HabitDashboardPage/Charts/CalorieChart/CalorieConsumedRadialChart";
-import EffectiveMixedStackChart from "../../../components/Dashboard/Habit/HabitDashboardPage/Charts/CalorieChart/EffectiveMixedStackChart";
-import DeficitVsSurplusMixedStackChart from "../../../components/Dashboard/Habit/HabitDashboardPage/Charts/CalorieChart/DeficitVsSurplusMixedStackChart";
-import CurrentStreakCard from "../../../components/Dashboard/Habit/HabitDashboardPage/CurrentStreakCard";
-import CalorieScoreBoard from "../../../components/Dashboard/Habit/HabitDashboardPage/CalorieScoreBoard";
-import WaterConsumptionHex from "../../../components/Dashboard/Habit/HabitDashboardPage/Charts/WaterChart/WaterConsumptionRadialChart";
-import WaterScoreBoard from "../../../components/Dashboard/Habit/HabitDashboardPage/WaterScoreBoard";
-import DeficitVsSurplusLitreMixedStackChart from "../../../components/Dashboard/Habit/HabitDashboardPage/Charts/WaterChart/DeficitVsSurplusLitreMixedStackChart";
-import SleepDurationRadialChart from "../../../components/Dashboard/Habit/HabitDashboardPage/Charts/SleepChart/SleepDurationRadialChart";
-import SleepScoreBoard from "../../../components/Dashboard/Habit/HabitDashboardPage/SleepScoreBoard";
-import SleepHeatMap from "../../../components/Dashboard/Habit/HabitDashboardPage/Charts/SleepChart/SleepHeatMap";
-import DeficitVsSurplusHoursMixedStackChart from "../../../components/Dashboard/Habit/HabitDashboardPage/Charts/SleepChart/DeficitVsSurplusHoursMixedStackChart";
+
+// Analysis Components
+import CalorieAnalysis from "../../../components/Dashboard/Habit/HabitDashboardPage/Analysis/CalorieAnalysis";
+import WaterAnalysis from "../../../components/Dashboard/Habit/HabitDashboardPage/Analysis/WaterAnalysis";
+import SleepAnalysis from "../../../components/Dashboard/Habit/HabitDashboardPage/Analysis/SleepAnalysis";
+import ReadAnalysis from "../../../components/Dashboard/Habit/HabitDashboardPage/Analysis/ReadAnalysis";
+
+import { Flame, Droplet, Moon, BookOpen } from "lucide-react";
 
 function HabitDashboard() {
   TitleChanger("Progress Pulse | Habit Dashboard");
@@ -32,11 +26,16 @@ function HabitDashboard() {
   const [waterMax, setWaterMax] = useState(100);
   const [sleepMin, setSleepMin] = useState(0);
   const [sleepMax, setSleepMax] = useState(0);
+  const [readMin, setReadMin] = useState(0);
+  const [readMax, setReadMax] = useState(0);
   const [ConsumedCalorieMax, setConsumedCalorieMax] = useState(0);
   const [ConsumedCalorieMin, setConsumedCalorieMin] = useState(0);
   const [BurnedCalorieMax, setBurnedCalorieMax] = useState(0);
   const [BurnedCalorieMin, setBurnedCalorieMin] = useState(0);
   const [basalMetabolicRate, setbasalMetabolicRate] = useState(0);
+
+  // 🔹 Tab State
+  const [activeTab, setActiveTab] = useState("calorie");
 
 
   // Format Date Function
@@ -77,9 +76,6 @@ function HabitDashboard() {
   };
 
 
-
-
-
   const fetchHabitSettings = async () => {
     try {
       setLoading(true);
@@ -88,6 +84,8 @@ function HabitDashboard() {
       setWaterMax(res.data.data.settings.water.max);
       setSleepMin(res.data.data.settings.sleep.min);
       setSleepMax(res.data.data.settings.sleep.max);
+      setReadMin(res.data.data.settings.read?.min || 0);
+      setReadMax(res.data.data.settings.read?.max || 24);
       setConsumedCalorieMax(res.data.data.settings.intake.max);
       setConsumedCalorieMin(res.data.data.settings.intake.min);
       setBurnedCalorieMax(res.data.data.settings.burned.max);
@@ -134,6 +132,36 @@ function HabitDashboard() {
             {/* <UserCheck size={26} /> */}
             Habit Dashboard
           </h1>
+
+          {/* Center: Analytics Tabs */}
+          <div className="absolute left-1/2 transform -translate-x-1/2">
+            <div className="tabs tabs-boxed bg-base-100/50 backdrop-blur-sm shadow-sm p-1 gap-1">
+              <a
+                className={`tab tab-sm gap-1 transition-all duration-300 ${activeTab === 'calorie' ? 'tab-active btn btn-sm btn-soft btn-primary' : 'btn btn-sm btn-ghost'}`}
+                onClick={() => setActiveTab('calorie')}
+              >
+                <Flame size={14} /> Calorie
+              </a>
+              <a
+                className={`tab tab-sm gap-1 transition-all duration-300 ${activeTab === 'water' ? 'tab-active btn btn-sm btn-soft btn-info' : 'btn btn-sm btn-ghost'}`}
+                onClick={() => setActiveTab('water')}
+              >
+                <Droplet size={14} /> Water
+              </a>
+              <a
+                className={`tab tab-sm gap-1 transition-all duration-300 ${activeTab === 'sleep' ? 'tab-active btn btn-sm btn-soft btn-accent' : 'btn btn-sm btn-ghost'}`}
+                onClick={() => setActiveTab('sleep')}
+              >
+                <Moon size={14} /> Sleep
+              </a>
+              <a
+                className={`tab tab-sm gap-1 transition-all duration-300 ${activeTab === 'read' ? 'tab-active btn btn-sm btn-soft btn-warning' : 'btn btn-sm btn-ghost'}`}
+                onClick={() => setActiveTab('read')}
+              >
+                <BookOpen size={14} /> Read
+              </a>
+            </div>
+          </div>
 
           {/* Right: From/To Date Pickers */}
           <div className="flex items-center gap-4 ml-auto">
@@ -222,6 +250,7 @@ function HabitDashboard() {
         </div>
       </div>
 
+
       <div className="w-full h-full overflow-y-auto overflow-x-hidden p-6 bg-base-200">
         {/* Overview Section */}
         <section className="mb-12">
@@ -263,338 +292,60 @@ function HabitDashboard() {
           </div>
         </section>
 
-        {/* Calorie Dashboard */}
-        <div className="mb-12">
-          {/* Calorie Heading */}
-          <div className="py-3 text-2xl text-primary font-semibold divider mb-12">
-            Calorie Analysis
-          </div>
-          {/* Calorie Overview Section */}
-          <section>
-            <div className="grid grid-cols-12 gap-4 mb-8">
-              {/* Consumed Vs Burned Chart */}
-              <div className="col-span-5 row-span-1 bg-base-100 rounded-2xl shadow-md p-4">
-                <h3 className="text-lg font-semibold mb-2">
-                  Consumed Vs Burned
-                </h3>
-                <div>
-                  <div className="tabs tabs-border">
-                    {/* Tab1 : Consumed */}
-                    <input
-                      type="radio"
-                      name="ConsumedVsBurned_Calories"
-                      className="tab"
-                      aria-label="Consumed"
-                    />
-                    <div className="tab-content border-base-300 bg-base-100 p-10">
-                      <div className="h-72 flex items-center justify-center text-gray-500">
-                        {
-                          <CalorieConsumedRadialChart
-                            habitData={habitData}
-                            ConsumedCalorieMax={ConsumedCalorieMax}
-                            totalEntries={totalEntries}
-                          /> ||
-                          "Coming Soon"}
-                      </div>
-                    </div>
-                    {/* Tab2 : Burned */}
-                    <input
-                      type="radio"
-                      name="ConsumedVsBurned_Calories"
-                      className="tab"
-                      aria-label="Burned"
-                    />
-                    <div className="tab-content border-base-300 bg-base-100 p-10">
-                      <div className="h-72 flex items-center justify-center text-gray-500">
-                        {<CalorieBurnedRadialChart
-                          habitData={habitData}
-                          BurnedCalorieMax={BurnedCalorieMax}
-                          totalEntries={totalEntries}
-                        /> ||
-                          "Coming Soon"}
-                      </div>
-                    </div>
-                    {/* Tab3 : Consumed Vs Burned */}
-                    <input
-                      type="radio"
-                      name="ConsumedVsBurned_Calories"
-                      className="tab"
-                      aria-label="Consumed Vs Burned"
-                      defaultChecked
-                    />
-                    <div className="tab-content border-base-300 bg-base-100 p-10">
-                      <div className="h-72 flex items-center justify-center text-gray-500">
-                        {(
-                          <BurnedVsConsumedCalorieRadialChart
-                            habitData={habitData}
-                            ConsumedCalorieMax={ConsumedCalorieMax}
-                            BurnedCalorieMax={BurnedCalorieMax}
-                            totalEntries={totalEntries}
-                          />
-                        ) || "Coming Soon"}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+        {/* 🔹 ANALYSIS TABS */}
 
-              {/* Effective Vs Actual */}
-              <div className="col-span-7 row-span-1 bg-base-100 rounded-2xl shadow-md p-4">
-                <h3 className="text-lg font-semibold mb-2">
-                  💯 Calorie Score Board
-                </h3>
-                <div className="h-101 flex items-center justify-center text-gray-500">
-                  <CalorieScoreBoard
-                    habitData={habitData}
-                    ConsumedCalorieMax={ConsumedCalorieMax}
-                    ConsumedCalorieMin={ConsumedCalorieMin}
-                    BurnedCalorieMax={BurnedCalorieMax}
-                    BurnedCalorieMin={BurnedCalorieMin}
-                    basalMetabolicRate={basalMetabolicRate}
-                    fromDate={fromDate}
-                    toDate={toDate}
-                  />
-                </div>
-              </div>
-            </div>
-          </section>
-          {/* Calorie Chart Section */}
-          <section>
-            <h2 className="text-xl font-semibold mb-4"></h2>
-            <div className="bg-base-100 rounded-2xl shadow-md p-6">
-              <div className="tabs tabs-border">
-                <input
-                  type="radio"
-                  name="CalorieVisualization"
-                  className="tab"
-                  aria-label="Consumed Vs Burned"
-                  defaultChecked
-                />
-                <div className="tab-content border-base-300 bg-base-100 p-10">
-                  <EffectiveMixedStackChart
-                    habitData={habitData}
-                    ConsumedCalorieMax={ConsumedCalorieMax}
-                  />
-                </div>
 
-                <input
-                  type="radio"
-                  name="CalorieVisualization"
-                  className="tab"
-                  aria-label="Deficit / Surplus (Kcal)"
-                />
-                <div className="tab-content border-base-300 bg-base-100 p-10">
-                  <DeficitVsSurplusMixedStackChart
-                    habitData={habitData}
-                    ConsumedCalorieMax={ConsumedCalorieMax}
-                    bmr={basalMetabolicRate}
-                  />
-                </div>
-              </div>
-            </div>
-          </section>
+        {/* 🔹 DYNAMIC CONTENT RENDER */}
+        <div className="min-h-[500px]">
+          {activeTab === 'calorie' && (
+            <CalorieAnalysis
+              habitData={habitData}
+              ConsumedCalorieMax={ConsumedCalorieMax}
+              ConsumedCalorieMin={ConsumedCalorieMin}
+              BurnedCalorieMax={BurnedCalorieMax}
+              BurnedCalorieMin={BurnedCalorieMin}
+              basalMetabolicRate={basalMetabolicRate}
+              totalEntries={totalEntries}
+              fromDate={fromDate}
+              toDate={toDate}
+            />
+          )}
+
+          {activeTab === 'water' && (
+            <WaterAnalysis
+              habitData={habitData}
+              waterMax={waterMax}
+              waterMin={waterMin}
+              basalMetabolicRate={basalMetabolicRate}
+              totalEntries={totalEntries}
+              fromDate={fromDate}
+              toDate={toDate}
+            />
+          )}
+
+          {activeTab === 'sleep' && (
+            <SleepAnalysis
+              habitData={habitData}
+              sleepMax={sleepMax}
+              sleepMin={sleepMin}
+              totalEntries={totalEntries}
+              fromDate={fromDate}
+              toDate={toDate}
+            />
+          )}
+
+          {activeTab === 'read' && (
+            <ReadAnalysis
+              habitData={habitData}
+              readMax={readMax}
+              readMin={readMin}
+              totalEntries={totalEntries}
+              fromDate={fromDate}
+              toDate={toDate}
+            />
+          )}
         </div>
 
-        <div className="mb-12">
-          {/* Water Analysis Heading */}
-          <div className="py-3 text-2xl text-primary font-semibold divider mb-12">
-            Water Analysis
-          </div>
-          {/* Water Overview Section */}
-          <section>
-            <div className="grid grid-cols-12 gap-4 mb-8">
-              {/* Consumed Vs Burned Chart */}
-              <div className="col-span-6 row-span-1 bg-base-100 rounded-2xl shadow-md p-4">
-                <h3 className="text-lg font-semibold mb-2">
-                  Water Consumption
-                </h3>
-                <div>
-                  <div className="tabs tabs-border">
-                    {/* Tab1 : Water Consumed */}
-                    <input
-                      type="radio"
-                      name="WaterConsumptionRadialChart"
-                      className="tab"
-                      aria-label="Water Consumed"
-                      defaultChecked
-                    />
-                    <div className="tab-content border-base-300 bg-base-100 p-10">
-                      <div className="h-72 flex items-center justify-center text-gray-500">
-                        {
-                          <WaterConsumptionHex
-                            habitData={habitData}
-                            waterMax={waterMax}
-                            totalEntries={totalEntries}
-                          /> ||
-                          "Coming Soon"}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Effective Vs Actual */}
-              <div className="col-span-6 row-span-1 bg-base-100 rounded-2xl shadow-md p-4">
-                <h3 className="text-lg font-semibold mb-2">
-                  💯 Water Score Board
-                </h3>
-                <div className="h-101 flex items-center justify-center text-gray-500">
-                  <WaterScoreBoard
-                    habitData={habitData}
-                    waterMax={waterMax}
-                    waterMin={waterMin}
-                    basalMetabolicRate={basalMetabolicRate}
-                    fromDate={fromDate}
-                    toDate={toDate}
-                  />
-                </div>
-              </div>
-            </div>
-          </section>
-
-
-          {/* Water Chart Section */}
-          <section>
-            <h2 className="text-xl font-semibold mb-4"></h2>
-            <div className="bg-base-100 rounded-2xl shadow-md p-6">
-              <div className="tabs tabs-border">
-                <input
-                  type="radio"
-                  name="WaterConsumption"
-                  className="tab"
-                  aria-label="Water Consumption"
-                  defaultChecked
-                />
-                <div className="tab-content border-base-300 bg-base-100 p-10">
-                  <WaterHeatMap
-                    habitData={habitData}
-                    waterMax={waterMax}
-                    waterMin={waterMin}
-                  />
-                </div>
-
-                <input
-                  type="radio"
-                  name="WaterConsumption"
-                  className="tab"
-                  aria-label="Deficit / Surplus (Liters)"
-                />
-                <div className="tab-content border-base-300 bg-base-100 p-10">
-                  <DeficitVsSurplusLitreMixedStackChart
-                    habitData={habitData}
-                    waterMax={waterMax}
-                    waterMin={waterMin}
-                    basalMetabolicRate={basalMetabolicRate}
-                  />
-                </div>
-              </div>
-            </div>
-          </section>
-
-          <div className="mb-12">
-            {/* Sleep Analysis Heading */}
-            <div className="py-3 text-2xl text-primary font-semibold divider mb-12">
-              Sleep Analysis
-            </div>
-            {/* Sleep Overview Section */}
-            <section>
-              <div className="grid grid-cols-12 gap-4 mb-8">
-                {/* Sleep Duration Glass */}
-                <div className="col-span-6 row-span-1 bg-base-100 rounded-2xl shadow-md p-4">
-                  <h3 className="text-lg font-semibold mb-2">
-                    Sleep Duration
-                  </h3>
-                  <div>
-                    <div className="tabs tabs-border">
-                      {/* Tab1 : Sleep Duration */}
-                      <input
-                        type="radio"
-                        name="SleepDurationRadialChart"
-                        className="tab"
-                        aria-label="Sleep Duration"
-                        defaultChecked
-                      />
-                      <div className="tab-content border-base-300 bg-base-100 p-10">
-                        <div className="h-72 flex items-center justify-center text-gray-500">
-                          {
-                            <SleepDurationRadialChart
-                              habitData={habitData}
-                              sleepMax={sleepMax}
-                              totalEntries={totalEntries}
-                            /> ||
-                            "Coming Soon"}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Effective Vs Actual */}
-                <div className="col-span-6 row-span-1 bg-base-100 rounded-2xl shadow-md p-4">
-                  <h3 className="text-lg font-semibold mb-2">
-                    💯 Sleep Score Board
-                  </h3>
-                  <div className="h-101 flex items-center justify-center text-gray-500">
-                    <SleepScoreBoard
-                      habitData={habitData}
-                      sleepMax={sleepMax}
-                      sleepMin={sleepMin}
-                      fromDate={fromDate}
-                      toDate={toDate}
-                    />
-                  </div>
-                </div>
-              </div>
-            </section>
-
-
-            {/* Sleep Chart Section */}
-            <section>
-              <h2 className="text-xl font-semibold mb-4"></h2>
-              <div className="bg-base-100 rounded-2xl shadow-md p-6">
-                <div className="tabs tabs-border">
-                  <input
-                    type="radio"
-                    name="SleepCharts"
-                    className="tab"
-                    aria-label="Sleep Heatmap"
-                    defaultChecked
-                  />
-                  <div className="tab-content border-base-300 bg-base-100 p-10">
-                    <SleepHeatMap
-                      habitData={habitData}
-                      sleepMax={sleepMax}
-                      sleepMin={sleepMin}
-                    />
-                  </div>
-
-                  <input
-                    type="radio"
-                    name="SleepCharts"
-                    className="tab"
-                    aria-label="Deficit / Surplus (Hrs)"
-                  />
-                  <div className="tab-content border-base-300 bg-base-100 p-10">
-                    <DeficitVsSurplusHoursMixedStackChart
-                      habitData={habitData}
-                      sleepMin={sleepMin}
-                    />
-                  </div>
-                </div>
-              </div>
-            </section>
-          </div>
-
-        </div>
-        {/* Log Section */}
-        {/* <section className="mt-8">
-          <h2 className="text-xl font-semibold mb-4">📋 Habit Logs</h2>
-          <div className="bg-base-100 rounded-2xl shadow-md p-4 min-h-[300px]">
-            <div className="h-full flex items-center justify-center text-gray-500">
-              Table or logs coming soon
-            </div>
-          </div>
-        </section> */}
       </div>
     </>
   );
