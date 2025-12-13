@@ -4,6 +4,7 @@ import registeredUserRoutes from "../routes/User-routes/registeredUser.routes.js
 import loggedInUserRoutes from "../routes/User-routes/loggedInUser.routes.js";
 import dashboardRoutes from "../routes/Dashboard-routes/dashboard.routes.js";
 import habitTrackerRoutes from "../routes/Habit-routes/HabitTracker.routes.js";
+import expenseRoutes from "../routes/Expense-routes/expense.routes.js";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import loggedOutUserRoutes from "../routes/User-routes/loggedOutUser.routes.js";
@@ -51,6 +52,7 @@ app.use("/api/v1/dashboard", dashboardRoutes)
 // Habit Tracker Routes
 app.use("/api/v1/dashboard/habit", habitTrackerRoutes)
 // Expense Tracker Routes
+app.use("/api/v1/dashboard/expense", expenseRoutes)
 // Investment Tracker Routes
 
 // ------------------------ Global Error Handling -----------------------
