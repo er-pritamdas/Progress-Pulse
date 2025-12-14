@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![Progress Pulse Logo](Client/public/Dashboard.png)
+![Progress Pulse Logo](Client/public/Main_Dashboard.png)
 
 **A Modern Full-Stack Personal Productivity & Finance Management Platform**
 
@@ -280,6 +280,12 @@ Progress Pulse implements a **robust dual-token authentication system** for enha
 ---
 
 ## 🐳 CI/CD Pipeline & Docker Architecture
+
+<div align="center">
+
+![DevOps Architecture](Client/public/DevOps_Architecture.png)
+
+</div>
 
 ### 🔄 Continuous Integration/Continuous Deployment
 
@@ -611,18 +617,50 @@ docker-compose up --build -d
 
 ### 🏠 Homepage & Landing
 
-![Homepage Demo](Client/public/Dashboard.png)
+![Homepage Demo](Client/public/Main_Dashboard.png)
 *Clean and modern landing page with feature highlights*
 
 ### 📊 Dashboard Overview (Light Theme)
 
-![Dashboard Light](Client/public/Dashboard.png)
+![Dashboard Light](Client/public/Main_Dashboard.png)
 *Comprehensive dashboard with habit, expense, and investment widgets*
 
-### 🌙 Dashboard Overview (Dark Theme)
+### � Dashboard Overview (Sunset Theme)
 
-![Dashboard Dark](Client/public/Dashboard-Dark.png)
-*Dark mode support for comfortable nighttime usage*
+![Dashboard Sunset](Client/public/Main_Dashboard_SunsetTheme.png)
+*Beautiful sunset theme for a warm aesthetic*
+
+### 🎯 Habit Tracking
+
+![Habit Tracker Table Entry](Client/public/HabitTracker_TableEntry.png)
+*Detailed habit logging interface*
+
+![Habit Tracker Dark Mode](Client/public/HabitTracker_TableEntry_DimTheme.png)
+*Habit tracking in dark mode*
+
+![Habit Logging](Client/public/HabitTracker_Logging.png)
+*Quick habit logging interface*
+
+![Habit Settings](Client/public/HabitTracker_Settings.png)
+*Customizable habit settings*
+
+#### Specific Dashboards
+
+| Water Tracking | Sleep Tracking |
+| :---: | :---: |
+| ![Water](Client/public/HabitTracker_Water_Dashboard.png) | ![Sleep](Client/public/HabitTracker_Sleep_Dashboard.png) |
+
+| Read Tracking | Calorie Tracking |
+| :---: | :---: |
+| ![Read](Client/public/HabitTracker_Read_Dashboard.png) | ![Calorie](Client/public/HabitTracker_Calorie_Dashboard.png) |
+
+### 💰 Expense Management
+
+![Expense Table View](Client/public/ExpenseTracker_TableView.png)
+*Overview of all expenses in a sortable table*
+
+![Expense Entry](Client/public/ExpenseTracker_TableEntry.png)
+*Detailed expense entry view*
 
 ### 🎥 Video Demo
 
