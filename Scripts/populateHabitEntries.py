@@ -34,7 +34,7 @@ headers = {
 }
 
 # Step 2: Generate and send habit entries for a month
-start_date = datetime.date(2025, 11, 1)
+start_date = datetime.date(2025, 12, 1)
 
 for i in range(30):
     current_date = start_date + datetime.timedelta(days=i)

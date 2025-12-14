@@ -75,137 +75,142 @@ function Signup() {
   };
 
   return (
-    <div className="relative w-full h-screen overflow-hidden">
-      <video
-        className="absolute top-0 left-0 w-full h-full object-cover z-0"
-        autoPlay
-        muted
-        loop
-        playsInline
-      >
-        <source src="/Video/ProgressPulse.mp4" type="video/mp4" />
-      </video>
+    <div className="relative w-full h-screen bg-base-300 flex items-center justify-center overflow-hidden">
+      {/* Background Animated Blobs */}
+      <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none fixed">
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/20 rounded-full blur-[100px] animate-pulse-slow"></div>
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-secondary/20 rounded-full blur-[100px] animate-pulse-slow"></div>
+      </div>
 
-      <div className="relative z-10 w-full h-full flex flex-col md:flex-row backdrop-blur-sm bg-black/30">
+      <div className="relative z-10 w-full max-w-7xl mx-auto flex flex-col md:flex-row p-4 md:p-0">
         {/* Left Content with Motion */}
         <motion.div
-          initial={{ x: -100, opacity: 0 }}
+          initial={{ x: -50, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
           transition={{ duration: 0.8 }}
-          className="w-full md:w-1/2 flex flex-col justify-center items-center text-white p-10 text-center"
+          className="hidden md:flex w-full md:w-1/2 flex-col justify-center items-center p-10 relative"
         >
-          {/* <h1 className="text-4xl font-bold">Welcome to Progress Pulse</h1>
-          <p className="mt-4 text-lg">
-            Track your progress, stay motivated, and grow every day.
-          </p> */}
           <SignupLeftCard />
         </motion.div>
 
         {/* Signup Form with Motion */}
         <motion.div
-          initial={{ x: 100, opacity: 0 }}
+          initial={{ x: 50, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
           transition={{ duration: 0.8 }}
-          className="w-full md:w-1/2 flex justify-center items-center px-4 py-8"
+          className="w-full md:w-1/2 flex justify-center items-center py-10 md:py-0"
         >
-          <div className="w-full max-w-lg bg-opacity-80 backdrop-blur-md p-8 rounded-box shadow-lg">
+          <div className="w-full max-w-lg bg-base-100/50 backdrop-blur-2xl border border-white/10 p-8 rounded-3xl shadow-2xl relative overflow-hidden">
+            {/* Form Glow */}
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary to-transparent opacity-50"></div>
+
             {showErrorAlert && <ErrorAlert message={alertErrorMessage} />}
             {showSuccessAlert && <SuccessAlert message={alertSuccessMessage} />}
 
             <form
-              className="fieldset w-full max-w-lg border border-base-300 p-6 rounded-box"
+              className="w-full space-y-5"
               onSubmit={registerUser}
             >
-              <legend className="fieldset-legend text-2xl font-bold">
-                Sign Up
-              </legend>
+              <div className="text-center mb-8">
+                <h2 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-base-content/60">
+                  Create Account
+                </h2>
+                <p className="text-base-content/60 text-sm mt-2">Join us to start your journey</p>
+              </div>
 
-              <label className="fieldset-label text-lg">Name</label>
-              <input
-                type="text"
-                name="username"
-                className="input validator input-lg w-full"
-                placeholder="Full Name"
-                required
-                pattern="[A-Za-z][A-Za-z ]*"
-                minLength="3"
-                maxLength="30"
-                title="Only letters and spaces allowed"
-                onChange={handleChange}
-              />
+              <div>
+                <label className="label text-sm font-medium text-base-content/80 ml-1 mb-1">Full Name</label>
+                <input
+                  type="text"
+                  name="username"
+                  className="input input-bordered input-lg w-full bg-base-200/50 focus:bg-base-200 focus:border-primary transition-all rounded-xl"
+                  placeholder="Enter your name"
+                  required
+                  pattern="[A-Za-z][A-Za-z ]*"
+                  minLength="3"
+                  maxLength="30"
+                  title="Only letters and spaces allowed"
+                  onChange={handleChange}
+                />
+              </div>
 
-              <label className="fieldset-label text-lg mt-2">Email</label>
-              <input
-                type="email"
-                name="email"
-                className="input validator input-lg w-full"
-                placeholder="Email"
-                required
-                onChange={handleChange}
-              />
+              <div>
+                <label className="label text-sm font-medium text-base-content/80 ml-1 mb-1">Email Address</label>
+                <input
+                  type="email"
+                  name="email"
+                  className="input input-bordered input-lg w-full bg-base-200/50 focus:bg-base-200 focus:border-primary transition-all rounded-xl"
+                  placeholder="name@example.com"
+                  required
+                  onChange={handleChange}
+                />
+              </div>
 
-              <label className="fieldset-label text-lg mt-2">Password</label>
-              <input
-                type={showPassword ? "text" : "password"}
-                name="password"
-                className="input validator input-lg w-full"
-                required
-                placeholder="Password"
-                minLength="8"
-                pattern="(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}"
-                title="Must be minimum of 8 characters, including a number, a lowercase letter, and an uppercase letter"
-                onChange={(e) => {
-                  setPassword(e.target.value);
-                  handleChange(e);
-                }}
-              />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="label text-sm font-medium text-base-content/80 ml-1 mb-1">Password</label>
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    name="password"
+                    className="input input-bordered input-lg w-full bg-base-200/50 focus:bg-base-200 focus:border-primary transition-all rounded-xl"
+                    required
+                    placeholder="••••••••"
+                    minLength="8"
+                    pattern="(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}"
+                    title="Must be minimum of 8 characters, including a number, a lowercase letter, and an uppercase letter"
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      handleChange(e);
+                    }}
+                  />
+                </div>
+                <div>
+                  <label className="label text-sm font-medium text-base-content/80 ml-1 mb-1">Confirm</label>
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    className="input input-bordered input-lg w-full bg-base-200/50 focus:bg-base-200 focus:border-primary transition-all rounded-xl"
+                    required
+                    placeholder="••••••••"
+                    minLength="8"
+                    onChange={handleConfirmPasswordChange}
+                  />
+                </div>
+              </div>
 
-              <label className="fieldset-label text-lg mt-2">
-                Confirm Password
-              </label>
-              <input
-                type={showPassword ? "text" : "password"}
-                className="input validator input-lg w-full"
-                required
-                placeholder="Confirm Password"
-                minLength="8"
-                onChange={handleConfirmPasswordChange}
-              />
-
-              <div className="flex items-center mt-2">
+              <div className="flex items-center mt-2 pl-1">
                 <input
                   type="checkbox"
                   id="showPassword"
-                  className="mr-2"
+                  className="checkbox checkbox-primary checkbox-sm rounded-md"
                   onChange={() => setShowPassword(!showPassword)}
                 />
                 <label
                   htmlFor="showPassword"
-                  className="text-sm fieldset-label"
+                  className="ml-3 text-sm cursor-pointer select-none text-base-content/70"
                 >
                   Show Password
                 </label>
               </div>
 
-              {error && <p className="text-red-500 text-sm mt-1">{error}</p>}
+              {error && <p className="text-error text-center text-sm">{error}</p>}
 
               <button
                 disabled={disableButton}
-                className={`btn btn-primary btn-lg w-full ${/^[A-Za-z ]{3,30}$/.test(formData.username) &&
-                    /^(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}$/.test(formData.password) &&
-                    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email) &&
-                    error === "" && /^(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}$/.test(confirmPassword)
-                    ? ""
-                    : "btn-soft"
+                className={`btn btn-primary btn-lg w-full rounded-xl shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all text-lg font-bold ${/^[A-Za-z ]{3,30}$/.test(formData.username) &&
+                  /^(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}$/.test(formData.password) &&
+                  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email) &&
+                  error === "" && /^(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}$/.test(confirmPassword)
+                  ? ""
+                  : "btn-disabled opacity-50 cursor-not-allowed"
                   }`}
                 type="submit"
               >
-                <span>Sign Up</span>
+                Create Account
               </button>
 
-              <p className="text-center mt-4 text-sm">
+              <p className="text-center mt-6 text-sm text-base-content/60">
                 Already have an account?{" "}
-                <Link to="/login" className="text-blue-500 hover:underline">
+                <Link to="/login" className="text-primary hover:text-primary-focus font-semibold hover:underline">
                   Login here
                 </Link>
               </p>

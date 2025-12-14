@@ -1,64 +1,73 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { ShieldCheck, Zap, BarChart2, Smile } from 'lucide-react';
 
 function Why() {
-    return (
-        <section id="why" className="min-h-screen w-full flex flex-col items-center justify-center px-6 md:px-20 bg-base-200 py-20">
-            <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-12">
+    const reasons = [
+        {
+            icon: <Zap size={32} className="text-secondary" />,
+            title: "Lightning Fast",
+            description: "Built for speed. Log habits and transactions in seconds with our optimized keyboard-first interface."
+        },
+        {
+            icon: <BarChart2 size={32} className="text-primary" />,
+            title: "Deep Analytics",
+            description: "Go beyond basic tracking. Visualize trends, correlations, and insights that actually help you improve."
+        },
+        {
+            icon: <ShieldCheck size={32} className="text-accent" />,
+            title: "Privacy First",
+            description: "Your data is yours. We employ enterprise-grade encryption and never sell your personal information."
+        },
+        {
+            icon: <Smile size={32} className="text-info" />,
+            title: "User Friendly",
+            description: "Complex power, simple design. An intuitive interface that gets out of your way and lets you focus."
+        }
+    ];
 
-                {/* Left Side - Heading and Description */}
-                <motion.div 
-                    className="md:w-2/5 text-center md:text-left"
-                    initial={{ x: -100, opacity: 0 }}
-                    whileInView={{ x: 0, opacity: 1 }}
-                    transition={{ duration: 0.8, ease: "easeOut" }}
+    return (
+        <section id="why" className="w-full bg-base-300 py-32 relative">
+            {/* Background Mesh Gradient */}
+            <div className="absolute inset-0 overflow-hidden opacity-20 pointer-events-none">
+                <div className="absolute top-[20%] right-[10%] w-[40%] h-[40%] bg-primary/20 rounded-full blur-[100px]"></div>
+                <div className="absolute bottom-[20%] left-[10%] w-[40%] h-[40%] bg-secondary/20 rounded-full blur-[100px]"></div>
+            </div>
+
+            <div className="container mx-auto px-6 relative z-10">
+                <motion.div
+                    className="text-center mb-20"
+                    initial={{ opacity: 0, y: 30 }}
+                    whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
+                    transition={{ duration: 0.8 }}
                 >
-                    <h2 className="text-5xl font-bold mb-6 text-primary">Why Progress Pulse?</h2>
-                    <p className="text-base-content text-lg max-w-3xl mx-auto md:mx-0">
-                        Because consistency beats intensity. Progress Pulse helps you maintain small daily wins that eventually build into life-changing results.
-                        Plus, it's customizable, lightweight, and designed to suit your journey — whether it's building habits, managing investments, or tracking expenses!
+                    <h2 className="text-4xl md:text-5xl font-bold mb-6">Why <span className="text-primary">Progress Pulse?</span></h2>
+                    <p className="text-lg text-base-content/70 max-w-2xl mx-auto">
+                        Designed for those who demand more from their tools. Experience the difference of a platform built for performance.
                     </p>
                 </motion.div>
 
-                {/* Right Side - Tabs Section */}
-                <motion.div 
-                    className="flex flex-col justify-center items-center md:w-3/5"
-                    initial={{ x: 100, opacity: 0 }}
-                    whileInView={{ x: 0, opacity: 1 }}
-                    transition={{ duration: 0.8, ease: "easeOut", delay: 0.2 }}
-                    viewport={{ once: true }}
-                >
-                    <div className="tabs tabs-lift w-full">
-                        <input type="radio" name="why_tabs" className="tab text-primary hover:text-primary font-semibold text-1xl" aria-label="Consistency" defaultChecked />
-                        <div className="tab-content border-base-300 bg-base-100 p-8 shadow-md">
-                            <img src="/Dashboard.png" alt="image3" />
-                            <h3 className="text-2xl font-bold mb-4 mt-4 text-primary">Consistency Wins</h3>
-                            <p className="text-base-content">
-                                Building tiny habits every day leads to massive success over time. Progress Pulse keeps you accountable in small, powerful steps.
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                    {reasons.map((reason, index) => (
+                        <motion.div
+                            key={index}
+                            className="bg-base-100/50 backdrop-blur-md p-8 rounded-2xl border border-base-content/5 hover:border-primary/50 transition-all duration-300 group hover:-translate-y-2 hover:shadow-2xl hover:shadow-primary/10"
+                            initial={{ opacity: 0, y: 30 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            viewport={{ once: true }}
+                            transition={{ duration: 0.5, delay: index * 0.1 }}
+                        >
+                            <div className="mb-6 p-4 rounded-xl bg-base-200 w-fit group-hover:bg-base-300 transition-colors">
+                                {reason.icon}
+                            </div>
+                            <h3 className="text-xl font-bold mb-3 group-hover:text-primary transition-colors">{reason.title}</h3>
+                            <p className="text-base-content/70 leading-relaxed text-sm">
+                                {reason.description}
                             </p>
-                        </div>
-
-                        <input type="radio" name="why_tabs" className="tab text-primary hover:text-primary font-semibold text-1xl" aria-label="All-In-One" />
-                        <div className="tab-content border-base-300 bg-base-100 p-8 shadow-md">
-                            <img src="/Dashboard-Dark.png" alt="image3" />
-                            <h3 className="text-2xl font-bold mb-4 mt-4 text-primary">All-In-One Tracking</h3>
-                            <p className="text-base-content">
-                                Track habits, investments, and expenses — all from a clean, intuitive dashboard designed for clarity and control.
-                            </p>
-                        </div>
-
-                        <input type="radio" name="why_tabs" className="tab text-primary hover:text-primary font-semibold text-1xl" aria-label="Customizable" />
-                        <div className="tab-content border-base-300 bg-base-100 p-8 shadow-md">
-                            <img src="/Dashboard.png" alt="image3" />
-                            <h3 className="text-2xl font-bold mb-4 mt-4 text-primary">Tailored to You</h3>
-                            <p className="text-base-content">
-                                Progress Pulse adapts to your goals — whether you're growing your wealth, mastering habits, or managing spending, your dashboard evolves with you.
-                            </p>
-                        </div>
-                    </div>
-                </motion.div>
-
+                        </motion.div>
+                    ))}
+                </div>
             </div>
         </section>
     );

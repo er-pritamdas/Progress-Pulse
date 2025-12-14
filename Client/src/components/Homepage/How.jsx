@@ -1,138 +1,101 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { FilePlus, Activity, TrendingUp, Award } from 'lucide-react';
 
 function How() {
-  return (
-    <section
-      id="how"
-      className="min-h-screen w-full flex flex-col items-center justify-center px-6 md:px-20 bg-base-100"
-    >
-      <div className="text-center">
-        {/* Animated Section Title */}
-        <motion.h2
-          className="text-5xl font-bold mb-6 text-primary"
-          initial={{ opacity: 0, y: 50 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7 }}
-          viewport={{ once: true }}
-        >
-          How it Works?
-        </motion.h2>
+  const steps = [
+    {
+      id: 1,
+      title: "Add Data",
+      description: "Quickly log your habits, expenses, or investments manually or via bulk import.",
+      icon: <FilePlus size={24} className="text-primary" />
+    },
+    {
+      id: 2,
+      title: "Track Daily",
+      description: "Build consistency by checking in daily. Our streaks and reminders keep you accountable.",
+      icon: <Activity size={24} className="text-secondary" />
+    },
+    {
+      id: 3,
+      title: "Analyze Progress",
+      description: "Dive into the dashboards. View heatmaps, spending breakdowns, and net worth charts.",
+      icon: <TrendingUp size={24} className="text-accent" />
+    },
+    {
+      id: 4,
+      title: "Improve Consistently",
+      description: "Adjust your goals based on data. Optimize your routine and watch your life upgrade.",
+      icon: <Award size={24} className="text-success" />
+    }
+  ];
 
-        {/* Animated Description */}
-        <motion.p
-          className="text-base-content text-lg max-w-3xl mx-auto mb-8"
+  return (
+    <section id="how" className="min-h-screen w-full bg-base-100 py-32 relative flex flex-col items-center">
+      <div className="container mx-auto px-6 relative z-10">
+
+        {/* Header */}
+        <motion.div
+          className="text-center mb-24"
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.9, delay: 0.2 }}
           viewport={{ once: true }}
+          transition={{ duration: 0.8 }}
         >
-          Simply log your habits, investments, and expenses through an easy-to-use table with full CRUD operations.
-          Your data instantly updates interactive dashboards and detailed tables, helping you visualize and manage your journey effortlessly.
-        </motion.p>
-
-        {/* Cards with Staggered Animation */}
-        <motion.div
-          className="flex flex-col md:flex-row flex-wrap items-center justify-center gap-8"
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true }}
-          variants={{
-            hidden: {},
-            visible: {
-              transition: {
-                staggerChildren: 0.3,
-              },
-            },
-          }}
-        >
-          {/* Card 1 */}
-          <motion.div
-            className="card card-border bg-base-300 w-96 shadow-md"
-            variants={{
-              hidden: { opacity: 0, y: 50 },
-              visible: { opacity: 1, y: 0 },
-            }}
-            transition={{ duration: 0.7 }}
-          >
-            <figure>
-              <img
-                src="/Dashboard.png"
-                alt="Enter Data"
-                className="w-full h-48 object-cover"
-              />
-            </figure>
-            <div className="card-body">
-              <h2 className="card-title">
-                Enter Your Data
-                <div className="badge badge-soft badge-success">Step 1</div>
-              </h2>
-              <p>Add, edit, or delete your daily entries for habits, investments, and expenses.</p>
-              <div className="card-actions justify-end">
-                <div className="badge badge-outline badge-info font-bold">Habits</div>
-                <div className="badge badge-outline badge-success font-bold">Finance</div>
-              </div>
-            </div>
-          </motion.div>
-
-          {/* Card 2 */}
-          <motion.div
-            className="card card-border bg-base-300 w-96 shadow-md"
-            variants={{
-              hidden: { opacity: 0, y: 50 },
-              visible: { opacity: 1, y: 0 },
-            }}
-            transition={{ duration: 0.7, delay: 0.2 }}
-          >
-            <figure>
-              <img
-                src="/Dashboard.png"
-                alt="Auto Update"
-                className="w-full h-48 object-cover"
-              />
-            </figure>
-            <div className="card-body">
-              <h2 className="card-title">
-                Automatic Updates
-                <div className="badge badge-soft badge-success">Step 2</div>
-              </h2>
-              <p>Your dashboards and table views update instantly as you manage your entries.</p>
-              <div className="card-actions justify-end">
-                <div className="badge badge-outline badge-info font-bold">Live</div>
-                <div className="badge badge-outline badge-success font-bold">Smart</div>
-              </div>
-            </div>
-          </motion.div>
-
-          {/* Card 3 */}
-          <motion.div
-            className="card card-border bg-base-300 w-96 shadow-md"
-            variants={{
-              hidden: { opacity: 0, y: 50 },
-              visible: { opacity: 1, y: 0 },
-            }}
-            transition={{ duration: 0.7, delay: 0.4 }}
-          >
-            <figure>
-              <img
-                src="/Dashboard.png"
-                alt="Visualize Growth"
-                className="w-full h-48 object-cover"
-              />
-            </figure>
-            <div className="card-body">
-              <h2 className="card-title">
-                Visualize Your Growth
-                <div className="badge badge-soft badge-success">Step 3</div>
-              </h2>
-              <p>Analyze your habits, investments, and expenses with clean, powerful visuals.</p>
-              <div className="card-actions justify-end">
-                <div className="badge badge-outline badge-info font-bold">Dashboard</div>
-                <div className="badge badge-outline badge-success font-bold">Insights</div>
-              </div>
-            </div>
-          </motion.div>
+          <h2 className="text-4xl md:text-5xl font-bold mb-6">How it <span className="text-primary">Works</span></h2>
+          <p className="text-lg text-base-content/70 max-w-2xl mx-auto">
+            A simple, proven workflow designed to take you from chaos to clarity in four steps.
+          </p>
         </motion.div>
+
+        {/* Steps Container */}
+        <div className="relative flex flex-col md:flex-row justify-between items-start w-full max-w-6xl mx-auto gap-12 md:gap-4">
+
+          {/* Connecting Line (Desktop) */}
+          <div className="hidden md:block absolute top-[28px] left-0 w-full h-0.5 bg-gradient-to-r from-base-300 via-primary/50 to-base-300 -z-10"></div>
+
+          {steps.map((step, index) => (
+            <motion.div
+              key={index}
+              className="flex flex-col items-center text-center w-full md:w-1/4 group"
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: index * 0.2 }}
+            >
+              {/* Icon Circle */}
+              <div className="w-14 h-14 rounded-full bg-base-200 border border-base-content/10 flex items-center justify-center mb-6 shadow-xl relative z-10 group-hover:scale-110 group-hover:border-primary/50 transition-all duration-300">
+                {step.icon}
+                {/* Step Number Badge */}
+                <div className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-primary text-primary-content text-xs font-bold flex items-center justify-center border-2 border-base-100">
+                  {step.id}
+                </div>
+              </div>
+
+              {/* Content */}
+              <h3 className="text-xl font-bold mb-3">{step.title}</h3>
+              <p className="text-sm text-base-content/60 leading-relaxed px-4">
+                {step.description}
+              </p>
+            </motion.div>
+          ))}
+
+        </div>
+
+        {/* Bottom CTA */}
+        <motion.div
+          className="mt-24 text-center"
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.8, delay: 0.8 }}
+        >
+          <button className="btn btn-primary btn-lg rounded-full px-12 shadow-2xl shadow-primary/20 hover:scale-105 transition-transform">
+            Start Your Journey Now
+          </button>
+          <p className="mt-4 text-xs text-base-content/40">No credit card required for demo.</p>
+        </motion.div>
+
       </div>
     </section>
   );

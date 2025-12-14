@@ -98,108 +98,98 @@ function Login() {
 
 
   return (
-    <div className="relative w-full h-screen overflow-hidden">
-      {/* Background Video */}
-      <video
-        className="absolute top-0 left-0 w-full h-full object-cover z-0"
-        autoPlay
-        muted
-        loop
-        playsInline
-      >
-        <source src="/Video/ProgressPulse.mp4" type="video/mp4" />
-        Your browser does not support the video tag.
-      </video>
+    <div className="relative w-full h-screen bg-base-300 flex items-center justify-center overflow-hidden">
+      {/* Background Animated Blobs */}
+      <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none fixed">
+        <div className="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] bg-primary/20 rounded-full blur-[100px] animate-pulse-slow"></div>
+        <div className="absolute bottom-[-10%] left-[-10%] w-[40%] h-[40%] bg-secondary/20 rounded-full blur-[100px] animate-pulse-slow"></div>
+      </div>
 
-      {/* Overlay Content */}
-      <div className="relative z-10 w-full h-full flex flex-col md:flex-row backdrop-blur-sm bg-black/30">
+      <div className="relative z-10 w-full max-w-7xl mx-auto flex flex-col md:flex-row p-4 md:p-0">
 
         {/* Left Side */}
         <motion.div
-          className="w-full md:w-1/2 flex flex-col justify-center items-center text-white p-10 text-center"
-          initial={{ opacity: 0, x: -100 }}
+          className="hidden md:flex w-full md:w-1/2 flex-col justify-center items-center p-10 relative"
+          initial={{ opacity: 0, x: -50 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.8 }}
         >
-          {/* <img
-            src="/Dashboard.png"
-            alt="Welcome"
-            className="w-2/3 max-w-sm mb-8"
-          />
-          <h1 className="text-4xl font-bold mb-4">Welcome Back!</h1>
-          <p className="text-md max-w-md leading-relaxed">
-            Track your goals, habits, and progress with
-            <span className="font-semibold"> Progress Pulse</span>. Your journey
-            to productivity and self-growth begins here.
-          </p> */}
-
           <LoginLeftCard />
         </motion.div>
 
-        {/* Right Side */}
+        {/* Right Side - Login Form */}
         <motion.div
-          className="w-full md:w-1/2 flex justify-center items-center px-4 py-8"
-          initial={{ opacity: 0, x: 100 }}
+          className="w-full md:w-1/2 flex justify-center items-center py-10 md:py-0"
+          initial={{ opacity: 0, x: 50 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.8 }}
         >
           <motion.div
-            className="w-full max-w-lg bg-opacity-80 backdrop-blur-md p-8 rounded-box shadow-lg"
+            className="w-full max-w-lg bg-base-100/50 backdrop-blur-2xl border border-white/10 p-8 rounded-3xl shadow-2xl relative overflow-hidden"
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ duration: 0.5, delay: 0.2 }}
           >
+            {/* Form Glow */}
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary to-transparent opacity-50"></div>
+
             {showErrorAlert && <ErrorAlert message={alertErrorMessage} top={-10} />}
             {showSuccessAlert && <SuccessAlert message={alertSuccessMessage} top={-15} />}
 
-            <form onSubmit={loginUser}>
-              <legend className="text-3xl font-bold mb-6 text-center">
-                Login
-              </legend>
-
-              {/* Username */}
-              <label className="block text-lg font-medium mb-1">UserName</label>
-              <input
-                type="text"
-                name="username"
-                className="input input-bordered input-lg w-full mb-4"
-                placeholder="Full Name"
-                required
-                pattern="[A-Za-z][A-Za-z ]*"
-                minLength="3"
-                maxLength="30"
-                onChange={handleChange}
-              />
-
-              {/* Password */}
-              <label className="block text-lg font-medium mb-1">Password</label>
-              <input
-                name="password"
-                type={showPassword ? "text" : "password"}
-                className="input input-bordered input-lg w-full mb-2"
-                required
-                placeholder="Password"
-                minLength="8"
-                pattern="(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}"
-                onChange={handleChange}
-              />
-
-              {/* Show Password */}
-              <div className="flex items-center mb-2">
-                <input
-                  type="checkbox"
-                  id="showPassword"
-                  className="mr-2"
-                  onChange={() => setShowPassword(!showPassword)}
-                />
-                <label htmlFor="showPassword" className="text-sm">
-                  Show Password
-                </label>
+            <form onSubmit={loginUser} className="space-y-6">
+              <div className="text-center mb-8">
+                <h2 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-base-content/60">
+                  Welcome Back
+                </h2>
+                <p className="text-base-content/60 text-sm mt-2">Enter your credentials to access your account</p>
               </div>
 
-              {/* Forgot Password */}
-              <div className="text-right text-sm mb-4">
-                <Link to="/forgot_Password_Verify" className="link link-info">
+              {/* Username */}
+              <div>
+                <label className="label text-sm font-medium text-base-content/80 ml-1 mb-1">Username</label>
+                <input
+                  type="text"
+                  name="username"
+                  className="input input-bordered input-lg w-full bg-base-200/50 focus:bg-base-200 focus:border-primary transition-all rounded-xl"
+                  placeholder="Enter your username"
+                  required
+                  pattern="[A-Za-z][A-Za-z ]*"
+                  minLength="3"
+                  maxLength="30"
+                  onChange={handleChange}
+                />
+              </div>
+
+              {/* Password */}
+              <div>
+                <label className="label text-sm font-medium text-base-content/80 ml-1 mb-1">Password</label>
+                <input
+                  name="password"
+                  type={showPassword ? "text" : "password"}
+                  className="input input-bordered input-lg w-full bg-base-200/50 focus:bg-base-200 focus:border-primary transition-all rounded-xl"
+                  required
+                  placeholder="••••••••"
+                  minLength="8"
+                  pattern="(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}"
+                  onChange={handleChange}
+                />
+              </div>
+
+              {/* Options Row */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center pl-1">
+                  <input
+                    type="checkbox"
+                    id="showPassword"
+                    className="checkbox checkbox-primary checkbox-sm rounded-md"
+                    onChange={() => setShowPassword(!showPassword)}
+                  />
+                  <label htmlFor="showPassword" className="ml-3 text-sm cursor-pointer select-none text-base-content/70">
+                    Show Password
+                  </label>
+                </div>
+
+                <Link to="/forgot_Password_Verify" className="text-sm text-primary hover:text-primary-focus font-medium transition-colors">
                   Forgot Password?
                 </Link>
               </div>
@@ -207,20 +197,20 @@ function Login() {
               {/* Submit Button */}
               <button
                 disabled={disableButton}
-                className={`btn btn-success btn-lg w-full ${/^[A-Za-z ]{3,30}$/.test(formData.username) &&
+                className={`btn btn-primary btn-lg w-full rounded-xl shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all text-lg font-bold ${/^[A-Za-z ]{3,30}$/.test(formData.username) &&
                   /^(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}$/.test(formData.password)
                   ? ""
-                  : "btn-soft"
+                  : "btn-disabled opacity-50 cursor-not-allowed"
                   }`}
                 type="submit"
               >
-                Login
+                Login to Dashboard
               </button>
 
               {/* Sign Up Link */}
-              <p className="text-center mt-4 text-sm">
+              <p className="text-center mt-6 text-sm text-base-content/60">
                 Don’t have an account?{" "}
-                <Link to="/signup" className="text-blue-500 hover:underline">
+                <Link to="/signup" className="text-primary hover:text-primary-focus font-semibold hover:underline">
                   Sign up here
                 </Link>
               </p>
