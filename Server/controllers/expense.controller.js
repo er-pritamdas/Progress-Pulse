@@ -35,52 +35,9 @@ export const getDashboardData = async (req, res) => {
                         { name: "House Rent", budget: 15000 },
                         { name: "Electricity Bill", budget: 1500 },
                         { name: "Water Bill", budget: 300 },
-                        { name: "Gas (LPG)", budget: 1200 },
+                        { name: "Gas", budget: 1200 },
                         { name: "Maintenance", budget: 2000 },
-                        { name: "Internet / WiFi", budget: 1000 }
-                    ]
-                },
-                {
-                    name: "Food & Daily Needs 🍽",
-                    subCategories: [
-                        { name: "Groceries", budget: 5000 },
-                        { name: "Vegetables & Fruits", budget: 2000 },
-                        { name: "Milk & Dairy", budget: 1200 },
-                        { name: "Eating Outside", budget: 2000 }
-                    ]
-                },
-                {
-                    name: "Transport & Travel 🚗",
-                    subCategories: [
-                        { name: "Petrol / Diesel", budget: 3000 },
-                        { name: "Public Transport", budget: 1000 },
-                        { name: "Cab / Auto", budget: 1500 },
-                        { name: "Vehicle Maintenance", budget: 1000 }
-                    ]
-                },
-                {
-                    name: "Utilities & Subscriptions 📱",
-                    subCategories: [
-                        { name: "Mobile Recharge", budget: 500 },
-                        { name: "OTT Subscriptions", budget: 800 },
-                        { name: "Cloud / App Subscriptions", budget: 500 }
-                    ]
-                },
-                {
-                    name: "Family & Personal 👨‍👩‍👧",
-                    subCategories: [
-                        { name: "Parents Support", budget: 5000 },
-                        { name: "Kids Education", budget: 4000 },
-                        { name: "Personal Care", budget: 1000 },
-                        { name: "Gifts & Occasions", budget: 1000 }
-                    ]
-                },
-                {
-                    name: "Health & Insurance 💊",
-                    subCategories: [
-                        { name: "Medicines", budget: 1000 },
-                        { name: "Doctor Visits", budget: 1000 },
-                        { name: "Health Insurance", budget: 2000 }
+                        { name: "Internet", budget: 1000 }
                     ]
                 },
                 {
@@ -90,15 +47,6 @@ export const getDashboardData = async (req, res) => {
                         { name: "SIP / Mutual Funds", budget: 10000 },
                         { name: "Stocks", budget: 5000 },
                         { name: "Emergency Fund", budget: 3000 }
-                    ]
-                },
-                {
-                    name: "Lifestyle & Fun 🎉",
-                    subCategories: [
-                        { name: "Movies & Entertainment", budget: 1000 },
-                        { name: "Dining Out", budget: 2000 },
-                        { name: "Shopping", budget: 3000 },
-                        { name: "Trips / Travel", budget: 3000 }
                     ]
                 }
             ];
@@ -111,11 +59,11 @@ export const getDashboardData = async (req, res) => {
         const sourceCount = await PaymentSource.countDocuments({ userId });
         if (sourceCount === 0) {
             const defaultSources = [
-                { name: "HDFC" },
-                { name: "SBI" },
-                { name: "Credit Card" },
-                { name: "Cash" },
-                { name: "Paytm Wallet" }
+                { name: "HDFC", type: "Bank", balance: 5000 },
+                { name: "SBI", type: "Bank", balance: 5000 },
+                { name: "Credit Card", type: "Card"},
+                { name: "Cash", type: "Wallet", balance: 5000 },
+                { name: "Paytm Wallet", type: "Wallet", balance: 5000 }
             ];
             await PaymentSource.insertMany(
                 defaultSources.map(s => ({ userId, ...s }))

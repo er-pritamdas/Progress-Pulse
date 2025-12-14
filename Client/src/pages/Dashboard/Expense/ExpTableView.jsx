@@ -17,9 +17,7 @@ const ExpTableView = () => {
   const [isAddingCategory, setIsAddingCategory] = useState(false);
 
   useEffect(() => {
-    if (user) {
       dispatch(fetchDashboardData(currentMonth));
-    }
   }, [currentMonth, user, dispatch]);
 
 

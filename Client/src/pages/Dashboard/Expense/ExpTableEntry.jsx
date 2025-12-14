@@ -15,9 +15,7 @@ const ExpTableEntry = () => {
   const [showCredit, setShowCredit] = useState(true);
 
   useEffect(() => {
-    if (user) {
       dispatch(fetchDashboardData(currentMonth));
-    }
   }, [currentMonth, user, dispatch]);
 
   // Sidebar Stats
