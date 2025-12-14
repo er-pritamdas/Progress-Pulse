@@ -48,6 +48,10 @@ const expenseTransactionSchema = new mongoose.Schema({
         type: String,
         enum: ["Credit", "Debit"],
         default: "Debit"
+    },
+    isReimbursable: {
+        type: Boolean,
+        default: false
     }
 }, { timestamps: true });
 

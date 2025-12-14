@@ -1,8 +1,9 @@
+
 import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import dayjs from "dayjs";
 import { setMonth, updateSalary, createSource, deleteSource, fetchDashboardData } from "../../services/redux/slice/ExpenseSlice";
-import { Plus, Trash2, Edit2, X, ChevronLeft, ChevronRight, Eye, EyeOff } from "lucide-react";
+import { Plus, X, Eye, EyeOff, Info, Trash2, Wallet, Banknote, Calculator, PiggyBank } from "lucide-react";
 
 const HeaderSection = () => {
     const dispatch = useDispatch();
@@ -13,6 +14,10 @@ const HeaderSection = () => {
     const [newSourceName, setNewSourceName] = useState("");
     const [newSourceType, setNewSourceType] = useState("Bank");
     const [newSourceBalance, setNewSourceBalance] = useState("");
+
+    // History Modal State
+    const [historySourceId, setHistorySourceId] = useState(null);
+    const [showHistoryModal, setShowHistoryModal] = useState(false);
     const [isAddingSource, setIsAddingSource] = useState(false);
 
     // Privacy State
@@ -37,6 +42,7 @@ const HeaderSection = () => {
     });
 
     const totalSpentSources = sourceTotals.reduce((sum, s) => sum + s.spent, 0);
+    const totalBankBalance = sourceTotals.filter(s => s.type === 'Bank').reduce((sum, s) => sum + s.balance, 0);
 
 
     const handleMonthChange = (e) => {
@@ -70,37 +76,39 @@ const HeaderSection = () => {
             {/* Top Row: Month & Summary Stats */}
             <div className="flex flex-col xl:flex-row gap-6">
 
-                {/* Left: Month Selector & Add Source */}
-                <div className="flex flex-col md:flex-row xl:flex-col gap-4 min-w-[250px]">
-                    {/* Month Selector */}
-                    <div className="card bg-base-200 shadow-sm border border-base-300">
-                        <div className="card-body p-4 flex flex-row items-center justify-between">
-                            <h2 className="card-title text-base font-medium opacity-70">Period</h2>
-                            <input
-                                type="month"
-                                value={currentMonth}
-                                onChange={handleMonthChange}
-                                className="input input-sm input-ghost font-semibold text-lg focus:outline-none focus:bg-transparent px-0 text-right w-full max-w-[150px]"
-                            />
-                        </div>
-                    </div>
-                </div>
+                {/* Left: Month Selector & Add Source - REMOVED as per request */}
 
                 {/* Right: Financial Summary (DaisyUI Stats) */}
                 <div className="stats shadow-sm border border-base-300 w-full bg-base-200 flex flex-col md:flex-row relative group">
 
                     {/* Privacy Toggle (Absolute top-right of stats block) */}
-                    <button
-                        onClick={() => setShowBalance(!showBalance)}
-                        className="btn btn-xs btn-ghost btn-circle absolute top-2 right-2 z-10 opacity-30 hover:opacity-100"
-                        title={showBalance ? "Hide Balances" : "Show Balances"}
-                    >
-                        {showBalance ? <EyeOff size={14} /> : <Eye size={14} />}
-                    </button>
+                    {/* Header Controls (Month & Privacy) */}
+                    <div className="absolute top-2 right-2 z-10 flex items-center gap-2">
+                        {/* Month Picker REMOVED - Using Global Slider instead */}
+
+                        {/* Privacy Toggle */}
+                        <button
+                            onClick={() => setShowBalance(!showBalance)}
+                            className="btn btn-xs btn-ghost btn-circle opacity-30 hover:opacity-100"
+                            title={showBalance ? "Hide Balances" : "Show Balances"}
+                        >
+                            {showBalance ? <EyeOff size={14} /> : <Eye size={14} />}
+                        </button>
+                    </div>
+
+                    {/* Total Bank Balance Stat */}
+                    <div className="stat place-items-center relative overflow-hidden">
+                        <div className="stat-title text-base-content/60 font-medium uppercase tracking-wide text-xs relative z-10">Total Assets</div>
+                        <div className="stat-value text-success text-3xl relative z-10">
+                            {showBalance ? `₹${totalBankBalance.toLocaleString()} ` : "••••••••"}
+                        </div>
+                        <div className="stat-desc relative z-10">Bank Accounts Only</div>
+                        <Wallet className="absolute -bottom-4 -right-4 w-24 h-24 text-base-content/5 rotate-12 -z-0" />
+                    </div>
 
                     {/* Salary Stat */}
-                    <div className="stat place-items-center">
-                        <div className="stat-title text-base-content/60 font-medium uppercase tracking-wide text-xs">Total Salary</div>
+                    <div className="stat place-items-center border-t md:border-t-0 md:border-l border-base-300 relative overflow-hidden">
+                        <div className="stat-title text-base-content/60 font-medium uppercase tracking-wide text-xs relative z-10">Total Salary</div>
                         {isEditingSalary ? (
                             <input
                                 type="number"
@@ -109,17 +117,18 @@ const HeaderSection = () => {
                                 onBlur={handleSalarySubmit}
                                 onKeyDown={(e) => e.key === 'Enter' && handleSalarySubmit()}
                                 autoFocus
-                                className="input input-xs input-bordered w-full max-w-[120px] text-center mt-1"
+                                className="input input-xs input-bordered w-full max-w-[120px] text-center mt-1 relative z-10"
                             />
                         ) : (
                             <div
                                 onClick={() => setIsEditingSalary(true)}
-                                className="stat-value text-primary text-3xl cursor-pointer hover:opacity-80 transition-opacity"
+                                className="stat-value text-primary text-3xl cursor-pointer hover:opacity-80 transition-opacity relative z-10"
                             >
-                                {showBalance ? `₹${salary?.toLocaleString()}` : "••••••••"}
+                                {showBalance ? `₹${salary?.toLocaleString()} ` : "••••••••"}
                             </div>
                         )}
-                        <div className="stat-desc">Monthly Income</div>
+                        <div className="stat-desc text-warning font-semibold relative z-10">₹{totalUsed.toLocaleString()} Used</div>
+                        <Banknote className="absolute -bottom-4 -right-4 w-24 h-24 text-base-content/5 rotate-12 -z-0" />
                     </div>
 
                     {/* Planned Budget Stat */}
@@ -129,15 +138,15 @@ const HeaderSection = () => {
                         const budgetPct = salary > 0 ? ((totalBudgeted / salary) * 100) : 0;
 
                         return (
-                            <div className="stat place-items-center border-t md:border-t-0 md:border-l border-base-300">
-                                <div className="stat-title text-base-content/60 font-medium uppercase tracking-wide text-xs">Planned Budget</div>
-                                <div className={`stat-value text-3xl ${isOverBudget ? 'text-error' : 'text-info'}`}>
-                                    {showBalance ? `₹${totalBudgeted.toLocaleString()}` : "••••••••"}
+                            <div className="stat place-items-center border-t md:border-t-0 md:border-l border-base-300 relative overflow-hidden">
+                                <div className="stat-title text-base-content/60 font-medium uppercase tracking-wide text-xs relative z-10">Planned Budget</div>
+                                <div className={`stat-value text-3xl ${isOverBudget ? 'text-error' : 'text-info'} relative z-10`}>
+                                    {showBalance ? `₹${totalBudgeted.toLocaleString()} ` : "••••••••"}
                                 </div>
-                                <div className="stat-desc flex flex-col items-center gap-1 w-full max-w-[150px]">
+                                <div className="stat-desc flex flex-col items-center gap-1 w-full max-w-[150px] relative z-10">
                                     <span className={`${isOverBudget ? 'text-error font-bold' : ''}`}>
                                         {showBalance
-                                            ? (isOverBudget ? `Over by ₹${(totalBudgeted - salary).toLocaleString()}` : `${budgetPct.toFixed(0)}% of Salary`)
+                                            ? (isOverBudget ? `Over by ₹${(totalBudgeted - salary).toLocaleString()} ` : `${budgetPct.toFixed(0)}% of Salary`)
                                             : "••% of Salary"
                                         }
                                     </span>
@@ -147,17 +156,19 @@ const HeaderSection = () => {
                                         max="100"
                                     ></progress>
                                 </div>
+                                <Calculator className="absolute -bottom-4 -right-4 w-24 h-24 text-base-content/5 rotate-12 -z-0" />
                             </div>
                         );
                     })()}
 
                     {/* Actual Remaining Stat */}
-                    <div className="stat place-items-center border-t md:border-t-0 md:border-l border-base-300">
-                        <div className="stat-title text-base-content/60 font-medium uppercase tracking-wide text-xs">Actual Remaining</div>
-                        <div className={`stat-value text-3xl ${totalRemaining < 0 ? 'text-error' : 'text-success'}`}>
-                            {showBalance ? `₹${totalRemaining.toLocaleString()}` : "••••••••"}
+                    <div className="stat place-items-center border-t md:border-t-0 md:border-l border-base-300 relative overflow-hidden">
+                        <div className="stat-title text-base-content/60 font-medium uppercase tracking-wide text-xs relative z-10">Actual Remaining</div>
+                        <div className={`stat-value text-3xl ${totalRemaining < 0 ? 'text-error' : 'text-success'} relative z-10`}>
+                            {showBalance ? `₹${totalRemaining.toLocaleString()} ` : "••••••••"}
                         </div>
-                        <div className="stat-desc text-success font-medium">Net Savings Available</div>
+                        <div className="stat-desc text-success font-medium relative z-10">Net Savings Available</div>
+                        <PiggyBank className="absolute -bottom-4 -right-4 w-24 h-24 text-base-content/5 rotate-12 -z-0" />
                     </div>
 
                 </div>
@@ -232,7 +243,13 @@ const HeaderSection = () => {
                                         <span className="text-[10px] opacity-50 uppercase tracking-widest">{source.type || 'Bank'}</span>
                                     </div>
                                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        {/* We could add individual toggles here, but master toggle is cleaner for now */}
+                                        <button
+                                            onClick={() => { setHistorySourceId(source._id); setShowHistoryModal(true); }}
+                                            className="btn btn-square btn-ghost btn-xs text-info"
+                                            title="View History"
+                                        >
+                                            <Info size={12} />
+                                        </button>
                                         <button
                                             onClick={() => dispatch(deleteSource(source._id))}
                                             className="btn btn-square btn-ghost btn-xs text-error"
@@ -247,7 +264,7 @@ const HeaderSection = () => {
                                     </span>
                                     <span className={`text-xl font-bold ${source.type === 'Card' ? 'text-error' : 'text-success'}`}>
                                         {showBalance
-                                            ? `₹${(source.type === 'Card' ? source.spent : source.balance)?.toLocaleString() || 0}`
+                                            ? `₹${(source.type === 'Card' ? source.spent : source.balance)?.toLocaleString() || 0} `
                                             : "••••••"
                                         }
                                     </span>
@@ -257,7 +274,76 @@ const HeaderSection = () => {
                     ))}
                 </div>
             </div>
-        </div>
+
+
+            {/* History Modal */}
+            {
+                showHistoryModal && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+                        <div className="bg-base-100 rounded-xl shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col overflow-hidden border border-base-200">
+                            {/* Modal Header */}
+                            <div className="p-4 border-b border-base-200 flex justify-between items-center bg-base-200/50">
+                                <div>
+                                    <h3 className="font-bold text-lg">{sources.find(s => s._id === historySourceId)?.name} History</h3>
+                                    <p className="text-xs opacity-50">Transaction Log</p>
+                                </div>
+                                <button onClick={() => setShowHistoryModal(false)} className="btn btn-sm btn-ghost btn-square rounded-full hover:bg-base-300"><X size={20} /></button>
+                            </div>
+
+                            {/* Modal Content - Table */}
+                            <div className="overflow-y-auto p-0 flex-1">
+                                <table className="table table-xs table-pin-rows w-full">
+                                    <thead>
+                                        <tr className="bg-base-100">
+                                            <th className="bg-base-200/50">Date</th>
+                                            <th className="bg-base-200/50">Description</th>
+                                            <th className="bg-base-200/50">Category</th>
+                                            <th className="bg-base-200/50 text-right">Amount</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {transactions.filter(t => (t.sourceId?._id === historySourceId || t.sourceId === historySourceId)).length > 0 ? (
+                                            transactions
+                                                .filter(t => (t.sourceId?._id === historySourceId || t.sourceId === historySourceId))
+                                                .sort((a, b) => new Date(b.date) - new Date(a.date))
+                                                .map(t => (
+                                                    <tr key={t._id} className="hover:bg-base-100/50 border-b border-base-100 last:border-0">
+                                                        <td className="whitespace-nowrap font-mono opacity-70">{new Date(t.date).toLocaleDateString()}</td>
+                                                        <td className="font-medium">{t.description}</td>
+                                                        <td>{t.categoryId?.name || <span className="opacity-30">—</span>}</td>
+                                                        <td className={`text-right font-mono font-bold ${t.type === 'Credit' ? 'text-success' : 'text-error'}`}>
+                                                            {t.type === 'Credit' ? '+' : '-'}₹{t.amount.toLocaleString()}
+                                                        </td>
+                                                    </tr>
+                                                ))
+                                        ) : (
+                                            <tr>
+                                                <td colSpan="4" className="text-center py-12 flex flex-col items-center justify-center opacity-40 gap-2">
+                                                    <Info size={32} />
+                                                    <span>No transactions found for this source</span>
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            {/* Modal Footer */}
+                            <div className="p-3 border-t border-base-200 bg-base-100 flex justify-between items-center text-xs opacity-50">
+                                <span>
+                                    Net Change: <span className="font-mono">
+                                        ₹{transactions.filter(t => (t.sourceId?._id === historySourceId || t.sourceId === historySourceId))
+                                            .reduce((acc, t) => acc + (t.type === 'Credit' ? t.amount : -t.amount), 0)
+                                            .toLocaleString()}
+                                    </span>
+                                </span>
+                                <button onClick={() => setShowHistoryModal(false)} className="btn btn-xs btn-ghost">Close</button>
+                            </div>
+                        </div>
+                    </div>
+                )
+            }
+        </div >
     );
 };
 

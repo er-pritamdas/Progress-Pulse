@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { Trash2, Edit2, Plus, X, Save } from "lucide-react";
+import { Trash2, Edit2, Plus, X, Save, Info } from "lucide-react";
 import { addSubCategory, updateSubCategory, deleteSubCategory, deleteCategory, updateCategory } from "../../services/redux/slice/ExpenseSlice";
 
 const CategoryCard = ({ category }) => {
@@ -20,6 +20,10 @@ const CategoryCard = ({ category }) => {
     const [isAddingSub, setIsAddingSub] = useState(false);
     const [newSubName, setNewSubName] = useState("");
     const [newSubBudget, setNewSubBudget] = useState("");
+
+    // History Modal State
+    const [historySubId, setHistorySubId] = useState(null);
+    const [showHistoryModal, setShowHistoryModal] = useState(false);
 
 
     // Calculations
@@ -112,7 +116,7 @@ const CategoryCard = ({ category }) => {
                     <div className="w-full flex flex-col gap-1">
                         <div className="flex justify-between text-xs font-semibold opacity-70">
                             <span>{totalPercentage}% Used</span>
-                            <span>₹{totalRemaining.toLocaleString()} Left</span>
+                            <span>₹{totalUsed.toLocaleString()} Used</span>
                         </div>
                         <progress
                             className={`progress w-full h-2 ${Number(totalPercentage) > 100 ? 'progress-error' : totalPercentage > 85 ? 'progress-warning' : 'progress-primary'}`}
@@ -153,35 +157,42 @@ const CategoryCard = ({ category }) => {
                                         </td>
                                     ) : (
                                         <>
-                                            <td className="w-1/2 align-middle pl-2 py-3 rounded-l-lg">
-                                                <div className="font-semibold text-sm">{sub.name}</div>
+                                            <td className="w-2/6 align-middle pl-2 py-3 rounded-l-lg group/name">
+                                                <div className="font-semibold text-sm pr-1">{sub.name}</div>
                                                 <div className="text-[10px] opacity-50 mt-0.5">₹{sub.budget.toLocaleString()}</div>
                                             </td>
 
-                                            <td className="w-1/4 align-middle py-3">
+                                            <td className="w-2/6 align-middle py-3">
                                                 <div className="flex flex-col gap-1">
                                                     <span className="font-bold text-xs">₹{sub.used.toLocaleString()}</span>
                                                     <progress
-                                                        className={`progress progress-xs w-full ${((sub.used / sub.budget) * 100) > 100 ? 'progress-error' : 'progress-info'}`}
+                                                        className={`progress progress-lg w-full ${((sub.used / sub.budget) * 100) > 100 ? 'progress-error' : 'progress-info'}`}
                                                         value={(sub.used / sub.budget) * 100 || 0}
                                                         max="100"
                                                     ></progress>
                                                 </div>
                                             </td>
 
-                                            <td className="w-1/4 align-middle text-right pr-2 py-3 rounded-r-lg relative">
+                                            <td className="w-2/6 align-middle text-right pr-2 py-3 rounded-r-lg relative">
                                                 <div className={`font-bold text-xs ${sub.remaining < 0 ? 'text-error' : 'text-success'}`}>
                                                     {sub.remaining > 0 ? `+` : ''}₹{sub.remaining.toLocaleString()}
                                                 </div>
 
                                                 {/* Hidden Actions */}
-                                                <div className="absolute right-1 top-1/2 -translate-y-1/2 hidden group-hover:flex bg-base-200 shadow-md rounded-md p-0.5 border border-base-300">
+                                                <div className="absolute right-1 top-1/2 -translate-y-1/2 hidden group-hover:flex bg-base-200 shadow-md rounded-md p-0.5 border border-base-300 z-10">
+                                                    <button
+                                                        onClick={() => { setHistorySubId(sub._id); setShowHistoryModal(true); }}
+                                                        className="btn btn-xs btn-ghost btn-square text-info"
+                                                        title="View History"
+                                                    >
+                                                        <Info size={12} />
+                                                    </button>
                                                     <button onClick={() => {
                                                         setEditingSubId(sub._id);
                                                         setTempSubName(sub.name);
                                                         setTempSubBudget(sub.budget);
-                                                    }} className="btn btn-xs btn-ghost btn-square text-info"><Edit2 size={10} /></button>
-                                                    <button onClick={() => dispatch(deleteSubCategory({ categoryId: category._id, subId: sub._id }))} className="btn btn-xs btn-ghost btn-square text-error"><Trash2 size={10} /></button>
+                                                    }} className="btn btn-xs btn-ghost btn-square text-warning"><Edit2 size={12} /></button>
+                                                    <button onClick={() => dispatch(deleteSubCategory({ categoryId: category._id, subId: sub._id }))} className="btn btn-xs btn-ghost btn-square text-error"><Trash2 size={12} /></button>
                                                 </div>
                                             </td>
                                         </>
@@ -240,6 +251,64 @@ const CategoryCard = ({ category }) => {
                 </div>
 
             </div>
+
+            {/* History Modal */}
+            {showHistoryModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+                    <div className="bg-base-100 rounded-xl shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col overflow-hidden border border-base-200">
+                        {/* Modal Header */}
+                        <div className="p-4 border-b border-base-200 flex justify-between items-center bg-base-200/50">
+                            <div>
+                                <h3 className="font-bold text-lg">{category.subCategories.find(s => s._id === historySubId)?.name} History</h3>
+                                <p className="text-xs opacity-50">Transaction Log</p>
+                            </div>
+                            <button onClick={() => setShowHistoryModal(false)} className="btn btn-sm btn-ghost btn-square rounded-full hover:bg-base-300"><X size={20} /></button>
+                        </div>
+
+                        {/* Modal Content - Table */}
+                        <div className="overflow-y-auto p-0 flex-1">
+                            <table className="table table-xs table-pin-rows w-full">
+                                <thead>
+                                    <tr className="bg-base-100">
+                                        <th className="bg-base-200/50">Date</th>
+                                        <th className="bg-base-200/50">Description</th>
+                                        <th className="bg-base-200/50">Source</th>
+                                        <th className="bg-base-200/50 text-right">Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {transactions.filter(t => t.subCategoryId === historySubId).length > 0 ? (
+                                        transactions
+                                            .filter(t => t.subCategoryId === historySubId)
+                                            .sort((a, b) => new Date(b.date) - new Date(a.date))
+                                            .map(t => (
+                                                <tr key={t._id} className="hover:bg-base-100/50 border-b border-base-100 last:border-0">
+                                                    <td className="whitespace-nowrap font-mono opacity-70">{new Date(t.date).toLocaleDateString()}</td>
+                                                    <td className="font-medium">{t.description}</td>
+                                                    <td>{t.sourceId?.name || <span className="opacity-30">-</span>}</td>
+                                                    <td className="text-right font-mono font-bold text-error">-₹{t.amount.toLocaleString()}</td>
+                                                </tr>
+                                            ))
+                                    ) : (
+                                        <tr>
+                                            <td colSpan="4" className="text-center py-12 flex flex-col items-center justify-center opacity-40 gap-2">
+                                                <Info size={32} />
+                                                <span>No transactions found for this item</span>
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {/* Modal Footer */}
+                        <div className="p-3 border-t border-base-200 bg-base-100 flex justify-between items-center text-xs opacity-50">
+                            <span>Total Spent: ₹{transactions.filter(t => t.subCategoryId === historySubId).reduce((acc, curr) => acc + curr.amount, 0).toLocaleString()}</span>
+                            <button onClick={() => setShowHistoryModal(false)} className="btn btn-xs btn-ghost">Close</button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

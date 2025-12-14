@@ -172,8 +172,8 @@ export const deleteTransaction = createAsyncThunk(
     "expense/deleteTransaction",
     async (id, { rejectWithValue }) => {
         try {
-            await axiosInstance.delete(`${BASE_URL}/transaction/${id}`);
-            return id;
+            const response = await axiosInstance.delete(`${BASE_URL}/transaction/${id}`);
+            return response.data.data; // Now returns { id, updatedSource }
         } catch (error) {
             return rejectWithValue(error.response?.data?.message || "Failed to delete transaction");
         }
@@ -270,7 +270,15 @@ const expenseSlice = createSlice({
                 if (index !== -1) state.transactions[index] = action.payload;
             })
             .addCase(deleteTransaction.fulfilled, (state, action) => {
-                state.transactions = state.transactions.filter(t => t._id !== action.payload);
+                const { id, updatedSource } = action.payload;
+                // Remove Transaction
+                state.transactions = state.transactions.filter(t => t._id !== id);
+
+                // Update Source Balance (if returned)
+                if (updatedSource) {
+                    const index = state.sources.findIndex(s => s._id === updatedSource._id);
+                    if (index !== -1) state.sources[index] = updatedSource;
+                }
             });
     },
 });

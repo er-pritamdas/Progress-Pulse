@@ -323,7 +323,7 @@ export const deleteSource = async (req, res) => {
 export const addTransaction = async (req, res) => {
     try {
         const { _id: userId } = req.user;
-        const { date, description, sourceId, categoryId, subCategoryId, amount, type } = req.body; // type: Credit | Debit
+        const { date, description, sourceId, categoryId, subCategoryId, amount, type, isReimbursable } = req.body; // type: Credit | Debit
 
         const transactionType = type || "Debit";
 
@@ -335,7 +335,8 @@ export const addTransaction = async (req, res) => {
             categoryId: transactionType === "Debit" ? categoryId : undefined, // Optional for Credit
             subCategoryId: transactionType === "Debit" ? subCategoryId : undefined, // Optional for Credit
             amount,
-            type: transactionType
+            type: transactionType,
+            isReimbursable: isReimbursable || false
         });
 
         // Update Source Balance
@@ -382,8 +383,28 @@ export const updateTransaction = async (req, res) => {
 export const deleteTransaction = async (req, res) => {
     try {
         const { id } = req.params;
+        const transaction = await ExpenseTransaction.findById(id);
+
+        if (!transaction) {
+            return res.status(404).json({ success: false, message: "Transaction not found" });
+        }
+
+        // Revert Balance Logic
+        const source = await PaymentSource.findById(transaction.sourceId);
+        if (source) {
+            if (transaction.type === "Credit") {
+                // Was Added -> Subtract
+                source.balance -= Number(transaction.amount);
+            } else {
+                // Was Debited -> Add Back
+                source.balance += Number(transaction.amount);
+            }
+            await source.save();
+        }
+
         await ExpenseTransaction.findByIdAndDelete(id);
-        res.status(200).json({ success: true, message: "Transaction deleted" });
+
+        res.status(200).json({ success: true, message: "Transaction deleted", data: { id, updatedSource: source } });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }

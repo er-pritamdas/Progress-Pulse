@@ -2,14 +2,14 @@ import React, { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import dayjs from "dayjs";
 import { addTransaction, updateTransaction, deleteTransaction } from "../../services/redux/slice/ExpenseSlice";
-import { Trash2, Save, X, Edit2, Plus } from "lucide-react";
+import { Trash2, Save, X, Edit2, Plus, Handshake, AlertTriangle } from "lucide-react";
 
 // Helper Component for DaisyUI Dropdown
 const DaisySelect = ({ value, onChange, options, placeholder, disabled, className, specialOption }) => {
     const selectedItem = options.find(o => o.value === value);
     // Handle special "Add Money" label if selected
-    const displayLabel = value === "add_money" ? "+ Add Money" : (selectedItem ? selectedItem.label : placeholder);
-    const isSpecialSelected = value === "add_money";
+    const displayLabel = value === "add_money" ? "+ Add Money" : (value === "debit_money" ? "- Debit Money" : (selectedItem ? selectedItem.label : placeholder));
+    const isSpecialSelected = value === "add_money" || value === "debit_money";
 
     return (
         <div className={`dropdown dropdown-bottom dropdown-end w-full ${className || ''}`}>
@@ -34,10 +34,12 @@ const DaisySelect = ({ value, onChange, options, placeholder, disabled, classNam
                                     className={`${opt.value === value ? "active" : ""} ${opt.className || ''}`}
                                     onClick={(e) => {
                                         // e.preventDefault();
-                                        onChange(opt.value);
-                                        // Close dropdown by blurring
-                                        e.currentTarget.closest('.dropdown')?.removeAttribute('open');
-                                        document.activeElement?.blur();
+                                        if (opt.value !== "divider") {
+                                            onChange(opt.value);
+                                            // Close dropdown by blurring
+                                            e.currentTarget.closest('.dropdown')?.removeAttribute('open');
+                                            document.activeElement?.blur();
+                                        }
                                     }}
                                 >
                                     {opt.label}
@@ -62,6 +64,28 @@ const ExpenseTable = () => {
     const [editingId, setEditingId] = useState(null);
     const [editData, setEditData] = useState({});
 
+    // Delete Modal State
+    const [deleteId, setDeleteId] = useState(null);
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+
+    // Filter State
+    const [filters, setFilters] = useState({
+        date: "",
+        description: "",
+        sourceId: "",
+        categoryId: "",
+        subCategoryId: ""
+    });
+
+    const filteredTransactions = sortedTransactions.filter(t => {
+        const matchDate = filters.date ? dayjs(t.date).format("YYYY-MM-DD") === filters.date : true;
+        const matchDesc = filters.description ? t.description.toLowerCase().includes(filters.description.toLowerCase()) : true;
+        const matchSource = filters.sourceId ? (t.sourceId?._id === filters.sourceId || t.sourceId === filters.sourceId) : true;
+        const matchCategory = filters.categoryId ? (t.categoryId?._id === filters.categoryId || t.categoryId === filters.categoryId) : true;
+        const matchSub = filters.subCategoryId ? (t.subCategoryId?._id === filters.subCategoryId || t.subCategoryId === filters.subCategoryId) : true;
+        return matchDate && matchDesc && matchSource && matchCategory && matchSub;
+    });
+
     // Adding State
     const [isAdding, setIsAdding] = useState(false);
     const [newData, setNewData] = useState({
@@ -70,7 +94,8 @@ const ExpenseTable = () => {
         sourceId: "", // ID
         categoryId: "", // ID
         subCategoryId: "", // ID
-        amount: ""
+        amount: "",
+        isReimbursable: false
     });
 
     // Helper to get Subcategories for a selected category
@@ -81,8 +106,9 @@ const ExpenseTable = () => {
 
     // --- Options Builders ---
     const sourceOptions = [
-        { value: "", label: "Select Source", disabled: true }, // Placeholder logic handled by comp but good to have
+        { value: "", label: "Select Source", disabled: true }, // Placeholder
         { value: "add_money", label: "+ Add Money", className: "text-success font-bold" },
+        { value: "debit_money", label: "- Debit Money", className: "text-error font-bold" },
         { value: "divider", disabled: true },
         ...sources.map(s => ({
             value: s._id,
@@ -101,25 +127,33 @@ const ExpenseTable = () => {
 
     // Add Transaction
     const handleAdd = () => {
+        // Validation: For manual debit, we need sourceId (which is stored in sourceId for simplicity but implemented as 'target' logic in UI for Debit?)
+        // Wait, for Debit Money: 
+        // Source Dropdown -> "Debit Money"
+        // Category Dropdown -> Select *Source* to debit from (e.g. Bank) -> Stored in newData.sourceId
+        // So validation matches usual: need sourceId.
+
         if (!newData.description || !newData.sourceId || !newData.amount) {
             alert("Please fill required fields");
             return;
         }
 
         const isCredit = newData.isAddMoney;
+        const isDebit = newData.isManualDebit;
 
         dispatch(addTransaction({
             ...newData,
             date: newData.date || new Date(),
             amount: Number(newData.amount),
             type: isCredit ? "Credit" : "Debit",
-            // If Credit, category/subcat will be undefined/ignored by backend
-            categoryId: isCredit ? undefined : newData.categoryId,
-            subCategoryId: isCredit ? undefined : newData.subCategoryId
+            // If Credit or Manual Debit, category/subcat will be undefined
+            categoryId: (isCredit || isDebit) ? undefined : newData.categoryId,
+            subCategoryId: (isCredit || isDebit) ? undefined : newData.subCategoryId,
+            isReimbursable: newData.isReimbursable
         }));
 
         // Reset form but keep date
-        setNewData({ ...newData, description: "", amount: "", isAddMoney: false, sourceId: "", categoryId: "", subCategoryId: "" });
+        setNewData({ ...newData, description: "", amount: "", isAddMoney: false, isManualDebit: false, sourceId: "", categoryId: "", subCategoryId: "", isReimbursable: false });
         setIsAdding(false);
     };
 
@@ -132,22 +166,35 @@ const ExpenseTable = () => {
             sourceId: t.sourceId?._id || t.sourceId,
             categoryId: t.categoryId?._id || t.categoryId,
             subCategoryId: t.subCategoryId,
-            amount: t.amount
+            amount: t.amount,
+            isReimbursable: t.isReimbursable || false
         });
     };
 
     const saveEdit = () => {
         dispatch(updateTransaction({
             id: editingId,
-            data: { ...editData, amount: Number(editData.amount) }
+            data: { ...editData, amount: Number(editData.amount), isReimbursable: editData.isReimbursable }
         }));
         setEditingId(null);
     };
 
     const handleDelete = (id) => {
-        if (window.confirm("Delete this transaction?")) {
-            dispatch(deleteTransaction(id));
+        setDeleteId(id);
+        setShowDeleteModal(true);
+    };
+
+    const confirmDelete = () => {
+        if (deleteId) {
+            dispatch(deleteTransaction(deleteId));
+            setShowDeleteModal(false);
+            setDeleteId(null);
         }
+    };
+
+    const cancelDelete = () => {
+        setShowDeleteModal(false);
+        setDeleteId(null);
     };
 
 
@@ -156,15 +203,45 @@ const ExpenseTable = () => {
     return (
         <div className="w-full bg-base-100 rounded-2xl shadow-lg border border-base-200 flex flex-col h-[700px]">
 
-            {/* Table Header - Sticky */}
-            <div className="grid grid-cols-12 gap-4 px-6 py-4 bg-base-200/50 border-b border-base-200 text-xs font-bold text-base-content/50 uppercase tracking-widest sticky top-0 z-10 backdrop-blur-md">
-                <div className="col-span-2">Date</div>
-                <div className="col-span-2">Description</div>
-                <div className="col-span-2">From</div>
-                <div className="col-span-2">Category</div>
-                <div className="col-span-2">Sub Category</div>
-                <div className="col-span-1 text-right">Amount</div>
-                <div className="col-span-1 text-center">Action</div>
+            {/* Table Header - Sticky with Filters */}
+            <div className="grid grid-cols-12 gap-4 px-6 py-4 bg-base-200/90 border-b border-base-200 text-xs font-bold text-base-content/50 uppercase tracking-widest sticky top-0 z-30 backdrop-blur-md items-end">
+                <div className="col-span-2">
+                    <span className="mb-1 block">Date</span>
+                    <input type="date" value={filters.date} onChange={(e) => setFilters({ ...filters, date: e.target.value })} className="input input-xs input-bordered w-full" />
+                </div>
+                <div className="col-span-2">
+                    <span className="mb-1 block">Description</span>
+                    <input type="text" placeholder="Filter..." value={filters.description} onChange={(e) => setFilters({ ...filters, description: e.target.value })} className="input input-xs input-bordered w-full" />
+                </div>
+                <div className="col-span-2">
+                    <span className="mb-1 block">From</span>
+                    <select value={filters.sourceId} onChange={(e) => setFilters({ ...filters, sourceId: e.target.value })} className="select select-bordered select-xs w-full">
+                        <option value="">All</option>
+                        {sources.map(s => <option key={s._id} value={s._id}>{s.name}</option>)}
+                    </select>
+                </div>
+                <div className="col-span-2">
+                    <span className="mb-1 block">Category</span>
+                    <select value={filters.categoryId} onChange={(e) => setFilters({ ...filters, categoryId: e.target.value, subCategoryId: "" })} className="select select-bordered select-xs w-full">
+                        <option value="">All</option>
+                        {categoryOptions.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+                    </select>
+                </div>
+                <div className="col-span-2">
+                    <span className="mb-1 block">Sub Category</span>
+                    <select value={filters.subCategoryId} onChange={(e) => setFilters({ ...filters, subCategoryId: e.target.value })} className="select select-bordered select-xs w-full">
+                        <option value="">All</option>
+                        {filters.categoryId
+                            ? getSubCats(filters.categoryId).map(s => <option key={s._id} value={s._id}>{s.name}</option>)
+                            : categories.flatMap(c => c.subCategories).map(s => <option key={s._id} value={s._id}>{s.name}</option>)
+                        }
+                        {/* Note: FlatMap might show duplicate names if not careful, but usually subcat names are unique enough or user knows context. 
+                            Strictly filtering by Category first is better UX usually.
+                        */}
+                    </select>
+                </div>
+                <div className="col-span-1 text-right mb-2">Amount</div>
+                <div className="col-span-1 text-center mb-2">Action</div>
             </div>
 
             {/* Scrollable Content */}
@@ -180,20 +257,32 @@ const ExpenseTable = () => {
                 <div className={`transition-all duration-300 ${isAdding ? 'bg-base-200/30 py-4 px-4 border-b border-primary/20 z-20 relative' : 'p-2 border-b border-base-200/50'}`}>
                     {isAdding ? (
                         <div className="grid grid-cols-12 gap-2 items-center animate-in fade-in slide-in-from-top-2">
-                            <input type="date" value={newData.date} onChange={e => setNewData({ ...newData, date: e.target.value })} className="col-span-2 input input-sm input-bordered focus:input-primary w-full text-xs" />
+                            {/* Date & Reimbursable Toggle */}
+                            <div className="col-span-2 flex items-center gap-1">
+                                <button
+                                    onClick={() => setNewData({ ...newData, isReimbursable: !newData.isReimbursable })}
+                                    className={`btn btn-xs btn-square ${newData.isReimbursable ? 'btn-warning' : 'btn-ghost opacity-40 hover:opacity-100'}`}
+                                    title="Need to collect money? (Mark as Reimbursable)"
+                                >
+                                    <Handshake size={14} />
+                                </button>
+                                <input type="date" value={newData.date} onChange={e => setNewData({ ...newData, date: e.target.value })} className="input input-sm input-bordered focus:input-primary w-full text-xs" />
+                            </div>
                             <input placeholder="Desc" value={newData.description} onChange={e => setNewData({ ...newData, description: e.target.value })} className="col-span-2 input input-sm input-bordered focus:input-primary w-full text-xs" autoFocus />
 
                             {/* From / Action */}
                             <div className="col-span-2">
                                 <DaisySelect
                                     options={sourceOptions}
-                                    value={newData.isAddMoney ? "add_money" : newData.sourceId}
+                                    value={newData.isAddMoney ? "add_money" : (newData.isManualDebit ? "debit_money" : newData.sourceId)}
                                     placeholder="Source"
                                     onChange={(val) => {
                                         if (val === "add_money") {
-                                            setNewData({ ...newData, isAddMoney: true, sourceId: "", categoryId: "", subCategoryId: "" });
+                                            setNewData({ ...newData, isAddMoney: true, isManualDebit: false, sourceId: "", categoryId: "", subCategoryId: "" });
+                                        } else if (val === "debit_money") {
+                                            setNewData({ ...newData, isAddMoney: false, isManualDebit: true, sourceId: "", categoryId: "", subCategoryId: "" });
                                         } else {
-                                            setNewData({ ...newData, isAddMoney: false, sourceId: val });
+                                            setNewData({ ...newData, isAddMoney: false, isManualDebit: false, sourceId: val });
                                         }
                                     }}
                                 />
@@ -209,6 +298,14 @@ const ExpenseTable = () => {
                                         onChange={(val) => setNewData({ ...newData, sourceId: val })}
                                         className="text-success"
                                     />
+                                ) : newData.isManualDebit ? (
+                                    <DaisySelect
+                                        options={targetOptions}
+                                        value={newData.sourceId}
+                                        placeholder="Debit From"
+                                        onChange={(val) => setNewData({ ...newData, sourceId: val })}
+                                        className="text-error"
+                                    />
                                 ) : (
                                     <DaisySelect
                                         options={categoryOptions}
@@ -222,10 +319,10 @@ const ExpenseTable = () => {
                             {/* Sub Cat */}
                             <div className="col-span-2">
                                 <DaisySelect
-                                    options={newData.isAddMoney ? [] : getSubCats(newData.categoryId).map(sub => ({ value: sub._id, label: sub.name }))}
+                                    options={(newData.isAddMoney || newData.isManualDebit) ? [] : getSubCats(newData.categoryId).map(sub => ({ value: sub._id, label: sub.name }))}
                                     value={newData.subCategoryId}
-                                    placeholder={newData.isAddMoney ? "—" : "SubCat"}
-                                    disabled={newData.isAddMoney}
+                                    placeholder={(newData.isAddMoney || newData.isManualDebit) ? "—" : "SubCat"}
+                                    disabled={newData.isAddMoney || newData.isManualDebit}
                                     onChange={(val) => setNewData({ ...newData, subCategoryId: val })}
                                 />
                             </div>
@@ -247,13 +344,22 @@ const ExpenseTable = () => {
                 </div>
 
                 {/* Rows */}
-                {sortedTransactions.map(t => (
+                {filteredTransactions.map(t => (
                     <div key={t._id} className="grid grid-cols-12 gap-4 px-6 py-3 border-b border-base-200 hover:bg-base-200/50 transition-colors group items-center text-sm relative">
                         {/* Note: 'relative' on row + 'z-10' on dropdowns helps stacking, but clipping by parent scroll is unavoidable without portals */}
                         {editingId === t._id ? (
                             // Edit Mode (Inline Inputs)
                             <>
-                                <input type="date" value={editData.date} onChange={e => setEditData({ ...editData, date: e.target.value })} className="col-span-2 input input-xs input-bordered" />
+                                <div className="col-span-2 flex items-center gap-1">
+                                    <button
+                                        onClick={() => setEditData({ ...editData, isReimbursable: !editData.isReimbursable })}
+                                        className={`btn btn-xs btn-square ${editData.isReimbursable ? 'btn-warning' : 'btn-ghost opacity-40 hover:opacity-100'}`}
+                                        title="Need to collect money? (Mark as Reimbursable)"
+                                    >
+                                        <Handshake size={14} />
+                                    </button>
+                                    <input type="date" value={editData.date} onChange={e => setEditData({ ...editData, date: e.target.value })} className="input input-xs input-bordered w-full" />
+                                </div>
                                 <input value={editData.description} onChange={e => setEditData({ ...editData, description: e.target.value })} className="col-span-2 input input-xs input-bordered" />
 
                                 <div className="col-span-2">
@@ -294,7 +400,14 @@ const ExpenseTable = () => {
                             // View Mode
                             <>
                                 <div className="col-span-2 text-base-content/60 font-medium">{dayjs(t.date).format("MMM DD, YYYY")}</div>
-                                <div className="col-span-2 font-semibold text-base-content truncate pr-4" title={t.description}>{t.description}</div>
+                                <div className="col-span-2">
+                                    <div className="flex flex-col">
+                                        <div className="flex items-center gap-1">
+                                            {t.isReimbursable && <Handshake size={12} className="text-warning" title="Reimbursable: Need to collect money" />}
+                                            <span className="font-bold text-base-content/80 truncate text-xs" title={t.description}>{t.description}</span>
+                                        </div>
+                                    </div>
+                                </div>
                                 <div className="col-span-2">
                                     <div className="badge badge-ghost badge-sm gap-1 font-medium bg-base-200/80 border-0 text-base-content/70">
                                         {t.sourceId?.name || 'Unknown'}
@@ -318,7 +431,7 @@ const ExpenseTable = () => {
                                         return sub?.name || '—';
                                     })()}
                                 </div>
-                                <div className={`col-span-1 text-right font-bold font-mono tracking-tight ${t.type === 'Credit' ? 'text-success' : 'text-base-content'}`}>
+                                <div className={`col-span-1 text-right font-bold font-mono tracking-tight ${t.type === 'Credit' ? 'text-success' : 'text-error'}`}>
                                     {t.type === 'Credit' ? '+' : '-'}₹{t.amount.toLocaleString()}
                                 </div>
 
@@ -337,6 +450,28 @@ const ExpenseTable = () => {
                     </div>
                 )}
             </div>
+
+            {showDeleteModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+                    <div className="bg-base-100 rounded-xl shadow-2xl w-full max-w-sm flex flex-col overflow-hidden border border-base-200 p-6 text-center">
+                        <div className="mx-auto mb-4 p-3 bg-error/10 rounded-full text-error">
+                            <AlertTriangle size={32} />
+                        </div>
+                        <h3 className="text-xl font-bold text-base-content mb-2">Delete Transaction?</h3>
+                        <p className="text-sm text-base-content/60 mb-6">
+                            Are you sure you want to delete this transaction? This action cannot be undone.
+                        </p>
+                        <div className="flex gap-3 justify-center">
+                            <button onClick={cancelDelete} className="btn btn-sm flex-1">
+                                Cancel
+                            </button>
+                            <button onClick={confirmDelete} className="btn btn-sm btn-error flex-1 text-white">
+                                Delete
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
