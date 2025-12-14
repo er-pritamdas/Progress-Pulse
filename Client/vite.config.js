@@ -6,7 +6,7 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   server:{
     proxy:{
-      '/api': 'http://database:8000'
+      '/api': 'http://backend:3000'
     },
   },
   plugins: [react(),tailwindcss()],

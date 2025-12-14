@@ -20,8 +20,8 @@ const monthlyBudgetSchema = new mongoose.Schema({
     },
     salary: {
         type: Number,
-        default: 0,
-        min: 0
+        default: 86500,
+        min: 86500
     }
 }, { timestamps: true });
 

@@ -30,43 +30,75 @@ export const getDashboardData = async (req, res) => {
         if (categoryCount === 0) {
             const defaultCategories = [
                 {
-                    name: "Investment 💰",
+                    name: "Household & Living 🏠",
                     subCategories: [
-                        { name: "EPF", budget: 3320 },
-                        { name: "Stocks", budget: 5000 }, // Estimated
-                        { name: "SIP", budget: 10500 }
+                        { name: "House Rent", budget: 15000 },
+                        { name: "Electricity Bill", budget: 1500 },
+                        { name: "Water Bill", budget: 300 },
+                        { name: "Gas (LPG)", budget: 1200 },
+                        { name: "Maintenance", budget: 2000 },
+                        { name: "Internet / WiFi", budget: 1000 }
                     ]
                 },
                 {
-                    name: "Family 👨‍👩‍👧‍👦",
+                    name: "Food & Daily Needs 🍽",
                     subCategories: [
-                        { name: "Home", budget: 0 },
-                        { name: "Piu", budget: 1500 },
-                        { name: "Jassi", budget: 500 }
+                        { name: "Groceries", budget: 5000 },
+                        { name: "Vegetables & Fruits", budget: 2000 },
+                        { name: "Milk & Dairy", budget: 1200 },
+                        { name: "Eating Outside", budget: 2000 }
                     ]
                 },
                 {
-                    name: "Needs ⏳",
+                    name: "Transport & Travel 🚗",
                     subCategories: [
-                        { name: "Petrol", budget: 1000 },
-                        { name: "Lunch", budget: 500 },
-                        { name: "Extra", budget: 500 }
+                        { name: "Petrol / Diesel", budget: 3000 },
+                        { name: "Public Transport", budget: 1000 },
+                        { name: "Cab / Auto", budget: 1500 },
+                        { name: "Vehicle Maintenance", budget: 1000 }
                     ]
                 },
                 {
-                    name: "Extra Spending 👽",
+                    name: "Utilities & Subscriptions 📱",
                     subCategories: [
-                        { name: "Junk", budget: 500 },
-                        { name: "Movie", budget: 1000 },
-                        { name: "Tour", budget: 1000 },
-                        { name: "Extra", budget: 5000 }
+                        { name: "Mobile Recharge", budget: 500 },
+                        { name: "OTT Subscriptions", budget: 800 },
+                        { name: "Cloud / App Subscriptions", budget: 500 }
                     ]
                 },
                 {
-                    name: "Emergency Fund Distro 💵",
+                    name: "Family & Personal 👨‍👩‍👧",
                     subCategories: [
-                        { name: "SBI", budget: 40000 },
-                        { name: "Debt Fund", budget: 0 }
+                        { name: "Parents Support", budget: 5000 },
+                        { name: "Kids Education", budget: 4000 },
+                        { name: "Personal Care", budget: 1000 },
+                        { name: "Gifts & Occasions", budget: 1000 }
+                    ]
+                },
+                {
+                    name: "Health & Insurance 💊",
+                    subCategories: [
+                        { name: "Medicines", budget: 1000 },
+                        { name: "Doctor Visits", budget: 1000 },
+                        { name: "Health Insurance", budget: 2000 }
+                    ]
+                },
+                {
+                    name: "Investments & Savings 💰",
+                    subCategories: [
+                        { name: "EPF / PPF", budget: 5000 },
+                        { name: "SIP / Mutual Funds", budget: 10000 },
+                        { name: "Stocks", budget: 5000 },
+                        { name: "Emergency Fund", budget: 3000 }
+                    ]
+                },
+                {
+                    name: "Lifestyle & Fun 🎉",
+                    subCategories: [
+                        { name: "Movies & Entertainment", budget: 1000 },
+                        { name: "Dining Out", budget: 2000 },
+                        { name: "Shopping", budget: 3000 },
+                        { name: "Trips / Travel", budget: 3000 }
                     ]
                 }
             ];
@@ -79,11 +111,11 @@ export const getDashboardData = async (req, res) => {
         const sourceCount = await PaymentSource.countDocuments({ userId });
         if (sourceCount === 0) {
             const defaultSources = [
-                { name: "EXP - HDFC" },
-                { name: "Account 2" },
-                { name: "EXP - Cash" },
-                { name: "SAV - Cash" },
-                { name: "Credit Bill" }
+                { name: "HDFC" },
+                { name: "SBI" },
+                { name: "Credit Card" },
+                { name: "Cash" },
+                { name: "Paytm Wallet" }
             ];
             await PaymentSource.insertMany(
                 defaultSources.map(s => ({ userId, ...s }))
@@ -133,7 +165,7 @@ export const getDashboardData = async (req, res) => {
             data: {
                 categories,
                 sources: updatedSources,
-                salary: salaryData ? salaryData.salary : 0,
+                salary: salaryData ? salaryData.salary : 86500,
                 transactions
             }
         });
