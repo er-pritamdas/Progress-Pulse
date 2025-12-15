@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import dayjs from "dayjs";
-import { fetchDashboardData, createCategory, setMonth } from "../../../services/redux/slice/ExpenseSlice";
+import { fetchDashboardData, createCategory, setMonth, copyCategoriesFromLastMonth } from "../../../services/redux/slice/ExpenseSlice";
 import { useAuth } from "../../../Context/JwtAuthContext";
 import HeaderSection from "../../../components/Expense/HeaderSection";
 import CategoryCard from "../../../components/Expense/CategoryCard";
-import { Plus, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
+import { message } from "antd";
 
 // This view now contains the "Expense Dashboard" UI as requested
 const ExpTableView = () => {
@@ -17,7 +18,7 @@ const ExpTableView = () => {
   const [isAddingCategory, setIsAddingCategory] = useState(false);
 
   useEffect(() => {
-      dispatch(fetchDashboardData(currentMonth));
+    dispatch(fetchDashboardData(currentMonth));
   }, [currentMonth, user, dispatch]);
 
 
@@ -109,15 +110,63 @@ const ExpTableView = () => {
 
           {/* Empty State / Add Helper */}
           {categories.length === 0 && (
-            <div className="col-span-1 md:col-span-2 xl:col-span-4 h-[300px] flex flex-col items-center justify-center border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl text-gray-400">
-              <p>No Categories Yet</p>
-              <button onClick={() => setIsAddingCategory(true)} className="mt-2 text-blue-500 hover:underline">Create One</button>
+            <div className="col-span-1 md:col-span-2 xl:col-span-4 h-[300px] flex flex-col items-center justify-center border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl text-gray-400 gap-4">
+              <p className="text-lg font-medium">No Categories Yet</p>
+
+              <div className="flex flex-col items-center gap-2">
+                <button onClick={() => setIsAddingCategory(true)} className="btn btn-primary btn-sm">Create One</button>
+                <span className="text-xs opacity-50">- OR -</span>
+                <CopyFromLastMonthButton currentMonth={currentMonth} />
+              </div>
             </div>
           )}
         </div>
       </section>
 
     </div>
+  );
+};
+
+// Internal sub-component for the button to keep main component clean
+const CopyFromLastMonthButton = ({ currentMonth }) => {
+  const dispatch = useDispatch();
+  const [isCopying, setIsCopying] = useState(false);
+  const [messageApi, contextHolder] = message.useMessage();
+
+  const handleCopy = async () => {
+    setIsCopying(true);
+    try {
+      const resultAction = await dispatch(copyCategoriesFromLastMonth({ currentMonth }));
+      if (copyCategoriesFromLastMonth.fulfilled.match(resultAction)) {
+        if (resultAction.payload && resultAction.payload.length > 0) {
+          messageApi.success(`Successfully copied ${resultAction.payload.length} categories!`);
+          dispatch(fetchDashboardData(currentMonth));
+        } else {
+          messageApi.info("No categories found in last month to copy.");
+        }
+      } else {
+        messageApi.error(resultAction.payload || "Failed to copy.");
+      }
+    } catch (error) {
+      console.error(error);
+      messageApi.error("Something went wrong");
+    } finally {
+      setIsCopying(false);
+    }
+  };
+
+  return (
+    <>
+      {contextHolder}
+      <button
+        onClick={handleCopy}
+        className="btn btn-ghost btn-sm text-base-content/70 hover:text-primary gap-2"
+        disabled={isCopying}
+      >
+        {isCopying ? <span className="loading loading-spinner loading-xs"></span> : <RefreshCw size={14} />}
+        Use Last Month's Categories
+      </button>
+    </>
   );
 };
 

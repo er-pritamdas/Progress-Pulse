@@ -69,6 +69,18 @@ export const deleteCategory = createAsyncThunk(
     }
 );
 
+export const copyCategoriesFromLastMonth = createAsyncThunk(
+    "expense/copyCategoriesFromLastMonth",
+    async ({ currentMonth }, { rejectWithValue }) => {
+        try {
+            const response = await axiosInstance.post(`${BASE_URL}/category/copy-previous`, { currentMonth });
+            return response.data.data; // Array of new categories
+        } catch (error) {
+            return rejectWithValue(error.response?.data?.message || "Failed to copy categories");
+        }
+    }
+);
+
 // SubCategories
 export const addSubCategory = createAsyncThunk(
     "expense/addSubCategory",
@@ -234,6 +246,11 @@ const expenseSlice = createSlice({
             .addCase(deleteCategory.fulfilled, (state, action) => {
                 state.categories = state.categories.filter(c => c._id !== action.payload);
             })
+            .addCase(copyCategoriesFromLastMonth.fulfilled, (state, action) => {
+                if (action.payload && Array.isArray(action.payload)) {
+                    state.categories.push(...action.payload);
+                }
+            })
 
             // SubCategories (all return updated Category)
             .addCase(addSubCategory.fulfilled, (state, action) => {
@@ -264,6 +281,15 @@ const expenseSlice = createSlice({
             // Transactions
             .addCase(addTransaction.fulfilled, (state, action) => {
                 state.transactions.unshift(action.payload); // Add new to top
+
+                // Update Source Balance dynamically
+                const updatedSource = action.payload.sourceId; // This is populated
+                if (updatedSource && updatedSource._id) {
+                    const index = state.sources.findIndex(s => s._id === updatedSource._id);
+                    if (index !== -1) {
+                        state.sources[index] = { ...state.sources[index], ...updatedSource };
+                    }
+                }
             })
             .addCase(updateTransaction.fulfilled, (state, action) => {
                 const index = state.transactions.findIndex(t => t._id === action.payload._id);

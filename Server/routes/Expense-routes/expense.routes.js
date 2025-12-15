@@ -14,7 +14,8 @@ import {
     addTransaction,
     updateTransaction,
     deleteTransaction,
-    updateSalary
+    updateSalary,
+    copyCategoriesFromLastMonth
 } from "../../controllers/expense.controller.js";
 
 const router = Router();
@@ -29,6 +30,8 @@ router.get("/get-all-data", getDashboardData);
 router.post("/salary", updateSalary);
 
 // Categories
+router.post("/category/copy-previous", copyCategoriesFromLastMonth);
+
 router.route("/category")
     .post(createCategory);
 

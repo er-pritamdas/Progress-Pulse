@@ -38,7 +38,8 @@ export const getDashboardData = async (req, res) => {
                         { name: "Gas", budget: 1200 },
                         { name: "Maintenance", budget: 2000 },
                         { name: "Internet", budget: 1000 }
-                    ]
+                    ],
+                    month: month
                 },
                 {
                     name: "Investments & Savings 💰",
@@ -47,7 +48,8 @@ export const getDashboardData = async (req, res) => {
                         { name: "SIP / Mutual Funds", budget: 10000 },
                         { name: "Stocks", budget: 5000 },
                         { name: "Emergency Fund", budget: 3000 }
-                    ]
+                    ],
+                    month: month
                 }
             ];
 
@@ -61,7 +63,7 @@ export const getDashboardData = async (req, res) => {
             const defaultSources = [
                 { name: "HDFC", type: "Bank", balance: 5000 },
                 { name: "SBI", type: "Bank", balance: 5000 },
-                { name: "Credit Card", type: "Card"},
+                { name: "Credit Card", type: "Card" },
                 { name: "Cash", type: "Wallet", balance: 5000 },
                 { name: "Paytm Wallet", type: "Wallet", balance: 5000 }
             ];
@@ -385,6 +387,61 @@ export const deleteTransaction = async (req, res) => {
         await ExpenseTransaction.findByIdAndDelete(id);
 
         res.status(200).json({ success: true, message: "Transaction deleted", data: { id, updatedSource: source } });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+export const copyCategoriesFromLastMonth = async (req, res) => {
+    try {
+        const { _id: userId } = req.user;
+        const { currentMonth } = req.body; // "YYYY-MM"
+
+        if (!currentMonth) {
+            return res.status(400).json({ success: false, message: "Target month is required" });
+        }
+
+        // Calculate Previous Month
+        const [year, month] = currentMonth.split('-').map(Number);
+        const previousDate = new Date(year, month - 2); // month is 1-indexed in split, Date is 0-indexed. month-1 is current, month-2 is previous.
+        const prevYear = previousDate.getFullYear();
+        const prevMonthVal = previousDate.getMonth() + 1;
+        const previousMonthStr = `${prevYear}-${String(prevMonthVal).padStart(2, '0')}`;
+
+        // Fetch Previous Month's Categories
+        const prevCategories = await ExpenseCategory.find({ userId, month: previousMonthStr }).lean();
+
+        if (prevCategories.length === 0) {
+            return res.status(404).json({ success: false, message: `No categories found for ${previousMonthStr}` });
+        }
+
+        // Fetch Current Month's Categories to avoid duplicates
+        const currentCategories = await ExpenseCategory.find({ userId, month: currentMonth }).select('name').lean();
+        const existingNames = new Set(currentCategories.map(c => c.name));
+
+        // Filter categories to copy
+        const categoriesToCopy = prevCategories
+            .filter(cat => !existingNames.has(cat.name))
+            .map(cat => ({
+                userId,
+                name: cat.name,
+                month: currentMonth,
+                subCategories: cat.subCategories.map(sub => ({
+                    name: sub.name,
+                    budget: sub.budget,
+                    month: currentMonth
+                }))
+            }));
+
+        if (categoriesToCopy.length === 0) {
+            return res.status(200).json({ success: true, message: "All categories already exist in the current month" });
+        }
+
+        // Insert New Categories
+        await ExpenseCategory.insertMany(categoriesToCopy);
+
+        res.status(200).json({ success: true, message: `Successfully copied ${categoriesToCopy.length} categories from ${previousMonthStr}`, data: categoriesToCopy });
+
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
