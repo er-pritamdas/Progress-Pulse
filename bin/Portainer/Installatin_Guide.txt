@@ -1,0 +1,14 @@
+To install using Docker Compose, download the compose file using the following curl command: 
+	curl -L https://downloads.portainer.io/ce-lts/portainer-compose.yaml -o portainer-compose.yaml
+
+Once you have created or downloaded the compose file, you can deploy it with the following command:
+	docker compose -f portainer-compose.yaml up -d
+
+Docker Compose will create the necessary resources and deploy Portainer. You can check to see whether the Portainer Server container has started by running docker ps:
+	root@server:~# docker ps
+	CONTAINER ID   IMAGE                        COMMAND        CREATED         STATUS         PORTS                                                                                                NAMES
+	7963585688a9   portainer/portainer-ce:lts   "/portainer"   8 seconds ago   Up 8 seconds   0.0.0.0:8000->8000/tcp, [::]:8000->8000/tcp, 0.0.0.0:9443->9443/tcp, [::]:9443->9443/tcp, 9000/tcp   portainer
+
+Logging In
+Now that the installation is complete, you can log into your Portainer Server instance by opening a web browser and going to:
+	https://localhost:9443

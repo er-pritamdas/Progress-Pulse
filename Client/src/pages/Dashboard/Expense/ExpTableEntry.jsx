@@ -30,12 +30,12 @@ const ExpTableEntry = () => {
   const creditCount = creditTransactions.length;
 
   return (
-    <div className="p-4 md:p-6 w-full max-w-[1600px] mx-auto pb-20">
+    <div className="p-4 md:p-2 w-full max-w-[1600px] mx-auto pb-20">
 
       <div className="flex flex-col lg:flex-row gap-6">
 
-        {/* Sidebar Stats (Left) */}
-        <div className="w-full lg:w-72 shrink-0 space-y-6">
+        {/* Sidebar Stats (Left) - Sticky */}
+        <div className="w-full lg:w-72 shrink-0 space-y-6 lg:sticky lg:top-6 lg:h-fit">
 
           {/* Month Selector */}
           <div className="card bg-gradient-to-br from-base-100 to-base-200 shadow-md border border-base-200/50">
@@ -132,20 +132,7 @@ const ExpTableEntry = () => {
         {/* Main Table Area (Right) */}
         <div className="flex-1 flex flex-col gap-6">
 
-          {/* Sources Tags */}
-          {sources.length > 0 && (
-            <div className="flex flex-wrap gap-3">
-              {sources.map((source) => (
-                <div key={source._id} className="badge badge-lg py-4 px-4 gap-2 bg-base-100 border border-base-200 shadow-sm">
-                  <Wallet size={14} className="opacity-50" />
-                  <span className="font-semibold">{source.name}</span>
-                  <span className={`font-mono font-bold ${source.balance >= 0 ? 'text-success' : 'text-error'}`}>
-                    ₹{source.balance.toLocaleString()}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
+
 
           <ExpenseTable />
         </div>

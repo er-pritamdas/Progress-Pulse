@@ -36,10 +36,10 @@ const ExpTableView = () => {
   }
 
   return (
-    <div className="p-4 md:p-6 lg:p-8 w-full max-w-[1600px] mx-auto space-y-8 pb-20">
+    <div className="p-4 md:p-6 lg:p-5 w-full max-w-[1600px] mx-auto space-y-8 pb-20">
 
       {/* Month Selector & Header */}
-      <section className="flex flex-col md:flex-row gap-4 justify-between items-center bg-base-100 p-4 rounded-xl border border-base-200 shadow-sm">
+      <section className="flex flex-col md:flex-row gap-4 justify-between items-center bg-base-100 rounded-xl ">
         <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
           Financial Overview
         </h1>

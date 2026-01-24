@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import dayjs from "dayjs";
 import { addTransaction, updateTransaction, deleteTransaction } from "../../services/redux/slice/ExpenseSlice";
-import { Trash2, Save, X, Edit2, Plus, Handshake, AlertTriangle } from "lucide-react";
+import { Trash2, Save, X, Edit2, Plus, Handshake, AlertTriangle, Wallet } from "lucide-react";
 
 // Helper Component for DaisyUI Dropdown
 const DaisySelect = ({ value, onChange, options, placeholder, disabled, className, specialOption }) => {
@@ -201,51 +201,70 @@ const ExpenseTable = () => {
     if (loading && transactions.length === 0) return <div className="p-8 text-center opacity-50">Loading transactions...</div>;
 
     return (
-        <div className="w-full bg-base-100 rounded-2xl shadow-lg border border-base-200 flex flex-col h-[700px]">
+        <div className="w-full bg-base-100 rounded-2xl shadow-lg border border-base-200 flex flex-col min-h-[500px]">
 
-            {/* Table Header - Sticky with Filters */}
-            <div className="grid grid-cols-12 gap-4 px-6 py-4 bg-base-200/90 border-b border-base-200 text-xs font-bold text-base-content/50 uppercase tracking-widest sticky top-0 z-30 backdrop-blur-md items-end">
-                <div className="col-span-2">
-                    <span className="mb-1 block">Date</span>
-                    <input type="date" value={filters.date} onChange={(e) => setFilters({ ...filters, date: e.target.value })} className="input input-xs input-bordered w-full" />
+            {/* Sticky Header Section: Sources + Table Filter Header */}
+            <div className="sticky top-0 z-30 bg-base-100 rounded-t-2xl shadow-sm backdrop-blur-md">
+
+                {/* Sources Tags */}
+                {sources.length > 0 && (
+                    <div className="flex flex-wrap gap-3 p-4 border-b border-base-200/50 bg-base-100">
+                        {sources.map((source) => (
+                            <div key={source._id} className="badge badge-lg py-4 px-4 gap-2 bg-base-100 border border-base-200 shadow-sm">
+                                <Wallet size={14} className="opacity-50" />
+                                <span className="font-semibold">{source.name}</span>
+                                <span className={`font-mono font-bold ${source.balance >= 0 ? 'text-success' : 'text-error'}`}>
+                                    ₹{source.balance.toLocaleString()}
+                                </span>
+                            </div>
+                        ))}
+                    </div>
+                )}
+
+                {/* Table Header Row */}
+                <div className="grid grid-cols-12 gap-4 px-6 py-4 bg-base-200/90 border-b border-base-200 text-xs font-bold text-base-content/50 uppercase tracking-widest items-end">
+                    <div className="col-span-2">
+                        <span className="mb-1 block">Date</span>
+                        <input type="date" value={filters.date} onChange={(e) => setFilters({ ...filters, date: e.target.value })} className="input input-xs input-bordered w-full" />
+                    </div>
+                    <div className="col-span-2">
+                        <span className="mb-1 block">Description</span>
+                        <input type="text" placeholder="Filter..." value={filters.description} onChange={(e) => setFilters({ ...filters, description: e.target.value })} className="input input-xs input-bordered w-full" />
+                    </div>
+                    <div className="col-span-2">
+                        <span className="mb-1 block">From</span>
+                        <select value={filters.sourceId} onChange={(e) => setFilters({ ...filters, sourceId: e.target.value })} className="select select-bordered select-xs w-full">
+                            <option value="">All</option>
+                            {sources.map(s => <option key={s._id} value={s._id}>{s.name}</option>)}
+                        </select>
+                    </div>
+                    <div className="col-span-2">
+                        <span className="mb-1 block">Category</span>
+                        <select value={filters.categoryId} onChange={(e) => setFilters({ ...filters, categoryId: e.target.value, subCategoryId: "" })} className="select select-bordered select-xs w-full">
+                            <option value="">All</option>
+                            {categoryOptions.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+                        </select>
+                    </div>
+                    <div className="col-span-2">
+                        <span className="mb-1 block">Sub Category</span>
+                        <select value={filters.subCategoryId} onChange={(e) => setFilters({ ...filters, subCategoryId: e.target.value })} className="select select-bordered select-xs w-full">
+                            <option value="">All</option>
+                            {filters.categoryId
+                                ? getSubCats(filters.categoryId).map(s => <option key={s._id} value={s._id}>{s.name}</option>)
+                                : categories.flatMap(c => c.subCategories).map(s => <option key={s._id} value={s._id}>{s.name}</option>)
+                            }
+                            {/* Note: FlatMap might show duplicate names if not careful, but usually subcat names are unique enough or user knows context. 
+                                Strictly filtering by Category first is better UX usually.
+                            */}
+                        </select>
+                    </div>
+                    <div className="col-span-1 text-right mb-2">Amount</div>
+                    <div className="col-span-1 text-center mb-2">Action</div>
                 </div>
-                <div className="col-span-2">
-                    <span className="mb-1 block">Description</span>
-                    <input type="text" placeholder="Filter..." value={filters.description} onChange={(e) => setFilters({ ...filters, description: e.target.value })} className="input input-xs input-bordered w-full" />
-                </div>
-                <div className="col-span-2">
-                    <span className="mb-1 block">From</span>
-                    <select value={filters.sourceId} onChange={(e) => setFilters({ ...filters, sourceId: e.target.value })} className="select select-bordered select-xs w-full">
-                        <option value="">All</option>
-                        {sources.map(s => <option key={s._id} value={s._id}>{s.name}</option>)}
-                    </select>
-                </div>
-                <div className="col-span-2">
-                    <span className="mb-1 block">Category</span>
-                    <select value={filters.categoryId} onChange={(e) => setFilters({ ...filters, categoryId: e.target.value, subCategoryId: "" })} className="select select-bordered select-xs w-full">
-                        <option value="">All</option>
-                        {categoryOptions.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
-                    </select>
-                </div>
-                <div className="col-span-2">
-                    <span className="mb-1 block">Sub Category</span>
-                    <select value={filters.subCategoryId} onChange={(e) => setFilters({ ...filters, subCategoryId: e.target.value })} className="select select-bordered select-xs w-full">
-                        <option value="">All</option>
-                        {filters.categoryId
-                            ? getSubCats(filters.categoryId).map(s => <option key={s._id} value={s._id}>{s.name}</option>)
-                            : categories.flatMap(c => c.subCategories).map(s => <option key={s._id} value={s._id}>{s.name}</option>)
-                        }
-                        {/* Note: FlatMap might show duplicate names if not careful, but usually subcat names are unique enough or user knows context. 
-                            Strictly filtering by Category first is better UX usually.
-                        */}
-                    </select>
-                </div>
-                <div className="col-span-1 text-right mb-2">Amount</div>
-                <div className="col-span-1 text-center mb-2">Action</div>
             </div>
 
             {/* Scrollable Content */}
-            <div className="overflow-y-visible flex-1 scrollbar-thin scrollbar-thumb-base-300 scrollbar-track-transparent pb-40">
+            <div className="flex-1 pb-40">
                 {/* Note: overflow-y-visible might break scrolling if height is fixed.
                   But dropdowns need visible.
                   Actually, DaisyUI dropdowns might need 'overflow-y-auto' on parent to serve as scroll container,

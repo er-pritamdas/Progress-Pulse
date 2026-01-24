@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { TitleChanger } from "../../../utils/TitleChanger";
-import { updateHabitSettings, fetchPhysicalLogs, addPhysicalLog, deletePhysicalLog } from "../../../services/redux/slice/habitSlice";
+import { updateHabitSettings, fetchHabitSettings, fetchPhysicalLogs, addPhysicalLog, deletePhysicalLog } from "../../../services/redux/slice/habitSlice";
 import { useLoading } from "../../../Context/LoadingContext";
 import { Calculator, Play, UserCheck, Plus, History, Trash2, Info } from "lucide-react";
 import ReactApexChart from "react-apexcharts";
@@ -67,6 +67,7 @@ function HabitLogging() {
     }, [reduxAge, reduxGender, reduxWeight, reduxHeight, reduxActivityLevel, reduxMaintenanceCalories, reduxBmr, reduxBmi]);
 
     useEffect(() => {
+        dispatch(fetchHabitSettings());
         dispatch(fetchPhysicalLogs());
     }, [dispatch]);
 

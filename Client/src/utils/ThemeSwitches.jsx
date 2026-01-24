@@ -22,7 +22,7 @@ const themes = [
   // { name: "wireframe", emoji: "🪶" },
   { name: "black", emoji: "⚫" },
   // { name: "luxury", emoji: "💎" },
-  // { name: "dracula", emoji: "🧛" },
+  { name: "dracula", emoji: "🧛" },
   // { name: "cmyk", emoji: "🖨️" },
   // { name: "autumn", emoji: "🍂" },
   { name: "business", emoji: "💼" },
