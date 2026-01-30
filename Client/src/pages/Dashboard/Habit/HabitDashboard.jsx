@@ -14,7 +14,10 @@ import WaterAnalysis from "../../../components/Dashboard/Habit/HabitDashboardPag
 import SleepAnalysis from "../../../components/Dashboard/Habit/HabitDashboardPage/Analysis/SleepAnalysis";
 import ReadAnalysis from "../../../components/Dashboard/Habit/HabitDashboardPage/Analysis/ReadAnalysis";
 
-import { Flame, Droplet, Moon, BookOpen } from "lucide-react";
+import { Flame, Droplet, Moon, BookOpen, Smile, Heart, Book, ChevronDown, ChevronUp } from "lucide-react";
+import MoodAnalysis from "../../../components/Dashboard/Habit/HabitDashboardPage/Analysis/MoodAnalysis.jsx";
+import SelfCareAnalysis from "../../../components/Dashboard/Habit/HabitDashboardPage/Analysis/SelfCareAnalysis.jsx";
+import JournalAnalysis from "../../../components/Dashboard/Habit/HabitDashboardPage/Analysis/JournalAnalysis.jsx";
 
 function HabitDashboard() {
   TitleChanger("Progress Pulse | Habit Dashboard");
@@ -22,6 +25,9 @@ function HabitDashboard() {
   const { setLoading } = useLoading();
   const [habitData, setHabitData] = useState([]);
   const [totalEntries, setTotalEntries] = useState(0)
+  const [activeTab, setActiveTab] = useState('calorie');
+  const [isOverviewOpen, setIsOverviewOpen] = useState(true);
+
   const [waterMin, setWaterMin] = useState(0);
   const [waterMax, setWaterMax] = useState(100);
   const [sleepMin, setSleepMin] = useState(0);
@@ -33,9 +39,11 @@ function HabitDashboard() {
   const [BurnedCalorieMax, setBurnedCalorieMax] = useState(0);
   const [BurnedCalorieMin, setBurnedCalorieMin] = useState(0);
   const [basalMetabolicRate, setbasalMetabolicRate] = useState(0);
+  const [moodList, setMoodList] = useState([]);
+  const [selfCareList, setSelfCareList] = useState([]);
 
   // 🔹 Tab State
-  const [activeTab, setActiveTab] = useState("calorie");
+
 
 
   // Format Date Function
@@ -91,6 +99,8 @@ function HabitDashboard() {
       setBurnedCalorieMax(res.data.data.settings.burned.max);
       setBurnedCalorieMin(res.data.data.settings.burned.min);
       setbasalMetabolicRate(res.data.data.bmr);
+      setMoodList(res.data.data.settings.mood || []);
+      setSelfCareList(res.data.data.settings.selfcare || []);
       setTimeout(() => setLoading(false), 4000);
     } catch (err) {
       console.error("Error fetching heatmap Settings data:", err);
@@ -134,7 +144,7 @@ function HabitDashboard() {
           </h1>
 
           {/* Center: Analytics Tabs */}
-          <div className="absolute left-1/2 transform -translate-x-1/2">
+          <div className="flex-1 flex justify-center px-4">
             <div className="tabs tabs-boxed bg-base-100/50 backdrop-blur-sm shadow-sm p-1 gap-1">
               <a
                 className={`tab tab-sm gap-1 transition-all duration-300 ${activeTab === 'calorie' ? 'tab-active btn btn-sm btn-soft btn-primary' : 'btn btn-sm btn-ghost'}`}
@@ -159,6 +169,24 @@ function HabitDashboard() {
                 onClick={() => setActiveTab('read')}
               >
                 <BookOpen size={14} /> Read
+              </a>
+              <a
+                className={`tab tab-sm gap-1 transition-all duration-300 ${activeTab === 'selfcare' ? 'tab-active btn btn-sm btn-soft btn-secondary' : 'btn btn-sm btn-ghost'}`}
+                onClick={() => setActiveTab('selfcare')}
+              >
+                <Heart size={14} /> Self Care
+              </a>
+              <a
+                className={`tab tab-sm gap-1 transition-all duration-300 ${activeTab === 'mood' ? 'tab-active btn btn-sm btn-soft btn-accent' : 'btn btn-sm btn-ghost'}`}
+                onClick={() => setActiveTab('mood')}
+              >
+                <Smile size={14} /> Mood
+              </a>
+              <a
+                className={`tab tab-sm gap-1 transition-all duration-300 ${activeTab === 'journal' ? 'tab-active btn btn-sm btn-soft btn-info' : 'btn btn-sm btn-ghost'}`}
+                onClick={() => setActiveTab('journal')}
+              >
+                <Book size={14} /> Journal
               </a>
             </div>
           </div>
@@ -254,42 +282,53 @@ function HabitDashboard() {
       <div className="w-full h-full overflow-y-auto overflow-x-hidden p-6 bg-base-200">
         {/* Overview Section */}
         <section className="mb-12">
-          <h2 className="text-xl font-semibold mb-4">Overview</h2>
-          <div className="grid grid-cols-15 gap-3 mb-8">
-            <div className="col-span-3 bg-base-100 rounded-2xl shadow-lg p-6">
-              <HabitSummaryCard
-                habitData={habitData}
-              />
-            </div>
-            <div className="col-span-3 bg-base-100 rounded-2xl shadow-lg p-6">
-              <CurrentStreakCard
-                habitData={habitData}
-                fromDate={fromDate}
-                toDate={toDate}
-              />
-            </div>
-            <div className="col-span-3 bg-base-100 rounded-2xl shadow-lg p-6">
-              <LongestStreakCard
-                habitData={habitData}
-                fromDate={fromDate}
-                toDate={toDate}
-              />
-            </div>
-            <div className="col-span-3 bg-base-100 rounded-2xl shadow-lg p-6">
-              <GoalProgressCard
-                habitData={habitData}
-                fromDate={fromDate}
-                toDate={toDate}
-              />
-            </div>
-            <div className="col-span-3 bg-base-100 rounded-2xl shadow-lg p-6">
-              <HabitScoreCard
-                habitData={habitData}
-                fromDate={fromDate}
-                toDate={toDate}
-              />
-            </div>
+          <div 
+            className="flex items-center justify-between cursor-pointer mb-4 hover:bg-base-300/50 p-2 rounded-lg transition-colors"
+            onClick={() => setIsOverviewOpen(!isOverviewOpen)}
+          >
+             <h2 className="text-xl font-semibold flex items-center gap-2">Overview</h2>
+             <button className="btn btn-sm btn-ghost btn-circle">
+                {isOverviewOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+             </button>
           </div>
+          
+          {isOverviewOpen && (
+              <div className="grid grid-cols-15 gap-3 mb-8 animate-fade-in-down">
+                <div className="col-span-3 bg-base-100 rounded-2xl shadow-lg p-6">
+                  <HabitSummaryCard
+                    habitData={habitData}
+                  />
+                </div>
+                <div className="col-span-3 bg-base-100 rounded-2xl shadow-lg p-6">
+                  <CurrentStreakCard
+                    habitData={habitData}
+                    fromDate={fromDate}
+                    toDate={toDate}
+                  />
+                </div>
+                <div className="col-span-3 bg-base-100 rounded-2xl shadow-lg p-6">
+                  <LongestStreakCard
+                    habitData={habitData}
+                    fromDate={fromDate}
+                    toDate={toDate}
+                  />
+                </div>
+                <div className="col-span-3 bg-base-100 rounded-2xl shadow-lg p-6">
+                  <GoalProgressCard
+                    habitData={habitData}
+                    fromDate={fromDate}
+                    toDate={toDate}
+                  />
+                </div>
+                <div className="col-span-3 bg-base-100 rounded-2xl shadow-lg p-6">
+                  <HabitScoreCard
+                    habitData={habitData}
+                    fromDate={fromDate}
+                    toDate={toDate}
+                  />
+                </div>
+              </div>
+          )}
         </section>
 
         {/* 🔹 ANALYSIS TABS */}
@@ -340,6 +379,32 @@ function HabitDashboard() {
               readMax={readMax}
               readMin={readMin}
               totalEntries={totalEntries}
+              fromDate={fromDate}
+              toDate={toDate}
+            />
+          )}
+
+          {activeTab === 'selfcare' && (
+            <SelfCareAnalysis
+              habitData={habitData}
+              selfCareList={selfCareList}
+              fromDate={fromDate}
+              toDate={toDate}
+            />
+          )}
+
+          {activeTab === 'mood' && (
+            <MoodAnalysis
+              habitData={habitData}
+              moodList={moodList}
+              fromDate={fromDate}
+              toDate={toDate}
+            />
+          )}
+
+          {activeTab === 'journal' && (
+            <JournalAnalysis
+              habitData={habitData}
               fromDate={fromDate}
               toDate={toDate}
             />

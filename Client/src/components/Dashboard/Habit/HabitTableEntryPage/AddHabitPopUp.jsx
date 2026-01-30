@@ -322,30 +322,36 @@ const AddHabitPopUp = ({
                 tabIndex={0}
                 className="dropdown-content z-[999] menu p-2 shadow bg-base-300 rounded-box w-full max-w-xs"
               >
-                {[
-                  "Amazing",
-                  "Good",
-                  "Average",
-                  "Sad",
-                  "Depressed",
-                  "Productive",
-                ].map((mood) => (
-                  <li key={mood}>
-                    <button
-                      onClick={() =>
-                        handleChange({
-                          target: { name: "mood", value: mood },
-                        })
-                      }
-                      className={`text-sm px-2 py-1 rounded w-full text-left ${formData.mood === mood
-                        ? "bg-primary text-primary-content"
-                        : ""
-                        }`}
-                    >
-                      {mood}
-                    </button>
-                  </li>
-                ))}
+                {
+                  settings.mood && settings.mood.length > 0 ? (
+                    settings.mood.map((mood) => (
+                      <li key={mood}>
+                        <button
+                          onClick={() =>
+                            handleChange({
+                              target: { name: "mood", value: mood },
+                            })
+                          }
+                          className={`text-sm px-2 py-1 rounded w-full text-left ${formData.mood === mood
+                            ? "bg-primary text-primary-content"
+                            : ""
+                            }`}
+                        >
+                          {mood}
+                        </button>
+                      </li>
+                    ))
+                  ) : (
+                    <li className="text-sm text-center text-gray-400 px-2 py-1 flex flex-col items-center gap-1">
+                      No Moods set. Please set them in{" "}
+                      <a
+                        href="/settings"
+                        className="text-primary hover:text-primary-focus"
+                      >
+                        Settings
+                      </a>
+                    </li>
+                  )}
               </ul>
             </div>
 

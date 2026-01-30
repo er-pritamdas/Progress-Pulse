@@ -73,6 +73,11 @@ const dailyHabitSchema = new mongoose.Schema(
         max: 10000,
         trim: true,
       },
+      journal: {
+        type: String,
+        default: "",
+        trim: true,
+      },
     },
 
     progress: {

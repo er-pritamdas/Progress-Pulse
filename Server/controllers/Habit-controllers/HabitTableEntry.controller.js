@@ -51,6 +51,7 @@ const readHabitTableData = asynchandler(async (req, res, next) => {
     intake: entry.habits.intake?.toString() || "",
     selfcare: entry.habits.selfcare?.toString() || "",
     mood: entry.habits.mood?.toString() || "",
+    journal: entry.habits.journal?.toString() || "",
     progress: entry.progress?.toString() || "",
     score: entry.score?.toString() || "",
   }));
@@ -80,6 +81,7 @@ const createHabitTableEntry = asynchandler(async (req, res, next) => {
     intake,
     selfcare,
     mood,
+    journal,
     progress,
     score
   } = req.body;
@@ -111,6 +113,7 @@ const createHabitTableEntry = asynchandler(async (req, res, next) => {
         intake,
         selfcare,
         mood,
+        journal,
       },
       progress,
       status,
@@ -168,6 +171,7 @@ const updateHabitTableEntry = asynchandler(async (req, res, next) => {
     intake,
     selfcare,
     mood,
+    journal,
     progress,
     score,
   } = req.body;
@@ -194,6 +198,7 @@ const updateHabitTableEntry = asynchandler(async (req, res, next) => {
         "habits.intake": intake,
         "habits.selfcare": selfcare,
         "habits.mood": mood,
+        "habits.journal": journal,
         progress: progress,
         status: status,
         score: score,

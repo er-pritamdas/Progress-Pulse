@@ -4,6 +4,8 @@ import Heading from "../../../components/Dashboard/Habit/HabitTableEntryPage/Hea
 import Pagination from "../../../components/Dashboard/Habit/HabitTableEntryPage/Pagination.jsx";
 
 import AddHabitPopUp from "../../../components/Dashboard/Habit/HabitTableEntryPage/AddHabitPopUp.jsx";
+import DeleteHabitPopUp from "../../../components/Dashboard/Habit/HabitTableEntryPage/DeleteHabitPopUp.jsx";
+import JournalPopUp from "../../../components/Dashboard/Habit/HabitTableEntryPage/JournalPopUp.jsx";
 import Trash from "../../../utils/Icons/Trash";
 import Pencil from "../../../utils/Icons/Pencil";
 import Save from "../../../utils/Icons/Save";
@@ -12,7 +14,6 @@ import ErrorAlert from "../../../utils/Alerts/ErrorAlert";
 import SuccessAlert from "../../../utils/Alerts/SuccessAlert";
 import axiosInstance from "../../../Context/AxiosInstance";
 import { useLoading } from "../../../Context/LoadingContext";
-import DeleteHabitPopUp from "../../../components/Dashboard/Habit/HabitTableEntryPage/DeleteHabitPopUp.jsx";
 import Refresh from "../../../utils/Icons/Refresh";
 import { TitleChanger } from "../../../utils/TitleChanger";
 import { useSelector, useDispatch } from "react-redux";
@@ -32,6 +33,8 @@ import {
   MoreHorizontal,
   Settings,
   Sparkles,
+  Book,
+  Search,
 } from "lucide-react";
 
 function HabitTableEntry() {
@@ -53,6 +56,11 @@ function HabitTableEntry() {
   const { setLoading } = useLoading();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [habitToDelete, setHabitToDelete] = useState(null);
+
+  // Journal State
+  const [isJournalModalOpen, setIsJournalModalOpen] = useState(false);
+  const [currentJournalItem, setCurrentJournalItem] = useState(null);
   const [data, setData] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [editingItem, setEditingItem] = useState(null);
@@ -260,10 +268,50 @@ function HabitTableEntry() {
     setIsDeleteModalOpen(true);
   };
 
+  const handleJournalClick = (item) => {
+    setCurrentJournalItem(item);
+    setIsJournalModalOpen(true);
+  };
+
+  const handleJournalSave = async (text) => {
+    if (!currentJournalItem) return;
+
+    try {
+      const payload = {
+        date: currentJournalItem.date,
+        burned: currentJournalItem.burned,
+        water: currentJournalItem.water,
+        sleep: currentJournalItem.sleep,
+        read: currentJournalItem.read,
+        intake: currentJournalItem.intake,
+        selfcare: currentJournalItem.selfcare,
+        mood: currentJournalItem.mood,
+        journal: text,
+        progress: Number(currentJournalItem.progress),
+        score: Number(currentJournalItem.score)
+      };
+
+      await axiosInstance.put("/v1/dashboard/habit/table-entry", payload);
+      setAlertSuccessMessage("Journal saved successfully!");
+      setShowSuccessAlert(true);
+      setTimeout(() => setShowSuccessAlert(false), 4000);
+      fetchHabits(currentPage);
+      setIsJournalModalOpen(false);
+      setCurrentJournalItem(null);
+    } catch (err) {
+      console.error(err);
+      const errorMessage =
+        err.response?.data?.message || "Failed to save journal";
+      setAlertErrorMessage(errorMessage);
+      setShowErrorAlert(true);
+      setTimeout(() => setShowErrorAlert(false), 4000);
+    }
+  };
+
   const handleDeleteConfirm = async () => {
     try {
       setLoading(true);
-      const response = axiosInstance.delete("/v1/dashboard/habit/table-entry", {
+      await axiosInstance.delete("/v1/dashboard/habit/table-entry", {
         params: {
           date: itemToDelete,
         },
@@ -271,10 +319,11 @@ function HabitTableEntry() {
       setAlertSuccessMessage(`Entry For ${itemToDelete} Deleted`);
       setShowSuccessAlert(true);
       setTimeout(() => setShowSuccessAlert(false), 4000);
+      setEditingItem(null);
       fetchHabits(currentPage);
     } catch (err) {
       const errorMessage =
-        err.response?.data?.message || "Failed to fetch habit data!";
+        err.response?.data?.message || "Failed to delete habit entry!";
       setAlertErrorMessage(errorMessage);
       setShowErrorAlert(true);
       setTimeout(() => setShowErrorAlert(false), 4000);
@@ -1011,16 +1060,23 @@ function HabitTableEntry() {
                     <td className="text-center w-[120px]">
                       <div className="flex justify-center gap-2">
                         <button
+                          className={`btn btn-circle btn-sm ${item.journal && item.journal.trim().length > 0 ? "btn-primary" : "btn-ghost text-base-content/30"}`}
+                          onClick={() => handleJournalClick(item)}
+                          title={item.journal ? "View/Edit Journal" : "Add Journal"}
+                        >
+                          <Book size={16} />
+                        </button>
+                        <button
                           className="btn btn-soft btn-circle btn-info btn-sm"
                           onClick={() => handleEdit(item)}
                         >
-                          <Pencil />
+                          <Pencil size={16} />
                         </button>
                         <button
                           className="btn btn-soft btn-circle btn-error btn-sm"
                           onClick={() => handleDeleteClick(item.date)}
                         >
-                          <Trash />
+                          <Trash size={16}/>
                         </button>
                       </div>
                     </td>
@@ -1056,6 +1112,14 @@ function HabitTableEntry() {
         isDeletePopupOpen={isDeleteModalOpen}
         onClose={() => setIsDeleteModalOpen(false)}
         onConfirm={handleDeleteConfirm}
+      />
+
+      {/* Journal Popup */}
+      <JournalPopUp
+        isOpen={isJournalModalOpen}
+        onClose={() => setIsJournalModalOpen(false)}
+        initialData={currentJournalItem?.journal}
+        onSave={handleJournalSave}
       />
     </div>
   );
