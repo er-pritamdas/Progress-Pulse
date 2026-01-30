@@ -122,6 +122,10 @@ function HabitDashboard() {
       setLoading(false);
     } catch (err) {
       console.error("Error fetching heatmap data:", err);
+      if (err.response && (err.response.status === 404 || err.response.status === 400)) {
+        setHabitData([]);
+        setTotalEntries(0);
+      }
       setLoading(false);
     }
   };
@@ -226,7 +230,7 @@ function HabitDashboard() {
                 </calendar-date>
               </div>
             </div>
-            -{/* TO DATE PICKER */}
+            {/* TO DATE PICKER */}
             <div className="dropdown dropdown-end floating-label">
               <div tabIndex={0} role="button" className="input text-xs w-25">
                 {formatDate(toDate) || "-- / --- / --"}
@@ -280,137 +284,147 @@ function HabitDashboard() {
 
 
       <div className="w-full h-full overflow-y-auto overflow-x-hidden p-6 bg-base-200">
-        {/* Overview Section */}
-        <section className="mb-12">
-          <div 
-            className="flex items-center justify-between cursor-pointer mb-4 hover:bg-base-300/50 p-2 rounded-lg transition-colors"
-            onClick={() => setIsOverviewOpen(!isOverviewOpen)}
-          >
-             <h2 className="text-xl font-semibold flex items-center gap-2">Overview</h2>
-             <button className="btn btn-sm btn-ghost btn-circle">
-                {isOverviewOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-             </button>
-          </div>
-          
-          {isOverviewOpen && (
-              <div className="grid grid-cols-15 gap-3 mb-8 animate-fade-in-down">
-                <div className="col-span-3 bg-base-100 rounded-2xl shadow-lg p-6">
-                  <HabitSummaryCard
-                    habitData={habitData}
-                  />
+      {habitData.length > 0 ? (
+        <>
+            {/* Overview Section */}
+            <section className="mb-12">
+            <div 
+                className="flex items-center justify-between cursor-pointer mb-4 hover:bg-base-300/50 p-2 rounded-lg transition-colors"
+                onClick={() => setIsOverviewOpen(!isOverviewOpen)}
+            >
+                <h2 className="text-xl font-semibold flex items-center gap-2">Overview</h2>
+                <button className="btn btn-sm btn-ghost btn-circle">
+                    {isOverviewOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                </button>
+            </div>
+            
+            {isOverviewOpen && (
+                <div className="grid grid-cols-15 gap-3 mb-8 animate-fade-in-down">
+                    <div className="col-span-3 bg-base-100 rounded-2xl shadow-lg p-6">
+                    <HabitSummaryCard
+                        habitData={habitData}
+                    />
+                    </div>
+                    <div className="col-span-3 bg-base-100 rounded-2xl shadow-lg p-6">
+                    <CurrentStreakCard
+                        habitData={habitData}
+                        fromDate={fromDate}
+                        toDate={toDate}
+                    />
+                    </div>
+                    <div className="col-span-3 bg-base-100 rounded-2xl shadow-lg p-6">
+                    <LongestStreakCard
+                        habitData={habitData}
+                        fromDate={fromDate}
+                        toDate={toDate}
+                    />
+                    </div>
+                    <div className="col-span-3 bg-base-100 rounded-2xl shadow-lg p-6">
+                    <GoalProgressCard
+                        habitData={habitData}
+                        fromDate={fromDate}
+                        toDate={toDate}
+                    />
+                    </div>
+                    <div className="col-span-3 bg-base-100 rounded-2xl shadow-lg p-6">
+                    <HabitScoreCard
+                        habitData={habitData}
+                        fromDate={fromDate}
+                        toDate={toDate}
+                    />
+                    </div>
                 </div>
-                <div className="col-span-3 bg-base-100 rounded-2xl shadow-lg p-6">
-                  <CurrentStreakCard
-                    habitData={habitData}
-                    fromDate={fromDate}
-                    toDate={toDate}
-                  />
-                </div>
-                <div className="col-span-3 bg-base-100 rounded-2xl shadow-lg p-6">
-                  <LongestStreakCard
-                    habitData={habitData}
-                    fromDate={fromDate}
-                    toDate={toDate}
-                  />
-                </div>
-                <div className="col-span-3 bg-base-100 rounded-2xl shadow-lg p-6">
-                  <GoalProgressCard
-                    habitData={habitData}
-                    fromDate={fromDate}
-                    toDate={toDate}
-                  />
-                </div>
-                <div className="col-span-3 bg-base-100 rounded-2xl shadow-lg p-6">
-                  <HabitScoreCard
-                    habitData={habitData}
-                    fromDate={fromDate}
-                    toDate={toDate}
-                  />
-                </div>
-              </div>
-          )}
-        </section>
+            )}
+            </section>
 
-        {/* 🔹 ANALYSIS TABS */}
+            {/* 🔹 ANALYSIS TABS */}
 
 
-        {/* 🔹 DYNAMIC CONTENT RENDER */}
-        <div className="min-h-[500px]">
-          {activeTab === 'calorie' && (
-            <CalorieAnalysis
-              habitData={habitData}
-              ConsumedCalorieMax={ConsumedCalorieMax}
-              ConsumedCalorieMin={ConsumedCalorieMin}
-              BurnedCalorieMax={BurnedCalorieMax}
-              BurnedCalorieMin={BurnedCalorieMin}
-              basalMetabolicRate={basalMetabolicRate}
-              totalEntries={totalEntries}
-              fromDate={fromDate}
-              toDate={toDate}
-            />
-          )}
+            {/* 🔹 DYNAMIC CONTENT RENDER */}
+            <div className="min-h-[500px]">
+            {activeTab === 'calorie' && (
+                <CalorieAnalysis
+                habitData={habitData}
+                ConsumedCalorieMax={ConsumedCalorieMax}
+                ConsumedCalorieMin={ConsumedCalorieMin}
+                BurnedCalorieMax={BurnedCalorieMax}
+                BurnedCalorieMin={BurnedCalorieMin}
+                basalMetabolicRate={basalMetabolicRate}
+                totalEntries={totalEntries}
+                fromDate={fromDate}
+                toDate={toDate}
+                />
+            )}
 
-          {activeTab === 'water' && (
-            <WaterAnalysis
-              habitData={habitData}
-              waterMax={waterMax}
-              waterMin={waterMin}
-              basalMetabolicRate={basalMetabolicRate}
-              totalEntries={totalEntries}
-              fromDate={fromDate}
-              toDate={toDate}
-            />
-          )}
+            {activeTab === 'water' && (
+                <WaterAnalysis
+                habitData={habitData}
+                waterMax={waterMax}
+                waterMin={waterMin}
+                basalMetabolicRate={basalMetabolicRate}
+                totalEntries={totalEntries}
+                fromDate={fromDate}
+                toDate={toDate}
+                />
+            )}
 
-          {activeTab === 'sleep' && (
-            <SleepAnalysis
-              habitData={habitData}
-              sleepMax={sleepMax}
-              sleepMin={sleepMin}
-              totalEntries={totalEntries}
-              fromDate={fromDate}
-              toDate={toDate}
-            />
-          )}
+            {activeTab === 'sleep' && (
+                <SleepAnalysis
+                habitData={habitData}
+                sleepMax={sleepMax}
+                sleepMin={sleepMin}
+                totalEntries={totalEntries}
+                fromDate={fromDate}
+                toDate={toDate}
+                />
+            )}
 
-          {activeTab === 'read' && (
-            <ReadAnalysis
-              habitData={habitData}
-              readMax={readMax}
-              readMin={readMin}
-              totalEntries={totalEntries}
-              fromDate={fromDate}
-              toDate={toDate}
-            />
-          )}
+            {activeTab === 'read' && (
+                <ReadAnalysis
+                habitData={habitData}
+                readMax={readMax}
+                readMin={readMin}
+                totalEntries={totalEntries}
+                fromDate={fromDate}
+                toDate={toDate}
+                />
+            )}
 
-          {activeTab === 'selfcare' && (
-            <SelfCareAnalysis
-              habitData={habitData}
-              selfCareList={selfCareList}
-              fromDate={fromDate}
-              toDate={toDate}
-            />
-          )}
+            {activeTab === 'selfcare' && (
+                <SelfCareAnalysis
+                habitData={habitData}
+                selfCareList={selfCareList}
+                fromDate={fromDate}
+                toDate={toDate}
+                />
+            )}
 
-          {activeTab === 'mood' && (
-            <MoodAnalysis
+            {activeTab === 'mood' && (
+                <MoodAnalysis
+                habitData={habitData}
+                moodList={moodList}
+                fromDate={fromDate}
+                toDate={toDate}
+                />
+            )}
+
+            {activeTab === 'journal' && (
+            <JournalAnalysis
               habitData={habitData}
               moodList={moodList}
               fromDate={fromDate}
               toDate={toDate}
             />
           )}
-
-          {activeTab === 'journal' && (
-            <JournalAnalysis
-              habitData={habitData}
-              fromDate={fromDate}
-              toDate={toDate}
-            />
-          )}
-        </div>
-
+            </div>
+        </>
+      ) : (
+          <div className="h-[60vh] flex flex-col items-center justify-center opacity-50">
+                <Book className="w-16 h-16 mb-4 text-base-content/30" />
+                <h3 className="text-xl font-semibold">No Data Found</h3>
+                <p className="text-sm mt-2">Try selecting a different date range or log new habits.</p>
+          </div>
+      )}
       </div>
     </>
   );

@@ -49,9 +49,9 @@ const SleepHeatMap = ({ habitData, sleepMin, sleepMax }) => {
                 colorScale: {
                     ranges: [
                         { from: 0, to: 0.1, color: "#1e1b4b", name: "No Data" },     // ~0
-                        { from: 0.1, to: sleepMin, color: "#4c1d95", name: "Below Min" }, // e.g. < 7h
-                        { from: sleepMin, to: sleepMax + 0.1, color: "#8b5cf6", name: "Within Range" },   // e.g. 7-9h
-                        { from: sleepMax + 0.1, to: 24, color: "#c4b5fd", name: "Above Max" }  // > 9h
+                        { from: 0.1, to: sleepMin, color: "#e9d5ff", name: "Below Min" }, // Lightest
+                        { from: sleepMin, to: sleepMax + 0.1, color: "#c084fc", name: "Within Range" },   // Medium
+                        { from: sleepMax + 0.1, to: 24, color: "#9333ea", name: "Above Max" }  // Darkest
                     ]
                 }
             }
@@ -59,7 +59,7 @@ const SleepHeatMap = ({ habitData, sleepMin, sleepMax }) => {
         stroke: { show: false },
         dataLabels: {
             enabled: true,
-            style: { colors: ['#fff'] }
+            style: { colors: ['#000'] }
         },
         grid: {
             yaxis: { lines: { show: false } }

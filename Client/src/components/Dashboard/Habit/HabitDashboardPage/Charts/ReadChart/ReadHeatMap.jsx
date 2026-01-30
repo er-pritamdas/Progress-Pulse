@@ -49,9 +49,9 @@ const ReadHeatMap = ({ habitData, readMin, readMax }) => {
                 colorScale: {
                     ranges: [
                         { from: 0, to: 0.1, color: "#451a03", name: "No Data" },     // ~0 (Amber-950)
-                        { from: 0.1, to: readMin, color: "#92400e", name: "Below Min" }, // Amber-800
-                        { from: readMin, to: readMax + 0.1, color: "#f59e0b", name: "Within Range" },   // Amber-500
-                        { from: readMax + 0.1, to: 24, color: "#fcd34d", name: "Above Max" }  // Amber-300
+                        { from: 0.1, to: readMin, color: "#fcd34d", name: "Below Min" }, // Amber-300 (Light)
+                        { from: readMin, to: readMax + 0.1, color: "#f59e0b", name: "Within Range" },   // Amber-500 (Medium)
+                        { from: readMax + 0.1, to: 24, color: "#92400e", name: "Above Max" }  // Amber-800 (Dark)
                     ]
                 }
             }
@@ -59,7 +59,7 @@ const ReadHeatMap = ({ habitData, readMin, readMax }) => {
         stroke: { show: false },
         dataLabels: {
             enabled: true,
-            style: { colors: ['#fff'] }
+            style: { colors: ['#000'] }
         },
         grid: {
             yaxis: { lines: { show: false } }

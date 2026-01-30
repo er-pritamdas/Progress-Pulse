@@ -1,7 +1,8 @@
 import React, { useMemo } from 'react';
 import ReactApexChart from "react-apexcharts";
-import { Heart, CheckCircle2, Calendar } from "lucide-react";
+import { Heart, CheckCircle2, Calendar, Dumbbell, BookOpen, Flower2, Footprints, Droplets, Moon, PenLine, Sparkles, Zap } from "lucide-react";
 import dayjs from "dayjs";
+import SelfCareCalendar from "./SelfCareCalendar";
 
 const SelfCareAnalysis = ({
     habitData,
@@ -69,9 +70,13 @@ const SelfCareAnalysis = ({
         },
         dataLabels: {
             enabled: true,
+            style: {
+                colors: ['#000000']
+            }
         },
         xaxis: {
             categories: chartCategories,
+            min: 0,
             max: totalDaysInRange > 0 ? totalDaysInRange : undefined, // Limit axis to selected days
             tickAmount: Math.min(totalDaysInRange, 5), // Ensure decent tick spacing
             title: {
@@ -92,19 +97,22 @@ const SelfCareAnalysis = ({
     };
 
     // Helper to get emoji for habit
-    const getHabitEmoji = (habitName) => {
+    // Helper to get icon for habit
+    const getHabitIcon = (habitName) => {
         const lower = habitName.toLowerCase();
-        if (lower.includes('workout') || lower.includes('gym') || lower.includes('exercise')) return '🏋️';
-        if (lower.includes('read') || lower.includes('book')) return '📖';
-        if (lower.includes('meditat')) return '🧘';
-        if (lower.includes('yoga')) return '🧘‍♀️';
-        if (lower.includes('run') || lower.includes('jog')) return '🏃';
-        if (lower.includes('walk')) return '🚶';
-        if (lower.includes('water') || lower.includes('drink')) return '💧';
-        if (lower.includes('sleep') || lower.includes('nap')) return '😴';
-        if (lower.includes('journal') || lower.includes('writ')) return '✍️';
-        if (lower.includes('skin') || lower.includes('face')) return '✨';
-        return '⚡'; // Default
+        const iconProps = { size: 18, className: "text-secondary" }; // Default styling
+
+        if (lower.includes('workout') || lower.includes('gym') || lower.includes('exercise')) return <Dumbbell {...iconProps} />;
+        if (lower.includes('read') || lower.includes('book')) return <BookOpen {...iconProps} />;
+        if (lower.includes('meditat')) return <Flower2 {...iconProps} />;
+        if (lower.includes('yoga')) return <Flower2 {...iconProps} />;
+        if (lower.includes('run') || lower.includes('jog')) return <Footprints {...iconProps} />;
+        if (lower.includes('walk')) return <Footprints {...iconProps} />;
+        if (lower.includes('water') || lower.includes('drink')) return <Droplets {...iconProps} />;
+        if (lower.includes('sleep') || lower.includes('nap')) return <Moon {...iconProps} />;
+        if (lower.includes('journal') || lower.includes('writ')) return <PenLine {...iconProps} />;
+        if (lower.includes('skin') || lower.includes('face')) return <Sparkles {...iconProps} />;
+        return <Zap {...iconProps} />; // Default
     };
 
     return (
@@ -122,7 +130,7 @@ const SelfCareAnalysis = ({
                         <div className="bg-base-100 rounded-2xl shadow-md p-6">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-xs opacity-70">Total Activities ✨</p>
+                                    <p className="text-lg font-semibold opacity-70">Total Activities ✨</p>
                                     <p className="text-2xl font-bold mt-1 text-secondary">{totalActivities}</p>
                                 </div>
                                 <div className="p-2 bg-secondary/10 rounded-full text-secondary">
@@ -135,7 +143,7 @@ const SelfCareAnalysis = ({
                          <div className="bg-base-100 rounded-2xl shadow-md p-6">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-xs opacity-70">Total Days 📅</p>
+                                    <p className="text-lg font-semibold opacity-70">Total Days 📅</p>
                                     <p className="text-2xl font-bold mt-1 text-accent">{totalDaysInRange}</p>
                                 </div>
                                 <div className="p-2 bg-accent/10 rounded-full text-accent">
@@ -148,15 +156,14 @@ const SelfCareAnalysis = ({
 
                     {/* Breakdown Card */}
                     <div className="bg-base-100 rounded-2xl shadow-md p-6">
-                        <h4 className="text-sm font-semibold mb-4 opacity-70">Activity Breakdown 📋</h4>
+                        <h4 className="text-lg font-semibold mb-4 opacity-70">Activity Breakdown 📋</h4>
                         <div className="space-y-3 h-64 overflow-y-auto pr-2 custom-scrollbar">
                             {Object.entries(activityCounts)
                                 .sort(([, a], [, b]) => b - a)
                                 .map(([activity, count]) => (
                                     <div key={activity} className="flex items-center justify-between p-3 bg-base-200 rounded-xl">
                                         <div className="flex items-center gap-2">
-                                            <Heart size={14} className="text-secondary opacity-70"/>
-                                            <span className="font-medium">{getHabitEmoji(activity)} {activity}</span>
+                                            <span className="font-medium flex items-center gap-2">{getHabitIcon(activity)} {activity}</span>
                                         </div>
                                         <div className="flex items-center gap-2">
                                             <span className="font-bold text-secondary">{count} <span className="text-xs opacity-50 font-normal">/ {totalDaysInRange}</span></span>
@@ -192,6 +199,15 @@ const SelfCareAnalysis = ({
                     )}
                 </div>
 
+            </section>
+
+            {/* Self Care Calendar Section */}
+            <section className="mt-8">
+                 <SelfCareCalendar 
+                    habitData={habitData} 
+                    selfCareList={selfCareList}
+                    year={fromDate ? dayjs(fromDate).year() : dayjs().year()}
+                 />
             </section>
         </div>
     );
