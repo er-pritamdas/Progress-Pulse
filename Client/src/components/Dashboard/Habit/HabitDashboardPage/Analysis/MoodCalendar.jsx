@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import dayjs from 'dayjs';
 import { ChevronRight, Smile, Frown, Meh, Angry, BatteryLow, Coffee, PartyPopper, AlertCircle, Zap } from 'lucide-react';
 
-const MoodCalendar = ({ habitData = [], moodList = [], year = dayjs().year() }) => {
+const MoodCalendar = ({ habitData = [], moodList = [], year = dayjs().year(), moodColors = {} }) => {
     const [selectedMood, setSelectedMood] = useState('All');
 
     // Helper to get icon for mood
@@ -24,10 +24,17 @@ const MoodCalendar = ({ habitData = [], moodList = [], year = dayjs().year() }) 
         return <Zap {...iconProps} />;
     };
 
-    // Helper for mood color (Matched with JournalCalendar)
+    // Helper for mood color (Matched with Frequency Chart)
     const getMoodColor = (moodName) => {
         if (!moodName) return null;
         if (moodName === 'All') return '#374151'; 
+        
+        // Use passed moodColors if available (Primary Source of Truth now)
+        if (moodColors[moodName]) {
+            return moodColors[moodName];
+        }
+
+        // Fallback for standalone usage or missing props
         const lower = moodName.toLowerCase();
         if (lower.includes('good') || lower.includes('happy')) return '#10B981'; // Green
         if (lower.includes('amazing') || lower.includes('great')) return '#3B82F6'; // Blue

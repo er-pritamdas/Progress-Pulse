@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import dayjs from 'dayjs';
 import { ChevronRight, Dumbbell, BookOpen, Flower2, Footprints, Droplets, Moon, PenLine, Sparkles, Zap } from 'lucide-react';
 
-const SelfCareCalendar = ({ habitData = [], selfCareList = [], year = dayjs().year() }) => {
+const SelfCareCalendar = ({ habitData = [], selfCareList = [], year = dayjs().year(), activityColors = {} }) => {
     const [selectedActivity, setSelectedActivity] = useState(selfCareList[0] || '');
 
     // Helper to get icon for habit
@@ -41,15 +41,6 @@ const SelfCareCalendar = ({ habitData = [], selfCareList = [], year = dayjs().ye
              // Check by index method (matching SelfCareAnalysis logic)
              const index = selfCareList.indexOf(activity);
              if (index !== -1 && index < entry.selfcare.length) {
-                 // Assuming selfcare string is like "10101" where 1=done
-                 // But wait, the previous logic checked for char existence based on first letter?
-                 // Let's look at line 32 of original file: const activityChar = selectedActivity[0].toUpperCase();
-                 // And line 48: if (entry.selfcare[index] === activityChar)
-                 // Actually, usually in this app "1" means done.
-                 // Let's stick to the previous conditional logic but generalize it for counting.
-                 
-                 // If the logic was checking if a specific character matching the activity name exist at that index...
-                 // Let's assume the previous logic was correct for this app's data structure.
                  const activityChar = activity[0].toUpperCase();
                  return entry.selfcare[index] === activityChar;
              }
@@ -119,7 +110,7 @@ const SelfCareCalendar = ({ habitData = [], selfCareList = [], year = dayjs().ye
                     </h3>
                     <div className="flex items-center gap-2 text-xs opacity-60">
                          <div className="w-3 h-3 rounded bg-base-300"></div> <span>Empty</span>
-                         <div className="w-3 h-3 rounded bg-success"></div> <span>Recorded</span>
+                         <div className="w-3 h-3 rounded" style={{ backgroundColor: activityColors[selectedActivity] || '#36D399' }}></div> <span>Recorded</span>
                     </div>
                 </div>
 
@@ -149,14 +140,20 @@ const SelfCareCalendar = ({ habitData = [], selfCareList = [], year = dayjs().ye
                                     {days.map(day => {
                                         const dateStr = monthStart.date(day).format('YYYY-MM-DD');
                                         const isActive = activeDates.has(dateStr);
+                                        
+                                        // Determine color
+                                        const activeColor = activityColors[selectedActivity];
+                                        const style = isActive && activeColor ? { backgroundColor: activeColor, color: '#000000' } : {};
+                                        
                                         return (
                                             <div
                                                 key={day}
                                                 className={`aspect-square flex items-center justify-center text-[10px] rounded-sm transition-colors ${
                                                     isActive 
-                                                        ? 'bg-success text-success-content font-bold shadow-sm' 
+                                                        ? 'font-bold shadow-sm' 
                                                         : 'bg-base-100 opacity-50 hover:opacity-100'
-                                                }`}
+                                                } ${!activeColor && isActive ? 'bg-success text-success-content' : ''}`}
+                                                style={style}
                                                 title={isActive ? `Recorded on ${dateStr}` : dateStr}
                                             >
                                                 {day}

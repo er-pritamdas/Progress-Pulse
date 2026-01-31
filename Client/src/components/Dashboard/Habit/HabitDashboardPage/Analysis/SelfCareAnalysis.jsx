@@ -54,6 +54,21 @@ const SelfCareAnalysis = ({
     
     const chartCategories = Object.keys(activityCounts);
 
+    // Color Palette
+    const COLORS = [
+        "#34D399", "#60A5FA", "#F87171", "#A78BFA", "#FBBF24",
+        "#F472B6", "#A2D729", "#22D3EE", "#FB923C", "#E879F9"
+    ];
+
+    // Map activities to colors
+    const activityColors = useMemo(() => {
+        const mapping = {};
+        chartCategories.forEach((activity, index) => {
+            mapping[activity] = COLORS[index % COLORS.length];
+        });
+        return mapping;
+    }, [chartCategories]);
+
     const chartOptions = {
         chart: {
             type: 'bar',
@@ -83,10 +98,7 @@ const SelfCareAnalysis = ({
                 text: 'Days Performed'
             }
         },
-        colors: [
-            "#34D399", "#60A5FA", "#F87171", "#A78BFA", "#FBBF24",
-            "#F472B6", "#A2D729", "#22D3EE", "#FB923C", "#E879F9"
-        ],
+        colors: COLORS,
         theme: {
             mode: 'dark',
         },
@@ -207,6 +219,7 @@ const SelfCareAnalysis = ({
                     habitData={habitData} 
                     selfCareList={selfCareList}
                     year={fromDate ? dayjs(fromDate).year() : dayjs().year()}
+                    activityColors={activityColors}
                  />
             </section>
         </div>

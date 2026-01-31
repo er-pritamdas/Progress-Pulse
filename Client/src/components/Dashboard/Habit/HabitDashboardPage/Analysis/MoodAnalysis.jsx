@@ -45,6 +45,38 @@ const MoodAnalysis = ({
     
     const chartCategories = Object.keys(moodCounts);
 
+    // Color Palette for Fallbacks
+    const FALLBACK_COLORS = [
+        "#34D399", "#60A5FA", "#F87171", "#A78BFA", "#FBBF24",
+        "#F472B6", "#A2D729", "#22D3EE", "#FB923C", "#E879F9"
+    ];
+
+    // Helper to get semantic mood color
+    const getSemanticMoodColor = (moodName, index) => {
+        const lower = moodName.toLowerCase();
+        if (lower.includes('good') || lower.includes('happy')) return '#10B981'; // Green (Success)
+        if (lower.includes('amazing') || lower.includes('great')) return '#3B82F6'; // Blue (Info)
+        if (lower.includes('average') || lower.includes('okay') || lower.includes('neutral')) return '#FBBF24'; // Yellow (Warning)
+        if (lower.includes('bad') || lower.includes('sad')) return '#EF4444'; // Red (Error)
+        if (lower.includes('depressed')) return '#7F1D1D'; // Dark Red
+        if (lower.includes('productive')) return '#8B5CF6'; // Purple
+        if (lower.includes('excited')) return '#EC4899'; // Pink
+        if (lower.includes('tired') || lower.includes('exhausted')) return '#9CA3AF'; // Gray
+        if (lower.includes('relaxed') || lower.includes('calm')) return '#06B6D4'; // Cyan
+        if (lower.includes('stressed') || lower.includes('anxious')) return '#F59E0B'; // Amber
+        
+        return FALLBACK_COLORS[index % FALLBACK_COLORS.length];
+    };
+
+    // Map moods to colors
+    const moodColors = useMemo(() => {
+        const mapping = {};
+        chartCategories.forEach((mood, index) => {
+            mapping[mood] = getSemanticMoodColor(mood, index);
+        });
+        return mapping;
+    }, [chartCategories]);
+
     const chartOptions = {
         chart: {
             type: 'bar',
@@ -74,10 +106,8 @@ const MoodAnalysis = ({
                 text: 'Days Recorded'
             }
         },
-        colors: [
-            "#34D399", "#60A5FA", "#F87171", "#A78BFA", "#FBBF24",
-            "#F472B6", "#A2D729", "#22D3EE", "#FB923C", "#E879F9"
-        ],
+        // Ensure chart colors match the categories order
+        colors: chartCategories.map(cat => moodColors[cat]),
         theme: {
             mode: 'dark',
         },
@@ -197,6 +227,7 @@ const MoodAnalysis = ({
                     habitData={habitData} 
                     moodList={moodList}
                     year={fromDate ? dayjs(fromDate).year() : dayjs().year()}
+                    moodColors={moodColors}
                  />
             </section>
         </div>
