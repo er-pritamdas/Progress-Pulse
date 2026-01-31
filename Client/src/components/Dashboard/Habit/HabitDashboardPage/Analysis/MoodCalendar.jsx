@@ -3,10 +3,11 @@ import dayjs from 'dayjs';
 import { ChevronRight, Smile, Frown, Meh, Angry, BatteryLow, Coffee, PartyPopper, AlertCircle, Zap } from 'lucide-react';
 
 const MoodCalendar = ({ habitData = [], moodList = [], year = dayjs().year() }) => {
-    const [selectedMood, setSelectedMood] = useState(moodList[0] || '');
+    const [selectedMood, setSelectedMood] = useState('All');
 
     // Helper to get icon for mood
     const getMoodIcon = (moodName) => {
+        if (moodName === 'All') return <Zap size={16} />;
         if (!moodName) return <Zap size={16} />;
         const lower = moodName.toLowerCase();
         const iconProps = { size: 16 };
@@ -23,19 +24,59 @@ const MoodCalendar = ({ habitData = [], moodList = [], year = dayjs().year() }) 
         return <Zap {...iconProps} />;
     };
 
-    // Calculate active days for the selected mood
-    const activeDates = useMemo(() => {
-        if (!selectedMood || !habitData.length) return new Set();
+    // Helper for mood color (Matched with JournalCalendar)
+    const getMoodColor = (moodName) => {
+        if (!moodName) return null;
+        if (moodName === 'All') return '#374151'; 
+        const lower = moodName.toLowerCase();
+        if (lower.includes('good') || lower.includes('happy')) return '#10B981'; // Green
+        if (lower.includes('amazing') || lower.includes('great')) return '#3B82F6'; // Blue
+        if (lower.includes('average') || lower.includes('okay')) return '#FBBF24'; // Yellow
+        if (lower.includes('bad') || lower.includes('sad')) return '#EF4444'; // Red
+        if (lower.includes('depressed')) return '#7F1D1D'; // Dark Red
+        if (lower.includes('productive')) return '#8B5CF6'; // Purple
+        if (lower.includes('excited')) return '#EC4899'; // Pink
+        return '#374151'; // Default Gray
+    };
 
-        const dates = new Set();
-        // Mood is stored as a string "Happy", "Sad", etc. directly in entry.mood
+    // Helper for contrast text color
+    const getTextColor = (hexColor) => {
+        if (!hexColor) return null;
+        const r = parseInt(hexColor.substr(1, 2), 16);
+        const g = parseInt(hexColor.substr(3, 2), 16);
+        const b = parseInt(hexColor.substr(5, 2), 16);
+        const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+        return (yiq >= 128) ? '#000000' : '#ffffff';
+    };
+
+    // Calculate Active Days & Mood Counts
+    // For 'All', we map date -> mood
+    // moodCounts: { 'Happy': 12, 'Sad': 2, ... }
+    const { activeData, moodCounts, totalCount } = useMemo(() => {
+        if (!habitData.length) return { activeData: new Map(), moodCounts: {}, totalCount: 0 };
+
+        const map = new Map();
+        const counts = {};
+        let total = 0;
+
+        // Initialize counts
+        moodList.forEach(m => counts[m] = 0);
+
         habitData.forEach(entry => {
-            if (entry.mood === selectedMood) {
-                dates.add(dayjs(entry.date).format('YYYY-MM-DD'));
+            if (entry.mood) {
+                // Count globally
+                const moodKey = moodList.find(m => m === entry.mood) || entry.mood;
+                counts[moodKey] = (counts[moodKey] || 0) + 1;
+                total++;
+
+                // Map for Calendar Display
+                if (selectedMood === 'All' || entry.mood === selectedMood) {
+                    map.set(dayjs(entry.date).format('YYYY-MM-DD'), entry.mood);
+                }
             }
         });
-        return dates;
-    }, [selectedMood, habitData]);
+        return { activeData: map, moodCounts: counts, totalCount: total };
+    }, [selectedMood, habitData, moodList]);
 
     const months = useMemo(() => {
         return Array.from({ length: 12 }, (_, i) => {
@@ -49,6 +90,26 @@ const MoodCalendar = ({ habitData = [], moodList = [], year = dayjs().year() }) 
             <div className="w-full md:w-[20%] space-y-2">
                 <h3 className="text-lg font-semibold mb-4 opacity-70">Moods</h3>
                 <div className="flex flex-col gap-2 max-h-[600px] overflow-y-auto custom-scrollbar">
+                    
+                    {/* All Option */}
+                     <button
+                        onClick={() => setSelectedMood('All')}
+                        className={`flex items-center justify-between p-3 rounded-xl transition-all duration-200 text-left ${
+                            selectedMood === 'All'
+                                ? 'bg-primary text-primary-content shadow-md'
+                                : 'bg-base-200 hover:bg-base-300 opacity-70 hover:opacity-100'
+                        }`}
+                    >
+                        <span className="font-medium truncate flex items-center gap-2">
+                            <span><Zap size={16} /></span>
+                            All
+                        </span>
+                        <div className="flex items-center gap-2">
+                             <span className="text-xs opacity-80 font-bold bg-base-100/20 px-2 py-0.5 rounded-full">{totalCount}</span>
+                             {selectedMood === 'All' && <ChevronRight size={16} />}
+                        </div>
+                    </button>
+
                     {moodList.map((mood) => (
                         <button
                             key={mood}
@@ -63,7 +124,12 @@ const MoodCalendar = ({ habitData = [], moodList = [], year = dayjs().year() }) 
                                 <span>{getMoodIcon(mood)}</span>
                                 {mood}
                             </span>
-                            {selectedMood === mood && <ChevronRight size={16} />}
+                            <div className="flex items-center gap-2">
+                                <span className={`text-xs opacity-80 font-bold px-2 py-0.5 rounded-full ${selectedMood === mood ? 'bg-base-100/20' : 'bg-base-300'}`}>
+                                    {moodCounts[mood] || 0}
+                                </span>
+                                {selectedMood === mood && <ChevronRight size={16} />}
+                            </div>
                         </button>
                     ))}
                     {moodList.length === 0 && (
@@ -78,9 +144,28 @@ const MoodCalendar = ({ habitData = [], moodList = [], year = dayjs().year() }) 
                      <h3 className="text-lg font-semibold flex items-center gap-2">
                         {getMoodIcon(selectedMood)} {selectedMood} <span className="opacity-50 text-sm font-normal">in {year}</span>
                     </h3>
-                    <div className="flex items-center gap-2 text-xs opacity-60">
-                         <div className="w-3 h-3 rounded bg-base-300"></div> <span>Empty</span>
-                         <div className="w-3 h-3 rounded bg-success"></div> <span>Recorded</span>
+                    <div className="flex items-center gap-3 text-xs opacity-60 flex-wrap justify-end">
+                         <div className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-base-300"></div> <span>Empty</span></div>
+                         
+                         {selectedMood === 'All' ? (
+                            // Show full legend when 'All' is selected
+                            moodList.map((mood) => {
+                                const color = getMoodColor(mood);
+                                if (!color) return null;
+                                return (
+                                   <div key={mood} className="flex items-center gap-1">
+                                       <div className="w-3 h-3 rounded" style={{backgroundColor: color}}></div>
+                                       <span>{mood}</span>
+                                   </div>
+                                );
+                            })
+                         ) : (
+                            // Show only selected mood
+                            <div className="flex items-center gap-1">
+                                <div className="w-3 h-3 rounded" style={{backgroundColor: getMoodColor(selectedMood) || '#10B981'}}></div>
+                                <span>{selectedMood}</span>
+                            </div>
+                         )}
                     </div>
                 </div>
 
@@ -109,16 +194,21 @@ const MoodCalendar = ({ habitData = [], moodList = [], year = dayjs().year() }) 
                                     {/* Days */}
                                     {days.map(day => {
                                         const dateStr = monthStart.date(day).format('YYYY-MM-DD');
-                                        const isActive = activeDates.has(dateStr);
+                                        const mood = activeData.get(dateStr);
+                                        const isActive = !!mood;
+                                        const moodColor = isActive ? getMoodColor(mood) : null;
+                                        const textColor = moodColor ? getTextColor(moodColor) : null;
+
                                         return (
                                             <div
                                                 key={day}
                                                 className={`aspect-square flex items-center justify-center text-[10px] rounded-sm transition-colors ${
                                                     isActive 
-                                                        ? 'bg-success text-success-content font-bold shadow-sm' 
+                                                        ? 'font-bold shadow-sm' 
                                                         : 'bg-base-100 opacity-50 hover:opacity-100'
                                                 }`}
-                                                title={isActive ? `Recorded on ${dateStr}` : dateStr}
+                                                style={isActive && moodColor ? { backgroundColor: moodColor, color: textColor } : {}}
+                                                title={isActive ? `Recorded on ${dateStr}: ${mood}` : dateStr}
                                             >
                                                 {day}
                                             </div>

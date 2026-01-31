@@ -24,34 +24,51 @@ const SelfCareCalendar = ({ habitData = [], selfCareList = [], year = dayjs().ye
         return <Zap {...iconProps} />;
     };
 
-    // Calculate active days for the selected activity
-    const activeDates = useMemo(() => {
-        if (!selectedActivity || !habitData.length) return new Set();
+    // Calculate Active Days & Activity Counts
+    const { activeDates, activityCounts } = useMemo(() => {
+        if (!habitData.length) return { activeDates: new Set(), activityCounts: {} };
 
         const dates = new Set();
-        const activityChar = selectedActivity[0].toUpperCase();
+        const counts = {};
+        
+        // Initialize counts
+        selfCareList.forEach(a => counts[a] = 0);
+
+        // Helper to check if activity is present in entry
+        const isActivityInEntry = (entry, activity) => {
+             if (!entry.selfcare) return false;
+             
+             // Check by index method (matching SelfCareAnalysis logic)
+             const index = selfCareList.indexOf(activity);
+             if (index !== -1 && index < entry.selfcare.length) {
+                 // Assuming selfcare string is like "10101" where 1=done
+                 // But wait, the previous logic checked for char existence based on first letter?
+                 // Let's look at line 32 of original file: const activityChar = selectedActivity[0].toUpperCase();
+                 // And line 48: if (entry.selfcare[index] === activityChar)
+                 // Actually, usually in this app "1" means done.
+                 // Let's stick to the previous conditional logic but generalize it for counting.
+                 
+                 // If the logic was checking if a specific character matching the activity name exist at that index...
+                 // Let's assume the previous logic was correct for this app's data structure.
+                 const activityChar = activity[0].toUpperCase();
+                 return entry.selfcare[index] === activityChar;
+             }
+             return false;
+        };
 
         habitData.forEach(entry => {
-            if (entry.selfcare && entry.selfcare.includes(activityChar)) {
-               // Verify it matches the specific activity index if needed, 
-               // but based on previous logic, we check existence of char.
-               // However, SelfCareAnalysis checked index. Let's try to be consistent if possible.
-               // But usually selfcare string is just concatenated chars? 
-               // Wait, SelfCareAnalysis logic:
-               // for (let i = 0; i < selfCareList.length; i++) ... if (i < selfcareStr.length) ...
-               // This implies positional mapping. 
-               // Let's assume simplest check for now: if user follows the positional rule.
-               // We need the index of selectedActivity in the selfCareList.
-               
-               const index = selfCareList.indexOf(selectedActivity);
-               if (index !== -1 && index < entry.selfcare.length) {
-                   if (entry.selfcare[index] === activityChar) {
-                       dates.add(dayjs(entry.date).format('YYYY-MM-DD'));
-                   }
-               }
-            }
+             selfCareList.forEach(activity => {
+                 if (isActivityInEntry(entry, activity)) {
+                     counts[activity] = (counts[activity] || 0) + 1;
+                     
+                     if (activity === selectedActivity) {
+                         dates.add(dayjs(entry.date).format('YYYY-MM-DD'));
+                     }
+                 }
+             });
         });
-        return dates;
+
+        return { activeDates: dates, activityCounts: counts };
     }, [selectedActivity, habitData, selfCareList]);
 
     const months = useMemo(() => {
@@ -80,7 +97,12 @@ const SelfCareCalendar = ({ habitData = [], selfCareList = [], year = dayjs().ye
                                 <span>{getHabitIcon(activity)}</span>
                                 {activity}
                             </span>
-                            {selectedActivity === activity && <ChevronRight size={16} />}
+                            <div className="flex items-center gap-2">
+                                <span className={`text-xs opacity-80 font-bold px-2 py-0.5 rounded-full ${selectedActivity === activity ? 'bg-base-100/20' : 'bg-base-300'}`}>
+                                    {activityCounts[activity] || 0}
+                                </span>
+                                {selectedActivity === activity && <ChevronRight size={16} />}
+                            </div>
                         </button>
                     ))}
                     {selfCareList.length === 0 && (
