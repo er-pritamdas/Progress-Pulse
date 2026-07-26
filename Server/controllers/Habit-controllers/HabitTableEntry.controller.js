@@ -54,6 +54,7 @@ const readHabitTableData = asynchandler(async (req, res, next) => {
     journal: entry.habits.journal?.toString() || "",
     progress: entry.progress?.toString() || "",
     score: entry.score?.toString() || "",
+    status: entry.status || (Number(entry.progress) >= 75 ? "consistent" : Number(entry.progress) >= 50 ? "moderate" : Number(entry.progress) >= 25 ? "uncertain" : "inconsistent"),
   }));
 
   return res.status(200).json(

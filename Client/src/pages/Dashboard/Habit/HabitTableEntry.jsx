@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import Heading from "../../../components/Dashboard/Habit/HabitTableEntryPage/Heading.jsx";
 import Pagination from "../../../components/Dashboard/Habit/HabitTableEntryPage/Pagination.jsx";
+import HabitDateQuickSelect from "../../../components/Dashboard/Habit/HabitDateQuickSelect.jsx";
 
 import AddHabitPopUp from "../../../components/Dashboard/Habit/HabitTableEntryPage/AddHabitPopUp.jsx";
 import DeleteHabitPopUp from "../../../components/Dashboard/Habit/HabitTableEntryPage/DeleteHabitPopUp.jsx";
@@ -17,6 +18,7 @@ import { useLoading } from "../../../Context/LoadingContext";
 import Refresh from "../../../utils/Icons/Refresh";
 import { TitleChanger } from "../../../utils/TitleChanger";
 import { useSelector, useDispatch } from "react-redux";
+import { setHabitFilters, resetHabitFilters } from "../../../services/redux/slice/habitSlice";
 import {
   AlertTriangle,
   CheckCircle,
@@ -39,7 +41,11 @@ import {
 
 function HabitTableEntry() {
   TitleChanger("Progress Pulse | Habit Entry");
+  const dispatch = useDispatch();
   const settings = useSelector((state) => state.habit.settings);
+  const { fromDate, toDate, itemPerPage } = useSelector(
+    (state) => state.habit.filters
+  );
 
   // Format Date Function
   const formatDate = (dateString) => {
@@ -52,7 +58,6 @@ function HabitTableEntry() {
 
   // variables
   const [itemToDelete, setItemToDelete] = useState(null);
-  const [itemPerPage, setItemPerPage] = useState(7);
   const { setLoading } = useLoading();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -74,30 +79,8 @@ function HabitTableEntry() {
 
   // -------------------------------------------------------------------- Functions ---------------------------------------------------------------
 
-  function formatDateLocal(date) {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0"); // add 1 because month is 0-indexed
-    const day = String(date.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
-  }
-
-  const now = new Date();
-  const currentYear = now.getFullYear();
-  const currentMonth = now.getMonth(); // 0-indexed
-
-  const startOfMonth = new Date(currentYear, currentMonth, 1);
-  const endOfMonth = new Date(currentYear, currentMonth + 1, 0);
-
-  const startDate = formatDateLocal(startOfMonth);
-  const endDate = formatDateLocal(endOfMonth);
-
-  const [fromDate, setFromDate] = useState(startDate);
-  const [toDate, setToDate] = useState(endDate);
-
   const resetFilters = () => {
-    setFromDate(startDate);
-    setToDate(endDate);
-    // Optionally re-fetch or show all data
+    dispatch(resetHabitFilters());
   };
 
   const getConsistencyLabel = (percentage) => {
@@ -129,7 +112,7 @@ function HabitTableEntry() {
     return "text-success";
   };
 
-  const fetchHabits = async (currentPage) => {
+  const fetchHabits = async (page = currentPage) => {
     setLoading(true);
 
     // declare response here so it's visible in finally
@@ -138,7 +121,7 @@ function HabitTableEntry() {
     try {
       response = await axiosInstance.get("/v1/dashboard/habit/table-entry", {
         params: {
-          page: currentPage,
+          page: page,
           limit: itemPerPage,
           startDate: fromDate,
           endDate: toDate,
@@ -170,7 +153,7 @@ function HabitTableEntry() {
 
   useEffect(() => {
     fetchHabits(currentPage);
-  }, [itemPerPage]); // re-run when currentPage changes
+  }, [currentPage, itemPerPage, fromDate, toDate]); // re-run when currentPage changes
 
   // Key Down Function
   useEffect(() => {
@@ -497,7 +480,7 @@ function HabitTableEntry() {
                           <a
                             className={`justify-center ${itemPerPage === value ? "active" : ""
                               }`}
-                            onClick={() => setItemPerPage(value)}
+                            onClick={() => dispatch(setHabitFilters({ itemPerPage: value }))}
                           >
                             {value}
                           </a>
@@ -506,8 +489,11 @@ function HabitTableEntry() {
                     </ul>
                   </div>
 
-                  {/* Right: From/To Date Pickers */}
-                  <div className="flex items-center gap-4 ml-auto">
+                  {/* Right: Quick Select (Year & Month) + From/To Date Pickers */}
+                  <div className="flex items-center gap-4 ml-auto flex-wrap">
+                    {/* Quick Year and Month Select */}
+                    <HabitDateQuickSelect />
+
                     {/* From Date Picker */}
                     <div className="dropdown dropdown-end floating-label">
                       <div
@@ -521,7 +507,7 @@ function HabitTableEntry() {
                       <div className="dropdown-content z-[999] bg-base-100 rounded-box shadow-sm p-2">
                         <calendar-date
                           class="cally"
-                          onchange={(e) => setFromDate(e.target.value)}
+                          onchange={(e) => dispatch(setHabitFilters({ fromDate: e.target.value }))}
                         >
                           <svg
                             aria-label="Previous"
@@ -561,7 +547,7 @@ function HabitTableEntry() {
                       <div className="dropdown-content z-[999] bg-base-100 rounded-box shadow-sm p-2">
                         <calendar-date
                           class="cally"
-                          onchange={(e) => setToDate(e.target.value)}
+                          onchange={(e) => dispatch(setHabitFilters({ toDate: e.target.value }))}
                         >
                           <svg
                             aria-label="Previous"

@@ -127,11 +127,18 @@ const MacroMicroCalculator = ({ maintenanceCalories, age, gender }) => {
     const newMicros = {
       vitamins: [
         { name: "Vitamin A", value: isMale ? "900 mcg" : "700 mcg", icon: "🥕" },
+        { name: "Vitamin B1 (Thiamine)", value: isMale ? "1.2 mg" : "1.1 mg", icon: "🌾" },
+        { name: "Vitamin B2 (Riboflavin)", value: isMale ? "1.3 mg" : "1.1 mg", icon: "🥛" },
+        { name: "Vitamin B3 (Niacin)", value: isMale ? "16 mg" : "14 mg", icon: "🥜" },
+        { name: "Vitamin B5 (Pantothenic Acid)", value: "5 mg", icon: "🥑" },
+        { name: "Vitamin B6 (Pyridoxine)", value: age > 50 ? (isMale ? "1.7 mg" : "1.5 mg") : "1.3 mg", icon: "🍌" },
+        { name: "Vitamin B7 (Biotin)", value: "30 mcg", icon: "🌰" },
+        { name: "Vitamin B9 (Folate)", value: "400 mcg", icon: "🥬" },
+        { name: "Vitamin B12", value: "2.4 mcg", icon: "🥩" },
         { name: "Vitamin C", value: isMale ? "90 mg" : "75 mg", icon: "🍊" },
         { name: "Vitamin D", value: "15-20 mcg", icon: "☀️" },
-        { name: "Vitamin E", value: "15 mg", icon: "🥑" },
-        { name: "Vitamin K", value: isMale ? "120 mcg" : "90 mcg", icon: "🥬" },
-        { name: "Vitamin B12", value: "2.4 mcg", icon: "🥩" },
+        { name: "Vitamin E", value: "15 mg", icon: "🌻" },
+        { name: "Vitamin K", value: isMale ? "120 mcg" : "90 mcg", icon: "🥦" },
       ],
       minerals: [
         { name: "Calcium", value: "1000 mg", icon: "🥛" },
@@ -139,7 +146,13 @@ const MacroMicroCalculator = ({ maintenanceCalories, age, gender }) => {
         { name: "Magnesium", value: isMale ? "400-420 mg" : "310-320 mg", icon: "🍫" },
         { name: "Zinc", value: isMale ? "11 mg" : "8 mg", icon: "🦪" },
         { name: "Potassium", value: "3400 mg", icon: "🍌" },
+        { name: "Sodium", value: "1500-2300 mg", icon: "🧂" },
+        { name: "Phosphorus", value: "700 mg", icon: "🦴" },
       ],
+      essentialFats: [
+        { name: "Omega-3", value: isMale ? "1.6 g" : "1.1 g", icon: "🐟" },
+        { name: "Omega-6", value: isMale ? "17 g" : "12 g", icon: "🥜" },
+      ]
     };
     setMicros(newMicros);
   }, [age, gender]);
@@ -161,6 +174,11 @@ const MacroMicroCalculator = ({ maintenanceCalories, age, gender }) => {
 
   const totalRatio = ratios.protein + ratios.carbs + ratios.fats;
   const isRatioValid = totalRatio === 100;
+
+  // --- Calories per Macro Calculation ---
+  const proteinCalories = Math.round((customCalories || 0) * (ratios.protein / 100));
+  const carbsCalories = Math.round((customCalories || 0) * (ratios.carbs / 100));
+  const fatsCalories = Math.round((customCalories || 0) * (ratios.fats / 100));
 
   // --- Modal State ---
   const [selectedMicro, setSelectedMicro] = useState(null);
@@ -192,19 +210,19 @@ const MacroMicroCalculator = ({ maintenanceCalories, age, gender }) => {
             {/* --- MICROS --- */}
             <div className="card bg-base-200 p-6 shadow-md">
               <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                <Zap size={18} /> Recommended Micros
+                <Zap size={18} /> Recommended Micros & Essential Nutrients
               </h3>
               <p className="text-xs opacity-60 mb-6">
                 Based on Age: <span className="font-bold">{age}</span>, Gender: <span className="font-bold capitalize">{gender}</span>. (General DRI guidelines)
               </p>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                {/* Vitamins */}
+              <div className="space-y-8">
+                {/* 1. Vitamins */}
                 <div>
                   <h4 className="text-sm font-bold uppercase opacity-70 mb-3 flex items-center gap-2 border-b border-base-300 pb-2">
                     <Droplet size={14} /> Vitamins
                   </h4>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
                     {micros.vitamins?.map((m, idx) => (
                       <div key={idx} className="bg-base-100 p-3 rounded-lg border border-base-300 flex flex-col items-center text-center hover:border-primary transition-colors hover:shadow-sm group relative">
                         <button
@@ -221,12 +239,12 @@ const MacroMicroCalculator = ({ maintenanceCalories, age, gender }) => {
                   </div>
                 </div>
 
-                {/* Minerals */}
+                {/* 2. Minerals (Electrolytes) */}
                 <div>
                   <h4 className="text-sm font-bold uppercase opacity-70 mb-3 flex items-center gap-2 border-b border-base-300 pb-2">
-                    <Activity size={14} /> Minerals
+                    <Activity size={14} /> Minerals (Electrolytes)
                   </h4>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
                     {micros.minerals?.map((m, idx) => (
                       <div key={idx} className="bg-base-100 p-3 rounded-lg border border-base-300 flex flex-col items-center text-center hover:border-secondary transition-colors hover:shadow-sm group relative">
                         <button
@@ -238,6 +256,28 @@ const MacroMicroCalculator = ({ maintenanceCalories, age, gender }) => {
                         <span className="text-2xl mb-2 group-hover:scale-110 transition-transform">{m.icon}</span>
                         <span className="text-xs font-bold mb-1">{m.name}</span>
                         <span className="text-xs text-secondary font-mono bg-secondary/10 px-2 py-0.5 rounded-full">{m.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 3. Essential Fatty Acids */}
+                <div>
+                  <h4 className="text-sm font-bold uppercase opacity-70 mb-3 flex items-center gap-2 border-b border-base-300 pb-2">
+                    <Zap size={14} /> Essential Fatty Acids
+                  </h4>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                    {micros.essentialFats?.map((m, idx) => (
+                      <div key={idx} className="bg-base-100 p-3 rounded-lg border border-base-300 flex flex-col items-center text-center hover:border-warning transition-colors hover:shadow-sm group relative">
+                        <button
+                          className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity btn btn-ghost btn-xs btn-circle"
+                          onClick={() => openMicroModal(m.name)}
+                        >
+                          <Info size={14} className="text-warning" />
+                        </button>
+                        <span className="text-2xl mb-2 group-hover:scale-110 transition-transform">{m.icon}</span>
+                        <span className="text-xs font-bold mb-1">{m.name}</span>
+                        <span className="text-xs text-warning font-mono bg-warning/10 px-2 py-0.5 rounded-full">{m.value}</span>
                       </div>
                     ))}
                   </div>
@@ -267,7 +307,7 @@ const MacroMicroCalculator = ({ maintenanceCalories, age, gender }) => {
                       <span className="text-info font-bold flex items-center gap-2">
                         Protein <span className="badge badge-xs badge-soft badge-info">Recommend: {RECOMMENDED_RANGES.protein}</span>
                       </span>
-                      <span className="opacity-70 font-mono">{grams.protein}g</span>
+                      <span className="opacity-70 font-mono">{grams.protein}g ({proteinCalories} kcal)</span>
                     </div>
                     <div className="flex items-center gap-4">
                       <button className="btn btn-xs btn-circle btn-soft" onClick={() => adjustRatio("protein", -1)}><Minus size={14} /></button>
@@ -290,7 +330,7 @@ const MacroMicroCalculator = ({ maintenanceCalories, age, gender }) => {
                       <span className="text-success font-bold flex items-center gap-2">
                         Carbs <span className="badge badge-xs badge-soft badge-success">Recommend: {RECOMMENDED_RANGES.carbs}</span>
                       </span>
-                      <span className="opacity-70 font-mono">{grams.carbs}g</span>
+                      <span className="opacity-70 font-mono">{grams.carbs}g ({carbsCalories} kcal)</span>
                     </div>
                     <div className="flex items-center gap-4">
                       <button className="btn btn-xs btn-circle btn-soft" onClick={() => adjustRatio("carbs", -1)}><Minus size={14} /></button>
@@ -313,7 +353,7 @@ const MacroMicroCalculator = ({ maintenanceCalories, age, gender }) => {
                       <span className="text-warning font-bold flex items-center gap-2">
                         Fats <span className="badge badge-xs badge-soft badge-warning">Recommend: {RECOMMENDED_RANGES.fats}</span>
                       </span>
-                      <span className="opacity-70 font-mono">{grams.fats}g</span>
+                      <span className="opacity-70 font-mono">{grams.fats}g ({fatsCalories} kcal)</span>
                     </div>
                     <div className="flex items-center gap-4">
                       <button className="btn btn-xs btn-circle btn-soft" onClick={() => adjustRatio("fats", -1)}><Minus size={14} /></button>
@@ -348,31 +388,57 @@ const MacroMicroCalculator = ({ maintenanceCalories, age, gender }) => {
                 <div className="collapse-title text-sm font-medium flex items-center gap-2">
                   <Info size={16} /> How is this calculated?
                 </div>
-                <div className="collapse-content">
-                  <p className="text-xs opacity-60 mb-4">
+                <div className="collapse-content space-y-4">
+                  <p className="text-xs opacity-60">
                     We use standard nutritional values where <strong>1g Protein/Carb = 4 kcal</strong> and <strong>1g Fat = 9 kcal</strong>.
                   </p>
+
+                  {/* Calories Coming From Each Macro Overview */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 bg-base-200/70 rounded-xl border border-base-300 text-center">
+                    <div className="bg-info/10 border border-info/20 p-3 rounded-lg flex flex-col items-center">
+                      <span className="text-xs text-info font-bold uppercase tracking-wider mb-1">Protein Calories</span>
+                      <span className="text-xl font-extrabold text-info font-mono">{proteinCalories} kcal</span>
+                      <span className="text-[11px] opacity-70 mt-0.5">{ratios.protein}% of total calories</span>
+                    </div>
+                    <div className="bg-success/10 border border-success/20 p-3 rounded-lg flex flex-col items-center">
+                      <span className="text-xs text-success font-bold uppercase tracking-wider mb-1">Carbs Calories</span>
+                      <span className="text-xl font-extrabold text-success font-mono">{carbsCalories} kcal</span>
+                      <span className="text-[11px] opacity-70 mt-0.5">{ratios.carbs}% of total calories</span>
+                    </div>
+                    <div className="bg-warning/10 border border-warning/20 p-3 rounded-lg flex flex-col items-center">
+                      <span className="text-xs text-warning font-bold uppercase tracking-wider mb-1">Fats Calories</span>
+                      <span className="text-xl font-extrabold text-warning font-mono">{fatsCalories} kcal</span>
+                      <span className="text-[11px] opacity-70 mt-0.5">{ratios.fats}% of total calories</span>
+                    </div>
+                  </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     {/* Protein Calc */}
                     <div className="bg-info/10 border border-info/20 rounded-lg p-3 relative overflow-hidden">
                       <div className="absolute top-0 right-0 p-2 opacity-10"><Zap size={40} /></div>
                       <h4 className="text-xs font-bold text-info uppercase mb-2">Protein Formula</h4>
-                      <div className="text-xs font-mono space-y-1">
+                      <div className="text-xs font-mono space-y-1.5">
                         <div className="flex justify-between">
                           <span className="opacity-60">Total Cals:</span>
-                          <span>{customCalories}</span>
+                          <span>{customCalories} kcal</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="opacity-60">Ratio:</span>
                           <span>{ratios.protein}%</span>
                         </div>
-                        <div className="divider my-0"></div>
-                        <div className="text-center font-bold bg-base-100/50 rounded py-1">
-                          ({customCalories} × {ratios.protein}%) ÷ 4
+                        <div className="flex justify-between font-bold text-info border-t border-info/20 pt-1">
+                          <span>Macro Cals:</span>
+                          <span>{proteinCalories} kcal</span>
                         </div>
-                        <div className="text-center text-lg font-bold text-info mt-1">
-                          = {grams.protein}g
+                        <div className="divider my-1"></div>
+                        <div className="text-center font-medium bg-base-100/60 rounded py-1 text-[11px]">
+                          1. Cals = {customCalories} × {ratios.protein}% = {proteinCalories} kcal
+                        </div>
+                        <div className="text-center font-medium bg-base-100/60 rounded py-1 text-[11px]">
+                          2. Grams = {proteinCalories} ÷ 4 kcal/g
+                        </div>
+                        <div className="text-center text-base font-bold text-info mt-1">
+                          = {grams.protein}g ({proteinCalories} kcal)
                         </div>
                       </div>
                     </div>
@@ -381,21 +447,28 @@ const MacroMicroCalculator = ({ maintenanceCalories, age, gender }) => {
                     <div className="bg-success/10 border border-success/20 rounded-lg p-3 relative overflow-hidden">
                       <div className="absolute top-0 right-0 p-2 opacity-10"><Activity size={40} /></div>
                       <h4 className="text-xs font-bold text-success uppercase mb-2">Carbs Formula</h4>
-                      <div className="text-xs font-mono space-y-1">
+                      <div className="text-xs font-mono space-y-1.5">
                         <div className="flex justify-between">
                           <span className="opacity-60">Total Cals:</span>
-                          <span>{customCalories}</span>
+                          <span>{customCalories} kcal</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="opacity-60">Ratio:</span>
                           <span>{ratios.carbs}%</span>
                         </div>
-                        <div className="divider my-0"></div>
-                        <div className="text-center font-bold bg-base-100/50 rounded py-1">
-                          ({customCalories} × {ratios.carbs}%) ÷ 4
+                        <div className="flex justify-between font-bold text-success border-t border-success/20 pt-1">
+                          <span>Macro Cals:</span>
+                          <span>{carbsCalories} kcal</span>
                         </div>
-                        <div className="text-center text-lg font-bold text-success mt-1">
-                          = {grams.carbs}g
+                        <div className="divider my-1"></div>
+                        <div className="text-center font-medium bg-base-100/60 rounded py-1 text-[11px]">
+                          1. Cals = {customCalories} × {ratios.carbs}% = {carbsCalories} kcal
+                        </div>
+                        <div className="text-center font-medium bg-base-100/60 rounded py-1 text-[11px]">
+                          2. Grams = {carbsCalories} ÷ 4 kcal/g
+                        </div>
+                        <div className="text-center text-base font-bold text-success mt-1">
+                          = {grams.carbs}g ({carbsCalories} kcal)
                         </div>
                       </div>
                     </div>
@@ -404,21 +477,28 @@ const MacroMicroCalculator = ({ maintenanceCalories, age, gender }) => {
                     <div className="bg-warning/10 border border-warning/20 rounded-lg p-3 relative overflow-hidden">
                       <div className="absolute top-0 right-0 p-2 opacity-10"><Droplet size={40} /></div>
                       <h4 className="text-xs font-bold text-warning uppercase mb-2">Fats Formula</h4>
-                      <div className="text-xs font-mono space-y-1">
+                      <div className="text-xs font-mono space-y-1.5">
                         <div className="flex justify-between">
                           <span className="opacity-60">Total Cals:</span>
-                          <span>{customCalories}</span>
+                          <span>{customCalories} kcal</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="opacity-60">Ratio:</span>
                           <span>{ratios.fats}%</span>
                         </div>
-                        <div className="divider my-0"></div>
-                        <div className="text-center font-bold bg-base-100/50 rounded py-1">
-                          ({customCalories} × {ratios.fats}%) ÷ 9
+                        <div className="flex justify-between font-bold text-warning border-t border-warning/20 pt-1">
+                          <span>Macro Cals:</span>
+                          <span>{fatsCalories} kcal</span>
                         </div>
-                        <div className="text-center text-lg font-bold text-warning mt-1">
-                          = {grams.fats}g
+                        <div className="divider my-1"></div>
+                        <div className="text-center font-medium bg-base-100/60 rounded py-1 text-[11px]">
+                          1. Cals = {customCalories} × {ratios.fats}% = {fatsCalories} kcal
+                        </div>
+                        <div className="text-center font-medium bg-base-100/60 rounded py-1 text-[11px]">
+                          2. Grams = {fatsCalories} ÷ 9 kcal/g
+                        </div>
+                        <div className="text-center text-base font-bold text-warning mt-1">
+                          = {grams.fats}g ({fatsCalories} kcal)
                         </div>
                       </div>
                     </div>
@@ -504,6 +584,102 @@ const MICRO_DETAILS = {
     ],
     benefits: ["Maintains healthy vision (especially in low light)", "Supports immune system health", "Promotes healthy skin and cell growth"]
   },
+  "Vitamin B1 (Thiamine)": {
+    name: "Vitamin B1 (Thiamine)",
+    description: "Enables the body to use carbohydrates as energy. Essential for glucose metabolism and plays a key role in nerve, muscle, and heart function.",
+    sources: [
+      { name: "Enriched Rice & Whole Grains", amount: "1.2 mg" },
+      { name: "Pork Chops", amount: "0.9 mg" },
+      { name: "Sunflower Seeds", amount: "0.4 mg" },
+      { name: "Black Beans", amount: "0.4 mg" },
+      { name: "Macadamia Nuts", amount: "0.3 mg" }
+    ],
+    benefits: ["Helps convert food into cellular energy", "Supports healthy nervous system function", "Crucial for muscle contraction and cardiac health"]
+  },
+  "Vitamin B2 (Riboflavin)": {
+    name: "Vitamin B2 (Riboflavin)",
+    description: "Helps break down proteins, fats, and carbohydrates. It plays a vital role in maintaining the body's energy supply and cell growth.",
+    sources: [
+      { name: "Beef Liver", amount: "2.9 mg" },
+      { name: "Eggs", amount: "0.5 mg" },
+      { name: "Milk & Yogurt", amount: "0.4 mg" },
+      { name: "Lean Pork", amount: "0.3 mg" },
+      { name: "Spinach", amount: "0.2 mg" }
+    ],
+    benefits: ["Supports cellular energy production", "Promotes healthy skin and vision", "Acts as a cellular antioxidant"]
+  },
+  "Vitamin B3 (Niacin)": {
+    name: "Vitamin B3 (Niacin)",
+    description: "Helps convert food into energy and supports digestive health, skin function, and nervous system operations. Also helps manage cholesterol levels.",
+    sources: [
+      { name: "Chicken Breast", amount: "14.8 mg" },
+      { name: "Tuna (canned)", amount: "11.3 mg" },
+      { name: "Beef", amount: "7.5 mg" },
+      { name: "Peanuts", amount: "3.8 mg" },
+      { name: "Brown Rice", amount: "2.5 mg" }
+    ],
+    benefits: ["Improves cholesterol profile (lowers LDL, raises HDL)", "Supports brain function and skin health", "Enhances DNA repair and cellular energy"]
+  },
+  "Vitamin B5 (Pantothenic Acid)": {
+    name: "Vitamin B5 (Pantothenic Acid)",
+    description: "Essential for making blood cells and converting food (fats and carbohydrates) into usable energy.",
+    sources: [
+      { name: "Shiitake Mushrooms", amount: "3.6 mg" },
+      { name: "Avocado", amount: "2.0 mg" },
+      { name: "Sunflower Seeds", amount: "2.0 mg" },
+      { name: "Chicken Breast", amount: "1.5 mg" },
+      { name: "Egg Yolk", amount: "0.8 mg" }
+    ],
+    benefits: ["Crucial for red blood cell synthesis", "Promotes healthy digestive tract", "Helps produce stress and sex-related hormones"]
+  },
+  "Vitamin B6 (Pyridoxine)": {
+    name: "Vitamin B6 (Pyridoxine)",
+    description: "Important for normal brain development and for keeping the nervous system and immune system healthy.",
+    sources: [
+      { name: "Chickpeas (canned)", amount: "1.1 mg" },
+      { name: "Yellowfin Tuna", amount: "0.9 mg" },
+      { name: "Beef Liver", amount: "0.9 mg" },
+      { name: "Chicken Breast", amount: "0.5 mg" },
+      { name: "Banana", amount: "0.4 mg" }
+    ],
+    benefits: ["Promotes neurotransmitter production (serotonin & dopamine)", "Supports immune function", "Aids in hemoglobin synthesis"]
+  },
+  "Vitamin B7 (Biotin)": {
+    name: "Vitamin B7 (Biotin)",
+    description: "Plays a key role in metabolic function and is well known for supporting hair, skin, and nail strength.",
+    sources: [
+      { name: "Beef Liver", amount: "30.8 mcg" },
+      { name: "Whole Egg", amount: "10 mcg" },
+      { name: "Salmon", amount: "5 mcg" },
+      { name: "Pork Chop", amount: "4.5 mcg" },
+      { name: "Sweet Potato", amount: "2.4 mcg" }
+    ],
+    benefits: ["Strengthens hair, skin, and brittle nails", "Essential for carbohydrate, fat, and protein metabolism", "Supports healthy fetal development"]
+  },
+  "Vitamin B9 (Folate)": {
+    name: "Vitamin B9 (Folate)",
+    description: "Crucial for proper brain function and plays an important role in mental and emotional health. Essential during pregnancy to prevent birth defects.",
+    sources: [
+      { name: "Beef Liver", amount: "215 mcg" },
+      { name: "Spinach (cooked)", amount: "131 mcg" },
+      { name: "Black-Eyed Peas", amount: "105 mcg" },
+      { name: "Asparagus", amount: "89 mcg" },
+      { name: "Avocado", amount: "60 mcg" }
+    ],
+    benefits: ["Prevents neural tube defects during pregnancy", "Essential for DNA synthesis and repair", "Supports red blood cell maturation"]
+  },
+  "Vitamin B12": {
+    name: "Vitamin B12",
+    description: "Keeps the body's nerve and blood cells healthy and helps make DNA. It also helps prevent megaloblastic anemia.",
+    sources: [
+      { name: "Clams (cooked)", amount: "84 mcg" },
+      { name: "Beef Liver", amount: "70 mcg" },
+      { name: "Trout", amount: "5.4 mcg" },
+      { name: "Salmon", amount: "4.8 mcg" },
+      { name: "Nutritional Yeast", amount: "Variable" }
+    ],
+    benefits: ["Supports proper nerve function", "Essential for red blood cell formation", "Boosts energy levels"]
+  },
   "Vitamin C": {
     name: "Vitamin C",
     description: "A powerful antioxidant that protects cells from damage. It is vital for collagen production, iron absorption, and immune function.",
@@ -552,18 +728,6 @@ const MICRO_DETAILS = {
     ],
     benefits: ["Vital for blood clotting", "Supports bone health and density", "Helps prevent heart disease"]
   },
-  "Vitamin B12": {
-    name: "Vitamin B12",
-    description: "Keeps the body's nerve and blood cells healthy and helps make DNA. It also helps prevent megaloblastic anemia.",
-    sources: [
-      { name: "Clams (cooked)", amount: "84 mcg" },
-      { name: "Beef Liver", amount: "70 mcg" },
-      { name: "Trout", amount: "5.4 mcg" },
-      { name: "Salmon", amount: "4.8 mcg" },
-      { name: "Nutritional Yeast", amount: "Variable" }
-    ],
-    benefits: ["Supports proper nerve function", "Essential for red blood cell formation", "Boosts energy levels"]
-  },
   "Calcium": {
     name: "Calcium",
     description: "The most abundant mineral in the body. primarily found in bones and teeth. Also critical for heart, muscle, and nerve function.",
@@ -590,7 +754,7 @@ const MICRO_DETAILS = {
   },
   "Magnesium": {
     name: "Magnesium",
-    description: "Involved in more than 300 enzyme systems that regulate diverse biochemical reactions in the body, including protein synthesis and muscle function.",
+    description: "An essential electrolyte involved in over 300 biochemical reactions in the body, including muscle contraction and nerve transmission.",
     sources: [
       { name: "Pumpkin Seeds", amount: "156 mg" },
       { name: "Chia Seeds", amount: "111 mg" },
@@ -598,11 +762,11 @@ const MICRO_DETAILS = {
       { name: "Spinach (cooked)", amount: "78 mg" },
       { name: "Dark Chocolate", amount: "64 mg" }
     ],
-    benefits: ["Supports muscle and nerve function", "Regulates blood pressure", "Supports immune system"]
+    benefits: ["Supports muscle and nerve function", "Regulates blood pressure and fluid balance", "Supports immune system health"]
   },
   "Zinc": {
     name: "Zinc",
-    description: "Needed for the body's defensive (immune) system to work properly. It plays a role in cell division, cell growth, wound healing, and the breakdown of carbohydrates.",
+    description: "Needed for the body's defensive (immune) system to work properly. It plays a role in cell division, cell growth, wound healing, and carbohydrate metabolism.",
     sources: [
       { name: "Oysters", amount: "74 mg" },
       { name: "Beef", amount: "7 mg" },
@@ -614,7 +778,7 @@ const MICRO_DETAILS = {
   },
   "Potassium": {
     name: "Potassium",
-    description: "An electrolyte that counteracts the effects of sodium, helping to maintain consistent blood pressure. Important for heart and kidney function.",
+    description: "A major electrolyte that counteracts sodium to maintain healthy blood pressure, fluid balance, and muscle contractions.",
     sources: [
       { name: "Dried Apricots", amount: "1,101 mg" },
       { name: "Lentils", amount: "731 mg" },
@@ -622,7 +786,55 @@ const MICRO_DETAILS = {
       { name: "Banana", amount: "422 mg" },
       { name: "Avocado", amount: "364 mg" }
     ],
-    benefits: ["Regulates fluid balance", "Helps control blood pressure", "Prevents muscle cramps"]
+    benefits: ["Regulates fluid balance & hydration", "Helps control blood pressure", "Prevents muscle cramps and fatigue"]
+  },
+  "Sodium": {
+    name: "Sodium",
+    description: "A vital electrolyte essential for maintaining fluid balance, nerve transmission, and proper muscle function.",
+    sources: [
+      { name: "Table Salt (1 tsp)", amount: "2,300 mg" },
+      { name: "Pickles", amount: "800 mg" },
+      { name: "Soy Sauce (1 tbsp)", amount: "1,000 mg" },
+      { name: "Cheese (Feta)", amount: "320 mg" },
+      { name: "Celery", amount: "50 mg" }
+    ],
+    benefits: ["Maintains cellular hydration & blood volume", "Essential for conducting nerve impulses", "Facilitates muscle contraction and relaxation"]
+  },
+  "Phosphorus": {
+    name: "Phosphorus",
+    description: "Works closely with calcium to build strong bones and teeth, and plays a key role in energy storage (ATP synthesis).",
+    sources: [
+      { name: "Salmon", amount: "315 mg" },
+      { name: "Turkey Breast", amount: "217 mg" },
+      { name: "Pumpkin Seeds", amount: "330 mg" },
+      { name: "Milk", amount: "220 mg" },
+      { name: "Quinoa", amount: "140 mg" }
+    ],
+    benefits: ["Builds and preserves bone structure and teeth", "Critical for ATP (cellular energy) production", "Filters waste and repairs cells and tissues"]
+  },
+  "Omega-3": {
+    name: "Omega-3 Fatty Acids",
+    description: "Essential polyunsaturated fatty acids (ALA, EPA, DHA) that reduce inflammation and support heart, brain, and joint health.",
+    sources: [
+      { name: "Wild Salmon (3 oz)", amount: "1.8 g" },
+      { name: "Flaxseeds (1 tbsp)", amount: "2.4 g" },
+      { name: "Chia Seeds (1 tbsp)", amount: "2.5 g" },
+      { name: "Walnuts (1 oz)", amount: "2.5 g" },
+      { name: "Mackerel", amount: "2.0 g" }
+    ],
+    benefits: ["Lowers systemic inflammation", "Promotes cardiovascular and brain health", "Supports eye and joint wellness"]
+  },
+  "Omega-6": {
+    name: "Omega-6 Fatty Acids",
+    description: "Essential fatty acids (primarily Linoleic Acid) required for normal growth, skin health, and brain functioning.",
+    sources: [
+      { name: "Sunflower Seeds (1 oz)", amount: "9.3 g" },
+      { name: "Walnuts (1 oz)", amount: "10.8 g" },
+      { name: "Sesame Oil (1 tbsp)", amount: "5.6 g" },
+      { name: "Peanut Butter (2 tbsp)", amount: "4.4 g" },
+      { name: "Pine Nuts (1 oz)", amount: "9.4 g" }
+    ],
+    benefits: ["Supports healthy hair and skin barrier", "Helps regulate cellular metabolism", "Supports skeletal and bone health"]
   }
 };
 

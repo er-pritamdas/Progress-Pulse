@@ -9,6 +9,7 @@ import { getHabitSettings, updateHabitSettings, resetHabitSettingsToDefault } fr
 // Habit Table View Controller
 // Habit Logging Controller
 import { addPhysicalLog, getPhysicalLogs, deletePhysicalLog } from "../../controllers/Habit-controllers/HabitLogging.controller.js";
+import { exportHabitDataToEmail } from "../../controllers/Habit-controllers/HabitExport.controller.js";
 const router = Router()
 
 // Habit Table Entry Routes
@@ -21,6 +22,9 @@ router.route("/table-entry").delete(verifyToken, deleteHabitTableEntry)
 router.route("/settings").get(verifyToken, getHabitSettings)
 router.route("/settings").put(verifyToken, updateHabitSettings)
 router.route("/settings").delete(verifyToken, resetHabitSettingsToDefault)
+
+// Export Route
+router.route("/export").post(verifyToken, exportHabitDataToEmail)
 
 // Habit Dashboard Routes
 router.route("").get(verifyToken,)

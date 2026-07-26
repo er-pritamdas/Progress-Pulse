@@ -1,4 +1,7 @@
 import { useState, useEffect } from "react";
+import { useSelector, useDispatch } from "react-redux";
+import { setHabitFilters, resetHabitFilters } from "../../../services/redux/slice/habitSlice";
+import HabitDateQuickSelect from "../../../components/Dashboard/Habit/HabitDateQuickSelect.jsx";
 import { TitleChanger } from "../../../utils/TitleChanger";
 import LongestStreakCard from "../../../components/Dashboard/Habit/HabitDashboardPage/LongestStreakCard";
 import GoalProgressCard from "../../../components/Dashboard/Habit/HabitDashboardPage/GoalProgressCard";
@@ -14,13 +17,17 @@ import WaterAnalysis from "../../../components/Dashboard/Habit/HabitDashboardPag
 import SleepAnalysis from "../../../components/Dashboard/Habit/HabitDashboardPage/Analysis/SleepAnalysis";
 import ReadAnalysis from "../../../components/Dashboard/Habit/HabitDashboardPage/Analysis/ReadAnalysis";
 
-import { Flame, Droplet, Moon, BookOpen, Smile, Heart, Book, ChevronDown, ChevronUp } from "lucide-react";
+import { Flame, Droplet, Moon, BookOpen, Smile, Heart, Book, ChevronDown, ChevronUp, Trophy } from "lucide-react";
 import MoodAnalysis from "../../../components/Dashboard/Habit/HabitDashboardPage/Analysis/MoodAnalysis.jsx";
 import SelfCareAnalysis from "../../../components/Dashboard/Habit/HabitDashboardPage/Analysis/SelfCareAnalysis.jsx";
 import JournalAnalysis from "../../../components/Dashboard/Habit/HabitDashboardPage/Analysis/JournalAnalysis.jsx";
+import ScoreAnalysis from "../../../components/Dashboard/Habit/HabitDashboardPage/Analysis/ScoreAnalysis.jsx";
 
 function HabitDashboard() {
   TitleChanger("Progress Pulse | Habit Dashboard");
+
+  const dispatch = useDispatch();
+  const { fromDate, toDate } = useSelector((state) => state.habit.filters);
 
   const { setLoading } = useLoading();
   const [habitData, setHabitData] = useState([]);
@@ -42,10 +49,6 @@ function HabitDashboard() {
   const [moodList, setMoodList] = useState([]);
   const [selfCareList, setSelfCareList] = useState([]);
 
-  // 🔹 Tab State
-
-
-
   // Format Date Function
   const formatDate = (dateString) => {
     const date = new Date(dateString);
@@ -55,34 +58,9 @@ function HabitDashboard() {
     return `${day}-${month}-${year}`;
   };
 
-  function formatDateLocal(date) {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0"); // add 1 because month is 0-indexed
-    const day = String(date.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
-  }
-
-  const now = new Date();
-  const currentYear = now.getFullYear();
-  const currentMonth = now.getMonth(); // 0-indexed
-
-  const startOfMonth = new Date(currentYear, currentMonth, 1);
-  const endOfMonth = new Date(currentYear, currentMonth + 1, 0);
-  const today = new Date();
-
-  const startDate = formatDateLocal(startOfMonth);
-  const endDate = formatDateLocal(today);
-
-  // 🔹 Set in state
-  const [fromDate, setFromDate] = useState(startDate);
-  const [toDate, setToDate] = useState(endDate);
-
   const resetFilters = () => {
-    setFromDate(startDate);
-    setToDate(endDate);
-    // Optionally re-fetch or show all data
+    dispatch(resetHabitFilters());
   };
-
 
   const fetchHabitSettings = async () => {
     try {
@@ -132,6 +110,9 @@ function HabitDashboard() {
 
   useEffect(() => {
     fetchData();
+  }, [fromDate, toDate]);
+
+  useEffect(() => {
     fetchHabitSettings();
   }, []);
 
@@ -140,63 +121,19 @@ function HabitDashboard() {
   return (
     <>
       {/* Sticky Heading */}
-      <div className="sticky top-[-20px] z-30 bg-opacity-90 backdrop-blur-md shadow-sm">
-        <div className="flex items-center justify-between p-3">
+      <div className="sticky top-[-20px] z-30 bg-opacity-90 backdrop-blur-md shadow-sm border-b border-base-300/30">
+        {/* Top Row: Heading and Filter Controls */}
+        <div className="flex items-center justify-between p-3 flex-wrap gap-3">
           <h1 className="text-2xl font-bold flex items-center gap-2">
             {/* <UserCheck size={26} /> */}
             Habit Dashboard
           </h1>
 
-          {/* Center: Analytics Tabs */}
-          <div className="flex-1 flex justify-center px-4">
-            <div className="tabs tabs-boxed bg-base-100/50 backdrop-blur-sm shadow-sm p-1 gap-1">
-              <a
-                className={`tab tab-sm gap-1 transition-all duration-300 ${activeTab === 'calorie' ? 'tab-active btn btn-sm btn-soft btn-primary' : 'btn btn-sm btn-ghost'}`}
-                onClick={() => setActiveTab('calorie')}
-              >
-                <Flame size={14} /> Calorie
-              </a>
-              <a
-                className={`tab tab-sm gap-1 transition-all duration-300 ${activeTab === 'water' ? 'tab-active btn btn-sm btn-soft btn-info' : 'btn btn-sm btn-ghost'}`}
-                onClick={() => setActiveTab('water')}
-              >
-                <Droplet size={14} /> Water
-              </a>
-              <a
-                className={`tab tab-sm gap-1 transition-all duration-300 ${activeTab === 'sleep' ? 'tab-active btn btn-sm btn-soft btn-accent' : 'btn btn-sm btn-ghost'}`}
-                onClick={() => setActiveTab('sleep')}
-              >
-                <Moon size={14} /> Sleep
-              </a>
-              <a
-                className={`tab tab-sm gap-1 transition-all duration-300 ${activeTab === 'read' ? 'tab-active btn btn-sm btn-soft btn-warning' : 'btn btn-sm btn-ghost'}`}
-                onClick={() => setActiveTab('read')}
-              >
-                <BookOpen size={14} /> Read
-              </a>
-              <a
-                className={`tab tab-sm gap-1 transition-all duration-300 ${activeTab === 'selfcare' ? 'tab-active btn btn-sm btn-soft btn-secondary' : 'btn btn-sm btn-ghost'}`}
-                onClick={() => setActiveTab('selfcare')}
-              >
-                <Heart size={14} /> Self Care
-              </a>
-              <a
-                className={`tab tab-sm gap-1 transition-all duration-300 ${activeTab === 'mood' ? 'tab-active btn btn-sm btn-soft btn-accent' : 'btn btn-sm btn-ghost'}`}
-                onClick={() => setActiveTab('mood')}
-              >
-                <Smile size={14} /> Mood
-              </a>
-              <a
-                className={`tab tab-sm gap-1 transition-all duration-300 ${activeTab === 'journal' ? 'tab-active btn btn-sm btn-soft btn-info' : 'btn btn-sm btn-ghost'}`}
-                onClick={() => setActiveTab('journal')}
-              >
-                <Book size={14} /> Journal
-              </a>
-            </div>
-          </div>
+          {/* Right: Quick Select (Year & Month) + From/To Date Pickers */}
+          <div className="flex items-center gap-4 ml-auto flex-wrap">
+            {/* Quick Year and Month Select */}
+            <HabitDateQuickSelect />
 
-          {/* Right: From/To Date Pickers */}
-          <div className="flex items-center gap-4 ml-auto">
             {/* FROM DATE PICKER */}
             <div className="dropdown dropdown-end floating-label">
               <div tabIndex={0} role="button" className="input text-xs w-25">
@@ -206,7 +143,7 @@ function HabitDashboard() {
               <div className="dropdown-content z-[999] bg-base-100 rounded-box shadow-sm p-2">
                 <calendar-date
                   class="cally"
-                  onchange={(e) => setFromDate(e.target.value)}
+                  onchange={(e) => dispatch(setHabitFilters({ fromDate: e.target.value }))}
                 >
                   <svg
                     aria-label="Previous"
@@ -239,7 +176,7 @@ function HabitDashboard() {
               <div className="dropdown-content z-[999] bg-base-100 rounded-box shadow-sm p-2">
                 <calendar-date
                   class="cally"
-                  onchange={(e) => setToDate(e.target.value)}
+                  onchange={(e) => dispatch(setHabitFilters({ toDate: e.target.value }))}
                 >
                   <svg
                     aria-label="Previous"
@@ -278,6 +215,60 @@ function HabitDashboard() {
                 Reset
               </button>
             </div>
+          </div>
+        </div>
+
+        {/* Bottom Row: Analytics Tabs Section */}
+        <div className="px-3 pb-3 pt-1 flex items-center justify-start overflow-x-auto">
+          <div className="tabs tabs-boxed bg-base-100/50 backdrop-blur-sm shadow-sm p-1 gap-1">
+            <a
+              className={`tab tab-sm gap-1 transition-all duration-300 ${activeTab === 'calorie' ? 'tab-active btn btn-sm btn-soft btn-primary' : 'btn btn-sm btn-ghost'}`}
+              onClick={() => setActiveTab('calorie')}
+            >
+              <Flame size={14} /> Calorie
+            </a>
+            <a
+              className={`tab tab-sm gap-1 transition-all duration-300 ${activeTab === 'water' ? 'tab-active btn btn-sm btn-soft btn-info' : 'btn btn-sm btn-ghost'}`}
+              onClick={() => setActiveTab('water')}
+            >
+              <Droplet size={14} /> Water
+            </a>
+            <a
+              className={`tab tab-sm gap-1 transition-all duration-300 ${activeTab === 'sleep' ? 'tab-active btn btn-sm btn-soft btn-accent' : 'btn btn-sm btn-ghost'}`}
+              onClick={() => setActiveTab('sleep')}
+            >
+              <Moon size={14} /> Sleep
+            </a>
+            <a
+              className={`tab tab-sm gap-1 transition-all duration-300 ${activeTab === 'read' ? 'tab-active btn btn-sm btn-soft btn-warning' : 'btn btn-sm btn-ghost'}`}
+              onClick={() => setActiveTab('read')}
+            >
+              <BookOpen size={14} /> Read
+            </a>
+            <a
+              className={`tab tab-sm gap-1 transition-all duration-300 ${activeTab === 'selfcare' ? 'tab-active btn btn-sm btn-soft btn-secondary' : 'btn btn-sm btn-ghost'}`}
+              onClick={() => setActiveTab('selfcare')}
+            >
+              <Heart size={14} /> Self Care
+            </a>
+            <a
+              className={`tab tab-sm gap-1 transition-all duration-300 ${activeTab === 'mood' ? 'tab-active btn btn-sm btn-soft btn-accent' : 'btn btn-sm btn-ghost'}`}
+              onClick={() => setActiveTab('mood')}
+            >
+              <Smile size={14} /> Mood
+            </a>
+            <a
+              className={`tab tab-sm gap-1 transition-all duration-300 ${activeTab === 'scores' ? 'tab-active btn btn-sm btn-soft btn-warning' : 'btn btn-sm btn-ghost'}`}
+              onClick={() => setActiveTab('scores')}
+            >
+              <Trophy size={14} /> Scores
+            </a>
+            <a
+              className={`tab tab-sm gap-1 transition-all duration-300 ${activeTab === 'journal' ? 'tab-active btn btn-sm btn-soft btn-info' : 'btn btn-sm btn-ghost'}`}
+              onClick={() => setActiveTab('journal')}
+            >
+              <Book size={14} /> Journal
+            </a>
           </div>
         </div>
       </div>
@@ -406,6 +397,14 @@ function HabitDashboard() {
                 fromDate={fromDate}
                 toDate={toDate}
                 />
+            )}
+
+            {activeTab === 'scores' && (
+              <ScoreAnalysis
+                habitData={habitData}
+                fromDate={fromDate}
+                toDate={toDate}
+              />
             )}
 
             {activeTab === 'journal' && (

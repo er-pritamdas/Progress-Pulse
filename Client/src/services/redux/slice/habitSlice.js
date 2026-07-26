@@ -76,6 +76,44 @@ export const deletePhysicalLog = createAsyncThunk(
   }
 )
 
+function formatDateLocal(date) {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+const getDefaultFromDate = () => {
+  const now = new Date()
+  return formatDateLocal(new Date(now.getFullYear(), now.getMonth(), 1))
+}
+
+const getDefaultToDate = () => {
+  const now = new Date()
+  return formatDateLocal(new Date(now.getFullYear(), now.getMonth() + 1, 0))
+}
+
+const getInitialFilters = () => {
+  let savedFromDate = localStorage.getItem('habit_from_date')
+  let savedToDate = localStorage.getItem('habit_to_date')
+  let savedItemPerPage = localStorage.getItem('habit_item_per_page')
+
+  if (!savedFromDate || savedFromDate === 'undefined' || savedFromDate === 'null') {
+    savedFromDate = getDefaultFromDate()
+  }
+  if (!savedToDate || savedToDate === 'undefined' || savedToDate === 'null') {
+    savedToDate = getDefaultToDate()
+  }
+
+  const itemPerPage = savedItemPerPage ? Number(savedItemPerPage) : 7
+
+  return {
+    fromDate: savedFromDate,
+    toDate: savedToDate,
+    itemPerPage: isNaN(itemPerPage) || itemPerPage <= 0 ? 7 : itemPerPage,
+  }
+}
+
 const initialState = {
   settings: {
     burned: { min: 300, max: 500 },
@@ -86,9 +124,8 @@ const initialState = {
     selfcare: ["Shower", "Brush", "Face"],
     mood: ["Amazing", "Good", "Average", "Sad", "Depressed", "Productive"],
   },
+  filters: getInitialFilters(),
   subscribeToNewsletter: false,
-  emailNotification: false,
-  darkMode: false,
   emailNotification: false,
   darkMode: false,
   streakReminders: false,
@@ -98,7 +135,6 @@ const initialState = {
   height: 180,
   activityLevel: "light",
   maintenanceCalories: 0,
-  bmr: 0,
   bmr: 0,
   bmi: 0,
   physicalLogs: [],
@@ -135,6 +171,58 @@ const habitSlice = createSlice({
     },
     toggleStreakReminders: (state) => {
       state.streakReminders = !state.streakReminders
+    },
+
+    setHabitFilters: (state, action) => {
+      const { fromDate, toDate, itemPerPage } = action.payload
+      if (fromDate !== undefined) {
+        state.filters.fromDate = fromDate
+        localStorage.setItem('habit_from_date', fromDate)
+      }
+      if (toDate !== undefined) {
+        state.filters.toDate = toDate
+        localStorage.setItem('habit_to_date', toDate)
+      }
+      if (itemPerPage !== undefined) {
+        state.filters.itemPerPage = itemPerPage
+        localStorage.setItem('habit_item_per_page', itemPerPage)
+      }
+    },
+    resetHabitFilters: (state) => {
+      const defaultFrom = getDefaultFromDate()
+      const defaultTo = getDefaultToDate()
+      state.filters.fromDate = defaultFrom
+      state.filters.toDate = defaultTo
+      state.filters.itemPerPage = 7
+
+      localStorage.setItem('habit_from_date', defaultFrom)
+      localStorage.setItem('habit_to_date', defaultTo)
+      localStorage.setItem('habit_item_per_page', '7')
+    },
+    setHabitYearAndMonth: (state, action) => {
+      const { year, month } = action.payload
+      const selectedYear = Number(year) || new Date().getFullYear()
+
+      if (month === "all" || month === undefined || month === null) {
+        const fromDate = `${selectedYear}-01-01`
+        const toDate = `${selectedYear}-12-31`
+        state.filters.fromDate = fromDate
+        state.filters.toDate = toDate
+        localStorage.setItem("habit_from_date", fromDate)
+        localStorage.setItem("habit_to_date", toDate)
+      } else {
+        const selectedMonth = Number(month)
+        const startOfMonth = new Date(selectedYear, selectedMonth, 1)
+        const endOfMonth = new Date(selectedYear, selectedMonth + 1, 0)
+
+        const fromDate = formatDateLocal(startOfMonth)
+        const toDate = formatDateLocal(endOfMonth)
+
+        state.filters.fromDate = fromDate
+        state.filters.toDate = toDate
+        localStorage.setItem("habit_from_date", fromDate)
+        localStorage.setItem("habit_to_date", toDate)
+      }
     },
   },
 
@@ -243,6 +331,9 @@ export const {
   toggleEmailNotification,
   toggleDarkMode,
   toggleStreakReminders,
+  setHabitFilters,
+  resetHabitFilters,
+  setHabitYearAndMonth,
 } = habitSlice.actions
 
 export default habitSlice.reducer

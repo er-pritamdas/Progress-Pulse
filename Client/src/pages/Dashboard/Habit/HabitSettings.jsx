@@ -5,10 +5,11 @@ import { TitleChanger } from "../../../utils/TitleChanger";
 import ErrorAlert from "../../../utils/Alerts/ErrorAlert";
 import SuccessAlert from "../../../utils/Alerts/SuccessAlert";
 import { setFieldRange, setSelfcareHabits, setMoodList, toggleSubscribeToNewsletter, toggleEmailNotification, toggleDarkMode, toggleStreakReminders } from "../../../services/redux/slice/habitSlice";
-import { Flame, Droplet, Moon, BookOpen, Utensils, Smile, UserCheck, X, Info, Download, SaveAll, ListRestart, Play, Calculator, Target } from "lucide-react";
+import { Flame, Droplet, Moon, BookOpen, Utensils, Smile, UserCheck, X, Info, Download, SaveAll, ListRestart, Play, Calculator, Target, Mail, FileSpreadsheet } from "lucide-react";
 import { useLoading } from "../../../Context/LoadingContext";
 import { fetchHabitSettings, updateHabitSettings, resetHabitSettings } from "../../../services/redux/slice/habitSlice";
 import store from "../../../services/redux/store/store";
+import axiosInstance from "../../../Context/AxiosInstance";
 
 function HabitSettings() {
   TitleChanger("Progress Pulse | Habit Settings");
@@ -198,11 +199,12 @@ function HabitSettings() {
       title: "Streak Reminders",
       description: "Daily reminders to help you maintain your habit streaks and stay consistent.",
     },
-    excelDownload: {
-      title: "Download Excel Template",
-      description: "Download a sample Excel format to manually track or backup your data offline.",
+    exportData: {
+      title: "Export Habit Data",
+      description: "Send an Excel spreadsheet (.xlsx) to your registered email containing Table Entry, Settings, and Logging sheets.",
     },
   };
+
   const toggle = (key) => {
     if (key == "subscribeToNewsletter") {
       setIsSubscribed(!isSubscribed)
@@ -236,28 +238,31 @@ function HabitSettings() {
     }
   };
 
-
-
   const openModal = (key) => {
     setModalContent(preferenceInfo[key]);
     setShowModal(true);
   };
 
-  const handleExcelDownload = () => {
-    const blob = new Blob(
-      ["Habit,Date,Value\nWater,2025-01-01,2L\nBurned,2025-01-01,300kcal"],
-      { type: "text/csv" }
-    );
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.setAttribute("download", "habit_template.csv");
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    setalertSuccessMessage("Excel format downloaded");
-    setShowSuccessAlert(true);
-    setTimeout(() => setShowSuccessAlert(false), 4000);
+  const [isExporting, setIsExporting] = useState(false);
+
+  const handleExportData = async () => {
+    try {
+      setIsExporting(true);
+      setLoading(true);
+      const response = await axiosInstance.post("/v1/dashboard/habit/export");
+      const msg = response.data?.message || "Export sent! Please check your registered email inbox.";
+      setalertSuccessMessage(msg);
+      setShowSuccessAlert(true);
+      setTimeout(() => setShowSuccessAlert(false), 5000);
+    } catch (err) {
+      const errMsg = err.response?.data?.message || "Failed to send export email";
+      setAlertErrorMessage(errMsg);
+      setShowErrorAlert(true);
+      setTimeout(() => setShowErrorAlert(false), 5000);
+    } finally {
+      setIsExporting(false);
+      setLoading(false);
+    }
   };
 
 
@@ -573,21 +578,26 @@ function HabitSettings() {
               </div>
             ))}
 
-            {/* Download Excel */}
+            {/* Export Habit Data */}
             <div className="flex items-center justify-between py-3">
               <div className="flex flex-col gap-1">
                 <div className="flex items-center gap-2">
-                  <p className="font-medium text-base">Download Excel Format</p>
-                  <button onClick={() => openModal("excelDownload")}>
+                  <p className="font-medium text-base">Export Habit Data</p>
+                  <button onClick={() => openModal("exportData")}>
                     <Info size={16} />
                   </button>
                 </div>
                 <p className="text-sm text-muted">
-                  Get a CSV to track your habits manually.
+                  Receive CSV/Excel sheets via email (Table Entry, Settings & Logging).
                 </p>
               </div>
-              <button className="btn btn-sm btn-primary" onClick={handleExcelDownload}>
-                <Download size={16} />
+              <button
+                className="btn btn-sm btn-primary flex items-center gap-1"
+                onClick={handleExportData}
+                disabled={isExporting}
+              >
+                <Mail size={16} />
+                {isExporting ? "Exporting..." : "Export"}
               </button>
             </div>
           </div>
