@@ -4,34 +4,48 @@ import { verifyToken } from "../../middlewares/JwtAuthorization.middleware.js";
 import { readHabitTableData, createHabitTableEntry, updateHabitTableEntry, deleteHabitTableEntry } from "../../controllers/Habit-controllers/HabitTableEntry.controller.js";
 // Habit Settings Controller
 import { getHabitSettings, updateHabitSettings, resetHabitSettingsToDefault } from "../../controllers/Habit-controllers/HabitSettings.controller.js";
-// Habit Dashboard Controller
-
-// Habit Table View Controller
-// Habit Logging Controller
+// Habit Physical Logging Controller
 import { addPhysicalLog, getPhysicalLogs, deletePhysicalLog } from "../../controllers/Habit-controllers/HabitLogging.controller.js";
 import { exportHabitDataToEmail } from "../../controllers/Habit-controllers/HabitExport.controller.js";
-const router = Router()
+
+// Food Logging Controller
+import {
+  getFoodDatabase,
+  createCustomFood,
+  getDailyFoodLogs,
+  logFoodItem,
+  updateFoodLog,
+  deleteFoodLog,
+} from "../../controllers/Habit-controllers/FoodLogging.controller.js";
+
+const router = Router();
 
 // Habit Table Entry Routes
-router.route("/table-entry").post(verifyToken, createHabitTableEntry)
-router.route("/table-entry").get(verifyToken, readHabitTableData)
-router.route("/table-entry").put(verifyToken, updateHabitTableEntry)
-router.route("/table-entry").delete(verifyToken, deleteHabitTableEntry)
+router.route("/table-entry").post(verifyToken, createHabitTableEntry);
+router.route("/table-entry").get(verifyToken, readHabitTableData);
+router.route("/table-entry").put(verifyToken, updateHabitTableEntry);
+router.route("/table-entry").delete(verifyToken, deleteHabitTableEntry);
 
 // Habit Setting Routes
-router.route("/settings").get(verifyToken, getHabitSettings)
-router.route("/settings").put(verifyToken, updateHabitSettings)
-router.route("/settings").delete(verifyToken, resetHabitSettingsToDefault)
+router.route("/settings").get(verifyToken, getHabitSettings);
+router.route("/settings").put(verifyToken, updateHabitSettings);
+router.route("/settings").delete(verifyToken, resetHabitSettingsToDefault);
 
 // Export Route
-router.route("/export").post(verifyToken, exportHabitDataToEmail)
+router.route("/export").post(verifyToken, exportHabitDataToEmail);
 
-// Habit Dashboard Routes
-router.route("").get(verifyToken,)
-
-// Habit Table View Routes
-// Habit Logging Routes
+// Habit Physical Logging Routes
 router.route("/logging").post(verifyToken, addPhysicalLog);
 router.route("/logging").get(verifyToken, getPhysicalLogs);
 router.route("/logging/:logId").delete(verifyToken, deletePhysicalLog);
-export default router
+
+// Food Database & Daily Food Logging Routes
+router.route("/food/database").get(verifyToken, getFoodDatabase);
+router.route("/food/database").post(verifyToken, createCustomFood);
+
+router.route("/food/log").get(verifyToken, getDailyFoodLogs);
+router.route("/food/log").post(verifyToken, logFoodItem);
+router.route("/food/log/:id").put(verifyToken, updateFoodLog);
+router.route("/food/log/:id").delete(verifyToken, deleteFoodLog);
+
+export default router;

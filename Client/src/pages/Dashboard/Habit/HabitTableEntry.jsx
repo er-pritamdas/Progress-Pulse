@@ -39,9 +39,12 @@ import {
   Search,
 } from "lucide-react";
 
+import FoodLoggingTab from "../../../components/Dashboard/Habit/FoodLogging/FoodLoggingTab.jsx";
+
 function HabitTableEntry() {
-  TitleChanger("Progress Pulse | Habit Entry");
+  TitleChanger("Progress Pulse | Habit Logging");
   const dispatch = useDispatch();
+  const [activeMainTab, setActiveMainTab] = useState("habit"); // "habit" or "food"
   const settings = useSelector((state) => state.habit.settings);
   const { fromDate, toDate, itemPerPage } = useSelector(
     (state) => state.habit.filters
@@ -374,6 +377,25 @@ function HabitTableEntry() {
     setEditingItem((prev) => ({ ...prev, [name]: value }));
   };
 
+  const handleInlineCalculateFood = async () => {
+    if (!editingItem?.date) return;
+    try {
+      setLoading(true);
+      const res = await axiosInstance.get("/v1/dashboard/habit/food/log", {
+        params: { date: editingItem.date },
+      });
+      const totalCals = res.data?.data?.summary?.totalCalories;
+      setEditingItem((prev) => ({
+        ...prev,
+        intake: totalCals !== undefined && totalCals !== null ? totalCals : 0,
+      }));
+    } catch (err) {
+      console.error("Failed to calculate food calories inline", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Add Data Function
   const handleAdd = async (newItem) => {
     // Check if the date already exists
@@ -425,21 +447,51 @@ function HabitTableEntry() {
         <SuccessAlert message={alertSuccessMessage} top={20} />
       )}
 
-      {/* Headings */}
-      <div className="sticky top-[-20px] z-30 bg-opacity-90 backdrop-blur-md shadow-sm mb-1 p-2 pt-3">
-        <Heading
-          handleAddEntryClick={handleAddEntryClick}
-          currentPage={currentPage}
-          fetchHabits={fetchHabits}
-          setShowErrorAlert={setShowErrorAlert}
-          setAlertErrorMessage={setAlertErrorMessage}
-          setShowSuccessAlert={setShowSuccessAlert}
-          setAlertSuccessMessage={setAlertSuccessMessage}
-        />
+      {/* Main Tabs Navigation */}
+      <div className="flex border-b border-base-300 mb-4 px-2">
+        <button
+          className={`flex items-center gap-2 py-3 px-5 font-bold text-sm border-b-2 transition-all ${
+            activeMainTab === "habit"
+              ? "border-primary text-primary bg-primary/5 rounded-t-lg"
+              : "border-transparent text-base-content/60 hover:text-base-content"
+          }`}
+          onClick={() => setActiveMainTab("habit")}
+        >
+          <CalendarDays size={18} />
+          Habit Logging
+        </button>
+        <button
+          className={`flex items-center gap-2 py-3 px-5 font-bold text-sm border-b-2 transition-all ${
+            activeMainTab === "food"
+              ? "border-primary text-primary bg-primary/5 rounded-t-lg"
+              : "border-transparent text-base-content/60 hover:text-base-content"
+          }`}
+          onClick={() => setActiveMainTab("food")}
+        >
+          <Utensils size={18} />
+          Food Logging
+        </button>
       </div>
 
-      {/* Table */}
-      <div>
+      {activeMainTab === "food" ? (
+        <FoodLoggingTab />
+      ) : (
+        <>
+          {/* Headings */}
+          <div className="sticky top-[-20px] z-30 bg-opacity-90 backdrop-blur-md shadow-sm mb-1 p-2 pt-3">
+            <Heading
+              handleAddEntryClick={handleAddEntryClick}
+              currentPage={currentPage}
+              fetchHabits={fetchHabits}
+              setShowErrorAlert={setShowErrorAlert}
+              setAlertErrorMessage={setAlertErrorMessage}
+              setShowSuccessAlert={setShowSuccessAlert}
+              setAlertSuccessMessage={setAlertSuccessMessage}
+            />
+          </div>
+
+          {/* Table */}
+          <div>
         <table className="bg-base-300 table table-fixed table-md">
           <thead className="sticky top-10 z-30 bg-opacity-90 backdrop-blur-md shadow-sm mb-1 p-2 pt-3">
             {/* ToolBar */}
@@ -759,16 +811,26 @@ function HabitTableEntry() {
 
                     {/* Intake */}
                     <td>
-                      <input
-                        type="number"
-                        min="0"
-                        max="100000"
-                        onKeyDown={handleKeyDown}
-                        name="intake"
-                        className="btn btn-sm w-full max-w-[80px] hover:cursor-text bg-base-100"
-                        value={editingItem.intake}
-                        onChange={handleChange}
-                      />
+                      <div className="flex items-center justify-center gap-1">
+                        <input
+                          type="number"
+                          min="0"
+                          max="100000"
+                          onKeyDown={handleKeyDown}
+                          name="intake"
+                          className="btn btn-sm w-full max-w-[80px] hover:cursor-text bg-base-100"
+                          value={editingItem.intake}
+                          onChange={handleChange}
+                        />
+                        <button
+                          type="button"
+                          className="btn btn-xs btn-ghost btn-circle text-primary"
+                          onClick={handleInlineCalculateFood}
+                          title="Calculate from Food Logging for this date"
+                        >
+                          <Utensils size={14} />
+                        </button>
+                      </div>
                     </td>
 
                     {/* Self Care */}
@@ -1107,6 +1169,8 @@ function HabitTableEntry() {
         initialData={currentJournalItem?.journal}
         onSave={handleJournalSave}
       />
+        </>
+      )}
     </div>
   );
 }

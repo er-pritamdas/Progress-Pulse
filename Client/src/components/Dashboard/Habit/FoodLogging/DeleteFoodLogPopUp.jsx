@@ -1,8 +1,9 @@
-import React, { useEffect } from 'react';
+import React, { useEffect } from "react";
+import { AlertTriangle } from "lucide-react";
 
-function DeleteHabitPopUp({ isDeletePopupOpen, onClose, onConfirm }) {
+function DeleteFoodLogPopUp({ isOpen, onClose, onConfirm, foodName }) {
   useEffect(() => {
-    if (isDeletePopupOpen) {
+    if (isOpen) {
       document.body.style.overflow = "hidden";
     } else {
       document.body.style.overflow = "";
@@ -10,29 +11,32 @@ function DeleteHabitPopUp({ isDeletePopupOpen, onClose, onConfirm }) {
     return () => {
       document.body.style.overflow = "";
     };
-  }, [isDeletePopupOpen]);
+  }, [isOpen]);
 
-  if (!isDeletePopupOpen) return null;
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-[999] bg-black/75 backdrop-blur-md flex items-start justify-center pt-16 sm:pt-18 pb-6 px-3 sm:px-6 overflow-hidden">
       <div className="bg-base-200 w-full max-w-sm rounded-3xl shadow-2xl border border-base-300 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         {/* Header */}
-        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-          <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100">
+        <div className="px-6 py-4 border-b border-base-300 flex items-center justify-between">
+          <h2 className="text-xl font-bold text-base-content flex items-center gap-2">
+            <AlertTriangle className="text-error" size={22} />
             Confirm Deletion
           </h2>
         </div>
 
         {/* Body */}
         <div className="px-6 py-5">
-          <p className="text-gray-600 dark:text-gray-300">
-            You’re about to <span className="font-medium text-red-600">permanently delete</span> this habit entry. This action <strong>cannot</strong> be undone.
+          <p className="text-base-content/80 text-sm leading-relaxed">
+            You’re about to <span className="font-semibold text-error">permanently delete</span>{" "}
+            {foodName ? <span className="font-bold text-base-content">"{foodName}"</span> : "this food log entry"}.
+            This action <strong>cannot</strong> be undone.
           </p>
         </div>
 
         {/* Actions */}
-        <div className="px-6 py-4 flex justify-end space-x-3">
+        <div className="px-6 py-4 bg-base-300/30 flex justify-end space-x-3 border-t border-base-300">
           <button
             onClick={onClose}
             className="btn btn-sm btn-soft btn-warning"
@@ -51,4 +55,4 @@ function DeleteHabitPopUp({ isDeletePopupOpen, onClose, onConfirm }) {
   );
 }
 
-export default DeleteHabitPopUp;
+export default DeleteFoodLogPopUp;

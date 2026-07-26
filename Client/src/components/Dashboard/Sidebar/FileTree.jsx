@@ -52,13 +52,13 @@ function FileTree({ open, setOpen }) {
                         </summary>
                         <ul className='ml-0'>
                             <li>
-                                <Tooltip title={!open ? "Table Entry" : ""} placement="right" arrow slotProps={tooltipSlotProps}>
+                                <Tooltip title={!open ? "Logging" : ""} placement="right" arrow slotProps={tooltipSlotProps}>
                                     <Link
                                         to="/dashboard/habit/table-entry"
                                         className={getLinkClass("/dashboard/habit/table-entry")}
                                     >
                                         <TableEntry />
-                                        {open && <span className="ml-2">Table Entry</span>}
+                                        {open && <span className="ml-2">Logging</span>}
                                     </Link>
                                 </Tooltip>
                             </li>
@@ -74,13 +74,13 @@ function FileTree({ open, setOpen }) {
                                 </Tooltip>
                             </li>
                             <li>
-                                <Tooltip title={!open ? "Logging" : ""} placement="right" arrow slotProps={tooltipSlotProps}>
+                                <Tooltip title={!open ? "Habit Profile" : ""} placement="right" arrow slotProps={tooltipSlotProps}>
                                     <Link
                                         to="/dashboard/habit/logging"
                                         className={getLinkClass("/dashboard/habit/logging")}
                                     >
                                         <TableView />
-                                        {open && <span className="ml-2">Logging</span>}
+                                        {open && <span className="ml-2">Habit Profile</span>}
                                     </Link>
                                 </Tooltip>
                             </li>

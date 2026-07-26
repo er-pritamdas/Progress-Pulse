@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { Activity, Droplet, Zap, Info, Minus, Plus, PieChart } from "lucide-react";
+import { useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
+import { Activity, Droplet, Zap, Info, Minus, Plus, PieChart, ExternalLink } from "lucide-react";
 
-const DonutChart = ({ ratios, customCalories, setCustomCalories }) => {
+const DonutChart = ({ ratios, calorieMin, calorieMax }) => {
+  const navigate = useNavigate();
   const size = 250;
   const strokeWidth = 20;
   const radius = (size - strokeWidth) / 2;
@@ -58,26 +61,49 @@ const DonutChart = ({ ratios, customCalories, setCustomCalories }) => {
           );
         })}
       </svg>
-      {/* Center Input */}
-      <div className="absolute flex flex-col items-center justify-center text-center">
-        <span className="text-sm opacity-70 mb-1">Calories</span>
-        <input
-          type="number"
-          className="input input-ghost text-3xl font-bold w-32 text-center p-0 h-auto focus:bg-transparent focus:text-primary"
-          value={customCalories}
-          onChange={(e) => setCustomCalories(Number(e.target.value))}
-        />
+      {/* Center Non-Editable Content displaying selected Settings Min and Max */}
+      <div className="absolute flex flex-col items-center justify-center text-center px-4">
+        <span className="text-[10px] font-bold text-base-content/60 uppercase tracking-wider mb-0.5">
+          Intake Target
+        </span>
+        <div
+          className="text-base sm:text-lg font-extrabold text-primary font-mono leading-tight hover:underline cursor-pointer"
+          onClick={() => navigate("/dashboard/habit/logging")}
+          title="Click to edit Min & Max calories in Habit Profile"
+        >
+          {calorieMin} – {calorieMax}
+        </div>
+        <span className="text-[10px] font-semibold text-base-content/70">kcal / day</span>
+        <button
+          className="btn btn-[10px] btn-xs btn-ghost text-primary p-0 h-auto min-h-0 mt-1 hover:underline flex items-center gap-1 cursor-pointer font-bold"
+          onClick={() => navigate("/dashboard/habit/logging")}
+          title="Go to Habit Profile to edit min/max calories"
+        >
+          <span>Edit in Settings</span>
+          <ExternalLink size={9} />
+        </button>
       </div>
     </div>
   );
 };
 
 const MacroMicroCalculator = ({ maintenanceCalories, age, gender }) => {
+  // --- Redux Habit Settings Intake Min & Max ---
+  const habitSettings = useSelector((state) => state.habit?.settings);
+
+  const calorieMin = habitSettings?.intake?.min || (maintenanceCalories ? Math.round(maintenanceCalories * 0.9) : 1500);
+  const calorieMax = habitSettings?.intake?.max || (maintenanceCalories ? Math.round(maintenanceCalories * 1.1) : 2500);
+
   // --- Macros State ---
   // Default Ratios: 30% Protein, 40% Carbs, 30% Fats
-  const [ratios, setRatios] = useState({ protein: 30, carbs: 40, fats: 30 });
-  const [grams, setGrams] = useState({ protein: 0, carbs: 0, fats: 0 });
-  const [customCalories, setCustomCalories] = useState(maintenanceCalories || 0);
+  const [ratios, setRatios] = useState(() => {
+    try {
+      const saved = localStorage.getItem("macro_ratios");
+      return saved ? JSON.parse(saved) : { protein: 30, carbs: 40, fats: 30 };
+    } catch (e) {
+      return { protein: 30, carbs: 40, fats: 30 };
+    }
+  });
 
   // --- Micros State ---
   const [micros, setMicros] = useState({});
@@ -92,32 +118,33 @@ const MacroMicroCalculator = ({ maintenanceCalories, age, gender }) => {
 
   // --- Effects ---
 
-  // 1. Sync customCalories with maintenanceCalories prop
+  // Save ratios to localStorage when changed
   useEffect(() => {
-    if (maintenanceCalories) {
-      setCustomCalories(maintenanceCalories);
+    try {
+      localStorage.setItem("macro_ratios", JSON.stringify(ratios));
+    } catch (e) {
+      console.error("Failed to save macro_ratios to localStorage", e);
     }
-  }, [maintenanceCalories]);
+  }, [ratios]);
 
-  // 2. Calculate Macros when customCalories or ratios change
-  useEffect(() => {
-    const caloriesToUse = customCalories || 0;
+  // --- Macro Min and Max Calculations ---
+  // Protein (4 kcal/g)
+  const proteinMinCals = Math.round(calorieMin * (ratios.protein / 100));
+  const proteinMaxCals = Math.round(calorieMax * (ratios.protein / 100));
+  const proteinMinGrams = Math.round(proteinMinCals / 4);
+  const proteinMaxGrams = Math.round(proteinMaxCals / 4);
 
-    if (!caloriesToUse) {
-      setGrams({ protein: 0, carbs: 0, fats: 0 });
-      return;
-    }
+  // Carbs (4 kcal/g)
+  const carbsMinCals = Math.round(calorieMin * (ratios.carbs / 100));
+  const carbsMaxCals = Math.round(calorieMax * (ratios.carbs / 100));
+  const carbsMinGrams = Math.round(carbsMinCals / 4);
+  const carbsMaxGrams = Math.round(carbsMaxCals / 4);
 
-    const proteinCals = caloriesToUse * (ratios.protein / 100);
-    const carbsCals = caloriesToUse * (ratios.carbs / 100);
-    const fatsCals = caloriesToUse * (ratios.fats / 100);
-
-    setGrams({
-      protein: Math.round(proteinCals / CALORIES_PER_GRAM.protein),
-      carbs: Math.round(carbsCals / CALORIES_PER_GRAM.carbs),
-      fats: Math.round(fatsCals / CALORIES_PER_GRAM.fats),
-    });
-  }, [customCalories, ratios]);
+  // Fats (9 kcal/g)
+  const fatsMinCals = Math.round(calorieMin * (ratios.fats / 100));
+  const fatsMaxCals = Math.round(calorieMax * (ratios.fats / 100));
+  const fatsMinGrams = Math.round(fatsMinCals / 9);
+  const fatsMaxGrams = Math.round(fatsMaxCals / 9);
 
   // 3. Calculate Micros based on Age and Gender
   useEffect(() => {
@@ -174,11 +201,6 @@ const MacroMicroCalculator = ({ maintenanceCalories, age, gender }) => {
 
   const totalRatio = ratios.protein + ratios.carbs + ratios.fats;
   const isRatioValid = totalRatio === 100;
-
-  // --- Calories per Macro Calculation ---
-  const proteinCalories = Math.round((customCalories || 0) * (ratios.protein / 100));
-  const carbsCalories = Math.round((customCalories || 0) * (ratios.carbs / 100));
-  const fatsCalories = Math.round((customCalories || 0) * (ratios.fats / 100));
 
   // --- Modal State ---
   const [selectedMicro, setSelectedMicro] = useState(null);
@@ -307,7 +329,9 @@ const MacroMicroCalculator = ({ maintenanceCalories, age, gender }) => {
                       <span className="text-info font-bold flex items-center gap-2">
                         Protein <span className="badge badge-xs badge-soft badge-info">Recommend: {RECOMMENDED_RANGES.protein}</span>
                       </span>
-                      <span className="opacity-70 font-mono">{grams.protein}g ({proteinCalories} kcal)</span>
+                      <span className="opacity-80 font-mono text-xs font-semibold text-info">
+                        {proteinMinGrams}g – {proteinMaxGrams}g ({proteinMinCals} – {proteinMaxCals} kcal)
+                      </span>
                     </div>
                     <div className="flex items-center gap-4">
                       <button className="btn btn-xs btn-circle btn-soft" onClick={() => adjustRatio("protein", -1)}><Minus size={14} /></button>
@@ -330,7 +354,9 @@ const MacroMicroCalculator = ({ maintenanceCalories, age, gender }) => {
                       <span className="text-success font-bold flex items-center gap-2">
                         Carbs <span className="badge badge-xs badge-soft badge-success">Recommend: {RECOMMENDED_RANGES.carbs}</span>
                       </span>
-                      <span className="opacity-70 font-mono">{grams.carbs}g ({carbsCalories} kcal)</span>
+                      <span className="opacity-80 font-mono text-xs font-semibold text-success">
+                        {carbsMinGrams}g – {carbsMaxGrams}g ({carbsMinCals} – {carbsMaxCals} kcal)
+                      </span>
                     </div>
                     <div className="flex items-center gap-4">
                       <button className="btn btn-xs btn-circle btn-soft" onClick={() => adjustRatio("carbs", -1)}><Minus size={14} /></button>
@@ -353,7 +379,9 @@ const MacroMicroCalculator = ({ maintenanceCalories, age, gender }) => {
                       <span className="text-warning font-bold flex items-center gap-2">
                         Fats <span className="badge badge-xs badge-soft badge-warning">Recommend: {RECOMMENDED_RANGES.fats}</span>
                       </span>
-                      <span className="opacity-70 font-mono">{grams.fats}g ({fatsCalories} kcal)</span>
+                      <span className="opacity-80 font-mono text-xs font-semibold text-warning">
+                        {fatsMinGrams}g – {fatsMaxGrams}g ({fatsMinCals} – {fatsMaxCals} kcal)
+                      </span>
                     </div>
                     <div className="flex items-center gap-4">
                       <button className="btn btn-xs btn-circle btn-soft" onClick={() => adjustRatio("fats", -1)}><Minus size={14} /></button>
@@ -378,7 +406,7 @@ const MacroMicroCalculator = ({ maintenanceCalories, age, gender }) => {
 
                 {/* Chart (Right) */}
                 <div className="flex-shrink-0">
-                  <DonutChart ratios={ratios} customCalories={customCalories} setCustomCalories={setCustomCalories} />
+                  <DonutChart ratios={ratios} calorieMin={calorieMin} calorieMax={calorieMax} />
                 </div>
               </div>
 
@@ -390,25 +418,25 @@ const MacroMicroCalculator = ({ maintenanceCalories, age, gender }) => {
                 </div>
                 <div className="collapse-content space-y-4">
                   <p className="text-xs opacity-60">
-                    We use standard nutritional values where <strong>1g Protein/Carb = 4 kcal</strong> and <strong>1g Fat = 9 kcal</strong>.
+                    We use standard nutritional values where <strong>1g Protein/Carb = 4 kcal</strong> and <strong>1g Fat = 9 kcal</strong> based on your selected Settings intake range (<strong>{calorieMin} – {calorieMax} kcal</strong>).
                   </p>
 
                   {/* Calories Coming From Each Macro Overview */}
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 bg-base-200/70 rounded-xl border border-base-300 text-center">
                     <div className="bg-info/10 border border-info/20 p-3 rounded-lg flex flex-col items-center">
                       <span className="text-xs text-info font-bold uppercase tracking-wider mb-1">Protein Calories</span>
-                      <span className="text-xl font-extrabold text-info font-mono">{proteinCalories} kcal</span>
-                      <span className="text-[11px] opacity-70 mt-0.5">{ratios.protein}% of total calories</span>
+                      <span className="text-lg font-extrabold text-info font-mono">{proteinMinCals} – {proteinMaxCals} kcal</span>
+                      <span className="text-[11px] opacity-70 mt-0.5">{ratios.protein}% of target range</span>
                     </div>
                     <div className="bg-success/10 border border-success/20 p-3 rounded-lg flex flex-col items-center">
                       <span className="text-xs text-success font-bold uppercase tracking-wider mb-1">Carbs Calories</span>
-                      <span className="text-xl font-extrabold text-success font-mono">{carbsCalories} kcal</span>
-                      <span className="text-[11px] opacity-70 mt-0.5">{ratios.carbs}% of total calories</span>
+                      <span className="text-lg font-extrabold text-success font-mono">{carbsMinCals} – {carbsMaxCals} kcal</span>
+                      <span className="text-[11px] opacity-70 mt-0.5">{ratios.carbs}% of target range</span>
                     </div>
                     <div className="bg-warning/10 border border-warning/20 p-3 rounded-lg flex flex-col items-center">
                       <span className="text-xs text-warning font-bold uppercase tracking-wider mb-1">Fats Calories</span>
-                      <span className="text-xl font-extrabold text-warning font-mono">{fatsCalories} kcal</span>
-                      <span className="text-[11px] opacity-70 mt-0.5">{ratios.fats}% of total calories</span>
+                      <span className="text-lg font-extrabold text-warning font-mono">{fatsMinCals} – {fatsMaxCals} kcal</span>
+                      <span className="text-[11px] opacity-70 mt-0.5">{ratios.fats}% of target range</span>
                     </div>
                   </div>
 
@@ -419,8 +447,8 @@ const MacroMicroCalculator = ({ maintenanceCalories, age, gender }) => {
                       <h4 className="text-xs font-bold text-info uppercase mb-2">Protein Formula</h4>
                       <div className="text-xs font-mono space-y-1.5">
                         <div className="flex justify-between">
-                          <span className="opacity-60">Total Cals:</span>
-                          <span>{customCalories} kcal</span>
+                          <span className="opacity-60">Intake Range:</span>
+                          <span>{calorieMin} – {calorieMax} kcal</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="opacity-60">Ratio:</span>
@@ -428,17 +456,17 @@ const MacroMicroCalculator = ({ maintenanceCalories, age, gender }) => {
                         </div>
                         <div className="flex justify-between font-bold text-info border-t border-info/20 pt-1">
                           <span>Macro Cals:</span>
-                          <span>{proteinCalories} kcal</span>
+                          <span>{proteinMinCals} – {proteinMaxCals} kcal</span>
                         </div>
                         <div className="divider my-1"></div>
                         <div className="text-center font-medium bg-base-100/60 rounded py-1 text-[11px]">
-                          1. Cals = {customCalories} × {ratios.protein}% = {proteinCalories} kcal
+                          1. Cals = ({calorieMin} – {calorieMax}) × {ratios.protein}%
                         </div>
                         <div className="text-center font-medium bg-base-100/60 rounded py-1 text-[11px]">
-                          2. Grams = {proteinCalories} ÷ 4 kcal/g
+                          2. Grams = Cals ÷ 4 kcal/g
                         </div>
-                        <div className="text-center text-base font-bold text-info mt-1">
-                          = {grams.protein}g ({proteinCalories} kcal)
+                        <div className="text-center text-sm sm:text-base font-bold text-info mt-1">
+                          = {proteinMinGrams}g – {proteinMaxGrams}g
                         </div>
                       </div>
                     </div>
@@ -449,8 +477,8 @@ const MacroMicroCalculator = ({ maintenanceCalories, age, gender }) => {
                       <h4 className="text-xs font-bold text-success uppercase mb-2">Carbs Formula</h4>
                       <div className="text-xs font-mono space-y-1.5">
                         <div className="flex justify-between">
-                          <span className="opacity-60">Total Cals:</span>
-                          <span>{customCalories} kcal</span>
+                          <span className="opacity-60">Intake Range:</span>
+                          <span>{calorieMin} – {calorieMax} kcal</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="opacity-60">Ratio:</span>
@@ -458,17 +486,17 @@ const MacroMicroCalculator = ({ maintenanceCalories, age, gender }) => {
                         </div>
                         <div className="flex justify-between font-bold text-success border-t border-success/20 pt-1">
                           <span>Macro Cals:</span>
-                          <span>{carbsCalories} kcal</span>
+                          <span>{carbsMinCals} – {carbsMaxCals} kcal</span>
                         </div>
                         <div className="divider my-1"></div>
                         <div className="text-center font-medium bg-base-100/60 rounded py-1 text-[11px]">
-                          1. Cals = {customCalories} × {ratios.carbs}% = {carbsCalories} kcal
+                          1. Cals = ({calorieMin} – {calorieMax}) × {ratios.carbs}%
                         </div>
                         <div className="text-center font-medium bg-base-100/60 rounded py-1 text-[11px]">
-                          2. Grams = {carbsCalories} ÷ 4 kcal/g
+                          2. Grams = Cals ÷ 4 kcal/g
                         </div>
-                        <div className="text-center text-base font-bold text-success mt-1">
-                          = {grams.carbs}g ({carbsCalories} kcal)
+                        <div className="text-center text-sm sm:text-base font-bold text-success mt-1">
+                          = {carbsMinGrams}g – {carbsMaxGrams}g
                         </div>
                       </div>
                     </div>
@@ -479,8 +507,8 @@ const MacroMicroCalculator = ({ maintenanceCalories, age, gender }) => {
                       <h4 className="text-xs font-bold text-warning uppercase mb-2">Fats Formula</h4>
                       <div className="text-xs font-mono space-y-1.5">
                         <div className="flex justify-between">
-                          <span className="opacity-60">Total Cals:</span>
-                          <span>{customCalories} kcal</span>
+                          <span className="opacity-60">Intake Range:</span>
+                          <span>{calorieMin} – {calorieMax} kcal</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="opacity-60">Ratio:</span>
@@ -488,17 +516,17 @@ const MacroMicroCalculator = ({ maintenanceCalories, age, gender }) => {
                         </div>
                         <div className="flex justify-between font-bold text-warning border-t border-warning/20 pt-1">
                           <span>Macro Cals:</span>
-                          <span>{fatsCalories} kcal</span>
+                          <span>{fatsMinCals} – {fatsMaxCals} kcal</span>
                         </div>
                         <div className="divider my-1"></div>
                         <div className="text-center font-medium bg-base-100/60 rounded py-1 text-[11px]">
-                          1. Cals = {customCalories} × {ratios.fats}% = {fatsCalories} kcal
+                          1. Cals = ({calorieMin} – {calorieMax}) × {ratios.fats}%
                         </div>
                         <div className="text-center font-medium bg-base-100/60 rounded py-1 text-[11px]">
-                          2. Grams = {fatsCalories} ÷ 9 kcal/g
+                          2. Grams = Cals ÷ 9 kcal/g
                         </div>
-                        <div className="text-center text-base font-bold text-warning mt-1">
-                          = {grams.fats}g ({fatsCalories} kcal)
+                        <div className="text-center text-sm sm:text-base font-bold text-warning mt-1">
+                          = {fatsMinGrams}g – {fatsMaxGrams}g
                         </div>
                       </div>
                     </div>

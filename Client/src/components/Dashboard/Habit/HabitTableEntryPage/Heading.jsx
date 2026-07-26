@@ -11,7 +11,7 @@ function Heading({
 }) {
   return (
     <div className="flex justify-between items-center flex-wrap gap-4">
-      <h1 className="text-2xl font-bold">Habit Tracker Table Entry</h1>
+      <h1 className="text-2xl font-bold">Habit Tracker Logging</h1>
 
       <div className="join join-vertical lg:join-horizontal">
         <button

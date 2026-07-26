@@ -10,7 +10,7 @@ import SuccessAlert from "../../../utils/Alerts/SuccessAlert";
 import MacroMicroCalculator from "../../../components/Dashboard/Habit/MacroMicroCalculator";
 
 function HabitLogging() {
-    TitleChanger("Progress Pulse | Habit Logging");
+    TitleChanger("Progress Pulse | Habit Profile");
     const { setLoading } = useLoading();
     const dispatch = useDispatch();
 
@@ -274,7 +274,7 @@ function HabitLogging() {
 
             <h1 className="text-2xl font-bold flex items-center gap-2 mb-6">
                 <UserCheck size={26} />
-                Habit Logging
+                Habit Profile
             </h1>
 
             <div className="bg-base-300 rounded-xl p-6 shadow-md">

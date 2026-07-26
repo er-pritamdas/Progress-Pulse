@@ -335,6 +335,19 @@ function HabitSettings() {
 
 
 
+  const isModalOrBlockerOpen = showModal || blocker.state === "blocked";
+
+  useEffect(() => {
+    if (isModalOrBlockerOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isModalOrBlockerOpen]);
+
   return (
     <div className="p-1">
 
@@ -344,9 +357,9 @@ function HabitSettings() {
 
       {/* Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/10 backdrop-blur-xs flex items-center justify-center z-50">
-          <div className="bg-base-200 rounded-xl p-6 w-[90%] max-w-md relative">
-            <button className="absolute top-2 right-2" onClick={() => setShowModal(false)}>
+        <div className="fixed inset-0 z-[999] bg-black/75 backdrop-blur-md flex items-start justify-center pt-16 sm:pt-18 pb-6 px-3 sm:px-6 overflow-hidden">
+          <div className="bg-base-200 rounded-3xl p-6 w-[90%] max-w-md relative border border-base-300 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+            <button className="absolute top-4 right-4 btn btn-sm btn-circle btn-ghost" onClick={() => setShowModal(false)}>
               <X size={20} />
             </button>
             <h3 className="text-xl font-semibold mb-2">{modalContent.title}</h3>
@@ -357,8 +370,8 @@ function HabitSettings() {
 
       {/* Unsaved Changes Blocker Modal */}
       {blocker.state === "blocked" && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-base-100 rounded-xl p-6 w-[90%] max-w-md shadow-2xl border border-warning">
+        <div className="fixed inset-0 z-[999] bg-black/75 backdrop-blur-md flex items-start justify-center pt-16 sm:pt-18 pb-6 px-3 sm:px-6 overflow-hidden">
+          <div className="bg-base-100 rounded-3xl p-6 w-[90%] max-w-md shadow-2xl border border-warning animate-in fade-in zoom-in-95 duration-200">
             <h3 className="text-xl font-bold mb-2 text-warning flex items-center gap-2">
               <Info size={24} /> Unsaved Changes
             </h3>

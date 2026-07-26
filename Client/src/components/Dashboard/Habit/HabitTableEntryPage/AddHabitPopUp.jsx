@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from "react";
+import { Utensils, Loader2 } from "lucide-react";
+import axiosInstance from "../../../../Context/AxiosInstance";
 
 const AddHabitPopUp = ({
   isOpen,
@@ -18,6 +20,36 @@ const AddHabitPopUp = ({
     selfcare: "",
     mood: "",
   });
+
+  const [isCalculatingFood, setIsCalculatingFood] = useState(false);
+  const [foodCalcMsg, setFoodCalcMsg] = useState("");
+
+  const handleCalculateFromFood = async () => {
+    if (!formData.date) return;
+    try {
+      setIsCalculatingFood(true);
+      setFoodCalcMsg("");
+      const res = await axiosInstance.get("/v1/dashboard/habit/food/log", {
+        params: { date: formData.date },
+      });
+      const totalCals = res.data?.data?.summary?.totalCalories;
+      if (totalCals !== undefined && totalCals !== null) {
+        setFormData((prev) => ({ ...prev, intake: totalCals }));
+        setFoodCalcMsg(`Fetched ${totalCals} kcal from Food Logging!`);
+        setTimeout(() => setFoodCalcMsg(""), 3500);
+      } else {
+        setFormData((prev) => ({ ...prev, intake: 0 }));
+        setFoodCalcMsg("No food logged for this date (0 kcal).");
+        setTimeout(() => setFoodCalcMsg(""), 3500);
+      }
+    } catch (err) {
+      console.error("Failed to calculate calories from food logging", err);
+      setFoodCalcMsg("Failed to fetch food logs.");
+      setTimeout(() => setFoodCalcMsg(""), 3500);
+    } finally {
+      setIsCalculatingFood(false);
+    }
+  };
 
   useEffect(() => {
     if (isOpen && settings) {
@@ -52,11 +84,22 @@ const AddHabitPopUp = ({
     onClose();
   };
 
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/10 backdrop-blur-xs flex justify-center items-center z-50 mt-10">
-      <div className="bg-base-200 p-6 rounded-xl shadow-lg w-[90%] max-w-2xl">
+    <div className="fixed inset-0 z-[999] bg-black/75 backdrop-blur-md flex items-start justify-center pt-16 sm:pt-18 pb-6 px-3 sm:px-6 overflow-hidden">
+      <div className="bg-base-200 p-6 rounded-3xl shadow-2xl w-full max-w-2xl max-h-[calc(100vh-80px)] flex flex-col overflow-y-auto border border-base-300 animate-in fade-in zoom-in-95 duration-200">
         <h2 className="text-2xl font-bold text-center">
           Add New Habit Entry
         </h2>
@@ -207,7 +250,23 @@ const AddHabitPopUp = ({
 
           {/* Intake */}
           <fieldset className="fieldset">
-            <legend className="fieldset-legend">Calorie Intake</legend>
+            <div className="flex flex-wrap justify-between items-center mb-1 gap-1">
+              <legend className="fieldset-legend mb-0">Calorie Intake</legend>
+              <button
+                type="button"
+                className="btn btn-xs btn-outline btn-primary gap-1 rounded-lg"
+                onClick={handleCalculateFromFood}
+                disabled={isCalculatingFood}
+                title="Automatically calculate total logged calories from Food Logging for this date"
+              >
+                {isCalculatingFood ? (
+                  <Loader2 size={12} className="animate-spin" />
+                ) : (
+                  <Utensils size={12} />
+                )}
+                <span>Calculate from Food Logging</span>
+              </button>
+            </div>
             <label className="input input-bordered flex items-center gap-2">
               <input
                 name="intake"
@@ -222,9 +281,16 @@ const AddHabitPopUp = ({
               />
               <span className="label">Kcal</span>
             </label>
-            <p className="label mt-1 text-xs text-gray-400">
-              Required – Total calorie intake today.
-            </p>
+            <div className="flex justify-between items-center mt-1">
+              <p className="label text-xs text-gray-400">
+                Required – Total calorie intake today.
+              </p>
+              {foodCalcMsg && (
+                <span className="text-[11px] font-bold text-success animate-in fade-in">
+                  {foodCalcMsg}
+                </span>
+              )}
+            </div>
           </fieldset>
 
           {/* Selfcare */}

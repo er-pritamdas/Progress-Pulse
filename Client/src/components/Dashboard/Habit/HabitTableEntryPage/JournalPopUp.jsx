@@ -62,11 +62,22 @@ const JournalPopUp = ({
     }, 0);
   };
 
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex justify-center items-center z-[1000] p-4">
-      <div className="bg-base-100 rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col overflow-hidden max-h-[90vh] animate-scale-up">
+    <div className="fixed inset-0 z-[999] bg-black/75 backdrop-blur-md flex items-start justify-center pt-16 sm:pt-18 pb-6 px-3 sm:px-6 overflow-hidden">
+      <div className="bg-base-100 rounded-3xl shadow-2xl w-full max-w-2xl flex flex-col overflow-hidden max-h-[calc(100vh-80px)] border border-base-300 animate-in fade-in zoom-in-95 duration-200">
         
         {/* Header */}
         <div className="bg-base-200 border-b border-base-300 p-4 flex justify-between items-center">
