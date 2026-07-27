@@ -212,8 +212,10 @@ function DailyNutrientsModal({ isOpen, onClose, selectedDate, data, calorieTarge
         } else if (n.id === "glycemicIndex" || n.id === "glycemicLoad") {
           const num = parseFloat(String(rawVal).replace(/[^0-9.]/g, ""));
           if (!isNaN(num) && num > totals[n.id]) totals[n.id] = num;
+        } else if (["calories", "protein", "carbohydrates", "fat", "fiber", "sugar"].includes(n.id) && log[n.id] !== undefined) {
+          totals[n.id] += Number(log[n.id]) || 0;
         } else if (typeof rawVal === "number") {
-          totals[n.id] += rawVal;
+          totals[n.id] += rawVal * servings;
         } else {
           const num = parseFloat(String(rawVal).replace(/[^0-9.]/g, ""));
           if (!isNaN(num)) totals[n.id] += num * servings;

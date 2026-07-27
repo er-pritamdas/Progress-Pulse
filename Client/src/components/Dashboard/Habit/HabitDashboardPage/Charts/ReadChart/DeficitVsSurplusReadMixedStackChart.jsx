@@ -42,18 +42,9 @@ const DeficitVsSurplusReadMixedStackChart = ({ habitData, readMin }) => {
             background: "transparent",
 
             toolbar: {
-                show: true,
-                tools: {
-                    download: false,
-                    selection: true,
-                    zoom: true,
-                    zoomin: true,
-                    zoomout: true,
-                    pan: true,
-                    reset: true,
-                },
+                show: false,
             },
-            zoom: { enabled: true },
+            zoom: { enabled: false },
         },
 
         stroke: {

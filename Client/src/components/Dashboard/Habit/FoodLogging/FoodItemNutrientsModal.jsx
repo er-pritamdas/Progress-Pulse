@@ -5,32 +5,41 @@ import NutrientWikiModal from "./NutrientWikiModal";
 
 const formatServingCalc = (item) => {
   if (!item) return "";
-  const servingSize = Number(item.servingSize) || 1;
+  const foodObj = item.foodId || item;
+  const servingSize = Number(item.servingSize || foodObj.servingSize) || 1;
   const servings = Number(item.servings) || 1;
-  const total = servingSize * servings;
   const fmtNum = (num) => (Math.round(num * 100) / 100).toString();
-
-  const rawUnit = (item.unitType || "g").trim();
+  const rawUnit = (item.unitType || foodObj.unitType || "g").trim();
 
   const match = rawUnit.match(/^(\d+(?:\.\d+)?)\s*(.*)$/);
   if (match) {
     const unitNum = parseFloat(match[1]);
     const unitText = match[2].trim();
-    if (unitText) {
-      const space = unitText.length > 2 ? " " : "";
-      const baseLabel = `${fmtNum(unitNum)}${space}${unitText}`;
-      const totalLabel = `${fmtNum(total)}${space}${unitText}`;
-      return `${baseLabel} * ${fmtNum(servings)} = ${totalLabel}`;
+    const totalUnitQty = unitNum * servings;
+    const totalGrams = servingSize * servings;
+    const space = unitText.length > 0 ? " " : "";
+
+    if (unitText.toLowerCase() === "g" || unitText.toLowerCase() === "ml") {
+      if (servings === 1) return `${fmtNum(unitNum)}${space}${unitText}`;
+      return `${fmtNum(unitNum)}${space}${unitText} × ${fmtNum(servings)} = ${fmtNum(totalUnitQty)}${space}${unitText}`;
     }
-    const baseLabel = `${fmtNum(unitNum)}`;
-    const totalLabel = `${fmtNum(total)}`;
-    return `${baseLabel} * ${fmtNum(servings)} = ${totalLabel}`;
+
+    const baseGramLabel = servingSize && servingSize !== unitNum ? ` (${fmtNum(servingSize)} g)` : "";
+    const totalGramLabel = servingSize && servingSize !== unitNum ? ` (${fmtNum(totalGrams)} g)` : "";
+
+    if (servings === 1) {
+      return `${fmtNum(unitNum)}${space}${unitText}${baseGramLabel}`;
+    }
+    return `${fmtNum(unitNum)}${space}${unitText}${baseGramLabel} × ${fmtNum(servings)} = ${fmtNum(totalUnitQty)}${space}${unitText}${totalGramLabel}`;
   }
 
+  const totalGrams = servingSize * servings;
   const space = rawUnit.length > 2 ? " " : "";
-  const baseLabel = `${fmtNum(servingSize)}${space}${rawUnit}`;
-  const totalLabel = `${fmtNum(total)}${space}${rawUnit}`;
-  return `${baseLabel} * ${fmtNum(servings)} = ${totalLabel}`;
+
+  if (servings === 1) {
+    return `${fmtNum(servingSize)}${space}${rawUnit}`;
+  }
+  return `${fmtNum(servingSize)}${space}${rawUnit} × ${fmtNum(servings)} = ${fmtNum(totalGrams)}${space}${rawUnit}`;
 };
 
 function FoodItemNutrientsModal({ isOpen, onClose, foodItem }) {
@@ -51,7 +60,7 @@ function FoodItemNutrientsModal({ isOpen, onClose, foodItem }) {
   if (!isOpen || !foodItem) return null;
 
   const foodObj = foodItem.foodId || foodItem;
-  const servings = foodItem.servings || 1;
+  const servings = Number(foodItem.servings) || 1;
   const totalWeight = (foodItem.servingSize || foodObj.servingSize || 100) * servings;
   const unit = foodItem.unitType || foodObj.unitType || "g";
 
@@ -62,24 +71,20 @@ function FoodItemNutrientsModal({ isOpen, onClose, foodItem }) {
     }
 
     if (n.id === "netCarbs") {
-      const carbs = foodItem.carbohydrates !== undefined ? foodItem.carbohydrates : (foodObj?.carbohydrates || 0);
-      const fiber = foodItem.fiber !== undefined ? foodItem.fiber : (foodObj?.fiber || 0);
+      const carbsRaw = foodItem.carbohydrates !== undefined ? foodItem.carbohydrates : (foodObj?.carbohydrates || 0);
+      const fiberRaw = foodItem.fiber !== undefined ? foodItem.fiber : (foodObj?.fiber || 0);
+      const carbs = (typeof carbsRaw === "number" ? carbsRaw : parseFloat(String(carbsRaw).replace(/[^0-9.]/g, "")) || 0) * servings;
+      const fiber = (typeof fiberRaw === "number" ? fiberRaw : parseFloat(String(fiberRaw).replace(/[^0-9.]/g, "")) || 0) * servings;
       return Math.max(0, parseFloat((carbs - fiber).toFixed(1)));
     }
 
-    if (n.id === "calories" || n.id === "water") {
-      if (typeof rawVal === "number") return Math.round(rawVal);
-      const num = parseFloat(String(rawVal).replace(/[^0-9.]/g, ""));
-      return !isNaN(num) ? Math.round(num * servings) : "0";
-    }
-
-    if (typeof rawVal === "number") {
-      return parseFloat(rawVal.toFixed(1));
-    }
-
-    const num = parseFloat(String(rawVal).replace(/[^0-9.]/g, ""));
+    const num = typeof rawVal === "number" ? rawVal : parseFloat(String(rawVal).replace(/[^0-9.]/g, ""));
     if (!isNaN(num)) {
-      return parseFloat((num * servings).toFixed(1));
+      const scaled = num * servings;
+      if (n.id === "calories" || n.id === "water") {
+        return Math.round(scaled);
+      }
+      return parseFloat(scaled.toFixed(1));
     }
 
     return rawVal || "0";
@@ -102,6 +107,9 @@ function FoodItemNutrientsModal({ isOpen, onClose, foodItem }) {
             <div>
               <h2 className="text-xl font-bold flex items-center gap-2">
                 {foodItem.foodName || foodObj.name}
+                <span className="badge badge-primary badge-sm font-extrabold">
+                  {servings} Serving{servings !== 1 ? "s" : ""}
+                </span>
               </h2>
               <p className="text-xs text-base-content/70">
                 Logged Portion: <span className="font-bold text-primary">{formatServingCalc(foodItem)}</span> • {foodObj.brand || "Generic"}

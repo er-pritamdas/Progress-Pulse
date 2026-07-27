@@ -222,6 +222,7 @@ export const getDailyFoodLogs = async (req, res) => {
     logs.forEach((log) => {
       let rawMeal = log.mealType || "Breakfast";
       let meal = rawMeal.charAt(0).toUpperCase() + rawMeal.slice(1).toLowerCase();
+      if (meal === "Others") meal = "Other";
       if (!["Breakfast", "Lunch", "Dinner", "Snacks", "Other"].includes(meal)) {
         meal = "Breakfast";
       }
@@ -262,10 +263,142 @@ export const getDailyFoodLogs = async (req, res) => {
   }
 };
 
+// GET /api/v1/dashboard/habit/food/range-logs
+export const getFoodLogsDateRange = async (req, res) => {
+  try {
+    const userId = req.user?._id;
+    const { startDate, endDate } = req.query;
+
+    if (!startDate || !endDate) {
+      return res.status(400).json({
+        success: false,
+        message: "startDate and endDate are required (YYYY-MM-DD)",
+      });
+    }
+
+    const cleanStart = String(startDate).split("T")[0].trim();
+    const cleanEnd = String(endDate).split("T")[0].trim();
+
+    const parseToYYYYMMDD = (raw) => {
+      if (!raw) return "";
+      const str = String(raw).trim();
+      if (str.includes("T")) return str.split("T")[0].trim();
+      if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
+      const d = new Date(str);
+      if (isNaN(d.getTime())) return "";
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, "0");
+      const dd = String(d.getDate()).padStart(2, "0");
+      return `${yyyy}-${mm}-${dd}`;
+    };
+
+    const allLogs = await FoodLog.find({ userId })
+      .populate({
+        path: "foodId",
+        model: FoodDatabase,
+      })
+      .sort({ createdAt: 1 });
+
+    const logs = allLogs.filter((log) => {
+      const normDate = parseToYYYYMMDD(log.date);
+      return normDate && normDate >= cleanStart && normDate <= cleanEnd;
+    });
+
+    console.log(`🔍 [getFoodLogsDateRange] User: ${userId} | Range: ${cleanStart} to ${cleanEnd} | Found ${logs.length} / ${allLogs.length} logs`);
+
+    // Group logs by date
+    const groupedByDate = {};
+    logs.forEach((log) => {
+      const dKey = parseToYYYYMMDD(log.date);
+      if (dKey) {
+        if (!groupedByDate[dKey]) {
+          groupedByDate[dKey] = [];
+        }
+        groupedByDate[dKey].push(log);
+      }
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Date range food logs retrieved successfully",
+      data: {
+        startDate: cleanStart,
+        endDate: cleanEnd,
+        totalLogs: logs.length,
+        logs,
+        groupedByDate,
+      },
+    });
+  } catch (error) {
+    console.error("❌ Error in getFoodLogsDateRange:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Failed to fetch date range food logs",
+    });
+  }
+};
+
 // POST /api/v1/dashboard/habit/food/log
 export const logFoodItem = async (req, res) => {
   try {
     const userId = req.user?._id;
+
+    // Support batch logging via `items` array
+    if (req.body.items && Array.isArray(req.body.items) && req.body.items.length > 0) {
+      const createdLogs = [];
+      for (const itemPayload of req.body.items) {
+        let { date, mealType = "Breakfast", foodId, servings = 1 } = itemPayload;
+
+        if (!date || !foodId) continue;
+
+        let normalizedMeal = mealType || "Breakfast";
+        normalizedMeal = normalizedMeal.charAt(0).toUpperCase() + normalizedMeal.slice(1).toLowerCase();
+        if (normalizedMeal === "Others") normalizedMeal = "Other";
+        if (!["Breakfast", "Lunch", "Dinner", "Snacks", "Other"].includes(normalizedMeal)) {
+          normalizedMeal = "Breakfast";
+        }
+
+        const food = await FoodDatabase.findById(foodId);
+        if (!food) continue;
+
+        const multiplier = Number(servings) || 1;
+
+        let cleanDate = String(date).split("T")[0].trim();
+        const dObj = new Date(cleanDate);
+        if (!isNaN(dObj.getTime())) {
+          const yyyy = dObj.getFullYear();
+          const mm = String(dObj.getMonth() + 1).padStart(2, "0");
+          const dd = String(dObj.getDate()).padStart(2, "0");
+          cleanDate = `${yyyy}-${mm}-${dd}`;
+        }
+
+        const newLog = await FoodLog.create({
+          userId,
+          date: cleanDate,
+          mealType: normalizedMeal,
+          foodId: food._id,
+          foodName: food.name,
+          servings: multiplier,
+          unitType: food.unitType,
+          servingSize: food.servingSize,
+          calories: Math.round((food.calories || 0) * multiplier),
+          protein: parseFloat(((food.protein || 0) * multiplier).toFixed(1)),
+          carbohydrates: parseFloat(((food.carbohydrates || 0) * multiplier).toFixed(1)),
+          fat: parseFloat(((food.fat || 0) * multiplier).toFixed(1)),
+          fiber: parseFloat(((food.fiber || 0) * multiplier).toFixed(1)),
+          sugar: parseFloat(((food.sugar || 0) * multiplier).toFixed(1)),
+        });
+
+        createdLogs.push(newLog);
+      }
+
+      return res.status(201).json({
+        success: true,
+        message: `${createdLogs.length} food item(s) logged successfully`,
+        data: createdLogs,
+      });
+    }
+
     let { date, mealType = "Breakfast", foodId, servings = 1 } = req.body;
 
     console.log("➕ [logFoodItem] Received payload:", { date, mealType, foodId, servings, userId });
@@ -279,6 +412,7 @@ export const logFoodItem = async (req, res) => {
 
     let normalizedMeal = mealType || "Breakfast";
     normalizedMeal = normalizedMeal.charAt(0).toUpperCase() + normalizedMeal.slice(1).toLowerCase();
+    if (normalizedMeal === "Others") normalizedMeal = "Other";
     if (!["Breakfast", "Lunch", "Dinner", "Snacks", "Other"].includes(normalizedMeal)) {
       normalizedMeal = "Breakfast";
     }
@@ -294,9 +428,18 @@ export const logFoodItem = async (req, res) => {
 
     const multiplier = Number(servings) || 1;
 
+    let cleanDate = String(date).split("T")[0].trim();
+    const dObj = new Date(cleanDate);
+    if (!isNaN(dObj.getTime())) {
+      const yyyy = dObj.getFullYear();
+      const mm = String(dObj.getMonth() + 1).padStart(2, "0");
+      const dd = String(dObj.getDate()).padStart(2, "0");
+      cleanDate = `${yyyy}-${mm}-${dd}`;
+    }
+
     const newLog = await FoodLog.create({
       userId,
-      date,
+      date: cleanDate,
       mealType: normalizedMeal,
       foodId: food._id,
       foodName: food.name,
@@ -350,7 +493,8 @@ export const updateFoodLog = async (req, res) => {
     }
 
     if (mealType) {
-      const normalizedMeal = mealType.charAt(0).toUpperCase() + mealType.slice(1).toLowerCase();
+      let normalizedMeal = mealType.charAt(0).toUpperCase() + mealType.slice(1).toLowerCase();
+      if (normalizedMeal === "Others") normalizedMeal = "Other";
       if (["Breakfast", "Lunch", "Dinner", "Snacks", "Other"].includes(normalizedMeal)) {
         log.mealType = normalizedMeal;
       }
@@ -407,6 +551,53 @@ export const deleteFoodLog = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: error.message || "Failed to delete food log",
+    });
+  }
+};
+
+// DELETE /api/v1/dashboard/habit/food/meal-category
+export const deleteMealCategoryLogs = async (req, res) => {
+  try {
+    const userId = req.user?._id;
+    const { date, mealType } = req.query;
+
+    if (!date || !mealType) {
+      return res.status(400).json({
+        success: false,
+        message: "Date and mealType are required",
+      });
+    }
+
+    let normalizedMeal = mealType.charAt(0).toUpperCase() + mealType.slice(1).toLowerCase();
+    if (normalizedMeal === "Others") normalizedMeal = "Other";
+
+    let cleanDate = String(date).split("T")[0].trim();
+    const dObj = new Date(cleanDate);
+    if (!isNaN(dObj.getTime())) {
+      const yyyy = dObj.getFullYear();
+      const mm = String(dObj.getMonth() + 1).padStart(2, "0");
+      const dd = String(dObj.getDate()).padStart(2, "0");
+      cleanDate = `${yyyy}-${mm}-${dd}`;
+    }
+
+    const result = await FoodLog.deleteMany({
+      userId,
+      date: cleanDate,
+      mealType: { $regex: new RegExp(`^${normalizedMeal}$`, "i") },
+    });
+
+    console.log(`🗑️ [deleteMealCategoryLogs] Deleted ${result.deletedCount} items for ${normalizedMeal} on ${cleanDate}`);
+
+    return res.status(200).json({
+      success: true,
+      message: `All ${normalizedMeal} items for ${cleanDate} deleted successfully`,
+      deletedCount: result.deletedCount,
+    });
+  } catch (error) {
+    console.error("❌ Error in deleteMealCategoryLogs:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Failed to delete meal category logs",
     });
   }
 };

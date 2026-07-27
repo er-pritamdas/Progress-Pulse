@@ -17,11 +17,12 @@ import WaterAnalysis from "../../../components/Dashboard/Habit/HabitDashboardPag
 import SleepAnalysis from "../../../components/Dashboard/Habit/HabitDashboardPage/Analysis/SleepAnalysis";
 import ReadAnalysis from "../../../components/Dashboard/Habit/HabitDashboardPage/Analysis/ReadAnalysis";
 
-import { Flame, Droplet, Moon, BookOpen, Smile, Heart, Book, ChevronDown, ChevronUp, Trophy } from "lucide-react";
+import { Flame, Droplet, Moon, BookOpen, Smile, Heart, Book, ChevronDown, ChevronUp, Trophy, Apple } from "lucide-react";
 import MoodAnalysis from "../../../components/Dashboard/Habit/HabitDashboardPage/Analysis/MoodAnalysis.jsx";
 import SelfCareAnalysis from "../../../components/Dashboard/Habit/HabitDashboardPage/Analysis/SelfCareAnalysis.jsx";
 import JournalAnalysis from "../../../components/Dashboard/Habit/HabitDashboardPage/Analysis/JournalAnalysis.jsx";
 import ScoreAnalysis from "../../../components/Dashboard/Habit/HabitDashboardPage/Analysis/ScoreAnalysis.jsx";
+import NutrientAnalysis from "../../../components/Dashboard/Habit/HabitDashboardPage/Analysis/NutrientAnalysis.jsx";
 
 function HabitDashboard() {
   TitleChanger("Progress Pulse | Habit Dashboard");
@@ -35,6 +36,7 @@ function HabitDashboard() {
   const [activeTab, setActiveTab] = useState('calorie');
   const [isOverviewOpen, setIsOverviewOpen] = useState(true);
 
+  const [nutrientCategory, setNutrientCategory] = useState("Macronutrients");
   const [waterMin, setWaterMin] = useState(0);
   const [waterMax, setWaterMax] = useState(100);
   const [sleepMin, setSleepMin] = useState(0);
@@ -48,6 +50,21 @@ function HabitDashboard() {
   const [basalMetabolicRate, setbasalMetabolicRate] = useState(0);
   const [moodList, setMoodList] = useState([]);
   const [selfCareList, setSelfCareList] = useState([]);
+
+  const DASHBOARD_TABS = [
+    { id: "calorie", label: "Calorie", icon: Flame, color: "text-error" },
+    { id: "water", label: "Water", icon: Droplet, color: "text-info" },
+    { id: "sleep", label: "Sleep", icon: Moon, color: "text-accent" },
+    { id: "read", label: "Read", icon: BookOpen, color: "text-warning" },
+    { id: "selfcare", label: "Self Care", icon: Heart, color: "text-secondary" },
+    { id: "mood", label: "Mood", icon: Smile, color: "text-accent" },
+    { id: "scores", label: "Scores", icon: Trophy, color: "text-amber-400" },
+    { id: "journal", label: "Journal", icon: Book, color: "text-info" },
+    { id: "nutrients", label: "Nutrients", icon: Apple, color: "text-success" },
+  ];
+
+  const activeTabObj = DASHBOARD_TABS.find((t) => t.id === activeTab) || DASHBOARD_TABS[0];
+  const ActiveIcon = activeTabObj.icon;
 
   // Format Date Function
   const formatDate = (dateString) => {
@@ -124,10 +141,96 @@ function HabitDashboard() {
       <div className="sticky top-[-20px] z-30 bg-opacity-90 backdrop-blur-md shadow-sm border-b border-base-300/30">
         {/* Top Row: Heading and Filter Controls */}
         <div className="flex items-center justify-between p-3 flex-wrap gap-3">
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            {/* <UserCheck size={26} /> */}
-            Habit Dashboard
-          </h1>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <div className="dropdown dropdown-bottom">
+              <div
+                tabIndex={0}
+                role="button"
+                className="btn btn-ghost text-lg font-bold p-0 min-h-0 h-auto hover:bg-base-200/70 px-2.5 py-1 rounded-xl flex items-center gap-2 transition-all border border-base-300/40 shadow-xs"
+              >
+                <ActiveIcon className={`${activeTabObj.color} w-5 h-5`} />
+                <span>{activeTabObj.label}</span>
+                <ChevronDown className="w-4 h-4 opacity-60 ml-0.5" />
+              </div>
+              <ul
+                tabIndex={0}
+                className="dropdown-content menu p-2 shadow-2xl bg-base-100/95 backdrop-blur-md rounded-2xl w-56 z-[100] mt-2 border border-base-300/50"
+              >
+                <li className="menu-title text-xs font-bold text-base-content/50 uppercase tracking-wider px-3 py-1">
+                  Select Dashboard
+                </li>
+                {DASHBOARD_TABS.map((tab) => {
+                  const Icon = tab.icon;
+                  const isActive = activeTab === tab.id;
+                  return (
+                    <li key={tab.id}>
+                      <button
+                        className={`flex items-center gap-3 py-2.5 px-3 rounded-xl transition-all font-medium ${
+                          isActive
+                            ? "bg-primary text-primary-content font-bold shadow-md"
+                            : "hover:bg-base-200"
+                        }`}
+                        onClick={() => {
+                          setActiveTab(tab.id);
+                          if (document.activeElement instanceof HTMLElement) {
+                            document.activeElement.blur();
+                          }
+                        }}
+                      >
+                        <Icon className={`w-4 h-4 ${isActive ? "text-primary-content" : tab.color}`} />
+                        <span>{tab.label}</span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+
+            <span className="text-lg font-bold text-base-content/80">Dashboard</span>
+
+            {activeTab === "nutrients" && (
+              <div className="flex items-center gap-1.5">
+                <span className="text-base font-medium text-base-content/60 px-0.5">for</span>
+                <div className="dropdown dropdown-bottom">
+                  <div
+                    tabIndex={0}
+                    role="button"
+                    className="btn btn-ghost text-lg font-bold p-0 min-h-0 h-auto hover:bg-base-200/70 px-2.5 py-1 rounded-xl flex items-center gap-1.5 transition-all border border-primary/30 shadow-xs text-primary"
+                  >
+                    <span>{nutrientCategory}</span>
+                    <ChevronDown className="w-4 h-4 opacity-60 ml-0.5" />
+                  </div>
+                  <ul
+                    tabIndex={0}
+                    className="dropdown-content menu p-2 shadow-2xl bg-base-100/95 backdrop-blur-md rounded-2xl w-52 z-[100] mt-2 border border-base-300/50"
+                  >
+                    <li className="menu-title text-xs font-bold text-base-content/50 uppercase tracking-wider px-3 py-1">
+                      Nutrient Category
+                    </li>
+                    {["Macronutrients", "Vitamins", "Trace Minerals", "Fatty Acids", "Others"].map((cat) => (
+                      <li key={cat}>
+                        <button
+                          className={`flex items-center justify-between py-2.5 px-3 rounded-xl transition-all font-medium ${
+                            nutrientCategory === cat
+                              ? "bg-primary text-primary-content font-bold shadow-md"
+                              : "hover:bg-base-200"
+                          }`}
+                          onClick={() => {
+                            setNutrientCategory(cat);
+                            if (document.activeElement instanceof HTMLElement) {
+                              document.activeElement.blur();
+                            }
+                          }}
+                        >
+                          <span>{cat}</span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            )}
+          </div>
 
           {/* Right: Quick Select (Year & Month) + From/To Date Pickers */}
           <div className="flex items-center gap-4 ml-auto flex-wrap">
@@ -218,64 +321,19 @@ function HabitDashboard() {
           </div>
         </div>
 
-        {/* Bottom Row: Analytics Tabs Section */}
-        <div className="px-3 pb-3 pt-1 flex items-center justify-start overflow-x-auto">
-          <div className="tabs tabs-boxed bg-base-100/50 backdrop-blur-sm shadow-sm p-1 gap-1">
-            <a
-              className={`tab tab-sm gap-1 transition-all duration-300 ${activeTab === 'calorie' ? 'tab-active btn btn-sm btn-soft btn-primary' : 'btn btn-sm btn-ghost'}`}
-              onClick={() => setActiveTab('calorie')}
-            >
-              <Flame size={14} /> Calorie
-            </a>
-            <a
-              className={`tab tab-sm gap-1 transition-all duration-300 ${activeTab === 'water' ? 'tab-active btn btn-sm btn-soft btn-info' : 'btn btn-sm btn-ghost'}`}
-              onClick={() => setActiveTab('water')}
-            >
-              <Droplet size={14} /> Water
-            </a>
-            <a
-              className={`tab tab-sm gap-1 transition-all duration-300 ${activeTab === 'sleep' ? 'tab-active btn btn-sm btn-soft btn-accent' : 'btn btn-sm btn-ghost'}`}
-              onClick={() => setActiveTab('sleep')}
-            >
-              <Moon size={14} /> Sleep
-            </a>
-            <a
-              className={`tab tab-sm gap-1 transition-all duration-300 ${activeTab === 'read' ? 'tab-active btn btn-sm btn-soft btn-warning' : 'btn btn-sm btn-ghost'}`}
-              onClick={() => setActiveTab('read')}
-            >
-              <BookOpen size={14} /> Read
-            </a>
-            <a
-              className={`tab tab-sm gap-1 transition-all duration-300 ${activeTab === 'selfcare' ? 'tab-active btn btn-sm btn-soft btn-secondary' : 'btn btn-sm btn-ghost'}`}
-              onClick={() => setActiveTab('selfcare')}
-            >
-              <Heart size={14} /> Self Care
-            </a>
-            <a
-              className={`tab tab-sm gap-1 transition-all duration-300 ${activeTab === 'mood' ? 'tab-active btn btn-sm btn-soft btn-accent' : 'btn btn-sm btn-ghost'}`}
-              onClick={() => setActiveTab('mood')}
-            >
-              <Smile size={14} /> Mood
-            </a>
-            <a
-              className={`tab tab-sm gap-1 transition-all duration-300 ${activeTab === 'scores' ? 'tab-active btn btn-sm btn-soft btn-warning' : 'btn btn-sm btn-ghost'}`}
-              onClick={() => setActiveTab('scores')}
-            >
-              <Trophy size={14} /> Scores
-            </a>
-            <a
-              className={`tab tab-sm gap-1 transition-all duration-300 ${activeTab === 'journal' ? 'tab-active btn btn-sm btn-soft btn-info' : 'btn btn-sm btn-ghost'}`}
-              onClick={() => setActiveTab('journal')}
-            >
-              <Book size={14} /> Journal
-            </a>
-          </div>
-        </div>
       </div>
 
 
       <div className="w-full h-full overflow-y-auto overflow-x-hidden p-6 bg-base-200">
-      {habitData.length > 0 ? (
+      {activeTab === 'nutrients' ? (
+        <NutrientAnalysis
+          habitData={habitData}
+          fromDate={fromDate}
+          toDate={toDate}
+          activeCategoryTab={nutrientCategory}
+          setActiveCategoryTab={setNutrientCategory}
+        />
+      ) : habitData.length > 0 ? (
         <>
             {/* Overview Section */}
             <section className="mb-12">

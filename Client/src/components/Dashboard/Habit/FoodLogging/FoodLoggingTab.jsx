@@ -40,37 +40,46 @@ import {
   ExternalLink,
   History,
   RotateCcw,
+  AlertTriangle,
 } from "lucide-react";
 
 const formatServingCalc = (log) => {
   if (!log) return "";
-  const servingSize = Number(log.servingSize) || 1;
+  const foodObj = log.foodId || log;
+  const servingSize = Number(log.servingSize || foodObj.servingSize) || 1;
   const servings = Number(log.servings) || 1;
-  const total = servingSize * servings;
   const fmtNum = (num) => (Math.round(num * 100) / 100).toString();
+  const rawUnit = (log.unitType || foodObj.unitType || "g").trim();
 
-  const rawUnit = (log.unitType || "g").trim();
-
-  // Check if rawUnit starts with a number like "100 g", "100g", or "1 Piece"
   const match = rawUnit.match(/^(\d+(?:\.\d+)?)\s*(.*)$/);
   if (match) {
     const unitNum = parseFloat(match[1]);
     const unitText = match[2].trim();
-    if (unitText) {
-      const space = unitText.length > 2 ? " " : "";
-      const baseLabel = `${fmtNum(unitNum)}${space}${unitText}`;
-      const totalLabel = `${fmtNum(total)}${space}${unitText}`;
-      return `${baseLabel} * ${fmtNum(servings)} = ${totalLabel}`;
+    const totalUnitQty = unitNum * servings;
+    const totalGrams = servingSize * servings;
+    const space = unitText.length > 0 ? " " : "";
+
+    if (unitText.toLowerCase() === "g" || unitText.toLowerCase() === "ml") {
+      if (servings === 1) return `${fmtNum(unitNum)}${space}${unitText}`;
+      return `${fmtNum(unitNum)}${space}${unitText} × ${fmtNum(servings)} = ${fmtNum(totalUnitQty)}${space}${unitText}`;
     }
-    const baseLabel = `${fmtNum(unitNum)}`;
-    const totalLabel = `${fmtNum(total)}`;
-    return `${baseLabel} * ${fmtNum(servings)} = ${totalLabel}`;
+
+    const baseGramLabel = servingSize && servingSize !== unitNum ? ` (${fmtNum(servingSize)} g)` : "";
+    const totalGramLabel = servingSize && servingSize !== unitNum ? ` (${fmtNum(totalGrams)} g)` : "";
+
+    if (servings === 1) {
+      return `${fmtNum(unitNum)}${space}${unitText}${baseGramLabel}`;
+    }
+    return `${fmtNum(unitNum)}${space}${unitText}${baseGramLabel} × ${fmtNum(servings)} = ${fmtNum(totalUnitQty)}${space}${unitText}${totalGramLabel}`;
   }
 
+  const totalGrams = servingSize * servings;
   const space = rawUnit.length > 2 ? " " : "";
-  const baseLabel = `${fmtNum(servingSize)}${space}${rawUnit}`;
-  const totalLabel = `${fmtNum(total)}${space}${rawUnit}`;
-  return `${baseLabel} * ${fmtNum(servings)} = ${totalLabel}`;
+
+  if (servings === 1) {
+    return `${fmtNum(servingSize)}${space}${rawUnit}`;
+  }
+  return `${fmtNum(servingSize)}${space}${rawUnit} × ${fmtNum(servings)} = ${fmtNum(totalGrams)}${space}${rawUnit}`;
 };
 
 const NUTRIENT_META_MAP = {
@@ -97,6 +106,10 @@ const NUTRIENT_META_MAP = {
 
 const getNutrientMeta = (id) => {
   if (NUTRIENT_META_MAP[id]) return NUTRIENT_META_MAP[id];
+  for (const cat of Object.values(NUTRIENT_CATEGORIES)) {
+    const found = cat.find((item) => item.id === id);
+    if (found) return { label: found.label, unit: found.unit };
+  }
   const formatted = id.charAt(0).toUpperCase() + id.slice(1);
   return { label: formatted, unit: "" };
 };
@@ -111,13 +124,47 @@ const getNutrientLogVal = (log, id) => {
     const net = log.netCarbs !== undefined ? log.netCarbs : Math.max(0, (log.carbohydrates || 0) - (log.fiber || 0));
     return `${net}g`;
   }
-  const val = log[id] !== undefined ? log[id] : (log.foodId?.[id] || 0);
+  if (id === "fiber") return `${log.fiber || 0}g`;
+  if (id === "sugar") return `${log.sugar || 0}g`;
+
   const meta = getNutrientMeta(id);
-  return `${val}${meta.unit ? meta.unit : ""}`;
+  const rawVal = log[id] !== undefined ? log[id] : (log.foodId?.[id] !== undefined ? log.foodId[id] : null);
+
+  if (rawVal === undefined || rawVal === null || rawVal === "" || rawVal === "N/A") {
+    return "N/A";
+  }
+
+  const servings = Number(log.servings) || 1;
+
+  if (typeof rawVal === "number") {
+    const total = Math.round(rawVal * servings * 100) / 100;
+    const unitToUse = meta.unit || "";
+    const space = unitToUse.length > 2 ? " " : "";
+    return `${total}${space}${unitToUse}`;
+  }
+
+  const strVal = String(rawVal).trim();
+  const prefix = strVal.startsWith("<") ? "<" : "";
+
+  // Strip duplicate concatenated unit labels if any raw values in DB have "mgmg", "gmg", etc.
+  const cleanStr = strVal.replace(/mgmg/gi, "mg").replace(/gmg/gi, "mg");
+
+  const numMatch = cleanStr.match(/[-+]?[0-9]*\.?[0-9]+/);
+  if (numMatch) {
+    const num = parseFloat(numMatch[0]);
+    const total = Math.round(num * servings * 100) / 100;
+    const unitToUse = meta.unit || cleanStr.replace(/^<|[-+]?[0-9]*\.?[0-9]+\s*/g, "").trim() || "";
+    const space = unitToUse.length > 2 ? " " : "";
+    return `${prefix}${total}${space}${unitToUse}`;
+  }
+
+  return cleanStr;
 };
 
 const getMealTotalNutrientVal = (mealLogs, id) => {
   if (!mealLogs || mealLogs.length === 0) return "0";
+  const meta = getNutrientMeta(id);
+
   const sum = mealLogs.reduce((acc, log) => {
     if (id === "calories") return acc + (Number(log.calories) || 0);
     if (id === "protein") return acc + (Number(log.protein) || 0);
@@ -130,13 +177,25 @@ const getMealTotalNutrientVal = (mealLogs, id) => {
       const net = log.netCarbs !== undefined ? log.netCarbs : Math.max(0, (log.carbohydrates || 0) - (log.fiber || 0));
       return acc + (Number(net) || 0);
     }
-    const val = log[id] !== undefined ? log[id] : (log.foodId?.[id] || 0);
-    return acc + (Number(val) || 0);
+    if (id === "fiber") return acc + (Number(log.fiber) || 0);
+    if (id === "sugar") return acc + (Number(log.sugar) || 0);
+
+    const isFromLog = log[id] !== undefined;
+    const rawVal = isFromLog ? log[id] : (log.foodId?.[id] !== undefined ? log.foodId[id] : null);
+    if (rawVal === undefined || rawVal === null || rawVal === "" || rawVal === "N/A") return acc;
+
+    const servings = Number(log.servings) || 1;
+    if (typeof rawVal === "number") return acc + (isFromLog ? rawVal : rawVal * servings);
+
+    const strVal = String(rawVal).trim();
+    const numMatch = strVal.match(/[-+]?[0-9]*\.?[0-9]+/);
+    if (numMatch) return acc + parseFloat(numMatch[0]) * (isFromLog ? 1 : servings);
+
+    return acc;
   }, 0);
 
   const rounded = Math.round(sum * 10) / 10;
-  const meta = getNutrientMeta(id);
-  return `${rounded} ${meta.unit || ""}`.trim();
+  return `${rounded}${meta.unit ? " " + meta.unit : ""}`;
 };
 
 function FoodLoggingTab() {
@@ -260,6 +319,26 @@ function FoodLoggingTab() {
   };
 
   const [copyingMeal, setCopyingMeal] = useState(null);
+  const [mealCategoryToDelete, setMealCategoryToDelete] = useState(null);
+  const [isDeleteCategoryModalOpen, setIsDeleteCategoryModalOpen] = useState(false);
+  const [deletingCategoryLoading, setDeletingCategoryLoading] = useState(false);
+
+  const confirmDeleteMealCategory = async () => {
+    if (!mealCategoryToDelete || !selectedDate) return;
+    try {
+      setDeletingCategoryLoading(true);
+      await axiosInstance.delete("/v1/dashboard/habit/food/meal-category", {
+        params: { date: selectedDate, mealType: mealCategoryToDelete },
+      });
+      fetchDailyLogs();
+    } catch (err) {
+      console.error("Failed to clear meal category", err);
+    } finally {
+      setDeletingCategoryLoading(false);
+      setIsDeleteCategoryModalOpen(false);
+      setMealCategoryToDelete(null);
+    }
+  };
 
   const getPreviousDateStr = (dateStr) => {
     if (!dateStr || typeof dateStr !== "string") return "";
@@ -757,8 +836,8 @@ function FoodLoggingTab() {
           allLoggedItems.forEach((log) => {
             const servings = log.servings || 1;
             const foodObj = log.foodId || log;
-            let val = log[cardId];
-            if (val === undefined || val === null) val = foodObj ? foodObj[cardId] : 0;
+            const isFromLog = log[cardId] !== undefined;
+            let val = isFromLog ? log[cardId] : (foodObj ? foodObj[cardId] : 0);
 
             if (cardId === "netCarbs") {
               const carbs = log.carbohydrates !== undefined ? log.carbohydrates : (foodObj?.carbohydrates || 0);
@@ -775,10 +854,10 @@ function FoodLoggingTab() {
             } else if (cardId === "sugar") {
               totalVal += log.sugar !== undefined ? log.sugar : (foodObj?.sugar || 0);
             } else if (typeof val === "number") {
-              totalVal += val;
+              totalVal += isFromLog ? val : val * servings;
             } else {
               const num = parseFloat(String(val).replace(/[^0-9.]/g, ""));
-              if (!isNaN(num)) totalVal += num * servings;
+              if (!isNaN(num)) totalVal += num * (isFromLog ? 1 : servings);
             }
           });
 
@@ -956,6 +1035,20 @@ function FoodLoggingTab() {
                 </div>
 
                 <div className="flex items-center gap-2">
+                  {mealLogs.length > 0 && (
+                    <button
+                      className="btn btn-xs btn-ghost text-error hover:bg-error/10 border border-error/20 gap-1 text-xs font-semibold"
+                      title={`Delete all ${mealType} items at once`}
+                      onClick={() => {
+                        setMealCategoryToDelete(mealType);
+                        setIsDeleteCategoryModalOpen(true);
+                      }}
+                    >
+                      <Trash2 size={13} />
+                      <span className="hidden sm:inline">Clear {mealType}</span>
+                    </button>
+                  )}
+
                   <button
                     className="btn btn-xs btn-neutral btn-ghost border border-base-300 gap-1 text-xs"
                     title={`Copy all ${mealType} items from yesterday`}
@@ -1013,7 +1106,7 @@ function FoodLoggingTab() {
                               <div className="inline-flex join join-horizontal border border-base-300 rounded-lg overflow-hidden">
                                 <button
                                   className="join-item btn btn-xs btn-ghost px-2"
-                                  onClick={() => handleUpdateServings(log, -0.5)}
+                                  onClick={() => handleUpdateServings(log, -0.25)}
                                 >
                                   -
                                 </button>
@@ -1022,7 +1115,7 @@ function FoodLoggingTab() {
                                 </span>
                                 <button
                                   className="join-item btn btn-xs btn-ghost px-2"
-                                  onClick={() => handleUpdateServings(log, 0.5)}
+                                  onClick={() => handleUpdateServings(log, 0.25)}
                                 >
                                   +
                                 </button>
@@ -1171,6 +1264,67 @@ function FoodLoggingTab() {
         onClose={() => setSelectedWikiNutrient(null)}
         nutrient={selectedWikiNutrient}
       />
+
+      {/* Delete Entire Meal Category Confirmation Modal (Double Sure Popup) */}
+      {isDeleteCategoryModalOpen && mealCategoryToDelete && (() => {
+        const categoryLogs = data.meals[mealCategoryToDelete] || [];
+        const categoryCalories = categoryLogs.reduce((sum, item) => sum + item.calories, 0);
+
+        return (
+          <div className="fixed inset-0 z-[1000] bg-black/75 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
+            <div className="bg-base-200 rounded-3xl max-w-md w-full p-6 border border-base-300 shadow-2xl space-y-4">
+              <div className="flex items-center gap-3 text-error">
+                <div className="p-3 bg-error/10 rounded-2xl">
+                  <AlertTriangle size={28} />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-lg leading-tight">Clear All {mealCategoryToDelete}?</h3>
+                  <p className="text-xs text-base-content/60 mt-0.5">Are you double sure about this action?</p>
+                </div>
+              </div>
+
+              <div className="bg-base-100 p-4 rounded-2xl border border-base-300 text-xs space-y-2">
+                <p className="text-base-content/80">
+                  This will permanently remove <strong>all {categoryLogs.length} logged item(s)</strong> under{" "}
+                  <span className="badge badge-error badge-sm font-bold text-white">{mealCategoryToDelete}</span> for{" "}
+                  <strong>{selectedDate}</strong>.
+                </p>
+
+                <div className="pt-2 border-t border-base-200 flex justify-between items-center text-xs font-semibold">
+                  <span className="text-base-content/60">Total Calories to Clear:</span>
+                  <span className="text-error font-bold font-mono text-sm">{categoryCalories} kcal</span>
+                </div>
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  className="btn btn-sm btn-ghost flex-1 font-semibold"
+                  disabled={deletingCategoryLoading}
+                  onClick={() => {
+                    setIsDeleteCategoryModalOpen(false);
+                    setMealCategoryToDelete(null);
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="btn btn-sm btn-error text-white flex-1 font-bold gap-1.5 shadow-sm"
+                  disabled={deletingCategoryLoading}
+                  onClick={confirmDeleteMealCategory}
+                >
+                  {deletingCategoryLoading ? (
+                    <span className="loading loading-spinner loading-xs"></span>
+                  ) : (
+                    <>
+                      <Trash2 size={16} /> Yes, Delete All {mealCategoryToDelete}
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

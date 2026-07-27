@@ -46,18 +46,9 @@ const DeficitSurplusChart = ({ habitData, bmr }) => {
       stacked: true,
       background: "transparent",
       toolbar: {
-        show: true,
-        tools: {
-          download: false,
-          selection: true,
-          zoom: true,
-          zoomin: true,
-          zoomout: true,
-          pan: true,
-          reset: true,
-        },
+        show: false,
       },
-      zoom: { enabled: true },
+      zoom: { enabled: false },
     },
 
     // title: {

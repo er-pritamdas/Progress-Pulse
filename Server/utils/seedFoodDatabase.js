@@ -32,7 +32,11 @@ function extractNumber(val) {
 export async function seedFoodDatabase() {
   try {
     const count = await FoodDatabase.countDocuments({ isCustom: false });
-    // If we already have seeded items, check if we need to sync
+    if (count > 0) {
+      console.log(`ℹ️ Food database already contains ${count} items. Skipping auto-seeding.`);
+      return;
+    }
+
     const csvPath = path.join(process.cwd(), "..", "bin", "FOOD TRACKER - Food_Database.csv");
     let fallbackPath = path.join(process.cwd(), "bin", "FOOD TRACKER - Food_Database.csv");
 
@@ -69,6 +73,7 @@ export async function seedFoodDatabase() {
       const notes = (col[8] || "").replace(/^"(.*)"$/, "$1");
 
       const calories = extractNumber(col[9]);
+      if (!calories || calories <= 0) continue;
       const protein = extractNumber(col[10]);
       const carbohydrates = extractNumber(col[11]);
       const netCarbs = extractNumber(col[12]);

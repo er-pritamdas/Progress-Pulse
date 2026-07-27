@@ -13,9 +13,11 @@ import {
   getFoodDatabase,
   createCustomFood,
   getDailyFoodLogs,
+  getFoodLogsDateRange,
   logFoodItem,
   updateFoodLog,
   deleteFoodLog,
+  deleteMealCategoryLogs,
 } from "../../controllers/Habit-controllers/FoodLogging.controller.js";
 
 const router = Router();
@@ -44,7 +46,9 @@ router.route("/food/database").get(verifyToken, getFoodDatabase);
 router.route("/food/database").post(verifyToken, createCustomFood);
 
 router.route("/food/log").get(verifyToken, getDailyFoodLogs);
+router.route("/food/range-logs").get(verifyToken, getFoodLogsDateRange);
 router.route("/food/log").post(verifyToken, logFoodItem);
+router.route("/food/meal-category").delete(verifyToken, deleteMealCategoryLogs);
 router.route("/food/log/:id").put(verifyToken, updateFoodLog);
 router.route("/food/log/:id").delete(verifyToken, deleteFoodLog);
 

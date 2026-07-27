@@ -70,7 +70,7 @@ function CustomizeTableColumnsModal({ isOpen, onClose, tableNutrients, setTableN
                 </span>
               </h2>
               <p className="text-xs text-base-content/70">
-                Choose up to 5 nutrients to show as columns in your Breakfast, Lunch, Dinner tables.
+                Choose up to 5 nutrients to show as columns in your meal category tables.
               </p>
             </div>
           </div>

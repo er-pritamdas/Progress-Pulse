@@ -2,6 +2,28 @@ import React, { useState, useEffect } from "react";
 import axiosInstance from "../../../../Context/AxiosInstance";
 import { Edit3, X, Check, Utensils, AlertCircle } from "lucide-react";
 
+const formatFoodPortionLabel = (item) => {
+  if (!item) return "";
+  const foodObj = item.foodId || item;
+  const rawUnit = (item.unitType || foodObj.unitType || "g").trim();
+  const servingSize = Number(item.servingSize || foodObj.servingSize);
+  const match = rawUnit.match(/^(\d+(?:\.\d+)?)\s*(.*)$/);
+
+  if (match) {
+    const unitNum = parseFloat(match[1]);
+    const unitText = match[2].trim();
+    if (unitText.toLowerCase() === "g" || unitText.toLowerCase() === "ml") {
+      return `${unitNum} ${unitText}`;
+    }
+    if (servingSize && servingSize !== unitNum) {
+      return `${rawUnit} (${servingSize} g)`;
+    }
+    return rawUnit;
+  }
+
+  return `${servingSize} ${rawUnit}`;
+};
+
 const calculateTotalQuantityLabel = (foodLog, servingsCount) => {
   if (!foodLog) return "";
   const numServings = Number(servingsCount) || 1;
@@ -15,7 +37,17 @@ const calculateTotalQuantityLabel = (foodLog, servingsCount) => {
     const unitNum = parseFloat(match[1]);
     const unitText = match[2].trim();
     const totalQtyNum = unitNum * numServings;
+    const totalGrams = servingSize * numServings;
     const space = unitText.length > 0 ? " " : "";
+
+    if (unitText.toLowerCase() === "g" || unitText.toLowerCase() === "ml") {
+      return `${fmtNum(totalQtyNum)}${space}${unitText}`;
+    }
+
+    if (servingSize && servingSize !== unitNum) {
+      return `${fmtNum(totalQtyNum)}${space}${unitText} (${fmtNum(totalGrams)} g)`;
+    }
+
     return `${fmtNum(totalQtyNum)}${space}${unitText}`;
   }
 
@@ -32,7 +64,10 @@ function EditFoodLogModal({ isOpen, onClose, log, onLogUpdated }) {
 
   useEffect(() => {
     if (isOpen && log) {
-      setMealType(log.mealType || "Breakfast");
+      let rawMeal = log.mealType || "Breakfast";
+      let normalized = rawMeal.charAt(0).toUpperCase() + rawMeal.slice(1).toLowerCase();
+      if (normalized === "Others") normalized = "Other";
+      setMealType(["Breakfast", "Lunch", "Dinner", "Snacks", "Other"].includes(normalized) ? normalized : "Breakfast");
       setServings(log.servings || 1);
       setError("");
     }
@@ -120,7 +155,7 @@ function EditFoodLogModal({ isOpen, onClose, log, onLogUpdated }) {
             <div>
               <h4 className="font-bold text-sm leading-tight">{log.foodName || foodObj.name}</h4>
               <p className="text-xs text-base-content/60 mt-0.5">
-                Base Portion: {baseServingSize} {log.unitType || foodObj.unitType || "g"}
+                Base Portion: {formatFoodPortionLabel(log)}
               </p>
             </div>
           </div>
@@ -154,7 +189,7 @@ function EditFoodLogModal({ isOpen, onClose, log, onLogUpdated }) {
                   <button
                     type="button"
                     className="join-item btn btn-sm btn-neutral px-3"
-                    onClick={() => handleServingStep(-0.5)}
+                    onClick={() => handleServingStep(-0.25)}
                   >
                     -
                   </button>
@@ -169,7 +204,7 @@ function EditFoodLogModal({ isOpen, onClose, log, onLogUpdated }) {
                   <button
                     type="button"
                     className="join-item btn btn-sm btn-neutral px-3"
-                    onClick={() => handleServingStep(0.5)}
+                    onClick={() => handleServingStep(0.25)}
                   >
                     +
                   </button>

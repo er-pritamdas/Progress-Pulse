@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import axiosInstance from "../../../../Context/AxiosInstance";
-import { Search, Plus, Utensils, Check, Sparkles, AlertCircle, Info, History, RotateCcw, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, Plus, Utensils, Check, Sparkles, AlertCircle, Info, History, RotateCcw, ChevronLeft, ChevronRight, Trash2, ShoppingBag, CheckCheck, Edit3 } from "lucide-react";
 import FoodItemNutrientsModal from "./FoodItemNutrientsModal";
 
 const getYesterdayDateStr = (dateStr) => {
@@ -18,6 +18,27 @@ const getYesterdayDateStr = (dateStr) => {
   return `${yyyy}-${mm}-${dd}`;
 };
 
+const formatFoodPortionLabel = (food) => {
+  if (!food) return "";
+  const rawUnit = (food.unitType || "g").trim();
+  const servingSize = Number(food.servingSize);
+  const match = rawUnit.match(/^(\d+(?:\.\d+)?)\s*(.*)$/);
+
+  if (match) {
+    const unitNum = parseFloat(match[1]);
+    const unitText = match[2].trim();
+    if (unitText.toLowerCase() === "g" || unitText.toLowerCase() === "ml") {
+      return `${unitNum} ${unitText}`;
+    }
+    if (servingSize && servingSize !== unitNum) {
+      return `${rawUnit} (${servingSize} g)`;
+    }
+    return rawUnit;
+  }
+
+  return `${servingSize} ${rawUnit}`;
+};
+
 const calculateTotalQuantityLabel = (food, servingsCount) => {
   if (!food) return "";
   const numServings = Number(servingsCount) || 1;
@@ -30,7 +51,17 @@ const calculateTotalQuantityLabel = (food, servingsCount) => {
     const unitNum = parseFloat(match[1]);
     const unitText = match[2].trim();
     const totalQtyNum = unitNum * numServings;
+    const totalGrams = servingSize * numServings;
     const space = unitText.length > 0 ? " " : "";
+
+    if (unitText.toLowerCase() === "g" || unitText.toLowerCase() === "ml") {
+      return `${fmtNum(totalQtyNum)}${space}${unitText}`;
+    }
+
+    if (servingSize && servingSize !== unitNum) {
+      return `${fmtNum(totalQtyNum)}${space}${unitText} (${fmtNum(totalGrams)} g)`;
+    }
+
     return `${fmtNum(totalQtyNum)}${space}${unitText}`;
   }
 
@@ -53,6 +84,8 @@ function LogFoodModal({ isOpen, onClose, selectedDate, initialMeal = "Breakfast"
   const [logLoading, setLogLoading] = useState(false);
   const [error, setError] = useState("");
 
+  const [stagedItems, setStagedItems] = useState([]);
+
   const [sourceTab, setSourceTab] = useState("database"); // "database" | "history"
   const [historyDate, setHistoryDate] = useState(() => getYesterdayDateStr(selectedDate));
   const [yesterdayLogs, setYesterdayLogs] = useState([]);
@@ -69,15 +102,17 @@ function LogFoodModal({ isOpen, onClose, selectedDate, initialMeal = "Breakfast"
 
   useEffect(() => {
     if (isOpen) {
-      const normalizedInitial = initialMeal
+      let normalizedInitial = initialMeal
         ? initialMeal.charAt(0).toUpperCase() + initialMeal.slice(1).toLowerCase()
         : "Breakfast";
+      if (normalizedInitial === "Others") normalizedInitial = "Other";
       setMealType(["Breakfast", "Lunch", "Dinner", "Snacks", "Other"].includes(normalizedInitial) ? normalizedInitial : "Breakfast");
       setSelectedFood(null);
       setServings(1);
       setSearchQuery("");
       setSelectedCategory("All");
       setError("");
+      setStagedItems([]);
       setSourceTab("database");
       setHistoryDate(getYesterdayDateStr(selectedDate));
     }
@@ -167,6 +202,82 @@ function LogFoodModal({ isOpen, onClose, selectedDate, initialMeal = "Breakfast"
     }
   };
 
+  const handleAddToQueue = () => {
+    if (!selectedFood) return;
+    const numServings = Number(servings) || 1;
+    const newItem = {
+      id: Date.now() + Math.random(),
+      food: selectedFood,
+      mealType,
+      servings: numServings,
+      calories: Math.round((selectedFood.calories || 0) * numServings),
+      protein: parseFloat(((selectedFood.protein || 0) * numServings).toFixed(1)),
+      carbohydrates: parseFloat(((selectedFood.carbohydrates || 0) * numServings).toFixed(1)),
+      fat: parseFloat(((selectedFood.fat || 0) * numServings).toFixed(1)),
+    };
+    setStagedItems((prev) => [...prev, newItem]);
+    setSelectedFood(null);
+    setServings(1);
+  };
+
+  const handleRemoveFromQueue = (id) => {
+    setStagedItems((prev) => prev.filter((item) => item.id !== id));
+  };
+
+  const handleUpdateQueueMealType = (id, newMealType) => {
+    setStagedItems((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, mealType: newMealType } : item))
+    );
+  };
+
+  const handleUpdateQueueServings = (id, delta) => {
+    setStagedItems((prev) =>
+      prev.map((item) => {
+        if (item.id !== id) return item;
+        const newServings = Math.max(0.1, parseFloat((item.servings + delta).toFixed(2)));
+        const calories = Math.round((item.food.calories || 0) * newServings);
+        return {
+          ...item,
+          servings: newServings,
+          calories,
+          protein: parseFloat(((item.food.protein || 0) * newServings).toFixed(1)),
+          carbohydrates: parseFloat(((item.food.carbohydrates || 0) * newServings).toFixed(1)),
+          fat: parseFloat(((item.food.fat || 0) * newServings).toFixed(1)),
+        };
+      })
+    );
+  };
+
+  const handleEditQueueItem = (item) => {
+    setSelectedFood(item.food);
+    setMealType(item.mealType);
+    setServings(item.servings);
+    setStagedItems((prev) => prev.filter((i) => i.id !== item.id));
+  };
+
+  const handleLogAllStaged = async () => {
+    if (stagedItems.length === 0) return;
+    try {
+      setLogLoading(true);
+      setError("");
+      const itemsPayload = stagedItems.map((item) => ({
+        date: selectedDate,
+        mealType: item.mealType,
+        foodId: item.food._id,
+        servings: item.servings,
+      }));
+
+      await axiosInstance.post("/v1/dashboard/habit/food/log", { items: itemsPayload });
+      setStagedItems([]);
+      if (onFoodLogged) onFoodLogged();
+      onClose();
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to log queued food items.");
+    } finally {
+      setLogLoading(false);
+    }
+  };
+
   const handleLogFood = async () => {
     if (!selectedFood) return;
     try {
@@ -203,78 +314,74 @@ function LogFoodModal({ isOpen, onClose, selectedDate, initialMeal = "Breakfast"
 
   return (
     <>
-      <div className="fixed inset-0 z-[999] bg-black/75 backdrop-blur-md flex items-start justify-center pt-16 sm:pt-20 pb-6 px-3 sm:px-6 overflow-hidden">
-        <div className="bg-base-200 rounded-3xl max-w-4xl w-full h-[580px] sm:h-[620px] max-h-[calc(100vh-100px)] border border-base-300 shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      <div className="fixed inset-0 z-[999] bg-black/75 backdrop-blur-md flex items-start justify-center pt-14 sm:pt-16 pb-6 px-3 sm:px-6 overflow-hidden">
+        <div className="bg-base-200 rounded-3xl max-w-5xl w-full h-[600px] sm:h-[640px] max-h-[calc(100vh-80px)] border border-base-300 shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
           {/* Header */}
-          <div className="p-5 sm:p-6 bg-base-300/80 border-b border-base-300 flex justify-between items-center shrink-0">
-            <h3 className="font-bold text-xl flex items-center gap-2">
-              <Utensils className="text-primary" size={22} /> Log Food ({selectedDate})
-            </h3>
+          <div className="p-4 border-b border-base-300 flex justify-between items-center shrink-0">
+            <div>
+              <h3 className="font-extrabold text-xl flex items-center gap-2">
+                <Utensils size={22} className="text-primary" /> Log Food
+              </h3>
+              <p className="text-xs text-base-content/70">
+                Search food database or pick from history to log into your daily intake.
+              </p>
+            </div>
             <button className="btn btn-sm btn-circle btn-ghost" onClick={onClose}>
               ✕
             </button>
           </div>
 
-          {/* Scrollable Body */}
-          <div className="p-5 sm:p-6 flex-1 min-h-0 flex flex-col overflow-hidden">
+          {/* Modal Body */}
+          <div className="p-4 flex-1 min-h-0 flex flex-col overflow-hidden">
             {error && (
-              <div className="alert alert-error mb-4 text-sm py-2 px-3 flex items-center gap-2 shrink-0">
-                <AlertCircle size={16} />
+              <div className="alert alert-error text-xs py-2 px-3 mb-3 flex items-center gap-2 shrink-0">
+                <AlertCircle size={14} />
                 <span>{error}</span>
               </div>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-6 flex-1 min-h-0 h-full">
-              {/* Left Column: Search & Food Selector (7 cols) */}
-              <div className="md:col-span-7 flex flex-col gap-3 h-full min-h-0">
-                {/* Source Selection Tabs */}
-                <div className="grid grid-cols-2 gap-2 bg-base-300 p-1 rounded-xl">
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-4 flex-1 min-h-0 overflow-hidden">
+              {/* Left Column: Search, Filter & List (6 cols) */}
+              <div className="md:col-span-6 flex flex-col gap-3 h-full min-h-0 overflow-hidden">
+                {/* Source Selection Tabs: Database vs Logged History */}
+                <div className="tabs tabs-boxed bg-base-100 p-1 rounded-xl border border-base-300 shrink-0">
                   <button
-                    type="button"
-                    className={`btn btn-xs sm:btn-sm rounded-lg flex items-center justify-center gap-1.5 font-bold transition-all ${
-                      sourceTab === "database"
-                        ? "btn-primary shadow-md"
-                        : "btn-ghost text-base-content/70"
+                    className={`tab tab-sm flex-1 font-bold text-xs gap-1.5 transition-all ${
+                      sourceTab === "database" ? "tab-active bg-primary text-primary-content shadow-xs" : ""
                     }`}
                     onClick={() => setSourceTab("database")}
                   >
-                    <Search size={14} />
-                    <span>Food Database</span>
+                    <Search size={14} /> Food Database
                   </button>
-
                   <button
-                    type="button"
-                    className={`btn btn-xs sm:btn-sm rounded-lg flex items-center justify-center gap-1.5 font-bold transition-all ${
-                      sourceTab === "history"
-                        ? "btn-primary shadow-md"
-                        : "btn-ghost text-base-content/70"
+                    className={`tab tab-sm flex-1 font-bold text-xs gap-1.5 transition-all ${
+                      sourceTab === "history" ? "tab-active bg-primary text-primary-content shadow-xs" : ""
                     }`}
                     onClick={() => setSourceTab("history")}
                   >
-                    <History size={14} />
-                    <span>Logged History</span>
+                    <History size={14} /> Logged History
                   </button>
                 </div>
 
                 {sourceTab === "database" ? (
                   <>
-                    {/* Search Input */}
-                    <div className="relative">
+                    {/* Search Bar */}
+                    <div className="relative shrink-0">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 opacity-50" size={16} />
                       <input
                         type="text"
-                        placeholder="Search food database (e.g. Rice, Egg, Oats)..."
-                        className="input input-bordered w-full pl-10 pr-4 input-md bg-base-100"
+                        className="input input-sm input-bordered w-full pl-9"
+                        placeholder="Search food by name, brand, or category..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                       />
-                      <Search className="absolute left-3 top-3.5 text-base-content/50" size={18} />
                     </div>
 
-                    {/* Category Pills with Side Navigation Arrows */}
-                    <div className="relative flex items-center gap-1 bg-base-100 p-1 rounded-xl border border-base-300">
+                    {/* Category Scroll Container */}
+                    <div className="relative shrink-0 flex items-center group">
                       <button
                         type="button"
-                        className="btn btn-xs btn-circle btn-ghost shrink-0 text-base-content/70 hover:bg-base-200"
+                        className="absolute left-0 z-10 btn btn-xs btn-circle btn-neutral shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
                         onClick={() => scrollCategories("left")}
                         title="Scroll Left"
                       >
@@ -283,17 +390,13 @@ function LogFoodModal({ isOpen, onClose, selectedDate, initialMeal = "Breakfast"
 
                       <div
                         ref={categoryListRef}
-                        className="flex gap-1.5 overflow-x-auto no-scrollbar scroll-smooth flex-1 py-0.5 text-xs"
-                        style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+                        className="flex gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden scroll-smooth w-full px-1"
                       >
                         {categories.map((cat) => (
                           <button
                             key={cat}
-                            type="button"
-                            className={`btn btn-xs rounded-full whitespace-nowrap font-medium transition-all ${
-                              selectedCategory === cat
-                                ? "btn-primary shadow-sm scale-105"
-                                : "btn-ghost hover:bg-base-200 text-base-content/80"
+                            className={`btn btn-xs rounded-lg whitespace-nowrap border-none transition-all ${
+                              selectedCategory === cat ? "btn-primary shadow-xs font-bold" : "btn-ghost bg-base-100 opacity-70"
                             }`}
                             onClick={() => setSelectedCategory(cat)}
                           >
@@ -304,7 +407,7 @@ function LogFoodModal({ isOpen, onClose, selectedDate, initialMeal = "Breakfast"
 
                       <button
                         type="button"
-                        className="btn btn-xs btn-circle btn-ghost shrink-0 text-base-content/70 hover:bg-base-200"
+                        className="absolute right-0 z-10 btn btn-xs btn-circle btn-neutral shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
                         onClick={() => scrollCategories("right")}
                         title="Scroll Right"
                       >
@@ -312,24 +415,16 @@ function LogFoodModal({ isOpen, onClose, selectedDate, initialMeal = "Breakfast"
                       </button>
                     </div>
 
-                    {/* Food List */}
+                    {/* Food Items List */}
                     <div className="flex-1 min-h-0 overflow-y-auto bg-base-100 rounded-xl p-2 border border-base-300 space-y-1.5">
                       {loading ? (
                         <div className="flex justify-center items-center h-full text-sm opacity-60">
-                          <span className="loading loading-spinner loading-md mr-2"></span> Searching foods...
+                          <span className="loading loading-spinner loading-md mr-2"></span> Loading foods...
                         </div>
                       ) : foods.length === 0 ? (
                         <div className="flex flex-col items-center justify-center h-full text-center p-4">
-                          <p className="text-sm opacity-70">No foods found for "{searchQuery}"</p>
-                          <button
-                            className="btn btn-sm btn-outline btn-primary mt-3 gap-1"
-                            onClick={() => {
-                              onClose();
-                              onOpenCustomFoodModal();
-                            }}
-                          >
-                            <Plus size={16} /> Add Custom Food Item
-                          </button>
+                          <Utensils size={32} className="opacity-40 mb-2" />
+                          <p className="text-sm opacity-70">No food items found.</p>
                         </div>
                       ) : (
                         foods.map((food) => {
@@ -354,7 +449,7 @@ function LogFoodModal({ isOpen, onClose, selectedDate, initialMeal = "Breakfast"
                                 <div className="text-xs text-base-content/70 flex items-center gap-2 mt-0.5">
                                   <span>{food.brand || "Generic"}</span>
                                   <span>•</span>
-                                  <span>{food.servingSize} {food.unitType}</span>
+                                  <span>{formatFoodPortionLabel(food)}</span>
                                 </div>
                               </div>
                               <div className="flex items-center gap-2">
@@ -471,7 +566,7 @@ function LogFoodModal({ isOpen, onClose, selectedDate, initialMeal = "Breakfast"
                                   )}
                                 </div>
                                 <div className="text-xs text-base-content/70 flex items-center gap-2 mt-0.5">
-                                  <span>{yLog.servings || 1} serving(s) ({yLog.servingSize * yLog.servings} {yLog.unitType})</span>
+                                  <span>{yLog.servings || 1} serving(s) ({formatFoodPortionLabel(yLog)})</span>
                                 </div>
                               </div>
                               <div className="flex items-center gap-2">
@@ -503,130 +598,295 @@ function LogFoodModal({ isOpen, onClose, selectedDate, initialMeal = "Breakfast"
                 </div>
               </div>
 
-              {/* Right Column: Logging Details (5 cols) */}
-              <div className="md:col-span-5 bg-base-100 rounded-xl p-4 border border-base-300 flex flex-col justify-between h-full min-h-0 overflow-y-auto">
-                {selectedFood ? (
-                  <div className="space-y-4">
-                    <div>
-                      <span className="text-xs font-semibold text-primary uppercase tracking-wider">
-                        Selected Food
-                      </span>
-                      <div className="flex justify-between items-center mt-0.5">
-                        <h4 className="font-bold text-lg leading-tight">{selectedFood.name}</h4>
-                        <button
-                          type="button"
-                          className="btn btn-ghost btn-xs text-info hover:bg-info/10 p-1 flex items-center gap-1"
-                          title="View Full Nutrition Details"
-                          onClick={() => setDetailFoodItem(selectedFood)}
-                        >
-                          <Info size={16} />
-                          <span className="text-xs">Details</span>
-                        </button>
-                      </div>
-                      <p className="text-xs text-base-content/70 mt-1">
-                        Base Serving: {selectedFood.servingSize} {selectedFood.unitType}
-                      </p>
-                    </div>
-
-                    {/* Meal Type Selection */}
-                    <div>
-                      <label className="text-xs font-medium block mb-1">Meal Category</label>
-                      <select
-                        className="select select-sm select-bordered w-full"
-                        value={mealType}
-                        onChange={(e) => setMealType(e.target.value)}
-                      >
-                        <option value="Breakfast">Breakfast</option>
-                        <option value="Lunch">Lunch</option>
-                        <option value="Dinner">Dinner</option>
-                        <option value="Snacks">Snacks</option>
-                        <option value="Other">Other</option>
-                      </select>
-                    </div>
-
-                    {/* Servings & Total Quantity Section */}
-                    <div className="space-y-2.5">
+              {/* Right Column: Logging Details & Batch Queue (6 cols) */}
+              <div className="md:col-span-6 bg-base-100 rounded-xl p-4 border border-base-300 flex flex-col justify-between h-full min-h-0 overflow-y-auto">
+                <div className="space-y-4 flex-1 min-h-0 overflow-y-auto">
+                  {selectedFood ? (
+                    <>
+                      <div className="space-y-3 bg-base-200/50 p-3 rounded-xl border border-base-300">
                       <div>
-                        <div className="flex justify-between items-center mb-1">
-                          <label className="text-xs font-semibold text-base-content/80">
-                            Number of Servings
-                          </label>
-                          <span className="text-[11px] font-semibold text-base-content/60">
-                            Base: {selectedFood.servingSize} {selectedFood.unitType}
-                          </span>
+                        <span className="text-[10px] font-bold text-primary uppercase tracking-wider">
+                          Selected Food
+                        </span>
+                        <div className="flex justify-between items-center mt-0.5">
+                          <h4 className="font-bold text-base leading-tight">{selectedFood.name}</h4>
+                          <button
+                            type="button"
+                            className="btn btn-ghost btn-xs text-info hover:bg-info/10 p-1 flex items-center gap-1"
+                            title="View Full Nutrition Details"
+                            onClick={() => setDetailFoodItem({ ...selectedFood, servings: Number(servings) || 1 })}
+                          >
+                            <Info size={14} />
+                            <span className="text-[11px]">Details</span>
+                          </button>
                         </div>
-                        <input
-                          type="number"
-                          step="0.25"
-                          min="0.1"
-                          className="input input-sm input-bordered w-full font-bold focus:outline-none"
-                          value={servings}
-                          onChange={(e) => setServings(e.target.value)}
-                        />
+                        <p className="text-xs text-base-content/70 mt-0.5">
+                          Base Serving: {formatFoodPortionLabel(selectedFood)}
+                        </p>
                       </div>
 
-                      {/* Prominent Live Total Quantity Badge */}
-                      <div className="bg-primary/10 border border-primary/30 p-2.5 rounded-xl flex items-center justify-between shadow-2xs">
-                        <span className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-1.5">
-                          <Utensils size={14} /> Total Quantity:
+                      {/* Meal Category & Servings */}
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="text-[11px] font-semibold block mb-1 text-base-content/80">Meal Category</label>
+                          <select
+                            className="select select-xs select-bordered w-full font-semibold"
+                            value={mealType}
+                            onChange={(e) => setMealType(e.target.value)}
+                          >
+                            <option value="Breakfast">Breakfast</option>
+                            <option value="Lunch">Lunch</option>
+                            <option value="Dinner">Dinner</option>
+                            <option value="Snacks">Snacks</option>
+                            <option value="Other">Other</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="text-[11px] font-semibold block mb-1 text-base-content/80">Servings</label>
+                          <input
+                            type="number"
+                            step="0.25"
+                            min="0.1"
+                            className="input input-xs input-bordered w-full font-bold focus:outline-none"
+                            value={servings}
+                            onChange={(e) => setServings(e.target.value)}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Live Total Quantity Badge */}
+                      <div className="bg-primary/10 border border-primary/20 p-2 rounded-lg flex items-center justify-between text-xs">
+                        <span className="font-bold text-primary flex items-center gap-1">
+                          <Utensils size={12} /> Total Quantity:
                         </span>
-                        <span className="text-sm font-black font-mono text-primary">
+                        <span className="font-black text-primary font-mono">
                           {calculateTotalQuantityLabel(selectedFood, servings)}
                         </span>
                       </div>
+
+                      {/* Action Buttons for selected food */}
+                      <div className="flex gap-2 pt-1">
+                        <button
+                          type="button"
+                          className="btn btn-xs btn-outline btn-primary flex-1 gap-1 font-bold"
+                          onClick={handleAddToQueue}
+                        >
+                          <Plus size={13} /> Add to Queue
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-xs btn-primary flex-1 gap-1 font-bold"
+                          disabled={logLoading}
+                          onClick={handleLogFood}
+                        >
+                          <Check size={13} /> Log Item Now
+                        </button>
+                      </div>
                     </div>
 
-                    {/* Calculated Macros Preview */}
-                    <div className="bg-base-200/60 p-3 rounded-lg space-y-1.5 text-xs">
-                      <div className="font-semibold text-xs text-base-content/80 mb-1 border-b border-base-300 pb-1">
-                        Calculated Nutrition:
+                      {/* Scaled Nutrition & Macros Card (Displayed when a food is selected) */}
+                      <div className="bg-base-200/60 p-3.5 rounded-xl border border-base-300 space-y-2.5 animate-in fade-in duration-200">
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="font-bold text-base-content/80 flex items-center gap-1.5">
+                          <Sparkles size={14} className="text-primary" /> Scaled Nutrition ({servings} serving{Number(servings) !== 1 ? 's' : ''})
+                        </span>
+                        <button
+                          type="button"
+                          className="btn btn-ghost btn-xs text-info gap-1 p-0.5 hover:bg-info/10"
+                          onClick={() => setDetailFoodItem({ ...selectedFood, servings: Number(servings) || 1 })}
+                        >
+                          <Info size={13} />
+                          <span className="text-[11px]">All 37 Nutrients</span>
+                        </button>
                       </div>
-                      <div className="flex justify-between font-bold text-sm text-primary">
-                        <span>Calories:</span>
-                        <span>{Math.round(selectedFood.calories * Number(servings))} kcal</span>
+
+                      <div className="grid grid-cols-3 gap-2 text-center text-xs">
+                        <div className="bg-base-100 p-2 rounded-lg border border-base-300">
+                          <div className="text-[10px] text-info font-bold uppercase tracking-wider">Protein</div>
+                          <div className="font-black text-sm text-info mt-0.5 font-mono">
+                            {((selectedFood.protein || 0) * (Number(servings) || 1)).toFixed(1)}g
+                          </div>
+                        </div>
+
+                        <div className="bg-base-100 p-2 rounded-lg border border-base-300">
+                          <div className="text-[10px] text-warning font-bold uppercase tracking-wider">Carbs</div>
+                          <div className="font-black text-sm text-warning mt-0.5 font-mono">
+                            {((selectedFood.carbohydrates || 0) * (Number(servings) || 1)).toFixed(1)}g
+                          </div>
+                        </div>
+
+                        <div className="bg-base-100 p-2 rounded-lg border border-base-300">
+                          <div className="text-[10px] text-success font-bold uppercase tracking-wider">Fats</div>
+                          <div className="font-black text-sm text-success mt-0.5 font-mono">
+                            {((selectedFood.fat || 0) * (Number(servings) || 1)).toFixed(1)}g
+                          </div>
+                        </div>
                       </div>
-                      <div className="flex justify-between">
-                        <span>Protein:</span>
-                        <span>{(selectedFood.protein * Number(servings)).toFixed(1)} g</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Carbs:</span>
-                        <span>{(selectedFood.carbohydrates * Number(servings)).toFixed(1)} g</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Fat:</span>
-                        <span>{(selectedFood.fat * Number(servings)).toFixed(1)} g</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Fiber:</span>
-                        <span>{(selectedFood.fiber * Number(servings)).toFixed(1)} g</span>
+
+                      <div className="grid grid-cols-3 gap-2 text-center text-[11px] pt-1.5 border-t border-base-300/50">
+                        <div className="bg-base-100/60 p-1.5 rounded-lg border border-base-300/60">
+                          <span className="text-base-content/60">Calories: </span>
+                          <span className="font-extrabold text-primary">{Math.round((selectedFood.calories || 0) * (Number(servings) || 1))} kcal</span>
+                        </div>
+                        <div className="bg-base-100/60 p-1.5 rounded-lg border border-base-300/60">
+                          <span className="text-base-content/60">Fiber: </span>
+                          <span className="font-extrabold text-emerald-500">{((selectedFood.fiber || 0) * (Number(servings) || 1)).toFixed(1)}g</span>
+                        </div>
+                        <div className="bg-base-100/60 p-1.5 rounded-lg border border-base-300/60">
+                          <span className="text-base-content/60">Sugar: </span>
+                          <span className="font-extrabold text-rose-400">{((selectedFood.sugar || 0) * (Number(servings) || 1)).toFixed(1)}g</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  </>
                 ) : (
-                  <div className="flex flex-col items-center justify-center h-full text-center p-4 text-base-content/50">
-                    <Utensils size={36} className="mb-2 opacity-40" />
-                    <p className="text-sm">Select a food from the list on the left to configure logging.</p>
-                  </div>
-                )}
+                  <>
+                    {/* Displayed when no food is currently selected in the upper panel */}
+                    {stagedItems.length > 0 ? (
+                      <div className="space-y-2 flex-1 min-h-0 flex flex-col">
+                        <div className="flex justify-between items-center px-1 shrink-0">
+                          <span className="font-bold text-xs flex items-center gap-1.5 text-base-content/90">
+                            <ShoppingBag size={14} className="text-secondary" /> Queued Foods ({stagedItems.length})
+                          </span>
+                          <span className="badge badge-sm badge-secondary font-bold">
+                            Total: {stagedItems.reduce((acc, item) => acc + item.calories, 0)} kcal
+                          </span>
+                        </div>
 
-                <div className="pt-4 border-t border-base-200 flex gap-2">
+                        <div className="flex-1 min-h-0 overflow-y-auto space-y-2 pr-1">
+                          {stagedItems.map((item) => (
+                            <div
+                              key={item.id}
+                              className="p-2.5 rounded-xl bg-base-200 border border-base-300 space-y-1.5 text-xs shadow-xs"
+                            >
+                              <div className="flex justify-between items-center gap-2">
+                                <div className="font-semibold text-sm truncate flex items-center gap-1.5 min-w-0">
+                                  <span className="truncate" title={item.food.name}>{item.food.name}</span>
+                                </div>
+
+                                <div className="flex items-center gap-1 shrink-0">
+                                  {/* Info Button: View full nutrient breakdown */}
+                                  <button
+                                    type="button"
+                                    className="btn btn-ghost btn-xs text-info p-1 hover:bg-info/10 rounded-md"
+                                    title="View Full Nutrition Details"
+                                    onClick={() => setDetailFoodItem(item.food)}
+                                  >
+                                    <Info size={13} />
+                                  </button>
+
+                                  {/* Inline Meal Category Selector */}
+                                  <select
+                                    className="select select-xs select-bordered font-semibold bg-base-100 text-[11px] py-0 px-1.5 h-6 rounded-lg"
+                                    value={item.mealType}
+                                    onChange={(e) => handleUpdateQueueMealType(item.id, e.target.value)}
+                                  >
+                                    <option value="Breakfast">Breakfast</option>
+                                    <option value="Lunch">Lunch</option>
+                                    <option value="Dinner">Dinner</option>
+                                    <option value="Snacks">Snacks</option>
+                                    <option value="Other">Other</option>
+                                  </select>
+
+                                  {/* Edit Button: Reloads into main editor */}
+                                  <button
+                                    type="button"
+                                    className="btn btn-ghost btn-xs text-info p-1 hover:bg-info/10 rounded-md"
+                                    title="Edit item in main panel"
+                                    onClick={() => handleEditQueueItem(item)}
+                                  >
+                                    <Edit3 size={13} />
+                                  </button>
+
+                                  {/* Delete Button */}
+                                  <button
+                                    type="button"
+                                    className="btn btn-ghost btn-xs text-error p-1 hover:bg-error/10 rounded-md"
+                                    title="Remove from Queue"
+                                    onClick={() => handleRemoveFromQueue(item.id)}
+                                  >
+                                    <Trash2 size={13} />
+                                  </button>
+                                </div>
+                              </div>
+
+                              {/* Servings Tweak & Live Macro calculation */}
+                              <div className="flex justify-between items-center text-[11px] pt-0.5 border-t border-base-300/50">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-base-content/70 font-medium">Servings:</span>
+                                  <div className="inline-flex join join-horizontal border border-base-300 rounded-md overflow-hidden bg-base-100">
+                                    <button
+                                      type="button"
+                                      className="join-item btn btn-xs btn-ghost px-1.5 h-5 min-h-0 text-xs font-bold"
+                                      onClick={() => handleUpdateQueueServings(item.id, -0.25)}
+                                    >
+                                      -
+                                    </button>
+                                    <span className="join-item px-1.5 font-extrabold text-xs flex items-center bg-base-100">
+                                      {item.servings}
+                                    </span>
+                                    <button
+                                      type="button"
+                                      className="join-item btn btn-xs btn-ghost px-1.5 h-5 min-h-0 text-xs font-bold"
+                                      onClick={() => handleUpdateQueueServings(item.id, 0.25)}
+                                    >
+                                      +
+                                    </button>
+                                  </div>
+                                </div>
+
+                                <div className="font-bold text-primary font-mono text-[11px] whitespace-nowrap shrink-0">
+                                  {calculateTotalQuantityLabel(item.food, item.servings)} ({item.calories} kcal)
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center h-full text-center p-4 text-base-content/50">
+                        <Utensils size={36} className="mb-2 opacity-40" />
+                        <p className="text-xs">Select a food from the left list to configure, inspect macros, or add to your batch queue.</p>
+                      </div>
+                    )}
+                  </>
+                )}
+                </div>
+
+                {/* Footer Buttons */}
+                <div className="pt-3 border-t border-base-200 flex gap-2 shrink-0">
                   <button className="btn btn-sm btn-ghost flex-1" onClick={onClose}>
                     Cancel
                   </button>
-                  <button
-                    className="btn btn-sm btn-primary flex-1 gap-1"
-                    disabled={!selectedFood || logLoading}
-                    onClick={handleLogFood}
-                  >
-                    {logLoading ? (
-                      <span className="loading loading-spinner loading-xs"></span>
-                    ) : (
-                      <>
-                        <Check size={16} /> Add to Log
-                      </>
-                    )}
-                  </button>
+                  {stagedItems.length > 0 ? (
+                    <button
+                      className="btn btn-sm btn-success text-white flex-1 gap-1.5 font-bold"
+                      disabled={logLoading}
+                      onClick={handleLogAllStaged}
+                    >
+                      {logLoading ? (
+                        <span className="loading loading-spinner loading-xs"></span>
+                      ) : (
+                        <>
+                          <CheckCheck size={16} /> Log All ({stagedItems.length}) Items
+                        </>
+                      )}
+                    </button>
+                  ) : (
+                    <button
+                      className="btn btn-sm btn-primary flex-1 gap-1 font-bold"
+                      disabled={!selectedFood || logLoading}
+                      onClick={handleLogFood}
+                    >
+                      {logLoading ? (
+                        <span className="loading loading-spinner loading-xs"></span>
+                      ) : (
+                        <>
+                          <Check size={16} /> Log Food
+                        </>
+                      )}
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
