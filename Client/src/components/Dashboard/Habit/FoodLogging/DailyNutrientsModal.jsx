@@ -19,6 +19,7 @@ import {
   Settings,
   ExternalLink,
   Info,
+  ListFilter,
 } from "lucide-react";
 import NutrientWikiModal from "./NutrientWikiModal";
 
@@ -40,15 +41,20 @@ export const NUTRIENT_CATEGORIES = {
     { id: "vitaminB3", label: "Vitamin B3", unit: "mg", color: "text-indigo-400", icon: Zap },
     { id: "vitaminB5", label: "Vitamin B5", unit: "mg", color: "text-sky-400", icon: Zap },
     { id: "vitaminB6", label: "Vitamin B6", unit: "mg", color: "text-violet-400", icon: Zap },
-    { id: "vitaminB7", label: "Vitamin B7 (Biotin)", unit: "mcg", color: "text-purple-400", icon: Zap },
-    { id: "vitaminB9", label: "Vitamin B9 (Folate)", unit: "mcg", color: "text-fuchsia-400", icon: Zap },
+    { id: "vitaminB7", label: "Vitamin B7", unit: "mcg", color: "text-purple-400", icon: Zap },
+    { id: "vitaminB9", label: "Vitamin B9", unit: "mcg", color: "text-fuchsia-400", icon: Zap },
     { id: "vitaminB12", label: "Vitamin B12", unit: "mcg", color: "text-pink-400", icon: Zap },
     { id: "vitaminC", label: "Vitamin C", unit: "mg", color: "text-orange-400", icon: Zap },
     { id: "vitaminD", label: "Vitamin D", unit: "IU", color: "text-yellow-400", icon: Zap },
     { id: "vitaminE", label: "Vitamin E", unit: "mg", color: "text-lime-400", icon: Zap },
     { id: "vitaminK", label: "Vitamin K", unit: "mcg", color: "text-green-400", icon: Zap },
   ],
-  "Trace Minerals": [
+  Minerals: [
+    { id: "calcium", label: "Calcium", unit: "mg", color: "text-sky-400", icon: Activity },
+    { id: "magnesium", label: "Magnesium", unit: "mg", color: "text-indigo-400", icon: Activity },
+    { id: "phosphorus", label: "Phosphorus", unit: "mg", color: "text-purple-400", icon: Activity },
+    { id: "potassium", label: "Potassium", unit: "mg", color: "text-emerald-400", icon: Activity },
+    { id: "sodium", label: "Sodium", unit: "mg", color: "text-amber-500", icon: Activity },
     { id: "iron", label: "Iron", unit: "mg", color: "text-amber-600", icon: Activity },
     { id: "zinc", label: "Zinc", unit: "mg", color: "text-slate-400", icon: Activity },
     { id: "copper", label: "Copper", unit: "mg", color: "text-orange-600", icon: Activity },
@@ -58,8 +64,8 @@ export const NUTRIENT_CATEGORIES = {
   ],
   "Fatty Acids": [
     { id: "saturatedFat", label: "Saturated Fat", unit: "g", color: "text-red-300", icon: HeartPulse },
-    { id: "monounsaturatedFat", label: "Monounsaturated Fat", unit: "g", color: "text-green-300", icon: HeartPulse },
-    { id: "polyunsaturatedFat", label: "Polyunsaturated Fat", unit: "g", color: "text-emerald-300", icon: HeartPulse },
+    { id: "monounsaturatedFat", label: "Monounsaturated", unit: "g", color: "text-green-300", icon: HeartPulse },
+    { id: "polyunsaturatedFat", label: "Polyunsaturated", unit: "g", color: "text-emerald-300", icon: HeartPulse },
     { id: "omega3", label: "Omega-3", unit: "g", color: "text-cyan-300", icon: HeartPulse },
     { id: "omega6", label: "Omega-6", unit: "g", color: "text-teal-300", icon: HeartPulse },
     { id: "transFat", label: "Trans Fat", unit: "g", color: "text-rose-500", icon: ShieldAlert },
@@ -76,6 +82,7 @@ function DailyNutrientsModal({ isOpen, onClose, selectedDate, data, calorieTarge
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("All");
   const [selectedWikiNutrient, setSelectedWikiNutrient] = useState(null);
+  const [contributorNutrient, setContributorNutrient] = useState(null);
 
   const habitState = useSelector((state) => state.habit || {});
   const age = habitState.age || 21;
@@ -165,7 +172,12 @@ function DailyNutrientsModal({ isOpen, onClose, selectedDate, data, calorieTarge
     vitaminE: 15,
     vitaminK: isMale ? 120 : 90,
 
-    // Trace Minerals
+    // Minerals
+    calcium: 1000,
+    magnesium: isMale ? 420 : 320,
+    phosphorus: 700,
+    potassium: isMale ? 3400 : 2600,
+    sodium: 2300,
     iron: isMale ? 8 : (age > 50 ? 8 : 18),
     zinc: isMale ? 11 : 8,
     copper: 0.9,
@@ -186,6 +198,18 @@ function DailyNutrientsModal({ isOpen, onClose, selectedDate, data, calorieTarge
     glycemicIndex: 55,
     glycemicLoad: 100,
     water: habitWaterMin ? habitWaterMin * 1000 : (isMale ? 3700 : 2700),
+  };
+
+  // Percentage color coding:
+  // 0% - 25%: Yellow (bg-warning)
+  // 25% - 75%: Blue (bg-info)
+  // 75% - 100%: Green (bg-success)
+  // > 100%: Red (bg-error)
+  const getPercentageColorClass = (pct) => {
+    if (pct > 100) return { bg: "bg-error", badge: "bg-error/20 text-error" };
+    if (pct >= 75) return { bg: "bg-success", badge: "bg-success/20 text-success" };
+    if (pct >= 25) return { bg: "bg-info", badge: "bg-info/20 text-info" };
+    return { bg: "bg-warning", badge: "bg-warning/20 text-warning" };
   };
 
   // Calculate totals for all nutrients
@@ -253,8 +277,8 @@ function DailyNutrientsModal({ isOpen, onClose, selectedDate, data, calorieTarge
       : [activeTab];
 
   return (
-    <div className="fixed inset-0 z-[999] bg-black/75 backdrop-blur-md flex items-start justify-center pt-16 sm:pt-18 pb-6 px-3 sm:px-6 overflow-hidden">
-      <div className="bg-base-200 rounded-3xl max-w-7xl w-full sm:w-[95vw] min-h-[550px] max-h-[calc(100vh-80px)] border border-base-300 shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-[9999] bg-black/75 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 overflow-hidden">
+      <div className="bg-base-200 rounded-3xl max-w-7xl w-full sm:w-[95vw] min-h-[550px] max-h-[calc(100vh-100px)] border border-base-300 shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200 -mt-6 sm:-mt-10">
         {/* Modal Header */}
         <div className="p-5 sm:p-6 bg-base-300/80 border-b border-base-300 flex justify-between items-center shrink-0">
           <div className="flex items-center gap-3">
@@ -356,7 +380,7 @@ function DailyNutrientsModal({ isOpen, onClose, selectedDate, data, calorieTarge
 
           {/* Category Tabs */}
           <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
-            {["All", "Macronutrients", "Vitamins", "Trace Minerals", "Fatty Acids", "Others"].map((tab) => (
+            {["All", ...Object.keys(NUTRIENT_CATEGORIES)].map((tab) => (
               <button
                 key={tab}
                 className={`btn btn-xs sm:btn-sm rounded-xl font-bold transition-all whitespace-nowrap ${
@@ -393,6 +417,7 @@ function DailyNutrientsModal({ isOpen, onClose, selectedDate, data, calorieTarge
                       const targetVal = NUTRIENT_TARGETS[n.id];
                       const hasTarget = targetVal !== undefined && targetVal !== null && targetVal > 0;
                       const pct = hasTarget ? Math.round((val / targetVal) * 100) : 0;
+                      const colorStyle = getPercentageColorClass(pct);
 
                       return (
                         <div
@@ -404,7 +429,18 @@ function DailyNutrientsModal({ isOpen, onClose, selectedDate, data, calorieTarge
                               <Icon size={14} className={n.color} />
                               {n.label}
                             </span>
-                            <div className="flex items-center gap-1">
+                            <div className="flex items-center gap-0.5">
+                              <button
+                                type="button"
+                                className="btn btn-ghost btn-xs p-1 text-primary hover:bg-primary/10 rounded-lg transition-all"
+                                title={`View foods contributing to ${n.label}`}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setContributorNutrient(n);
+                                }}
+                              >
+                                <ListFilter size={13} />
+                              </button>
                               <button
                                 type="button"
                                 className="btn btn-ghost btn-xs p-1 text-info hover:bg-info/10 rounded-lg transition-all"
@@ -414,17 +450,11 @@ function DailyNutrientsModal({ isOpen, onClose, selectedDate, data, calorieTarge
                                   setSelectedWikiNutrient(n);
                                 }}
                               >
-                                <Info size={14} />
+                                <Info size={13} />
                               </button>
                               {hasTarget && (
                                 <span
-                                  className={`text-[10px] font-bold font-mono px-1.5 py-0.5 rounded-md ${
-                                    pct > 100
-                                      ? "bg-warning/20 text-warning"
-                                      : pct >= 80
-                                      ? "bg-success/20 text-success text-emerald-400"
-                                      : "bg-base-200 text-base-content/60"
-                                  }`}
+                                  className={`text-[10px] font-bold font-mono px-1.5 py-0.5 rounded-md ${colorStyle.badge}`}
                                   title={`${pct}% of habit profile target`}
                                 >
                                   {pct}%
@@ -451,15 +481,9 @@ function DailyNutrientsModal({ isOpen, onClose, selectedDate, data, calorieTarge
                           </div>
 
                           {hasTarget && (
-                            <div className="w-full bg-base-300/80 h-1.5 rounded-full overflow-hidden mt-1">
+                            <div className="w-full bg-base-300/80 h-1.5 rounded-full overflow-hidden mt-1.5">
                               <div
-                                className={`h-full transition-all duration-500 rounded-full ${
-                                  pct > 100
-                                    ? "bg-warning"
-                                    : pct >= 80
-                                    ? "bg-success"
-                                    : "bg-primary"
-                                }`}
+                                className={`h-full transition-all duration-500 rounded-full ${colorStyle.bg}`}
                                 style={{ width: `${Math.min(pct, 100)}%` }}
                               ></div>
                             </div>
@@ -535,6 +559,149 @@ function DailyNutrientsModal({ isOpen, onClose, selectedDate, data, calorieTarge
         onClose={() => setSelectedWikiNutrient(null)}
         nutrient={selectedWikiNutrient}
       />
+
+      <NutrientContributorsModal
+        isOpen={!!contributorNutrient}
+        onClose={() => setContributorNutrient(null)}
+        nutrient={contributorNutrient}
+        allLogs={allLogs}
+        selectedDate={selectedDate}
+        dayTotal={contributorNutrient ? nutrientTotals[contributorNutrient.id] || 0 : 0}
+      />
+    </div>
+  );
+}
+
+function NutrientContributorsModal({ isOpen, onClose, nutrient, allLogs, selectedDate, dayTotal }) {
+  if (!isOpen || !nutrient) return null;
+
+  const Icon = nutrient.icon || Sparkles;
+
+  const getLogNutrientVal = (log, nutrientId) => {
+    const servings = log.servings || 1;
+    const foodObj = log.foodId || log;
+
+    let rawVal = log[nutrientId];
+    if (rawVal === undefined || rawVal === null) {
+      rawVal = foodObj ? foodObj[nutrientId] : 0;
+    }
+
+    if (nutrientId === "netCarbs") {
+      const carbs = log.carbohydrates !== undefined ? log.carbohydrates : (foodObj?.carbohydrates || 0);
+      const fiber = log.fiber !== undefined ? log.fiber : (foodObj?.fiber || 0);
+      return Math.max(0, carbs - fiber);
+    }
+
+    if (["calories", "protein", "carbohydrates", "fat", "fiber", "sugar"].includes(nutrientId) && log[nutrientId] !== undefined) {
+      return Number(log[nutrientId]) || 0;
+    }
+
+    if (typeof rawVal === "number") {
+      return rawVal * servings;
+    }
+
+    const num = parseFloat(String(rawVal).replace(/[^0-9.]/g, ""));
+    return isNaN(num) ? 0 : num * servings;
+  };
+
+  const contributors = allLogs
+    .map((log) => {
+      const foodObj = log.foodId || log;
+      const foodName = log.foodName || foodObj.name || "Logged Item";
+      const mealType = log.mealType || "Logged";
+      const val = getLogNutrientVal(log, nutrient.id);
+      const formattedVal = nutrient.id === "calories" || nutrient.id === "water" ? Math.round(val) : parseFloat(val.toFixed(1));
+      const pct = dayTotal > 0 ? Math.round((val / dayTotal) * 100) : 0;
+
+      return {
+        id: log._id || Math.random(),
+        foodName,
+        mealType,
+        servings: log.servings || 1,
+        portionLabel: log.portionLabel || log.servingUnit || "serving",
+        val: formattedVal,
+        pct,
+      };
+    })
+    .filter((item) => item.val > 0)
+    .sort((a, b) => b.val - a.val);
+
+  return (
+    <div className="fixed inset-0 z-[10000] bg-black/75 backdrop-blur-md flex items-center justify-center p-4 overflow-hidden">
+      <div className="bg-base-200 rounded-3xl max-w-md w-full max-h-[80vh] border border-base-300 shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200 -mt-6 sm:-mt-10">
+        {/* Header */}
+        <div className="p-4 sm:p-5 bg-base-300/80 border-b border-base-300 flex justify-between items-center shrink-0">
+          <div className="flex items-center gap-2.5">
+            <div className={`p-2.5 rounded-xl bg-base-100 shadow-xs ${nutrient.color}`}>
+              <Icon size={20} />
+            </div>
+            <div>
+              <h3 className="font-extrabold text-base flex items-center gap-1.5">
+                Food Contributors for {nutrient.label}
+              </h3>
+              <p className="text-xs text-base-content/70">
+                <span className="font-semibold text-primary">{selectedDate}</span> • Day Total: <span className="font-bold text-primary">{dayTotal} {nutrient.unit}</span>
+              </p>
+            </div>
+          </div>
+          <button className="btn btn-sm btn-circle btn-ghost" onClick={onClose}>
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="p-4 flex-1 overflow-y-auto space-y-2.5 min-h-0">
+          {contributors.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-10 text-center">
+              <Utensils size={36} className="opacity-30 mb-2" />
+              <p className="text-sm font-semibold opacity-70">No foods contributed to {nutrient.label} on this date.</p>
+            </div>
+          ) : (
+            contributors.map((item) => (
+              <div
+                key={item.id}
+                className="bg-base-100 p-3 rounded-2xl border border-base-300 shadow-xs flex flex-col gap-2"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <div className="font-bold text-sm truncate flex items-center gap-1.5">
+                      <span>{item.foodName}</span>
+                      <span className="badge badge-xs badge-outline badge-primary shrink-0">
+                        {item.mealType}
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-base-content/60">
+                      {item.servings} serving(s) ({item.portionLabel})
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <div className="font-extrabold text-sm text-primary font-mono">
+                      +{item.val} {nutrient.unit}
+                    </div>
+                    <div className="text-[10px] font-bold text-base-content/60">
+                      {item.pct}% of day total
+                    </div>
+                  </div>
+                </div>
+
+                <div className="w-full bg-base-200 h-1.5 rounded-full overflow-hidden">
+                  <div
+                    className="bg-primary h-full rounded-full transition-all duration-300"
+                    style={{ width: `${Math.min(item.pct, 100)}%` }}
+                  ></div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="p-3 bg-base-300/80 border-t border-base-300 flex justify-end shrink-0">
+          <button className="btn btn-xs sm:btn-sm btn-neutral rounded-xl px-4" onClick={onClose}>
+            Close
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

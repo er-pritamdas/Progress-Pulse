@@ -154,13 +154,13 @@ const MacroMicroCalculator = ({ maintenanceCalories, age, gender }) => {
     const newMicros = {
       vitamins: [
         { name: "Vitamin A", value: isMale ? "900 mcg" : "700 mcg", icon: "🥕" },
-        { name: "Vitamin B1 (Thiamine)", value: isMale ? "1.2 mg" : "1.1 mg", icon: "🌾" },
-        { name: "Vitamin B2 (Riboflavin)", value: isMale ? "1.3 mg" : "1.1 mg", icon: "🥛" },
-        { name: "Vitamin B3 (Niacin)", value: isMale ? "16 mg" : "14 mg", icon: "🥜" },
-        { name: "Vitamin B5 (Pantothenic Acid)", value: "5 mg", icon: "🥑" },
-        { name: "Vitamin B6 (Pyridoxine)", value: age > 50 ? (isMale ? "1.7 mg" : "1.5 mg") : "1.3 mg", icon: "🍌" },
-        { name: "Vitamin B7 (Biotin)", value: "30 mcg", icon: "🌰" },
-        { name: "Vitamin B9 (Folate)", value: "400 mcg", icon: "🥬" },
+        { name: "Vitamin B1", value: isMale ? "1.2 mg" : "1.1 mg", icon: "🌾" },
+        { name: "Vitamin B2", value: isMale ? "1.3 mg" : "1.1 mg", icon: "🥛" },
+        { name: "Vitamin B3", value: isMale ? "16 mg" : "14 mg", icon: "🥜" },
+        { name: "Vitamin B5", value: "5 mg", icon: "🥑" },
+        { name: "Vitamin B6", value: age > 50 ? (isMale ? "1.7 mg" : "1.5 mg") : "1.3 mg", icon: "🍌" },
+        { name: "Vitamin B7", value: "30 mcg", icon: "🌰" },
+        { name: "Vitamin B9", value: "400 mcg", icon: "🥬" },
         { name: "Vitamin B12", value: "2.4 mcg", icon: "🥩" },
         { name: "Vitamin C", value: isMale ? "90 mg" : "75 mg", icon: "🍊" },
         { name: "Vitamin D", value: "15-20 mcg", icon: "☀️" },
@@ -612,8 +612,8 @@ const MICRO_DETAILS = {
     ],
     benefits: ["Maintains healthy vision (especially in low light)", "Supports immune system health", "Promotes healthy skin and cell growth"]
   },
-  "Vitamin B1 (Thiamine)": {
-    name: "Vitamin B1 (Thiamine)",
+  "Vitamin B1": {
+    name: "Vitamin B1",
     description: "Enables the body to use carbohydrates as energy. Essential for glucose metabolism and plays a key role in nerve, muscle, and heart function.",
     sources: [
       { name: "Enriched Rice & Whole Grains", amount: "1.2 mg" },
@@ -624,8 +624,8 @@ const MICRO_DETAILS = {
     ],
     benefits: ["Helps convert food into cellular energy", "Supports healthy nervous system function", "Crucial for muscle contraction and cardiac health"]
   },
-  "Vitamin B2 (Riboflavin)": {
-    name: "Vitamin B2 (Riboflavin)",
+  "Vitamin B2": {
+    name: "Vitamin B2",
     description: "Helps break down proteins, fats, and carbohydrates. It plays a vital role in maintaining the body's energy supply and cell growth.",
     sources: [
       { name: "Beef Liver", amount: "2.9 mg" },
@@ -636,8 +636,8 @@ const MICRO_DETAILS = {
     ],
     benefits: ["Supports cellular energy production", "Promotes healthy skin and vision", "Acts as a cellular antioxidant"]
   },
-  "Vitamin B3 (Niacin)": {
-    name: "Vitamin B3 (Niacin)",
+  "Vitamin B3": {
+    name: "Vitamin B3",
     description: "Helps convert food into energy and supports digestive health, skin function, and nervous system operations. Also helps manage cholesterol levels.",
     sources: [
       { name: "Chicken Breast", amount: "14.8 mg" },
@@ -648,8 +648,8 @@ const MICRO_DETAILS = {
     ],
     benefits: ["Improves cholesterol profile (lowers LDL, raises HDL)", "Supports brain function and skin health", "Enhances DNA repair and cellular energy"]
   },
-  "Vitamin B5 (Pantothenic Acid)": {
-    name: "Vitamin B5 (Pantothenic Acid)",
+  "Vitamin B5": {
+    name: "Vitamin B5",
     description: "Essential for making blood cells and converting food (fats and carbohydrates) into usable energy.",
     sources: [
       { name: "Shiitake Mushrooms", amount: "3.6 mg" },
@@ -660,8 +660,8 @@ const MICRO_DETAILS = {
     ],
     benefits: ["Crucial for red blood cell synthesis", "Promotes healthy digestive tract", "Helps produce stress and sex-related hormones"]
   },
-  "Vitamin B6 (Pyridoxine)": {
-    name: "Vitamin B6 (Pyridoxine)",
+  "Vitamin B6": {
+    name: "Vitamin B6",
     description: "Important for normal brain development and for keeping the nervous system and immune system healthy.",
     sources: [
       { name: "Chickpeas (canned)", amount: "1.1 mg" },
@@ -672,8 +672,8 @@ const MICRO_DETAILS = {
     ],
     benefits: ["Promotes neurotransmitter production (serotonin & dopamine)", "Supports immune function", "Aids in hemoglobin synthesis"]
   },
-  "Vitamin B7 (Biotin)": {
-    name: "Vitamin B7 (Biotin)",
+  "Vitamin B7": {
+    name: "Vitamin B7",
     description: "Plays a key role in metabolic function and is well known for supporting hair, skin, and nail strength.",
     sources: [
       { name: "Beef Liver", amount: "30.8 mcg" },
@@ -684,8 +684,8 @@ const MICRO_DETAILS = {
     ],
     benefits: ["Strengthens hair, skin, and brittle nails", "Essential for carbohydrate, fat, and protein metabolism", "Supports healthy fetal development"]
   },
-  "Vitamin B9 (Folate)": {
-    name: "Vitamin B9 (Folate)",
+  "Vitamin B9": {
+    name: "Vitamin B9",
     description: "Crucial for proper brain function and plays an important role in mental and emotional health. Essential during pregnancy to prevent birth defects.",
     sources: [
       { name: "Beef Liver", amount: "215 mcg" },

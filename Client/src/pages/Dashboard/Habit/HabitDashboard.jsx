@@ -207,7 +207,7 @@ function HabitDashboard() {
                     <li className="menu-title text-xs font-bold text-base-content/50 uppercase tracking-wider px-3 py-1">
                       Nutrient Category
                     </li>
-                    {["Macronutrients", "Vitamins", "Trace Minerals", "Fatty Acids", "Others"].map((cat) => (
+                    {["Macronutrients", "Vitamins", "Minerals", "Fatty Acids", "Others"].map((cat) => (
                       <li key={cat}>
                         <button
                           className={`flex items-center justify-between py-2.5 px-3 rounded-xl transition-all font-medium ${

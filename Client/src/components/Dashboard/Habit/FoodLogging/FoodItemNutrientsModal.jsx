@@ -96,10 +96,10 @@ function FoodItemNutrientsModal({ isOpen, onClose, foodItem }) {
       : [activeTab];
 
   return (
-    <div className="fixed inset-0 z-[999] bg-black/75 backdrop-blur-md flex items-start justify-center pt-16 sm:pt-18 pb-6 px-3 sm:px-6 overflow-hidden">
+    <div className="fixed inset-0 z-[10000] bg-black/75 backdrop-blur-md flex items-start justify-center pt-16 sm:pt-18 pb-6 px-3 sm:px-6 overflow-hidden">
       <div className="bg-base-200 rounded-3xl max-w-3xl w-full h-[580px] sm:h-[620px] max-h-[calc(100vh-80px)] border border-base-300 shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         {/* Header */}
-        <div className="p-5 sm:p-6 bg-base-300/80 border-b border-base-300 flex justify-between items-center shrink-0">
+        <div className="px-5 py-3.5 bg-base-300/80 border-b border-base-300 flex justify-between items-center shrink-0">
           <div className="flex items-center gap-3">
             <div className="p-3 bg-secondary/20 text-secondary rounded-2xl">
               <Utensils size={24} />
@@ -153,7 +153,7 @@ function FoodItemNutrientsModal({ isOpen, onClose, foodItem }) {
 
           {/* Category Tabs */}
           <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
-            {["All", "Macronutrients", "Vitamins", "Trace Minerals", "Fatty Acids", "Others"].map((tab) => (
+            {["All", ...Object.keys(NUTRIENT_CATEGORIES)].map((tab) => (
               <button
                 key={tab}
                 className={`btn btn-xs sm:btn-sm rounded-xl font-bold transition-all whitespace-nowrap ${

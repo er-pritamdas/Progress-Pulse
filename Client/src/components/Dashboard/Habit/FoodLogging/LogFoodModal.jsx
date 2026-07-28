@@ -90,6 +90,7 @@ function LogFoodModal({ isOpen, onClose, selectedDate, initialMeal = "Breakfast"
   const [historyDate, setHistoryDate] = useState(() => getYesterdayDateStr(selectedDate));
   const [yesterdayLogs, setYesterdayLogs] = useState([]);
   const [yesterdayLoading, setYesterdayLoading] = useState(false);
+  const [historyMealFilter, setHistoryMealFilter] = useState("All");
 
   const yesterdayDate = getYesterdayDateStr(selectedDate);
 
@@ -115,6 +116,7 @@ function LogFoodModal({ isOpen, onClose, selectedDate, initialMeal = "Breakfast"
       setStagedItems([]);
       setSourceTab("database");
       setHistoryDate(getYesterdayDateStr(selectedDate));
+      setHistoryMealFilter("All");
     }
   }, [isOpen, initialMeal, selectedDate]);
 
@@ -314,8 +316,8 @@ function LogFoodModal({ isOpen, onClose, selectedDate, initialMeal = "Breakfast"
 
   return (
     <>
-      <div className="fixed inset-0 z-[999] bg-black/75 backdrop-blur-md flex items-start justify-center pt-14 sm:pt-16 pb-6 px-3 sm:px-6 overflow-hidden">
-        <div className="bg-base-200 rounded-3xl max-w-5xl w-full h-[600px] sm:h-[640px] max-h-[calc(100vh-80px)] border border-base-300 shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      <div className="fixed inset-0 z-[9999] bg-black/75 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 overflow-hidden">
+        <div className="bg-base-200 rounded-3xl max-w-5xl w-full h-[580px] max-h-[calc(100vh-100px)] border border-base-300 shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200 -mt-6 sm:-mt-10">
           {/* Header */}
           <div className="p-4 border-b border-base-300 flex justify-between items-center shrink-0">
             <div>
@@ -532,6 +534,45 @@ function LogFoodModal({ isOpen, onClose, selectedDate, initialMeal = "Breakfast"
                       </div>
                     </div>
 
+                    {/* History Meal Tags Filter Bar */}
+                    {!yesterdayLoading && yesterdayLogs.length > 0 && (
+                      <div className="flex gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden shrink-0 px-1">
+                        {["All", "Breakfast", "Lunch", "Dinner", "Snacks", "Other"].map((tag) => {
+                          const count = tag === "All"
+                            ? yesterdayLogs.length
+                            : yesterdayLogs.filter(l => (l.mealType || "").trim().toLowerCase() === tag.toLowerCase()).length;
+
+                          if (tag !== "All" && count === 0) return null;
+
+                          const isActive = historyMealFilter.toLowerCase() === tag.toLowerCase();
+
+                          return (
+                            <button
+                              key={tag}
+                              type="button"
+                              onClick={() => setHistoryMealFilter(tag)}
+                              className={`btn btn-xs rounded-lg whitespace-nowrap border-none transition-all flex items-center gap-1 ${
+                                isActive
+                                  ? "btn-primary text-primary-content shadow-xs font-bold"
+                                  : "btn-ghost bg-base-100 opacity-80 border border-base-300 text-base-content"
+                              }`}
+                            >
+                              <span>{tag}</span>
+                              <span
+                                className={`px-1.5 py-0.5 rounded-md text-[10px] font-black leading-none ${
+                                  isActive
+                                    ? "bg-primary-content/25 text-primary-content"
+                                    : "bg-base-300 text-base-content/70"
+                                }`}
+                              >
+                                {count}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+
                     <div className="flex-1 min-h-0 overflow-y-auto bg-base-100 rounded-xl p-2 border border-base-300 space-y-1.5">
                       {yesterdayLoading ? (
                         <div className="flex justify-center items-center h-full text-sm opacity-60">
@@ -542,8 +583,22 @@ function LogFoodModal({ isOpen, onClose, selectedDate, initialMeal = "Breakfast"
                           <History size={32} className="opacity-40 mb-2" />
                           <p className="text-sm opacity-70">No foods logged on {historyDate}.</p>
                         </div>
-                      ) : (
-                        yesterdayLogs.map((yLog) => {
+                      ) : (() => {
+                        const filteredYesterdayLogs = yesterdayLogs.filter((log) => {
+                          if (historyMealFilter === "All") return true;
+                          return (log.mealType || "").trim().toLowerCase() === historyMealFilter.toLowerCase();
+                        });
+
+                        if (filteredYesterdayLogs.length === 0) {
+                          return (
+                            <div className="flex flex-col items-center justify-center h-full text-center p-4">
+                              <Utensils size={32} className="opacity-40 mb-2" />
+                              <p className="text-sm opacity-70">No {historyMealFilter} items logged on {historyDate}.</p>
+                            </div>
+                          );
+                        }
+
+                        return filteredYesterdayLogs.map((yLog) => {
                           const foodObj = yLog.foodId || yLog;
                           const isSelected = selectedFood?._id === (foodObj._id || yLog._id);
                           return (
@@ -579,8 +634,8 @@ function LogFoodModal({ isOpen, onClose, selectedDate, initialMeal = "Breakfast"
                               </div>
                             </div>
                           );
-                        })
-                      )}
+                        });
+                      })()}
                     </div>
                   </div>
                 )}

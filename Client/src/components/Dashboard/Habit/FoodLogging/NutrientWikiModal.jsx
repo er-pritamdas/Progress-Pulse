@@ -167,6 +167,76 @@ export const NUTRIENT_WIKI_DATA = {
     deficiencySigns: "Anemia, extreme fatigue, pale skin, cold hands/feet, shortness of breath.",
     funFact: "Cast iron cookware can actually increase the iron content of acidic foods cooked in it!",
   },
+  calcium: {
+    title: "Calcium",
+    category: "Essential Major Mineral",
+    whatItIs: "The most abundant mineral in the human body, vital for strong bones, teeth, and cardiovascular function.",
+    healthBenefits: [
+      "Builds and maintains skeletal bone density and tooth enamel",
+      "Enables skeletal muscle contraction and nerve signal transmission",
+      "Regulates blood clotting, vascular tone, and cardiac muscle rhythm",
+    ],
+    topFoodSources: ["Dairy (Milk/Yogurt/Cheese)", "Sardines & Canned Salmon", "Tofu", "Leafy Greens (Kale/Bok Choy)", "Chia Seeds"],
+    dailyRecommendation: "1,000 mg per day for adults (1,200 mg for women > 50 and adults > 70).",
+    deficiencySigns: "Osteopenia, muscle cramps, brittle nails, numbness in fingers, and increased fracture risk.",
+    funFact: "About 99% of your body's total calcium supply is stored directly in your bones and teeth!",
+  },
+  magnesium: {
+    title: "Magnesium",
+    category: "Essential Mineral & Electrolyte",
+    whatItIs: "A critical macrominerals involved in over 300 enzymatic reactions in human physiology.",
+    healthBenefits: [
+      "Supports nerve signal transmission, muscle relaxation, and cramping prevention",
+      "Crucial for cellular energy (ATP) production and protein synthesis",
+      "Helps regulate blood glucose levels and promotes calm, restful sleep",
+    ],
+    topFoodSources: ["Pumpkin Seeds", "Spinach", "Almonds & Cashews", "Dark Chocolate (70%+)", "Black Beans"],
+    dailyRecommendation: "310–320 mg (women), 400–420 mg (men).",
+    deficiencySigns: "Muscle twitches/cramps, mental numbness, fatigue, high blood pressure, and irregular heartbeat.",
+    funFact: "Chlorophyll gives green plants their color, and every single molecule of chlorophyll contains a magnesium atom at its core!",
+  },
+  phosphorus: {
+    title: "Phosphorus",
+    category: "Essential Major Mineral",
+    whatItIs: "The second most abundant mineral in the body, working alongside calcium to build strong bone structure.",
+    healthBenefits: [
+      "Forms hydroxyapatite crystals with calcium to give structure to bones and teeth",
+      "Integral component of ATP (adenosine triphosphate), the cellular energy currency",
+      "Forms the structural backbone of human DNA and RNA molecules",
+    ],
+    topFoodSources: ["Chicken Breast", "Salmon & Tuna", "Milk & Cheese", "Pumpkin Seeds", "Lentils"],
+    dailyRecommendation: "700 mg per day for adults.",
+    deficiencySigns: "Loss of appetite, bone pain, muscle weakness, and fragile teeth.",
+    funFact: "Phosphorus accounts for roughly 1% of a person's total body weight!",
+  },
+  potassium: {
+    title: "Potassium",
+    category: "Essential Mineral & Electrolyte",
+    whatItIs: "A vital intracellular electrolyte responsible for maintaining cell fluid balance and nerve impulses.",
+    healthBenefits: [
+      "Counteracts excess sodium to maintain healthy blood pressure levels",
+      "Powers heart rhythm and prevents arterial stiffness",
+      "Prevents painful muscle cramps and supports nerve cell signaling",
+    ],
+    topFoodSources: ["Potatoes & Sweet Potatoes", "Bananas", "Avocados", "Spinach", "White Beans", "Coconut Water"],
+    dailyRecommendation: "2,600 mg (women), 3,400 mg (men).",
+    deficiencySigns: "Muscle weakness, extreme fatigue, constipation, heart palpitations, and high blood pressure.",
+    funFact: "A medium baked potato with skin contains over 900 mg of potassium—almost double that of a banana!",
+  },
+  sodium: {
+    title: "Sodium",
+    category: "Essential Electrolyte",
+    whatItIs: "An essential extracellular electrolyte critical for fluid balance, nerve conduction, and muscle contraction.",
+    healthBenefits: [
+      "Regulates extracellular fluid volume and blood plasma pressure",
+      "Powers the sodium-potassium pump needed for cellular nerve impulses",
+      "Facilitates nutrient absorption (like glucose and amino acids) in the intestines",
+    ],
+    topFoodSources: ["Sea Salt", "Pickles & Olives", "Broths", "Cheeses", "Cured Meats"],
+    dailyRecommendation: "Keep intake under 2,300 mg per day (ideally ~1,500 mg for optimal blood pressure).",
+    deficiencySigns: "Hyponatremia, muscle cramps, headache, nausea, confusion, and dizziness.",
+    funFact: "Sodium works in tandem with potassium like a biological battery to generate electrical charges in your heart and brain!",
+  },
   zinc: {
     title: "Zinc",
     category: "Essential Trace Mineral",
@@ -183,7 +253,7 @@ export const NUTRIENT_WIKI_DATA = {
   },
   omega3: {
     title: "Omega-3 Fatty Acids (EPA & DHA)",
-    category: "Essential Polyunsaturated Fat",
+    category: "Essential Polyunsaturated",
     whatItIs: "Healthy fats that reduce systemic inflammation and support cardiovascular and cognitive health.",
     healthBenefits: [
       "Reduces blood triglycerides and supports heart health",
@@ -214,7 +284,7 @@ export const NUTRIENT_WIKI_DATA = {
 const getDefaultWikiInfo = (nutrient) => {
   return {
     title: nutrient.label || "Nutrient",
-    category: "Essential Dietary Metric",
+    category: "",
     whatItIs: `${nutrient.label} is an essential nutritional component that plays an important role in overall human health, metabolism, and wellness.`,
     healthBenefits: [
       `Supports daily metabolic balance and energy regulation`,
@@ -246,29 +316,31 @@ function NutrientWikiModal({ isOpen, onClose, nutrient }) {
   const Icon = nutrient.icon || Sparkles;
 
   return (
-    <div className="fixed inset-0 z-[1000] bg-black/75 backdrop-blur-md flex items-start justify-center pt-16 sm:pt-18 pb-6 px-3 sm:px-6 overflow-hidden">
+    <div className="fixed inset-0 z-[10001] bg-black/75 backdrop-blur-md flex items-start justify-center pt-16 sm:pt-18 pb-6 px-3 sm:px-6 overflow-hidden">
       <div className="bg-base-200 rounded-3xl max-w-3xl w-full h-[580px] sm:h-[620px] max-h-[calc(100vh-80px)] border border-base-300 shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         {/* Header */}
-        <div className="p-5 sm:p-6 bg-base-300/80 border-b border-base-300 flex justify-between items-start shrink-0">
-          <div className="flex items-center gap-3">
-            <div className={`p-3 bg-base-100 rounded-2xl border border-base-300 shadow-sm ${nutrient.color || "text-primary"}`}>
-              <Icon size={28} />
+        <div className="px-5 py-3 bg-base-300/80 border-b border-base-300 flex justify-between items-center shrink-0">
+          <div className="flex items-center gap-2.5">
+            <div className={`p-2 bg-base-100 rounded-xl border border-base-300 shadow-xs ${nutrient.color || "text-primary"}`}>
+              <Icon size={20} />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <span className="badge badge-primary badge-sm font-bold text-[10px] uppercase tracking-wider">
-                  {wiki.category}
-                </span>
-              </div>
-              <h2 className="text-xl sm:text-2xl font-black mt-0.5">{wiki.title}</h2>
+              {wiki.category && (
+                <div className="flex items-center gap-2">
+                  <span className="badge badge-primary badge-xs font-bold text-[9px] uppercase tracking-wider">
+                    {wiki.category}
+                  </span>
+                </div>
+              )}
+              <h2 className="text-base sm:text-lg font-bold text-base-content leading-tight mt-0.5">{wiki.title}</h2>
             </div>
           </div>
 
           <button
-            className="btn btn-sm btn-circle btn-ghost"
+            className="btn btn-xs btn-circle btn-ghost"
             onClick={onClose}
           >
-            <X size={20} />
+            <X size={18} />
           </button>
         </div>
 

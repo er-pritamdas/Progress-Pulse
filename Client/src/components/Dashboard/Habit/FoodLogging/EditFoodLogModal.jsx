@@ -126,8 +126,8 @@ function EditFoodLogModal({ isOpen, onClose, log, onLogUpdated }) {
   };
 
   return (
-    <div className="fixed inset-0 z-[999] bg-black/75 backdrop-blur-md flex items-start justify-center pt-16 sm:pt-18 pb-6 px-3 sm:px-6 overflow-hidden">
-      <div className="bg-base-200 rounded-3xl max-w-md w-full border border-base-300 shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-[9999] bg-black/75 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 overflow-hidden">
+      <div className="bg-base-200 rounded-3xl max-w-md w-full border border-base-300 shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200 -mt-6 sm:-mt-10">
         {/* Header */}
         <div className="p-5 bg-base-300/80 border-b border-base-300 flex justify-between items-center">
           <h3 className="font-bold text-lg flex items-center gap-2">

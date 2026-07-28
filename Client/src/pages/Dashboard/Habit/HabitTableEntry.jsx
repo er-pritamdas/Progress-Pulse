@@ -1,5 +1,6 @@
 // Import Statements
 import { useState, useEffect } from "react";
+import { useLocation, useSearchParams } from "react-router-dom";
 import Heading from "../../../components/Dashboard/Habit/HabitTableEntryPage/Heading.jsx";
 import Pagination from "../../../components/Dashboard/Habit/HabitTableEntryPage/Pagination.jsx";
 import HabitDateQuickSelect from "../../../components/Dashboard/Habit/HabitDateQuickSelect.jsx";
@@ -44,7 +45,18 @@ import FoodLoggingTab from "../../../components/Dashboard/Habit/FoodLogging/Food
 function HabitTableEntry() {
   TitleChanger("Progress Pulse | Habit Logging");
   const dispatch = useDispatch();
-  const [activeMainTab, setActiveMainTab] = useState("habit"); // "habit" or "food"
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const initialTab = location.state?.tab || searchParams.get("tab") || "habit";
+  const [activeMainTab, setActiveMainTab] = useState(initialTab); // "habit" or "food"
+
+  useEffect(() => {
+    const tabFromUrl = searchParams.get("tab") || location.state?.tab;
+    if (tabFromUrl && (tabFromUrl === "habit" || tabFromUrl === "food")) {
+      setActiveMainTab(tabFromUrl);
+    }
+  }, [searchParams, location.state]);
+
   const settings = useSelector((state) => state.habit.settings);
   const { fromDate, toDate, itemPerPage } = useSelector(
     (state) => state.habit.filters

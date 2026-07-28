@@ -34,6 +34,11 @@ function AddCustomFoodModal({ isOpen, onClose, onFoodAdded }) {
     vitaminE: "",
     vitaminK: "",
     // Minerals
+    calcium: "",
+    magnesium: "",
+    phosphorus: "",
+    potassium: "",
+    sodium: "",
     iron: "",
     zinc: "",
     copper: "",
@@ -109,8 +114,8 @@ function AddCustomFoodModal({ isOpen, onClose, onFoodAdded }) {
   };
 
   return (
-    <div className="fixed inset-0 z-[999] bg-black/75 backdrop-blur-md flex items-start justify-center pt-16 sm:pt-18 pb-6 px-3 sm:px-6 overflow-hidden">
-      <div className="bg-base-200 rounded-3xl max-w-3xl w-full h-[580px] sm:h-[620px] max-h-[calc(100vh-80px)] border border-base-300 shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-[9999] bg-black/75 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 overflow-hidden">
+      <div className="bg-base-200 rounded-3xl max-w-3xl w-full h-[560px] max-h-[calc(100vh-100px)] border border-base-300 shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200 -mt-6 sm:-mt-10">
         {/* Header */}
         <div className="p-5 sm:p-6 bg-base-300/80 border-b border-base-300 flex justify-between items-center shrink-0">
           <h3 className="font-bold text-xl flex items-center gap-2">
@@ -339,16 +344,21 @@ function AddCustomFoodModal({ isOpen, onClose, onFoodAdded }) {
               </div>
             </details>
 
-            {/* Collapsible: Trace Minerals */}
+            {/* Collapsible: Minerals */}
             <details className="bg-base-100 rounded-xl border border-base-300 group">
               <summary className="p-3 font-semibold text-xs cursor-pointer flex justify-between items-center text-primary uppercase tracking-wider">
-                <span>🪨 Trace Minerals (Optional)</span>
+                <span>🪨 Minerals & Electrolytes (Optional)</span>
                 <span className="text-xs text-base-content/50 group-open:rotate-180 transition-transform">
                   ▼
                 </span>
               </summary>
               <div className="p-3 border-t border-base-200 grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
                 {[
+                  { name: "calcium", label: "Calcium (mg)", ph: "e.g. 1000" },
+                  { name: "magnesium", label: "Magnesium (mg)", ph: "e.g. 400" },
+                  { name: "phosphorus", label: "Phosphorus (mg)", ph: "e.g. 700" },
+                  { name: "potassium", label: "Potassium (mg)", ph: "e.g. 3400" },
+                  { name: "sodium", label: "Sodium (mg)", ph: "e.g. 2300" },
                   { name: "iron", label: "Iron (mg)", ph: "e.g. 18" },
                   { name: "zinc", label: "Zinc (mg)", ph: "e.g. 11" },
                   { name: "copper", label: "Copper (mg)", ph: "e.g. 0.9" },
