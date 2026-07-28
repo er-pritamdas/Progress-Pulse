@@ -20,6 +20,10 @@ import {
   BookOpen,
   ChevronLeft,
   ChevronRight,
+  LayoutGrid,
+  Rows,
+  LineChart,
+  BarChart2,
 } from "lucide-react";
 import NutrientGraphCard from "../Charts/NutrientGraphCard";
 import NutrientWikiModal from "../../FoodLogging/NutrientWikiModal";
@@ -181,6 +185,28 @@ function NutrientAnalysis({
     return initial;
   });
 
+  // Card Layout: 'side-by-side' (2 columns) or 'full-width' (1 column full width)
+  const [cardLayout, setCardLayout] = useState(() => {
+    try {
+      const saved = localStorage.getItem("nutrient_card_layout");
+      if (saved) return saved;
+    } catch (e) {
+      console.error("Error reading nutrient_card_layout:", e);
+    }
+    return "side-by-side";
+  });
+
+  // Display Mode: 'with-graph' (Graphs + Metrics) or 'metrics-only' (Metrics Only)
+  const [displayMode, setDisplayMode] = useState(() => {
+    try {
+      const saved = localStorage.getItem("nutrient_card_display_mode");
+      if (saved) return saved;
+    } catch (e) {
+      console.error("Error reading nutrient_card_display_mode:", e);
+    }
+    return "with-graph";
+  });
+
   // Save selected graphs to localStorage
   useEffect(() => {
     try {
@@ -189,6 +215,24 @@ function NutrientAnalysis({
       console.error("Failed to save graph selections", e);
     }
   }, [selectedGraphs]);
+
+  // Save card layout preference
+  useEffect(() => {
+    try {
+      localStorage.setItem("nutrient_card_layout", cardLayout);
+    } catch (e) {
+      console.error("Failed to save nutrient_card_layout", e);
+    }
+  }, [cardLayout]);
+
+  // Save display mode preference
+  useEffect(() => {
+    try {
+      localStorage.setItem("nutrient_card_display_mode", displayMode);
+    } catch (e) {
+      console.error("Failed to save nutrient_card_display_mode", e);
+    }
+  }, [displayMode]);
 
   const getTodayISO = () => {
     const today = new Date();
@@ -441,23 +485,23 @@ function NutrientAnalysis({
         });
       }
 
-      // Fallback: If no detailed food log items exist for this date, use the main habit table entry
-      if (dailySum === 0) {
-        const habitEntry = habitDataByDate[date];
-        if (habitEntry) {
-          if (nutrientId === "calories" && habitEntry.intake) {
-            dailySum = Number(habitEntry.intake) || 0;
-          } else if (nutrientId === "water" && habitEntry.water) {
-            const waterVal = Number(habitEntry.water) || 0;
-            dailySum = waterVal < 50 ? waterVal * 1000 : waterVal;
-          }
+      const habitEntry = habitDataByDate[date];
+      if (dailySum === 0 && habitEntry) {
+        if (nutrientId === "calories" && habitEntry.intake) {
+          dailySum = Number(habitEntry.intake) || 0;
+        } else if (nutrientId === "water" && habitEntry.water) {
+          const waterVal = Number(habitEntry.water) || 0;
+          dailySum = waterVal < 50 ? waterVal * 1000 : waterVal;
         }
       }
+
+      const hasLog = logsOnDate.length > 0 || Boolean(habitEntry && (Number(habitEntry.intake) > 0 || Number(habitEntry.water) > 0));
 
       return {
         date,
         formattedDate,
         value: nutrientId === "calories" || nutrientId === "water" ? Math.round(dailySum) : parseFloat(dailySum.toFixed(1)),
+        hasLog: hasLog || dailySum > 0,
       };
     });
   };
@@ -494,35 +538,113 @@ function NutrientAnalysis({
         return (
           <section key={category} className="space-y-4">
             {/* Category Control Header */}
-            <div className="bg-base-100 p-4 rounded-2xl border border-base-300 shadow-sm flex flex-wrap items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <span className="p-2 rounded-xl bg-primary/10 text-primary font-bold text-sm">
-                  <SlidersHorizontal size={16} />
-                </span>
-                <div>
-                  <h3 className="font-bold text-base uppercase tracking-wider text-base-content flex items-center gap-2">
-                    {category} Graphs
-                  </h3>
-                  <span className="text-xs text-base-content/60 font-medium">
-                    {activeSelected.length} of {categoryNutrients.length} graphs visible
+            <div className="bg-base-100 p-4 rounded-2xl border border-base-300 shadow-sm flex flex-col gap-3">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-base-200/80 pb-3">
+                <div className="flex items-center gap-2.5">
+                  <span className="p-2 rounded-xl bg-primary/10 text-primary font-bold text-sm">
+                    <SlidersHorizontal size={16} />
                   </span>
+                  <div>
+                    <h3 className="font-bold text-base uppercase tracking-wider text-base-content flex items-center gap-2">
+                      {category} Cards
+                    </h3>
+                    <span className="text-xs text-base-content/60 font-medium">
+                      {activeSelected.length} of {categoryNutrients.length} cards visible
+                    </span>
+                  </div>
+                </div>
+
+                {/* View Mode & Layout Control Buttons */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  {/* Layout Mode (Side by Side vs Full Width) */}
+                  <div className="join bg-base-200/80 p-1 rounded-2xl border border-base-300/60 shadow-xs">
+                    <button
+                      type="button"
+                      className={`join-item btn btn-xs rounded-xl font-bold gap-1.5 transition-all ${
+                        cardLayout === "side-by-side"
+                          ? "btn-primary text-primary-content shadow-xs"
+                          : "btn-ghost text-base-content/60 hover:text-base-content"
+                      }`}
+                      onClick={() => setCardLayout("side-by-side")}
+                      title="Side by Side Layout (2 cards per row)"
+                    >
+                      <LayoutGrid size={13} />
+                      <span className="hidden sm:inline">Side by Side</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      className={`join-item btn btn-xs rounded-xl font-bold gap-1.5 transition-all ${
+                        cardLayout === "full-width"
+                          ? "btn-primary text-primary-content shadow-xs"
+                          : "btn-ghost text-base-content/60 hover:text-base-content"
+                      }`}
+                      onClick={() => setCardLayout("full-width")}
+                      title="Full Width Layout (1 card per row)"
+                    >
+                      <Rows size={13} />
+                      <span className="hidden sm:inline">Full Width</span>
+                    </button>
+                  </div>
+
+                  {/* Display Mode (With Graph vs Metrics Only) */}
+                  <div className="join bg-base-200/80 p-1 rounded-2xl border border-base-300/60 shadow-xs">
+                    <button
+                      type="button"
+                      className={`join-item btn btn-xs rounded-xl font-bold gap-1.5 transition-all ${
+                        displayMode === "with-graph"
+                          ? "btn-primary text-primary-content shadow-xs"
+                          : "btn-ghost text-base-content/60 hover:text-base-content"
+                      }`}
+                      onClick={() => setDisplayMode("with-graph")}
+                      title="Show Graphs & Metrics"
+                    >
+                      <LineChart size={13} />
+                      <span className="hidden sm:inline">With Graph</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      className={`join-item btn btn-xs rounded-xl font-bold gap-1.5 transition-all ${
+                        displayMode === "metrics-only"
+                          ? "btn-primary text-primary-content shadow-xs"
+                          : "btn-ghost text-base-content/60 hover:text-base-content"
+                      }`}
+                      onClick={() => setDisplayMode("metrics-only")}
+                      title="Show Metrics Only (Hide Graphs)"
+                    >
+                      <BarChart2 size={13} />
+                      <span className="hidden sm:inline">Metrics Only</span>
+                    </button>
+                  </div>
                 </div>
               </div>
 
               {/* Selector Pills with Left/Right Scroll Arrows */}
-              <CategoryTagBar
-                category={category}
-                categoryNutrients={categoryNutrients}
-                activeSelected={activeSelected}
-                toggleGraph={toggleGraph}
-                selectAllGraphs={selectAllGraphs}
-                deselectAllGraphs={deselectAllGraphs}
-              />
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-xs font-semibold text-base-content/50 uppercase tracking-wider shrink-0 hidden md:inline">
+                  Filter Nutrients:
+                </span>
+                <CategoryTagBar
+                  category={category}
+                  categoryNutrients={categoryNutrients}
+                  activeSelected={activeSelected}
+                  toggleGraph={toggleGraph}
+                  selectAllGraphs={selectAllGraphs}
+                  deselectAllGraphs={deselectAllGraphs}
+                />
+              </div>
             </div>
 
             {/* Render Selected Nutrient Cards Grid */}
             {activeSelected.length > 0 ? (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+              <div
+                className={
+                  cardLayout === "full-width"
+                    ? "grid grid-cols-1 gap-5"
+                    : "grid grid-cols-1 lg:grid-cols-2 gap-5"
+                }
+              >
                 {categoryNutrients
                   .filter((n) => activeSelected.includes(n.id))
                   .map((nutrient) => {
@@ -540,6 +662,7 @@ function NutrientAnalysis({
                         nutrient={nutrientProps}
                         dailyData={dailyValues}
                         totalDays={dateRangeList.length}
+                        showGraph={displayMode === "with-graph"}
                         onOpenWiki={(nutr) => setSelectedWikiNutrient(nutr)}
                       />
                     );

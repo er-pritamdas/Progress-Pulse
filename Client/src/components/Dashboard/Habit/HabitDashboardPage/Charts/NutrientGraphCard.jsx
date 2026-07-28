@@ -2,7 +2,7 @@ import React from "react";
 import Chart from "react-apexcharts";
 import { Info, Sparkles, Calendar, Activity, TrendingUp, Target } from "lucide-react";
 
-function NutrientGraphCard({ nutrient, dailyData = [], totalDays = 1, onOpenWiki }) {
+function NutrientGraphCard({ nutrient, dailyData = [], totalDays = 1, onOpenWiki, showGraph = true }) {
   const Icon = nutrient.icon || Sparkles;
 
   // Calculate statistics
@@ -13,7 +13,11 @@ function NutrientGraphCard({ nutrient, dailyData = [], totalDays = 1, onOpenWiki
       ? Math.round(totalConsumed).toLocaleString()
       : parseFloat(totalConsumed.toFixed(1)).toLocaleString();
 
-  const avgValue = totalDays > 0 ? totalConsumed / totalDays : 0;
+  // Count days where food/intake was actually logged
+  const loggedDaysCount = dailyData.filter((d) => d.hasLog || (d.value || 0) > 0).length;
+
+  // Daily average calculated based on logged days (or 0 if no days logged)
+  const avgValue = loggedDaysCount > 0 ? totalConsumed / loggedDaysCount : 0;
   const formattedAvg =
     nutrient.id === "calories" || nutrient.id === "water"
       ? Math.round(avgValue).toLocaleString()
@@ -46,6 +50,21 @@ function NutrientGraphCard({ nutrient, dailyData = [], totalDays = 1, onOpenWiki
   const strokeWidths = [3];
   const dashArrays = [0];
   const seriesColors = [nutrient.colorHex || "#6366f1"];
+
+  if (avgValue > 0) {
+    series.push({
+      name: "Daily Average",
+      type: "line",
+      data: dailyData.map(() =>
+        nutrient.id === "calories" || nutrient.id === "water"
+          ? Math.round(avgValue)
+          : parseFloat(avgValue.toFixed(1))
+      ),
+    });
+    strokeWidths.push(2);
+    dashArrays.push(3);
+    seriesColors.push("#a855f7"); // Soft Purple for Daily Average Line
+  }
 
   if (maxTarget > 0) {
     series.push({
@@ -85,7 +104,7 @@ function NutrientGraphCard({ nutrient, dailyData = [], totalDays = 1, onOpenWiki
       dashArray: dashArrays,
     },
     fill: {
-      type: ["gradient", "solid", "solid"],
+      type: series.map((s) => (s.type === "area" ? "gradient" : "solid")),
       gradient: {
         shade: "dark",
         type: "vertical",
@@ -97,7 +116,7 @@ function NutrientGraphCard({ nutrient, dailyData = [], totalDays = 1, onOpenWiki
     },
     colors: seriesColors,
     markers: {
-      size: [5, 0, 0],
+      size: series.map((s, idx) => (idx === 0 ? 5 : 0)),
       strokeColors: "#1e293b",
       strokeWidth: 2,
       hover: { size: 7 },
@@ -187,7 +206,7 @@ function NutrientGraphCard({ nutrient, dailyData = [], totalDays = 1, onOpenWiki
       </div>
 
       {/* Summary Panels */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-4">
+      <div className={`grid grid-cols-2 sm:grid-cols-4 gap-2.5 ${showGraph ? "mb-4" : "mb-0"}`}>
         {/* Total Consumed Panel */}
         <div className="bg-base-200/70 p-3 rounded-2xl border border-base-300/60 flex flex-col justify-between">
           <div className="text-[11px] font-semibold text-base-content/60 flex items-center gap-1">
@@ -203,14 +222,14 @@ function NutrientGraphCard({ nutrient, dailyData = [], totalDays = 1, onOpenWiki
           </div>
         </div>
 
-        {/* Total Days Panel */}
+        {/* Days Logged Panel */}
         <div className="bg-base-200/70 p-3 rounded-2xl border border-base-300/60 flex flex-col justify-between">
           <div className="text-[11px] font-semibold text-base-content/60 flex items-center gap-1">
-            <Calendar size={13} className="text-info" /> Total Days
+            <Calendar size={13} className="text-info" /> Days Logged
           </div>
           <div className="mt-1">
             <span className="text-lg font-extrabold text-base-content tracking-tight">
-              {totalDays}
+              {loggedDaysCount}/{totalDays}
             </span>
             <span className="text-xs font-semibold text-base-content/60 ml-1">Days</span>
           </div>
@@ -265,9 +284,11 @@ function NutrientGraphCard({ nutrient, dailyData = [], totalDays = 1, onOpenWiki
       </div>
 
       {/* Chart Section */}
-      <div className="w-full pt-1">
-        <Chart options={chartOptions} series={series} type="line" height={260} />
-      </div>
+      {showGraph && (
+        <div className="w-full pt-1">
+          <Chart options={chartOptions} series={series} type="line" height={260} />
+        </div>
+      )}
     </div>
   );
 }
