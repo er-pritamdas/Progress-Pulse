@@ -106,26 +106,32 @@ const ExpTableView = () => {
 
       {/* Category Grid Section */}
       <section className="relative w-full">
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 pb-4">
-          {categories.map((cat) => (
-            <div key={cat._id} className="min-w-0">
-              <CategoryCard category={cat} />
-            </div>
-          ))}
+        {(() => {
+          const monthCategories = categories.filter(c => !c.month || c.month === currentMonth);
 
-          {/* Empty State / Add Helper */}
-          {categories.length === 0 && (
-            <div className="col-span-1 xl:col-span-2 h-[300px] flex flex-col items-center justify-center border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl text-gray-400 gap-4">
-              <p className="text-lg font-medium">No Categories Yet</p>
+          return (
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 pb-4">
+              {monthCategories.map((cat) => (
+                <div key={cat._id} className="min-w-0">
+                  <CategoryCard category={cat} />
+                </div>
+              ))}
 
-              <div className="flex flex-col items-center gap-2">
-                <button onClick={() => setShowAddCategoryModal(true)} className="btn btn-primary btn-sm">Create One</button>
-                <span className="text-xs opacity-50">- OR -</span>
-                <CopyFromLastMonthButton currentMonth={currentMonth} />
-              </div>
+              {/* Empty State / Add Helper */}
+              {monthCategories.length === 0 && (
+                <div className="col-span-1 xl:col-span-2 h-[300px] flex flex-col items-center justify-center border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl text-gray-400 gap-4">
+                  <p className="text-lg font-medium">No Categories Yet for {dayjs(currentMonth).format("MMMM YYYY")}</p>
+
+                  <div className="flex flex-col items-center gap-2">
+                    <button onClick={() => setShowAddCategoryModal(true)} className="btn btn-primary btn-sm">Create One</button>
+                    <span className="text-xs opacity-50">- OR -</span>
+                    <CopyFromLastMonthButton currentMonth={currentMonth} />
+                  </div>
+                </div>
+              )}
             </div>
-          )}
-        </div>
+          );
+        })()}
       </section>
 
       </div>

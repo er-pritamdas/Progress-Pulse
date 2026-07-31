@@ -1,10 +1,11 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchDashboardData, setMonth } from "../../../services/redux/slice/ExpenseSlice";
 import { useAuth } from "../../../Context/JwtAuthContext";
 import ExpenseTable from "../../../components/Expense/ExpenseTable";
 import dayjs from "dayjs";
-import { ChevronLeft, ChevronRight, TrendingUp, TrendingDown, Eye, EyeOff, Calendar, X, Wallet } from "lucide-react";
+import { ChevronLeft, ChevronRight, TrendingUp, TrendingDown, Eye, EyeOff, Calendar, X, Wallet, Search, Folder, ExternalLink, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
+import { getSourceTagStyle, getCategoryTagStyle } from "../../../utils/expenseTheme";
 
 const ExpTableEntry = () => {
   const dispatch = useDispatch();
@@ -14,6 +15,7 @@ const ExpTableEntry = () => {
   const [showDebit, setShowDebit] = useState(true);
   const [showCredit, setShowCredit] = useState(true);
   const [showHeatmapModal, setShowHeatmapModal] = useState(false);
+  const [showTransactionModal, setShowTransactionModal] = useState(null); // 'debit' | 'credit' | null
 
   useEffect(() => {
     dispatch(fetchDashboardData(currentMonth));
@@ -66,47 +68,81 @@ const ExpTableEntry = () => {
 
 
           {/* Debited Card */}
-          <div className="card bg-gradient-to-br from-base-100 to-base-200 shadow-xl overflow-hidden relative group">
+          <div
+            onClick={() => setShowTransactionModal("debit")}
+            className="card bg-gradient-to-br from-base-100 to-base-200 shadow-xl overflow-hidden relative group cursor-pointer hover:scale-[1.02] transition-all border border-transparent hover:border-error/30"
+          >
             {/* Background Icon */}
             <div className="absolute -right-6 -bottom-6 opacity-5 group-hover:scale-110 transition-transform duration-500">
               <TrendingDown size={120} className="text-error" />
             </div>
             <div className="card-body p-6 relative z-10">
               <div className="flex justify-between items-start">
-                <h3 className="text-xs font-bold text-base-content/50 uppercase tracking-widest mb-1">Total Debited</h3>
-                <button onClick={() => setShowDebit(!showDebit)} className="btn btn-xs btn-ghost btn-square opacity-50 hover:opacity-100">
+                <h3 className="text-xs font-bold text-base-content/50 uppercase tracking-widest mb-1 flex items-center gap-1.5">
+                  Total Debited <ExternalLink size={12} className="opacity-0 group-hover:opacity-100 transition-opacity text-error" />
+                </h3>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowDebit(!showDebit);
+                  }}
+                  className="btn btn-xs btn-ghost btn-square opacity-50 hover:opacity-100"
+                  title={showDebit ? "Hide Balance" : "Show Balance"}
+                >
                   {showDebit ? <EyeOff size={14} /> : <Eye size={14} />}
                 </button>
               </div>
               <div className="text-3xl font-bold text-error font-mono tracking-tighter">
                 {showDebit ? `₹${totalDebited.toLocaleString()}` : "••••••••"}
               </div>
-              <div className="flex items-center gap-2 mt-2">
-                <div className="w-2 h-2 rounded-full bg-error animate-pulse"></div>
-                <span className="text-xs text-base-content/60 font-medium">{debitCount} Transactions</span>
+              <div className="flex items-center justify-between mt-2">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-error animate-pulse"></div>
+                  <span className="text-xs text-base-content/60 font-medium">{debitCount} Transactions</span>
+                </div>
+                <span className="text-[10px] font-bold text-error bg-error/10 px-2 py-0.5 rounded-md opacity-80 group-hover:opacity-100 transition-opacity">
+                  View Breakdown →
+                </span>
               </div>
             </div>
           </div>
 
           {/* Credited Card */}
-          <div className="card bg-gradient-to-br from-base-100 to-base-200 shadow-xl overflow-hidden relative group">
+          <div
+            onClick={() => setShowTransactionModal("credit")}
+            className="card bg-gradient-to-br from-base-100 to-base-200 shadow-xl overflow-hidden relative group cursor-pointer hover:scale-[1.02] transition-all border border-transparent hover:border-success/30"
+          >
             {/* Background Icon */}
             <div className="absolute -right-6 -bottom-6 opacity-5 group-hover:scale-110 transition-transform duration-500">
               <TrendingUp size={120} className="text-success" />
             </div>
             <div className="card-body p-6 relative z-10">
               <div className="flex justify-between items-start">
-                <h3 className="text-xs font-bold text-base-content/50 uppercase tracking-widest mb-1">Total Credited</h3>
-                <button onClick={() => setShowCredit(!showCredit)} className="btn btn-xs btn-ghost btn-square opacity-50 hover:opacity-100">
+                <h3 className="text-xs font-bold text-base-content/50 uppercase tracking-widest mb-1 flex items-center gap-1.5">
+                  Total Credited <ExternalLink size={12} className="opacity-0 group-hover:opacity-100 transition-opacity text-success" />
+                </h3>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowCredit(!showCredit);
+                  }}
+                  className="btn btn-xs btn-ghost btn-square opacity-50 hover:opacity-100"
+                  title={showCredit ? "Hide Balance" : "Show Balance"}
+                >
                   {showCredit ? <EyeOff size={14} /> : <Eye size={14} />}
                 </button>
               </div>
               <div className="text-3xl font-bold text-success font-mono tracking-tighter">
                 {showCredit ? `₹${totalCredited.toLocaleString()}` : "••••••••"}
               </div>
-              <div className="flex items-center gap-2 mt-2">
-                <div className="w-2 h-2 rounded-full bg-success animate-pulse"></div>
-                <span className="text-xs text-base-content/60 font-medium">{creditCount} Transactions</span>
+              <div className="flex items-center justify-between mt-2">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-success animate-pulse"></div>
+                  <span className="text-xs text-base-content/60 font-medium">{creditCount} Transactions</span>
+                </div>
+                <span className="text-[10px] font-bold text-success bg-success/10 px-2 py-0.5 rounded-md opacity-80 group-hover:opacity-100 transition-opacity">
+                  View Breakdown →
+                </span>
               </div>
             </div>
           </div>
@@ -131,9 +167,6 @@ const ExpTableEntry = () => {
 
         {/* Main Table Area (Right) */}
         <div className="flex-1 flex flex-col gap-6">
-
-
-
           <ExpenseTable />
         </div>
 
@@ -145,6 +178,16 @@ const ExpTableEntry = () => {
           transactions={debitTransactions}
           currentMonth={currentMonth}
           onClose={() => setShowHeatmapModal(false)}
+        />
+      )}
+
+      {/* Debited / Credited Transactions List Popup Modal */}
+      {showTransactionModal && (
+        <TransactionListModal
+          type={showTransactionModal}
+          transactions={showTransactionModal === "debit" ? debitTransactions : creditTransactions}
+          currentMonth={currentMonth}
+          onClose={() => setShowTransactionModal(null)}
         />
       )}
     </div>
@@ -261,6 +304,221 @@ const HeatmapModal = ({ transactions, currentMonth, onClose }) => {
       </div>
     </div>
   );
-}
+};
+
+const TransactionListModal = ({ type, transactions, currentMonth, onClose }) => {
+  const { categories, sources } = useSelector((state) => state.expense);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sortOrder, setSortOrder] = useState("newest"); // "newest" | "oldest"
+  const [limitCount, setLimitCount] = useState("all"); // "10" | "20" | "30" | "40" | "all"
+
+  const isDebit = type === "debit";
+  const title = isDebit ? "Debited Transactions" : "Credited Transactions";
+  const accentColor = isDebit ? "text-error" : "text-success";
+  const bgBadge = isDebit ? "bg-error/10 text-error border-error/20" : "bg-success/10 text-success border-success/20";
+  const Icon = isDebit ? TrendingDown : TrendingUp;
+
+  // Filter transactions matching search term, sort order & row limit
+  const filteredTransactions = useMemo(() => {
+    let list = transactions.filter((t) => {
+      if (!searchTerm.trim()) return true;
+      const query = searchTerm.toLowerCase();
+
+      const catObj = categories.find((c) => String(c._id) === String(t.categoryId?._id || t.categoryId));
+      const catName = catObj?.name || t.categoryName || "";
+
+      const srcObj = sources.find((s) => String(s._id) === String(t.sourceId?._id || t.sourceId));
+      const srcName = srcObj?.name || t.sourceName || "";
+
+      const desc = t.description || "";
+      const amountStr = String(t.amount || "");
+      const dateStr = dayjs(t.date).format("DD MMM YYYY");
+
+      return (
+        desc.toLowerCase().includes(query) ||
+        catName.toLowerCase().includes(query) ||
+        srcName.toLowerCase().includes(query) ||
+        amountStr.includes(query) ||
+        dateStr.toLowerCase().includes(query)
+      );
+    });
+
+    list.sort((a, b) => {
+      const diff = new Date(b.date) - new Date(a.date);
+      return sortOrder === "newest" ? diff : -diff;
+    });
+
+    if (limitCount !== "all") {
+      list = list.slice(0, Number(limitCount));
+    }
+
+    return list;
+  }, [transactions, searchTerm, categories, sources, sortOrder, limitCount]);
+
+  const totalSum = filteredTransactions.reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+
+  return (
+    <div className="fixed inset-0 z-[99999] bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
+      <div className="bg-base-100 rounded-3xl shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden border border-base-300 animate-in fade-in zoom-in-95 duration-200">
+        {/* Header */}
+        <div className="p-5 border-b border-base-200 flex justify-between items-center bg-base-200/50">
+          <div className="flex items-center gap-3">
+            <div className={`p-2.5 rounded-2xl ${isDebit ? 'bg-error/15 text-error' : 'bg-success/15 text-success'}`}>
+              <Icon size={22} />
+            </div>
+            <div>
+              <h3 className="font-extrabold text-lg flex items-center gap-2">
+                <span>{title}</span>
+                <span className="text-xs opacity-60 font-mono font-medium">({dayjs(currentMonth).format("MMMM YYYY")})</span>
+              </h3>
+              <p className="text-xs opacity-60 font-medium mt-0.5">
+                Showing {filteredTransactions.length} of {transactions.length} transactions
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <span className={`px-3 py-1 rounded-xl text-sm font-extrabold font-mono border ${bgBadge}`}>
+              Total: ₹{totalSum.toLocaleString()}
+            </span>
+            <button onClick={onClose} className="btn btn-sm btn-ghost btn-circle rounded-full">
+              <X size={18} />
+            </button>
+          </div>
+        </div>
+
+        {/* Controls Bar: Search + Sort Order + Limit Selector */}
+        <div className="p-4 border-b border-base-200 bg-base-100 flex flex-col sm:flex-row gap-3 items-center justify-between">
+          <div className="relative w-full sm:w-72">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-base-content/40 w-4 h-4" />
+            <input
+              type="text"
+              placeholder="Search transactions..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="input input-sm select-bordered w-full pl-10 pr-8 bg-base-200/60 text-xs font-medium rounded-xl focus:bg-base-100 transition-colors"
+            />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm("")}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-base-content/40 hover:text-base-content"
+              >
+                <X size={14} />
+              </button>
+            )}
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto justify-end text-xs">
+            {/* Sort Order Toggle */}
+            <div className="join border border-base-300 rounded-xl p-0.5 bg-base-200/40">
+              <button
+                onClick={() => setSortOrder("newest")}
+                className={`join-item btn btn-xs rounded-lg font-bold gap-1 ${sortOrder === "newest" ? "btn-primary shadow-2xs" : "btn-ghost opacity-70"}`}
+                title="Show Newest First"
+              >
+                <ArrowDown size={12} /> New First
+              </button>
+              <button
+                onClick={() => setSortOrder("oldest")}
+                className={`join-item btn btn-xs rounded-lg font-bold gap-1 ${sortOrder === "oldest" ? "btn-primary shadow-2xs" : "btn-ghost opacity-70"}`}
+                title="Show Oldest First"
+              >
+                <ArrowUp size={12} /> Old First
+              </button>
+            </div>
+
+            {/* Row Limit Selector */}
+            <div className="flex items-center gap-1 bg-base-200/40 border border-base-300 p-0.5 rounded-xl">
+              <span className="px-2 text-[11px] font-bold opacity-60">Show:</span>
+              {["10", "20", "30", "40", "all"].map((val) => (
+                <button
+                  key={val}
+                  onClick={() => setLimitCount(val)}
+                  className={`btn btn-xs rounded-lg font-bold capitalize ${limitCount === val ? "btn-neutral shadow-2xs" : "btn-ghost opacity-70"}`}
+                >
+                  {val === "all" ? "All" : val}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Transactions Table */}
+        <div className="flex-1 overflow-y-auto p-4">
+          {filteredTransactions.length > 0 ? (
+            <div className="overflow-x-auto rounded-2xl border border-base-200 shadow-2xs">
+              <table className="table table-sm w-full text-xs">
+                <thead className="bg-base-200/70 text-base-content font-bold uppercase tracking-wider text-[11px]">
+                  <tr>
+                    <th className="py-3 px-4">Date</th>
+                    <th className="py-3 px-4">Description</th>
+                    <th className="py-3 px-4">Category</th>
+                    <th className="py-3 px-4">Payment Source</th>
+                    <th className="py-3 px-4 text-right">Amount</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-base-200/70 font-medium">
+                  {filteredTransactions.map((t) => {
+                    const catObj = categories.find((c) => String(c._id) === String(t.categoryId?._id || t.categoryId));
+                    const catTagStyle = getCategoryTagStyle(catObj, categories);
+
+                    const srcObj = sources.find((s) => String(s._id) === String(t.sourceId?._id || t.sourceId));
+                    const srcTagStyle = getSourceTagStyle(srcObj);
+
+                    return (
+                      <tr key={t._id || t.id} className="hover:bg-base-200/40 transition-colors">
+                        <td className="py-3 px-4 font-mono text-base-content/70 whitespace-nowrap">
+                          {dayjs(t.date).format("DD MMM YYYY")}
+                        </td>
+                        <td className="py-3 px-4 font-semibold text-base-content">
+                          {t.description || <span className="opacity-40 italic">No description</span>}
+                        </td>
+                        <td className="py-3 px-4">
+                          <span
+                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold ${catTagStyle.bg} ${catTagStyle.text} border ${catTagStyle.border}`}
+                          >
+                            <Folder size={12} />
+                            {catObj?.name || t.categoryName || "Uncategorized"}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <span
+                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold ${srcTagStyle.bg} ${srcTagStyle.text} border ${srcTagStyle.border}`}
+                          >
+                            <Wallet size={12} />
+                            {srcObj?.name || t.sourceName || "General"}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-right font-mono font-extrabold whitespace-nowrap">
+                          <span className={isDebit ? "text-error" : "text-success"}>
+                            {isDebit ? "-" : "+"}₹{Number(t.amount || 0).toLocaleString()}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="p-12 text-center text-sm opacity-50 italic">
+              No transactions match your filter criteria.
+            </div>
+          )}
+        </div>
+
+        {/* Footer Summary */}
+        <div className="p-4 border-t border-base-200 bg-base-200/50 flex justify-between items-center text-xs">
+          <span className="font-semibold text-base-content/70">
+            Showing <strong className="font-mono">{filteredTransactions.length}</strong> transactions | Total {isDebit ? 'Debited' : 'Credited'}: <strong className={`font-mono font-bold ${accentColor}`}>₹{totalSum.toLocaleString()}</strong>
+          </span>
+          <button onClick={onClose} className="btn btn-sm btn-primary rounded-xl font-bold px-5">
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export default ExpTableEntry;

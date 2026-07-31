@@ -5,16 +5,17 @@ import { reorderCategories, setLocalCategoriesOrder } from '../../services/redux
 
 const ReorderCategoriesModal = ({ isOpen, onClose }) => {
     const dispatch = useDispatch();
-    const { categories } = useSelector((state) => state.expense);
+    const { categories, currentMonth } = useSelector((state) => state.expense);
     const [items, setItems] = useState([]);
     const [draggedIndex, setDraggedIndex] = useState(null);
     const [isSaving, setIsSaving] = useState(false);
 
     useEffect(() => {
         if (isOpen && categories) {
-            setItems([...categories]);
+            const monthCategories = categories.filter(c => !c.month || c.month === currentMonth);
+            setItems([...monthCategories]);
         }
-    }, [isOpen, categories]);
+    }, [isOpen, categories, currentMonth]);
 
     if (!isOpen) return null;
 
@@ -42,8 +43,10 @@ const ReorderCategoriesModal = ({ isOpen, onClose }) => {
 
     const handleSave = async () => {
         setIsSaving(true);
-        // Optimistically update local redux state
-        dispatch(setLocalCategoriesOrder(items));
+        // Combine reordered month categories with categories of other months
+        const otherCategories = categories.filter(c => c.month && c.month !== currentMonth);
+        const updatedAllCategories = [...items, ...otherCategories];
+        dispatch(setLocalCategoriesOrder(updatedAllCategories));
         const categoryIds = items.map(c => c._id);
         await dispatch(reorderCategories({ categoryIds }));
         setIsSaving(false);

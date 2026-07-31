@@ -3,53 +3,136 @@ import { useDispatch, useSelector } from "react-redux";
 import dayjs from "dayjs";
 import { addTransaction, updateTransaction, deleteTransaction } from "../../services/redux/slice/ExpenseSlice";
 import { getSourceTagStyle, getCategoryTagStyle } from "../../utils/expenseTheme";
-import { Trash2, Save, X, Edit2, Plus, Handshake, AlertTriangle, Wallet, Tag, Folder, TrendingUp, TrendingDown } from "lucide-react";
+import { Trash2, Save, X, Edit2, Plus, Handshake, AlertTriangle, Wallet, Tag, Folder, TrendingUp, TrendingDown, ArrowUp, ArrowDown, Calendar } from "lucide-react";
 
 // Helper Component for DaisyUI Dropdown
-const DaisySelect = ({ value, onChange, options, placeholder, disabled, className, specialOption }) => {
+const DaisySelect = ({ value, onChange, options, placeholder, disabled, className }) => {
     const selectedItem = options.find(o => o.value === value);
     // Handle special "Add Money" label if selected
     const displayLabel = value === "add_money" ? "+ Add Money" : (value === "debit_money" ? "- Debit Money" : (selectedItem ? selectedItem.label : placeholder));
     const isSpecialSelected = value === "add_money" || value === "debit_money";
+    const selectedStyle = selectedItem?.tagStyle;
 
     return (
         <div className={`dropdown dropdown-bottom dropdown-end w-full ${className || ''}`}>
             <div
                 tabIndex={0}
                 role="button"
-                className={`btn btn-sm w-full justify-between font-normal text-xs border border-base-300 bg-base-100 hover:border-primary
+                className={`btn btn-xs w-full justify-between font-medium text-xs border transition-all
                     ${disabled ? 'btn-disabled opacity-50' : ''}
-                    ${isSpecialSelected ? 'text-success font-bold border-success/50 bg-success/5' : ''}`}
+                    ${isSpecialSelected
+                        ? (value === "add_money" ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/40 font-bold" : "bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/40 font-bold")
+                        : (selectedStyle ? `${selectedStyle.bg} ${selectedStyle.text} border ${selectedStyle.border}` : "border-base-300 bg-base-100 hover:border-primary")}`}
             >
-                <span className="truncate">{displayLabel}</span>
-                <span className="opacity-50 scale-75">▼</span>
+                <span className="truncate flex items-center gap-1.5 font-bold">
+                    {selectedStyle && <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${selectedStyle.swatch}`}></span>}
+                    {!selectedStyle && selectedItem?.catObj && <Folder size={12} className="shrink-0" />}
+                    {!selectedStyle && selectedItem?.sourceObj && <Wallet size={12} className="shrink-0" />}
+                    <span className="truncate">{displayLabel}</span>
+                </span>
+                <span className="opacity-50 scale-75 shrink-0">▼</span>
             </div>
             {!disabled && (
-                <ul tabIndex={0} className="dropdown-content z-[50] menu p-1 shadow-xl bg-base-100 rounded-box w-64 max-h-60 overflow-y-auto border border-base-200 block text-xs">
-                    {options.map((opt, idx) => (
-                        <li key={opt.key || opt.value || idx}>
-                            {opt.disabled ? (
-                                <div className="divider my-0 py-0 h-1"></div>
-                            ) : (
+                <ul tabIndex={0} className="dropdown-content z-[9999] p-1.5 shadow-2xl bg-base-100 backdrop-blur-md rounded-2xl w-72 max-h-60 overflow-y-auto overflow-x-hidden border border-base-200 text-xs flex flex-col flex-nowrap gap-1">
+                    {options.map((opt, idx) => {
+                        if (opt.disabled) {
+                            if (opt.value === "divider") return <div key={`div-${idx}`} className="divider my-0.5 py-0 h-px"></div>;
+                            return <li key={opt.key || idx} className="text-[10px] font-bold text-base-content/40 uppercase tracking-wider px-2 py-1 list-none block w-full">{opt.label}</li>;
+                        }
+
+                        const isSelected = opt.value === value;
+                        const optStyle = opt.tagStyle;
+
+                        return (
+                            <li key={opt.key || opt.value || idx} className="list-none block w-full">
                                 <a
-                                    className={`${opt.value === value ? "active" : ""} ${opt.className || ''}`}
+                                    className={`rounded-xl py-2 px-2.5 flex items-center justify-between font-semibold transition-all cursor-pointer w-full ${
+                                        optStyle
+                                            ? `${optStyle.bg} ${optStyle.text} border ${optStyle.border}`
+                                            : "hover:bg-base-200"
+                                    } ${isSelected ? "ring-2 ring-primary ring-offset-1 font-extrabold" : ""}`}
                                     onClick={(e) => {
-                                        // e.preventDefault();
                                         if (opt.value !== "divider") {
                                             onChange(opt.value);
-                                            // Close dropdown by blurring
                                             e.currentTarget.closest('.dropdown')?.removeAttribute('open');
                                             document.activeElement?.blur();
                                         }
                                     }}
                                 >
-                                    {opt.label}
+                                    <span className="truncate flex items-center gap-2 max-w-full">
+                                        {optStyle ? (
+                                            <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${optStyle.swatch}`}></span>
+                                        ) : (
+                                            <>
+                                                {opt.catObj && <Folder size={13} className="shrink-0" />}
+                                                {opt.sourceObj && <Wallet size={13} className="shrink-0" />}
+                                            </>
+                                        )}
+                                        <span className="truncate">{opt.label}</span>
+                                    </span>
                                 </a>
-                            )}
-                        </li>
-                    ))}
+                            </li>
+                        );
+                    })}
                 </ul>
             )}
+        </div>
+    );
+};
+
+// Helper Component for Cally Calendar Dropdown Date Picker
+const CallyDatePicker = ({ value, onChange, placeholder = "Select Date", className = "", size = "xs", showClear = false, onClear }) => {
+    const formattedDisplay = value ? dayjs(value).format("MMM DD, YYYY") : placeholder;
+
+    return (
+        <div className={`dropdown dropdown-bottom ${className || ''}`}>
+            <div
+                tabIndex={0}
+                role="button"
+                className={`btn btn-${size} btn-outline border-base-300 w-full justify-between font-medium text-xs bg-base-100 normal-case`}
+            >
+                <span className="truncate flex items-center gap-1.5">
+                    <Calendar size={13} className="shrink-0 text-primary/70" />
+                    <span className="truncate">{formattedDisplay}</span>
+                </span>
+                <span className="flex items-center gap-1">
+                    {showClear && value && (
+                        <span
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                if (onClear) onClear();
+                                document.activeElement?.blur();
+                            }}
+                            className="text-error hover:scale-125 transition-transform font-bold text-sm px-0.5"
+                            title="Clear Date"
+                        >
+                            ×
+                        </span>
+                    )}
+                    <span className="opacity-50 text-[10px]">▼</span>
+                </span>
+            </div>
+            <div tabIndex={0} className="dropdown-content z-[9999] bg-base-100 rounded-2xl shadow-2xl p-2 border border-base-200 mt-1 animate-in fade-in zoom-in-95 duration-150">
+                <calendar-date
+                    class="cally"
+                    value={value || undefined}
+                    onchange={(e) => {
+                        if (e.target.value) {
+                            onChange(e.target.value);
+                            e.currentTarget.closest('.dropdown')?.removeAttribute('open');
+                            document.activeElement?.blur();
+                        }
+                    }}
+                >
+                    <svg aria-label="Previous" className="fill-current size-4" slot="previous" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                        <path d="M15.75 19.5 8.25 12l7.5-7.5" />
+                    </svg>
+                    <svg aria-label="Next" className="fill-current size-4" slot="next" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                        <path d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+                    </svg>
+                    <calendar-month></calendar-month>
+                </calendar-date>
+            </div>
         </div>
     );
 };
@@ -100,8 +183,9 @@ const ExpenseTable = () => {
         );
     };
 
-    // Sort transactions by date (descending)
-    const sortedTransactions = [...transactions].sort((a, b) => new Date(b.date) - new Date(a.date));
+    // Sorting and Row Limit State
+    const [sortOrder, setSortOrder] = useState("newest"); // "newest" | "oldest"
+    const [rowLimit, setRowLimit] = useState("all"); // "10" | "20" | "30" | "40" | "all"
 
     // Editing State
     const [editingId, setEditingId] = useState(null);
@@ -120,14 +204,27 @@ const ExpenseTable = () => {
         subCategoryId: ""
     });
 
-    const filteredTransactions = sortedTransactions.filter(t => {
-        const matchDate = filters.date ? dayjs(t.date).format("YYYY-MM-DD") === filters.date : true;
-        const matchDesc = filters.description ? t.description.toLowerCase().includes(filters.description.toLowerCase()) : true;
-        const matchSource = filters.sourceId ? (t.sourceId?._id === filters.sourceId || t.sourceId === filters.sourceId) : true;
-        const matchCategory = filters.categoryId ? (t.categoryId?._id === filters.categoryId || t.categoryId === filters.categoryId) : true;
-        const matchSub = filters.subCategoryId ? (t.subCategoryId?._id === filters.subCategoryId || t.subCategoryId === filters.subCategoryId) : true;
-        return matchDate && matchDesc && matchSource && matchCategory && matchSub;
-    });
+    const filteredTransactions = (() => {
+        let list = transactions.filter(t => {
+            const matchDate = filters.date ? dayjs(t.date).format("YYYY-MM-DD") === filters.date : true;
+            const matchDesc = filters.description ? t.description.toLowerCase().includes(filters.description.toLowerCase()) : true;
+            const matchSource = filters.sourceId ? (t.sourceId?._id === filters.sourceId || t.sourceId === filters.sourceId) : true;
+            const matchCategory = filters.categoryId ? (t.categoryId?._id === filters.categoryId || t.categoryId === filters.categoryId) : true;
+            const matchSub = filters.subCategoryId ? (t.subCategoryId?._id === filters.subCategoryId || t.subCategoryId === filters.subCategoryId) : true;
+            return matchDate && matchDesc && matchSource && matchCategory && matchSub;
+        });
+
+        list.sort((a, b) => {
+            const diff = new Date(b.date) - new Date(a.date);
+            return sortOrder === "newest" ? diff : -diff;
+        });
+
+        if (rowLimit !== "all") {
+            list = list.slice(0, Number(rowLimit));
+        }
+
+        return list;
+    })();
 
     // Adding State
     const [isAdding, setIsAdding] = useState(false);
@@ -141,19 +238,29 @@ const ExpenseTable = () => {
         isReimbursable: false
     });
 
+    // Categories filtered for currentMonth
+    const currentMonthCategories = categories.filter(c => !c.month || c.month === currentMonth);
+
     // Helper to get Subcategories for a selected category
     const getSubCats = (catId) => {
-        const cat = categories.find(c => c._id === catId);
+        const cat = currentMonthCategories.find(c => c._id === catId);
         return cat ? cat.subCategories : [];
     };
 
-    // Helper to get formatted Subcategory options with remaining budget
+    // Transactions filtered by currentMonth for budget remaining calculation
+    const currentMonthTxns = transactions.filter(t => {
+        if (!currentMonth || !t.date) return true;
+        return dayjs(t.date).format("YYYY-MM") === currentMonth;
+    });
+
+    // Helper to get formatted Subcategory options with remaining budget & parent category style
     const getSubCatOptions = (catId) => {
-        const cat = categories.find(c => c._id === catId);
+        const cat = currentMonthCategories.find(c => c._id === catId);
         if (!cat || !cat.subCategories) return [];
+        const catTagStyle = getCategoryTagStyle(cat, currentMonthCategories);
         return cat.subCategories.map(sub => {
             const subBudget = Number(sub.budget) || 0;
-            const subUsed = transactions
+            const subUsed = currentMonthTxns
                 .filter(t => t.type !== 'Credit' && (
                     t.subCategoryId?._id === sub._id ||
                     t.subCategoryId === sub._id ||
@@ -165,7 +272,9 @@ const ExpenseTable = () => {
             return {
                 value: sub._id,
                 label: `${sub.name} (${formattedRem} Left)`,
-                key: sub._id
+                key: sub._id,
+                tagStyle: catTagStyle,
+                catObj: cat
             };
         });
     };
@@ -178,42 +287,56 @@ const ExpenseTable = () => {
         { value: "divider", disabled: true },
         ...sources.map(s => {
             const amt = s.type === 'Card' && !s.balance && s.limit ? s.limit : (s.balance || 0);
+            const tagStyle = getSourceTagStyle(s, sources);
             return {
                 value: s._id,
                 label: `${s.name} (₹${amt.toLocaleString()})`,
-                key: s._id
+                key: s._id,
+                tagStyle,
+                sourceObj: s
             };
         })
     ];
 
     const editSourceOptions = sources.map(s => {
         const amt = s.type === 'Card' && !s.balance && s.limit ? s.limit : (s.balance || 0);
+        const tagStyle = getSourceTagStyle(s, sources);
         return {
             value: s._id,
             label: `${s.name} (₹${amt.toLocaleString()})`,
-            key: s._id
+            key: s._id,
+            tagStyle,
+            sourceObj: s
         };
     });
 
     const targetOptions = [
-        ...sources.filter(s => s.type !== 'Card').map(s => ({
-            value: s._id,
-            label: `${s.name} (₹${(s.balance || 0).toLocaleString()})`,
-            key: s._id
-        }))
+        ...sources.filter(s => s.type !== 'Card').map(s => {
+            const tagStyle = getSourceTagStyle(s, sources);
+            return {
+                value: s._id,
+                label: `${s.name} (₹${(s.balance || 0).toLocaleString()})`,
+                key: s._id,
+                tagStyle,
+                sourceObj: s
+            };
+        })
     ];
 
-    const categoryOptions = categories.map(c => {
+    const categoryOptions = currentMonthCategories.map(c => {
         const catBudget = (c.subCategories || []).reduce((sum, sub) => sum + (Number(sub.budget) || 0), 0);
-        const catUsed = transactions
+        const catUsed = currentMonthTxns
             .filter(t => t.type !== 'Credit' && (t.categoryId?._id === c._id || t.categoryId === c._id))
             .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
         const rem = catBudget - catUsed;
         const formattedRem = rem >= 0 ? `₹${rem.toLocaleString()}` : `-₹${Math.abs(rem).toLocaleString()}`;
+        const tagStyle = getCategoryTagStyle(c, currentMonthCategories);
         return {
             value: c._id,
             label: `${c.name} (${formattedRem} Left)`,
-            key: c._id
+            key: c._id,
+            tagStyle,
+            catObj: c
         };
     });
 
@@ -322,7 +445,14 @@ const ExpenseTable = () => {
                 <div className="grid grid-cols-12 gap-4 px-6 py-4 bg-base-200/90 border-b border-base-200 text-xs font-bold text-base-content/50 uppercase tracking-widest items-end">
                     <div className="col-span-2">
                         <span className="mb-1 block">Date</span>
-                        <input type="date" value={filters.date} onChange={(e) => setFilters({ ...filters, date: e.target.value })} className="input input-xs input-bordered w-full" />
+                        <CallyDatePicker
+                            value={filters.date}
+                            onChange={(val) => setFilters({ ...filters, date: val })}
+                            placeholder="All Dates"
+                            showClear={true}
+                            onClear={() => setFilters({ ...filters, date: "" })}
+                            size="xs"
+                        />
                     </div>
                     <div className="col-span-2">
                         <span className="mb-1 block">Description</span>
@@ -379,7 +509,13 @@ const ExpenseTable = () => {
                                 >
                                     <Handshake size={14} />
                                 </button>
-                                <input type="date" value={newData.date} onChange={e => setNewData({ ...newData, date: e.target.value })} className="input input-sm input-bordered focus:input-primary w-full text-xs" />
+                                <CallyDatePicker
+                                    value={newData.date}
+                                    onChange={(val) => setNewData({ ...newData, date: val })}
+                                    placeholder="Select Date"
+                                    size="sm"
+                                    className="w-full"
+                                />
                             </div>
                             <input placeholder="Desc" value={newData.description} onChange={e => setNewData({ ...newData, description: e.target.value })} className="col-span-2 input input-sm input-bordered focus:input-primary w-full text-xs" autoFocus />
 
@@ -450,9 +586,45 @@ const ExpenseTable = () => {
                             </div>
                         </div>
                     ) : (
-                        <button onClick={() => setIsAdding(true)} className="btn btn-ghost btn-sm w-full gap-2 text-base-content/50 hover:text-primary hover:bg-base-200">
-                            <Plus size={16} /> Add New Transaction
-                        </button>
+                        <div className="flex flex-col sm:flex-row items-center justify-between gap-2 px-2 py-1">
+                            <button onClick={() => setIsAdding(true)} className="btn btn-ghost btn-xs text-primary font-bold gap-1 hover:bg-primary/10">
+                                <Plus size={15} /> Add New Transaction
+                            </button>
+
+                            <div className="flex flex-wrap items-center gap-3 text-xs">
+                                {/* Sort Order Toggle */}
+                                <div className="join border border-base-300 rounded-xl p-0.5 bg-base-100">
+                                    <button
+                                        onClick={() => setSortOrder("newest")}
+                                        className={`join-item btn btn-xs rounded-lg font-bold gap-1 ${sortOrder === "newest" ? "btn-primary shadow-2xs" : "btn-ghost opacity-70"}`}
+                                        title="Show Newest First"
+                                    >
+                                        <ArrowDown size={12} /> New First
+                                    </button>
+                                    <button
+                                        onClick={() => setSortOrder("oldest")}
+                                        className={`join-item btn btn-xs rounded-lg font-bold gap-1 ${sortOrder === "oldest" ? "btn-primary shadow-2xs" : "btn-ghost opacity-70"}`}
+                                        title="Show Oldest First"
+                                    >
+                                        <ArrowUp size={12} /> Old First
+                                    </button>
+                                </div>
+
+                                {/* Row Limit Selector */}
+                                <div className="flex items-center gap-1 bg-base-100 border border-base-300 p-0.5 rounded-xl">
+                                    <span className="px-2 text-[11px] font-bold opacity-60">Show:</span>
+                                    {["10", "20", "30", "40", "all"].map((val) => (
+                                        <button
+                                            key={val}
+                                            onClick={() => setRowLimit(val)}
+                                            className={`btn btn-xs rounded-lg font-bold capitalize ${rowLimit === val ? "btn-neutral shadow-2xs" : "btn-ghost opacity-70"}`}
+                                        >
+                                            {val === "all" ? "All" : val}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
                     )}
                 </div>
 
@@ -471,7 +643,13 @@ const ExpenseTable = () => {
                                     >
                                         <Handshake size={14} />
                                     </button>
-                                    <input type="date" value={editData.date} onChange={e => setEditData({ ...editData, date: e.target.value })} className="input input-xs input-bordered w-full" />
+                                    <CallyDatePicker
+                                        value={editData.date}
+                                        onChange={(val) => setEditData({ ...editData, date: val })}
+                                        placeholder="Select Date"
+                                        size="xs"
+                                        className="w-full"
+                                    />
                                 </div>
                                 <input value={editData.description} onChange={e => setEditData({ ...editData, description: e.target.value })} className="col-span-2 input input-xs input-bordered" />
 
@@ -555,7 +733,7 @@ const ExpenseTable = () => {
                     </div>
                 ))}
 
-                {sortedTransactions.length === 0 && (
+                {filteredTransactions.length === 0 && (
                     <div className="h-64 flex flex-col items-center justify-center text-base-content/30 italic">
                         No transactions recorded for this period.
                     </div>

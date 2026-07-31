@@ -107,7 +107,8 @@ const HeaderSection = () => {
 
                 {/* 2. Combined Salary & Budget Planning Stat Card */}
                 {(() => {
-                    const totalBudgeted = categories.reduce((acc, cat) => acc + (cat.subCategories || []).reduce((subAcc, sub) => subAcc + (Number(sub.budget) || 0), 0), 0);
+                    const monthCategories = categories.filter(c => !c.month || c.month === currentMonth);
+                    const totalBudgeted = monthCategories.reduce((acc, cat) => acc + (cat.subCategories || []).reduce((subAcc, sub) => subAcc + (Number(sub.budget) || 0), 0), 0);
                     const unbudgetedSalary = salary - totalBudgeted;
                     const isOverBudget = totalBudgeted > salary;
                     const allocatedPct = salary > 0 ? Math.min(((totalBudgeted / salary) * 100), 100) : 0;
@@ -167,7 +168,8 @@ const HeaderSection = () => {
 
                 {/* 3. Dedicated Total Spent Stat Card */}
                 {(() => {
-                    const totalBudgeted = categories.reduce((acc, cat) => acc + (cat.subCategories || []).reduce((subAcc, sub) => subAcc + (Number(sub.budget) || 0), 0), 0);
+                    const monthCategories = categories.filter(c => !c.month || c.month === currentMonth);
+                    const totalBudgeted = monthCategories.reduce((acc, cat) => acc + (cat.subCategories || []).reduce((subAcc, sub) => subAcc + (Number(sub.budget) || 0), 0), 0);
                     const spentPctSalary = salary > 0 ? Math.min(((totalUsed / salary) * 100), 100) : 0;
                     const spentPctBudget = totalBudgeted > 0 ? Math.min(((totalUsed / totalBudgeted) * 100), 100) : 0;
 
@@ -199,7 +201,8 @@ const HeaderSection = () => {
 
                 {/* 4. Actual Remaining Stat Card (with Vertical Calculation Breakdown) */}
                 {(() => {
-                    const totalBudgeted = categories.reduce((acc, cat) => acc + (cat.subCategories || []).reduce((subAcc, sub) => subAcc + (Number(sub.budget) || 0), 0), 0);
+                    const monthCategories = categories.filter(c => !c.month || c.month === currentMonth);
+                    const totalBudgeted = monthCategories.reduce((acc, cat) => acc + (cat.subCategories || []).reduce((subAcc, sub) => subAcc + (Number(sub.budget) || 0), 0), 0);
                     const unbudgetedSalary = salary - totalBudgeted;
 
                     return (
