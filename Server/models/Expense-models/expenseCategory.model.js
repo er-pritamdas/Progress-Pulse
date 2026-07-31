@@ -20,6 +20,10 @@ const subCategorySchema = new mongoose.Schema({
     month: {
         type: String, // Format: "YYYY-MM"
         trim: true
+    },
+    order: {
+        type: Number,
+        default: 0
     }
 });
 
@@ -38,6 +42,14 @@ const expenseCategorySchema = new mongoose.Schema({
     month: {
         type: String, // Format "YYYY-MM"
         trim: true
+    },
+    order: {
+        type: Number,
+        default: 0
+    },
+    color: {
+        type: String,
+        default: ""
     },
     subCategories: [subCategorySchema]
 }, { timestamps: true });

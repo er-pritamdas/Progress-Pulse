@@ -126,10 +126,10 @@ function EditFoodLogModal({ isOpen, onClose, log, onLogUpdated }) {
   };
 
   return (
-    <div className="fixed inset-0 z-[9999] bg-black/75 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 overflow-hidden">
-      <div className="bg-base-200 rounded-3xl max-w-md w-full border border-base-300 shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200 -mt-6 sm:-mt-10">
+    <div className="fixed inset-0 z-[9999] bg-black/75 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 overflow-hidden">
+      <div className="bg-base-200 rounded-3xl max-w-lg w-full h-[75vh] sm:h-[600px] border border-base-300 shadow-2xl flex flex-col justify-between overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         {/* Header */}
-        <div className="p-5 bg-base-300/80 border-b border-base-300 flex justify-between items-center">
+        <div className="p-5 bg-base-300/80 border-b border-base-300 flex justify-between items-center shrink-0">
           <h3 className="font-bold text-lg flex items-center gap-2">
             <Edit3 className="text-primary" size={20} /> Edit Logged Food
           </h3>
@@ -139,7 +139,7 @@ function EditFoodLogModal({ isOpen, onClose, log, onLogUpdated }) {
         </div>
 
         {/* Content */}
-        <div className="p-5 space-y-4">
+        <div className="p-5 space-y-4 flex-1 overflow-y-auto min-h-0">
           {error && (
             <div className="alert alert-error text-xs py-2 px-3 flex items-center gap-2">
               <AlertCircle size={14} />
@@ -248,7 +248,7 @@ function EditFoodLogModal({ isOpen, onClose, log, onLogUpdated }) {
         </div>
 
         {/* Footer */}
-        <div className="p-4 bg-base-300/40 border-t border-base-300 flex justify-end gap-2">
+        <div className="p-4 bg-base-300/40 border-t border-base-300 flex justify-end gap-2 shrink-0">
           <button type="button" className="btn btn-sm btn-ghost" onClick={onClose}>
             Cancel
           </button>

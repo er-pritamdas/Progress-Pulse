@@ -17,106 +17,93 @@ const getMonthDateRange = (monthStr) => {
 export const getDashboardData = async (req, res) => {
     try {
         const { _id: userId } = req.user; // Assuming auth middleware adds user
-        const { month } = req.query; // Format: "YYYY-MM"
+        const { month, fromMonth, toMonth } = req.query; // Format: "YYYY-MM"
 
-        if (!month) {
-            return res.status(400).json({ success: false, message: "Month is required (YYYY-MM)" });
-        }
+        let startDate, endDate, monthsList = [];
 
-        const { startDate, endDate } = getMonthDateRange(month);
+        if (fromMonth && toMonth) {
+            const [fromY, fromM] = fromMonth.split('-').map(Number);
+            const [toY, toM] = toMonth.split('-').map(Number);
+            startDate = new Date(fromY, fromM - 1, 1);
+            endDate = new Date(toY, toM, 0, 23, 59, 59, 999);
 
-        // Check and Seed Default Data if user is new (has no categories)
-        const categoryCount = await ExpenseCategory.countDocuments({ userId });
-        if (categoryCount === 0) {
-            const defaultCategories = [
-                {
-                    name: "Household & Living 🏠",
-                    subCategories: [
-                        { name: "House Rent", budget: 15000 },
-                        { name: "Electricity Bill", budget: 1500 },
-                        { name: "Water Bill", budget: 300 },
-                        { name: "Gas", budget: 1200 },
-                        { name: "Maintenance", budget: 2000 },
-                        { name: "Internet", budget: 1000 }
-                    ],
-                    month: month
-                },
-                {
-                    name: "Investments & Savings 💰",
-                    subCategories: [
-                        { name: "EPF / PPF", budget: 5000 },
-                        { name: "SIP / Mutual Funds", budget: 10000 },
-                        { name: "Stocks", budget: 5000 },
-                        { name: "Emergency Fund", budget: 3000 }
-                    ],
-                    month: month
+            // Construct list of YYYY-MM months in date range
+            let currYear = fromY;
+            let currMonth = fromM;
+            while (currYear < toY || (currYear === toY && currMonth <= toM)) {
+                monthsList.push(`${currYear}-${String(currMonth).padStart(2, '0')}`);
+                currMonth++;
+                if (currMonth > 12) {
+                    currMonth = 1;
+                    currYear++;
                 }
-            ];
-
-            await ExpenseCategory.insertMany(
-                defaultCategories.map(cat => ({ userId, ...cat }))
-            );
+            }
+        } else {
+            const targetMonth = month || new Date().toISOString().slice(0, 7);
+            monthsList = [targetMonth];
+            const range = getMonthDateRange(targetMonth);
+            startDate = range.startDate;
+            endDate = range.endDate;
         }
-
-        const sourceCount = await PaymentSource.countDocuments({ userId });
-        if (sourceCount === 0) {
-            const defaultSources = [
-                { name: "HDFC", type: "Bank", balance: 5000 },
-                { name: "SBI", type: "Bank", balance: 5000 },
-                { name: "Credit Card", type: "Card" },
-                { name: "Cash", type: "Wallet", balance: 5000 },
-                { name: "Paytm Wallet", type: "Wallet", balance: 5000 }
-            ];
-            await PaymentSource.insertMany(
-                defaultSources.map(s => ({ userId, ...s }))
-            );
-        }
-
 
         // Fetch all data in parallel
         let [categories, sources, salaryData, transactions] = await Promise.all([
-            // Find categories that are either Global (no month) OR match the specific month
-            ExpenseCategory.find({
-                userId,
-                $or: [
-                    { month: { $exists: false } },
-                    { month: null },
-                    { month: month }
-                ]
-            }).sort({ createdAt: 1 }).lean(),
+            // Find all categories for user
+            ExpenseCategory.find({ userId }).sort({ order: 1, createdAt: 1 }).lean(),
             PaymentSource.find({ userId }).sort({ createdAt: 1 }),
-            MonthlyBudget.findOne({ userId, month }),
+            MonthlyBudget.findOne({ userId, month: monthsList[monthsList.length - 1] }),
             ExpenseTransaction.find({
                 userId,
                 date: { $gte: startDate, $lte: endDate }
-            }).sort({ date: -1 }).populate('sourceId', 'name').populate('categoryId', 'name')
+            }).sort({ date: 1 }).populate('sourceId', 'name color').populate('categoryId', 'name color')
         ]);
 
-        // Filter SubCategories by Month (Include Global + Selected Month)
-        categories = categories.map(cat => ({
-            ...cat,
-            subCategories: cat.subCategories.filter(sub => !sub.month || sub.month === month)
-        }));
+        // Keep full subcategories data intact for month-by-month analysis
 
-        // Calculate "Spent" for Card type sources (This Month)
+        // Calculate "Spent" for Card type sources (in the date range)
         const updatedSources = sources.map(source => {
             if (source.type === "Card") {
-                // Calculate total debits for this source in the current month
                 const monthlySpend = transactions
-                    .filter(t => t.sourceId._id.toString() === source._id.toString() && t.type === "Debit")
+                    .filter(t => t.sourceId?._id?.toString() === source._id?.toString() && t.type === "Debit")
                     .reduce((sum, t) => sum + t.amount, 0);
                 return { ...source.toObject(), spent: monthlySpend };
             }
             return source.toObject(); // Bank/Wallet show native balance
         });
 
+        const targetMonth = monthsList[monthsList.length - 1];
+        let effectiveSalary = 0;
+
+        // Check if there is a previous month budget for this user
+        const prevBudget = await MonthlyBudget.findOne({
+            userId,
+            month: { $lt: targetMonth }
+        }).sort({ month: -1 });
+
+        if (salaryData && salaryData.salary !== 86500) {
+            effectiveSalary = salaryData.salary;
+        } else if (prevBudget) {
+            // Inherit from most recent previous month (overriding stale 86500 default)
+            effectiveSalary = prevBudget.salary;
+            await MonthlyBudget.findOneAndUpdate(
+                { userId, month: targetMonth },
+                { salary: effectiveSalary },
+                { upsert: true, new: true }
+            );
+        } else if (salaryData) {
+            effectiveSalary = salaryData.salary;
+        } else {
+            effectiveSalary = 0;
+        }
+
         res.status(200).json({
             success: true,
             data: {
                 categories,
                 sources: updatedSources,
-                salary: salaryData ? salaryData.salary : 86500,
-                transactions
+                salary: effectiveSalary,
+                transactions,
+                months: monthsList
             }
         });
     } catch (error) {
@@ -135,10 +122,18 @@ export const updateSalary = async (req, res) => {
             return res.status(400).json({ success: false, message: "Month and Salary are required" });
         }
 
+        const newSalary = Number(salary);
+
         const budget = await MonthlyBudget.findOneAndUpdate(
             { userId, month },
-            { salary },
-            { new: true, upsert: true } // Create if not exists
+            { salary: newSalary },
+            { new: true, upsert: true }
+        );
+
+        // Update any future month documents in DB that carry the stale 86500 default
+        await MonthlyBudget.updateMany(
+            { userId, month: { $gt: month }, salary: 86500 },
+            { salary: newSalary }
         );
 
         res.status(200).json({ success: true, data: budget });
@@ -152,10 +147,20 @@ export const updateSalary = async (req, res) => {
 export const createCategory = async (req, res) => {
     try {
         const { _id: userId } = req.user;
-        const { name, month } = req.body;
+        const { name, month, color, subCategories } = req.body;
+
+        const subs = Array.isArray(subCategories)
+            ? subCategories
+                .filter(s => s && s.name && s.name.trim())
+                .map(s => ({
+                    name: s.name.trim(),
+                    budget: Number(s.budget) || 0,
+                    month
+                }))
+            : [];
 
         // If month is provided, create for that month. If not, it's global.
-        const category = await ExpenseCategory.create({ userId, name, month, subCategories: [] });
+        const category = await ExpenseCategory.create({ userId, name, month, color, subCategories: subs });
         res.status(201).json({ success: true, data: category });
     } catch (error) {
         if (error.code === 11000) {
@@ -168,11 +173,15 @@ export const createCategory = async (req, res) => {
 export const updateCategory = async (req, res) => {
     try {
         const { id } = req.params;
-        const { name } = req.body;
+        const { name, color } = req.body;
+
+        const updateData = {};
+        if (name !== undefined) updateData.name = name;
+        if (color !== undefined) updateData.color = color;
 
         const category = await ExpenseCategory.findByIdAndUpdate(
             id,
-            { name },
+            updateData,
             { new: true }
         );
         res.status(200).json({ success: true, data: category });
@@ -250,20 +259,81 @@ export const deleteSubCategory = async (req, res) => {
     }
 };
 
+export const reorderCategories = async (req, res) => {
+    try {
+        const { _id: userId } = req.user;
+        const { categoryIds } = req.body;
+
+        if (!Array.isArray(categoryIds)) {
+            return res.status(400).json({ success: false, message: "categoryIds must be an array" });
+        }
+
+        const bulkOps = categoryIds.map((id, index) => ({
+            updateOne: {
+                filter: { _id: id, userId },
+                update: { $set: { order: index } }
+            }
+        }));
+
+        if (bulkOps.length > 0) {
+            await ExpenseCategory.bulkWrite(bulkOps);
+        }
+
+        res.status(200).json({ success: true, message: "Categories reordered successfully" });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+export const reorderSubCategories = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { subCategoryIds } = req.body;
+
+        if (!Array.isArray(subCategoryIds)) {
+            return res.status(400).json({ success: false, message: "subCategoryIds must be an array" });
+        }
+
+        const category = await ExpenseCategory.findById(id);
+        if (!category) return res.status(404).json({ success: false, message: "Category not found" });
+
+        const subMap = new Map(category.subCategories.map(sub => [sub._id.toString(), sub]));
+
+        const reorderedSubs = [];
+        subCategoryIds.forEach((subId, index) => {
+            const sub = subMap.get(subId.toString());
+            if (sub) {
+                sub.order = index;
+                reorderedSubs.push(sub);
+                subMap.delete(subId.toString());
+            }
+        });
+
+        subMap.forEach(sub => reorderedSubs.push(sub));
+
+        category.subCategories = reorderedSubs;
+        await category.save();
+
+        res.status(200).json({ success: true, data: category });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
 // ---------------------- Money Sources ----------------------
 
 export const createSource = async (req, res) => {
     try {
         const { _id: userId } = req.user;
-        const { name, type, balance } = req.body;
+        const { name, type, balance, limit, color } = req.body;
 
-        // If Credit Card, balance (spent) usually starts at 0.
-        // If Bank/Wallet, user provides initial balance.
         const source = await PaymentSource.create({
             userId,
             name,
             type,
-            balance: balance ? Number(balance) : 0
+            balance: balance ? Number(balance) : 0,
+            limit: limit ? Number(limit) : 0,
+            color: color || ""
         });
         res.status(201).json({ success: true, data: source });
     } catch (error) {
@@ -277,11 +347,18 @@ export const createSource = async (req, res) => {
 export const updateSource = async (req, res) => {
     try {
         const { id } = req.params;
-        const { name } = req.body;
+        const { name, type, balance, limit, color } = req.body;
+
+        const updateData = {};
+        if (name !== undefined) updateData.name = name;
+        if (type !== undefined) updateData.type = type;
+        if (balance !== undefined) updateData.balance = Number(balance);
+        if (limit !== undefined) updateData.limit = Number(limit);
+        if (color !== undefined) updateData.color = color;
 
         const source = await PaymentSource.findByIdAndUpdate(
             id,
-            { name },
+            updateData,
             { new: true }
         );
         res.status(200).json({ success: true, data: source });
@@ -334,9 +411,9 @@ export const addTransaction = async (req, res) => {
         }
 
         // Populate match the getDashboard format for immediate UI update
-        await transaction.populate('sourceId', 'name type balance');
+        await transaction.populate('sourceId', 'name color type balance');
         if (transactionType === "Debit") {
-            await transaction.populate('categoryId', 'name');
+            await transaction.populate('categoryId', 'name color');
         }
 
         res.status(201).json({ success: true, data: transaction });
@@ -354,7 +431,7 @@ export const updateTransaction = async (req, res) => {
             id,
             updateData,
             { new: true }
-        ).populate('sourceId', 'name').populate('categoryId', 'name');
+        ).populate('sourceId', 'name color').populate('categoryId', 'name color');
 
         res.status(200).json({ success: true, data: transaction });
     } catch (error) {

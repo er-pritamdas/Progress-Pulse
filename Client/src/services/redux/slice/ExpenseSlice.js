@@ -20,6 +20,20 @@ export const fetchDashboardData = createAsyncThunk(
     }
 );
 
+export const fetchRangeData = createAsyncThunk(
+    "expense/fetchRangeData",
+    async ({ fromMonth, toMonth }, { rejectWithValue }) => {
+        try {
+            const response = await axiosInstance.get(`${BASE_URL}/get-all-data`, {
+                params: { fromMonth, toMonth },
+            });
+            return response.data.data;
+        } catch (error) {
+            return rejectWithValue(error.response?.data?.message || "Failed to fetch range data");
+        }
+    }
+);
+
 export const updateSalary = createAsyncThunk(
     "expense/updateSalary",
     async ({ month, salary }, { rejectWithValue }) => {
@@ -35,9 +49,9 @@ export const updateSalary = createAsyncThunk(
 // Categories
 export const createCategory = createAsyncThunk(
     "expense/createCategory",
-    async ({ name, month }, { rejectWithValue }) => {
+    async ({ name, month, subCategories }, { rejectWithValue }) => {
         try {
-            const response = await axiosInstance.post(`${BASE_URL}/category`, { name, month });
+            const response = await axiosInstance.post(`${BASE_URL}/category`, { name, month, subCategories });
             return response.data.data;
         } catch (error) {
             return rejectWithValue(error.response?.data?.message || "Failed to create category");
@@ -47,9 +61,9 @@ export const createCategory = createAsyncThunk(
 
 export const updateCategory = createAsyncThunk(
     "expense/updateCategory",
-    async ({ id, name }, { rejectWithValue }) => {
+    async ({ id, name, color }, { rejectWithValue }) => {
         try {
-            const response = await axiosInstance.patch(`${BASE_URL}/category/${id}`, { name });
+            const response = await axiosInstance.patch(`${BASE_URL}/category/${id}`, { name, color });
             return response.data.data;
         } catch (error) {
             return rejectWithValue(error.response?.data?.message || "Failed to update category");
@@ -118,12 +132,36 @@ export const deleteSubCategory = createAsyncThunk(
     }
 );
 
+export const reorderCategories = createAsyncThunk(
+    "expense/reorderCategories",
+    async ({ categoryIds }, { rejectWithValue }) => {
+        try {
+            await axiosInstance.put(`${BASE_URL}/category/reorder`, { categoryIds });
+            return categoryIds;
+        } catch (error) {
+            return rejectWithValue(error.response?.data?.message || "Failed to reorder categories");
+        }
+    }
+);
+
+export const reorderSubCategories = createAsyncThunk(
+    "expense/reorderSubCategories",
+    async ({ categoryId, subCategoryIds }, { rejectWithValue }) => {
+        try {
+            const response = await axiosInstance.put(`${BASE_URL}/category/${categoryId}/subcategory/reorder`, { subCategoryIds });
+            return response.data.data;
+        } catch (error) {
+            return rejectWithValue(error.response?.data?.message || "Failed to reorder subcategories");
+        }
+    }
+);
+
 // Sources
 export const createSource = createAsyncThunk(
     "expense/createSource",
-    async ({ name, type, balance }, { rejectWithValue }) => {
+    async ({ name, type, balance, limit, color }, { rejectWithValue }) => {
         try {
-            const response = await axiosInstance.post(`${BASE_URL}/source`, { name, type, balance });
+            const response = await axiosInstance.post(`${BASE_URL}/source`, { name, type, balance, limit, color });
             return response.data.data;
         } catch (error) {
             return rejectWithValue(error.response?.data?.message || "Failed to create source");
@@ -133,9 +171,9 @@ export const createSource = createAsyncThunk(
 
 export const updateSource = createAsyncThunk(
     "expense/updateSource",
-    async ({ id, name }, { rejectWithValue }) => {
+    async ({ id, name, type, balance, limit, color }, { rejectWithValue }) => {
         try {
-            const response = await axiosInstance.patch(`${BASE_URL}/source/${id}`, { name });
+            const response = await axiosInstance.patch(`${BASE_URL}/source/${id}`, { name, type, balance, limit, color });
             return response.data.data;
         } catch (error) {
             return rejectWithValue(error.response?.data?.message || "Failed to update source");
@@ -209,6 +247,14 @@ const expenseSlice = createSlice({
     reducers: {
         setMonth: (state, action) => {
             state.currentMonth = action.payload;
+        },
+        setLocalCategoriesOrder: (state, action) => {
+            state.categories = action.payload;
+        },
+        setLocalSubCategoriesOrder: (state, action) => {
+            const { categoryId, subCategories } = action.payload;
+            const cat = state.categories.find(c => c._id === categoryId);
+            if (cat) cat.subCategories = subCategories;
         }
     },
     extraReducers: (builder) => {
@@ -226,6 +272,23 @@ const expenseSlice = createSlice({
                 state.transactions = action.payload.transactions;
             })
             .addCase(fetchDashboardData.rejected, (state, action) => {
+                state.loading = false;
+                state.error = action.payload;
+            })
+
+            // Fetch Range Data
+            .addCase(fetchRangeData.pending, (state) => {
+                state.loading = true;
+                state.error = null;
+            })
+            .addCase(fetchRangeData.fulfilled, (state, action) => {
+                state.loading = false;
+                state.categories = action.payload.categories;
+                state.sources = action.payload.sources;
+                state.salary = action.payload.salary;
+                state.transactions = action.payload.transactions;
+            })
+            .addCase(fetchRangeData.rejected, (state, action) => {
                 state.loading = false;
                 state.error = action.payload;
             })
@@ -262,6 +325,10 @@ const expenseSlice = createSlice({
                 if (index !== -1) state.categories[index] = action.payload;
             })
             .addCase(deleteSubCategory.fulfilled, (state, action) => {
+                const index = state.categories.findIndex(c => c._id === action.payload._id);
+                if (index !== -1) state.categories[index] = action.payload;
+            })
+            .addCase(reorderSubCategories.fulfilled, (state, action) => {
                 const index = state.categories.findIndex(c => c._id === action.payload._id);
                 if (index !== -1) state.categories[index] = action.payload;
             })
@@ -309,5 +376,5 @@ const expenseSlice = createSlice({
     },
 });
 
-export const { setMonth } = expenseSlice.actions;
+export const { setMonth, setLocalCategoriesOrder, setLocalSubCategoriesOrder } = expenseSlice.actions;
 export default expenseSlice.reducer;

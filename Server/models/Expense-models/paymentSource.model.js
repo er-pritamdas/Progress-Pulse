@@ -28,6 +28,14 @@ const paymentSourceSchema = new mongoose.Schema({
     balance: {
         type: Number,
         default: 0
+    },
+    limit: {
+        type: Number,
+        default: 0
+    },
+    color: {
+        type: String,
+        default: ""
     }
 }, { timestamps: true });
 

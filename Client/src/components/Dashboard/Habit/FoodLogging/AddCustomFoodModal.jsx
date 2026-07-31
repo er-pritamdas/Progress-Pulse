@@ -114,8 +114,8 @@ function AddCustomFoodModal({ isOpen, onClose, onFoodAdded }) {
   };
 
   return (
-    <div className="fixed inset-0 z-[9999] bg-black/75 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 overflow-hidden">
-      <div className="bg-base-200 rounded-3xl max-w-3xl w-full h-[560px] max-h-[calc(100vh-100px)] border border-base-300 shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200 -mt-6 sm:-mt-10">
+    <div className="fixed inset-0 z-[99999] bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
+      <div className="bg-base-200 rounded-3xl max-w-3xl w-full h-[650px] border border-base-300 shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         {/* Header */}
         <div className="p-5 sm:p-6 bg-base-300/80 border-b border-base-300 flex justify-between items-center shrink-0">
           <h3 className="font-bold text-xl flex items-center gap-2">

@@ -8,6 +8,8 @@ import {
     addSubCategory,
     updateSubCategory,
     deleteSubCategory,
+    reorderCategories,
+    reorderSubCategories,
     createSource,
     updateSource,
     deleteSource,
@@ -31,6 +33,7 @@ router.post("/salary", updateSalary);
 
 // Categories
 router.post("/category/copy-previous", copyCategoriesFromLastMonth);
+router.put("/category/reorder", reorderCategories);
 
 router.route("/category")
     .post(createCategory);
@@ -40,6 +43,8 @@ router.route("/category/:id")
     .delete(deleteCategory);
 
 // SubCategories
+router.put("/category/:id/subcategory/reorder", reorderSubCategories);
+
 router.route("/category/:id/subcategory")
     .post(addSubCategory);
 

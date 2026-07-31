@@ -98,12 +98,12 @@ const AddHabitPopUp = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[999] bg-black/75 backdrop-blur-md flex items-start justify-center pt-16 sm:pt-18 pb-6 px-3 sm:px-6 overflow-hidden">
-      <div className="bg-base-200 p-6 rounded-3xl shadow-2xl w-full max-w-2xl max-h-[calc(100vh-80px)] flex flex-col overflow-y-auto border border-base-300 animate-in fade-in zoom-in-95 duration-200">
-        <h2 className="text-2xl font-bold text-center">
+    <div className="fixed inset-0 z-[99999] bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
+      <div className="bg-base-200 p-6 rounded-3xl shadow-2xl w-full max-w-2xl h-[640px] flex flex-col justify-between overflow-hidden border border-base-300 animate-in fade-in zoom-in-95 duration-200">
+        <h2 className="text-2xl font-bold text-center shrink-0">
           Add New Habit Entry
         </h2>
-        <div className="flex justify-center mt-4 mb-4">
+        <div className="flex justify-center mt-4 mb-4 shrink-0">
           <progress
             className={`progress w-150 ${progresscolor(progress(formData))}`}
             value={progress(formData)}
@@ -111,7 +111,7 @@ const AddHabitPopUp = ({
           ></progress>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 flex-1 overflow-y-auto min-h-0 pr-1">
           {/* Date Picker */}
           <fieldset className="fieldset">
             <legend className="fieldset-legend">Date</legend>
@@ -427,7 +427,7 @@ const AddHabitPopUp = ({
           </fieldset>
         </div>
 
-        <div className="flex justify-end mt-6 gap-3">
+        <div className="flex justify-end mt-6 gap-3 shrink-0">
           <button className="btn btn-success" onClick={handleSubmit}>
             Add
           </button>

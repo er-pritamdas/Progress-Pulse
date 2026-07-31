@@ -7,6 +7,7 @@ import { getHabitSettings, updateHabitSettings, resetHabitSettingsToDefault } fr
 // Habit Physical Logging Controller
 import { addPhysicalLog, getPhysicalLogs, deletePhysicalLog } from "../../controllers/Habit-controllers/HabitLogging.controller.js";
 import { exportHabitDataToEmail } from "../../controllers/Habit-controllers/HabitExport.controller.js";
+import { exportFoodLoggingDataToEmail } from "../../controllers/Habit-controllers/FoodExport.controller.js";
 
 // Food Logging Controller
 import {
@@ -33,8 +34,9 @@ router.route("/settings").get(verifyToken, getHabitSettings);
 router.route("/settings").put(verifyToken, updateHabitSettings);
 router.route("/settings").delete(verifyToken, resetHabitSettingsToDefault);
 
-// Export Route
+// Export Routes
 router.route("/export").post(verifyToken, exportHabitDataToEmail);
+router.route("/food/export").post(verifyToken, exportFoodLoggingDataToEmail);
 
 // Habit Physical Logging Routes
 router.route("/logging").post(verifyToken, addPhysicalLog);

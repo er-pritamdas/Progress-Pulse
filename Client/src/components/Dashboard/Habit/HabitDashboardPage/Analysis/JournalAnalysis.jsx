@@ -19,7 +19,7 @@ const JournalAnalysis = ({
     return (
         <div className="mb-12 animate-fade-in-up">
             <div className="py-3 text-2xl text-primary font-semibold divider mb-8">
-                Journal Analysis ✍️
+                Daily Overview 🗓️
             </div>
 
             {/* Journal Calendar Section */}

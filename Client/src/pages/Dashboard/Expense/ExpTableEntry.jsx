@@ -180,13 +180,18 @@ const HeatmapModal = ({ transactions, currentMonth, onClose }) => {
   const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-      <div className="bg-base-100 rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col overflow-hidden border border-base-200 text-sm">
-        <div className="p-4 border-b border-base-200 flex justify-between items-center bg-base-200/50">
-          <h3 className="font-bold text-lg flex items-center gap-2">
-            <Calendar size={20} className="text-primary" />
-            Spending Calendar ({dayjs(currentMonth).format("MMM YYYY")})
-          </h3>
+    <div className="fixed inset-0 z-[99999] bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
+      <div className="bg-base-200 rounded-3xl shadow-2xl w-full max-w-2xl h-[580px] flex flex-col justify-between overflow-hidden border border-base-300 text-sm animate-in fade-in zoom-in-95 duration-200">
+        <div className="shrink-0 p-4 border-b border-base-200 flex justify-between items-center bg-base-200/50">
+          <div className="flex items-center gap-3">
+            <h3 className="font-bold text-lg flex items-center gap-2">
+              <Calendar size={20} className="text-primary" />
+              Spending Calendar ({dayjs(currentMonth).format("MMM YYYY")})
+            </h3>
+            <span className="badge badge-primary badge-outline gap-1.5 font-bold text-xs py-2 px-2.5 shadow-2xs">
+              Today: {dayjs().format("DD MMM YYYY")}
+            </span>
+          </div>
           <button onClick={onClose} className="btn btn-sm btn-ghost btn-square rounded-full"><X size={20} /></button>
         </div>
 
@@ -205,6 +210,7 @@ const HeatmapModal = ({ transactions, currentMonth, onClose }) => {
 
               const dateStr = date.format("YYYY-MM-DD");
               const amount = dailySpending[dateStr] || 0;
+              const isToday = dateStr === dayjs().format("YYYY-MM-DD");
 
               // Intensity Logic
               let bgClass = "bg-base-200/50 hover:bg-base-200";
@@ -226,10 +232,12 @@ const HeatmapModal = ({ transactions, currentMonth, onClose }) => {
               return (
                 <div
                   key={dateStr}
-                  className={`aspect-square rounded-xl flex flex-col items-center justify-center p-1 transition-all cursor-default relative group ${bgClass}`}
-                  title={`Spending: ₹${amount.toLocaleString()}`}
+                  className={`aspect-square rounded-xl flex flex-col items-center justify-center p-1 transition-all cursor-default relative group ${
+                    isToday ? 'ring-2 ring-primary ring-offset-2 ring-offset-base-100 z-10 font-black shadow-md border-2 border-primary scale-105' : ''
+                  } ${bgClass}`}
+                  title={(isToday ? 'Today - ' : '') + `Spending: ₹${amount.toLocaleString()}`}
                 >
-                  <span className={`text-xs ${amount > 0 ? 'opacity-100' : 'opacity-80'}`}>{date.date()}</span>
+                  <span className={`text-xs ${amount > 0 || isToday ? 'opacity-100 font-bold' : 'opacity-80'}`}>{date.date()}</span>
                   {amount > 0 && (
                     <span className={`text-[10px] leading-tight mt-1 ${textClass}`}>
                       ₹{amount > 1000 ? (amount / 1000).toFixed(1) + "k" : amount}
@@ -241,7 +249,11 @@ const HeatmapModal = ({ transactions, currentMonth, onClose }) => {
           </div>
         </div>
 
-        <div className="p-3 bg-base-100 border-t border-base-200 flex justify-center gap-4 opacity-100">
+        <div className="p-3 bg-base-100 border-t border-base-200 flex justify-center items-center gap-4 opacity-100 flex-wrap">
+          <div className="flex items-center gap-1.5 font-bold text-xs text-primary bg-primary/10 px-2 py-0.5 rounded-md border border-primary/20">
+            <span className="w-2.5 h-2.5 rounded-full bg-primary ring-2 ring-primary/40 animate-pulse"></span>
+            Today ({dayjs().format('D MMM')})
+          </div>
           <div className="flex items-center gap-1"><div className="w-2 h-2 rounded bg-success"></div> Low</div>
           <div className="flex items-center gap-1"><div className="w-2 h-2 rounded bg-warning"></div> Med</div>
           <div className="flex items-center gap-1"><div className="w-2 h-2 rounded bg-error"></div> High</div>

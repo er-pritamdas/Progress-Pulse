@@ -232,11 +232,18 @@ function LogFoodModal({ isOpen, onClose, selectedDate, initialMeal = "Breakfast"
     );
   };
 
+  const handleServingStep = (delta) => {
+    const nextVal = parseFloat((Number(servings || 0) + delta).toFixed(2));
+    if (nextVal >= 0.25) {
+      setServings(nextVal);
+    }
+  };
+
   const handleUpdateQueueServings = (id, delta) => {
     setStagedItems((prev) =>
       prev.map((item) => {
         if (item.id !== id) return item;
-        const newServings = Math.max(0.1, parseFloat((item.servings + delta).toFixed(2)));
+        const newServings = Math.max(0.25, parseFloat((item.servings + delta).toFixed(2)));
         const calories = Math.round((item.food.calories || 0) * newServings);
         return {
           ...item,
@@ -316,8 +323,8 @@ function LogFoodModal({ isOpen, onClose, selectedDate, initialMeal = "Breakfast"
 
   return (
     <>
-      <div className="fixed inset-0 z-[9999] bg-black/75 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 overflow-hidden">
-        <div className="bg-base-200 rounded-3xl max-w-5xl w-full h-[580px] max-h-[calc(100vh-100px)] border border-base-300 shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200 -mt-6 sm:-mt-10">
+      <div className="fixed inset-0 z-[99999] bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
+        <div className="bg-base-200 rounded-3xl max-w-5xl w-full h-[680px] border border-base-300 shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
           {/* Header */}
           <div className="p-4 border-b border-base-300 flex justify-between items-center shrink-0">
             <div>
@@ -698,14 +705,30 @@ function LogFoodModal({ isOpen, onClose, selectedDate, initialMeal = "Breakfast"
                         </div>
                         <div>
                           <label className="text-[11px] font-semibold block mb-1 text-base-content/80">Servings</label>
-                          <input
-                            type="number"
-                            step="0.25"
-                            min="0.1"
-                            className="input input-xs input-bordered w-full font-bold focus:outline-none"
-                            value={servings}
-                            onChange={(e) => setServings(e.target.value)}
-                          />
+                          <div className="join border border-base-300 rounded-lg overflow-hidden w-full flex">
+                            <button
+                              type="button"
+                              className="join-item btn btn-xs btn-neutral px-2 font-bold text-xs"
+                              onClick={() => handleServingStep(-0.25)}
+                            >
+                              -
+                            </button>
+                            <input
+                              type="number"
+                              step="0.25"
+                              min="0.25"
+                              className="join-item input input-xs text-center font-bold w-full bg-base-100 focus:outline-none px-1"
+                              value={servings}
+                              onChange={(e) => setServings(e.target.value)}
+                            />
+                            <button
+                              type="button"
+                              className="join-item btn btn-xs btn-neutral px-2 font-bold text-xs"
+                              onClick={() => handleServingStep(0.25)}
+                            >
+                              +
+                            </button>
+                          </div>
                         </div>
                       </div>
 

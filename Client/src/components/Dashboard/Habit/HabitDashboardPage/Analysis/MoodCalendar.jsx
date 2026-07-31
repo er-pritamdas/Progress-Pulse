@@ -147,11 +147,15 @@ const MoodCalendar = ({ habitData = [], moodList = [], year = dayjs().year(), mo
 
             {/* Right Content: Year Calendar */}
             <div className="w-full md:w-[80%]">
-                 <div className="flex items-center justify-between mb-6">
+                 <div className="flex items-center justify-between mb-6 flex-wrap gap-2">
                      <h3 className="text-lg font-semibold flex items-center gap-2">
                         {getMoodIcon(selectedMood)} {selectedMood} <span className="opacity-50 text-sm font-normal">in {year}</span>
                     </h3>
-                    <div className="flex items-center gap-3 text-xs opacity-60 flex-wrap justify-end">
+                    <div className="flex items-center gap-3 text-xs opacity-80 flex-wrap justify-end">
+                         <div className="flex items-center gap-1.5 font-semibold text-xs text-primary bg-primary/10 px-2.5 py-1 rounded-lg border border-primary/20">
+                             <span className="w-2.5 h-2.5 rounded-full bg-primary ring-2 ring-primary/40 animate-pulse"></span>
+                             Today: {dayjs().format('D MMM YYYY')}
+                         </div>
                          <div className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-base-300"></div> <span>Empty</span></div>
                          
                          {selectedMood === 'All' ? (
@@ -205,17 +209,20 @@ const MoodCalendar = ({ habitData = [], moodList = [], year = dayjs().year(), mo
                                         const isActive = !!mood;
                                         const moodColor = isActive ? getMoodColor(mood) : null;
                                         const textColor = moodColor ? getTextColor(moodColor) : null;
+                                        const isToday = dateStr === dayjs().format('YYYY-MM-DD');
 
                                         return (
                                             <div
                                                 key={day}
-                                                className={`aspect-square flex items-center justify-center text-[10px] rounded-sm transition-colors ${
+                                                className={`aspect-square flex items-center justify-center text-[10px] rounded-sm transition-all relative ${
+                                                    isToday ? 'ring-2 ring-primary ring-offset-1 ring-offset-base-100 font-extrabold z-10 scale-105 border border-primary shadow-sm' : ''
+                                                } ${
                                                     isActive 
                                                         ? 'font-bold shadow-sm' 
                                                         : 'bg-base-100 opacity-50 hover:opacity-100'
                                                 }`}
                                                 style={isActive && moodColor ? { backgroundColor: moodColor, color: textColor } : {}}
-                                                title={isActive ? `Recorded on ${dateStr}: ${mood}` : dateStr}
+                                                title={(isToday ? 'Today - ' : '') + (isActive ? `Recorded on ${dateStr}: ${mood}` : dateStr)}
                                             >
                                                 {day}
                                             </div>

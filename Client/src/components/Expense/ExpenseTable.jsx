@@ -2,7 +2,8 @@ import React, { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import dayjs from "dayjs";
 import { addTransaction, updateTransaction, deleteTransaction } from "../../services/redux/slice/ExpenseSlice";
-import { Trash2, Save, X, Edit2, Plus, Handshake, AlertTriangle, Wallet } from "lucide-react";
+import { getSourceTagStyle, getCategoryTagStyle } from "../../utils/expenseTheme";
+import { Trash2, Save, X, Edit2, Plus, Handshake, AlertTriangle, Wallet, Tag, Folder, TrendingUp, TrendingDown } from "lucide-react";
 
 // Helper Component for DaisyUI Dropdown
 const DaisySelect = ({ value, onChange, options, placeholder, disabled, className, specialOption }) => {
@@ -24,7 +25,7 @@ const DaisySelect = ({ value, onChange, options, placeholder, disabled, classNam
                 <span className="opacity-50 scale-75">▼</span>
             </div>
             {!disabled && (
-                <ul tabIndex={0} className="dropdown-content z-[50] menu p-1 shadow-xl bg-base-100 rounded-box w-52 max-h-60 overflow-y-auto border border-base-200 block text-xs">
+                <ul tabIndex={0} className="dropdown-content z-[50] menu p-1 shadow-xl bg-base-100 rounded-box w-64 max-h-60 overflow-y-auto border border-base-200 block text-xs">
                     {options.map((opt, idx) => (
                         <li key={opt.key || opt.value || idx}>
                             {opt.disabled ? (
@@ -56,6 +57,48 @@ const DaisySelect = ({ value, onChange, options, placeholder, disabled, classNam
 const ExpenseTable = () => {
     const dispatch = useDispatch();
     const { transactions, categories, sources, loading, currentMonth } = useSelector((state) => state.expense);
+
+    // Render Source Tag Helper
+    const renderSourceTag = (t) => {
+        const sourceObj = t.sourceId;
+        const sourceName = sourceObj?.name || (typeof sourceObj === 'string' ? sourceObj : 'Unknown');
+        const style = getSourceTagStyle(sourceObj || sourceName, sources);
+        return (
+            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold ${style.bg} ${style.text} border ${style.border} truncate max-w-full`} title={sourceName}>
+                <Wallet size={12} className="shrink-0" />
+                <span className="truncate">{sourceName}</span>
+            </span>
+        );
+    };
+
+    // Render Category Tag Helper
+    const renderCategoryTag = (t) => {
+        if (t.type === 'Credit') {
+            return (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 truncate max-w-full">
+                    <TrendingUp size={12} className="shrink-0 text-emerald-500" />
+                    <span className="truncate">+ Add Money</span>
+                </span>
+            );
+        }
+        if (t.type === 'Debit' && !t.categoryId) {
+            return (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30 truncate max-w-full">
+                    <TrendingDown size={12} className="shrink-0 text-rose-500" />
+                    <span className="truncate">- Debit Money</span>
+                </span>
+            );
+        }
+        const catObj = t.categoryId;
+        const catName = catObj?.name || (typeof catObj === 'string' ? catObj : 'Uncategorized');
+        const style = getCategoryTagStyle(catObj || catName, categories);
+        return (
+            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold ${style.bg} ${style.text} border ${style.border} truncate max-w-full`} title={catName}>
+                <Tag size={12} className="shrink-0" />
+                <span className="truncate">{catName}</span>
+            </span>
+        );
+    };
 
     // Sort transactions by date (descending)
     const sortedTransactions = [...transactions].sort((a, b) => new Date(b.date) - new Date(a.date));
@@ -104,24 +147,75 @@ const ExpenseTable = () => {
         return cat ? cat.subCategories : [];
     };
 
+    // Helper to get formatted Subcategory options with remaining budget
+    const getSubCatOptions = (catId) => {
+        const cat = categories.find(c => c._id === catId);
+        if (!cat || !cat.subCategories) return [];
+        return cat.subCategories.map(sub => {
+            const subBudget = Number(sub.budget) || 0;
+            const subUsed = transactions
+                .filter(t => t.type !== 'Credit' && (
+                    t.subCategoryId?._id === sub._id ||
+                    t.subCategoryId === sub._id ||
+                    (t.categoryId === cat._id && t.description?.includes(sub.name))
+                ))
+                .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+            const rem = subBudget - subUsed;
+            const formattedRem = rem >= 0 ? `₹${rem.toLocaleString()}` : `-₹${Math.abs(rem).toLocaleString()}`;
+            return {
+                value: sub._id,
+                label: `${sub.name} (${formattedRem} Left)`,
+                key: sub._id
+            };
+        });
+    };
+
     // --- Options Builders ---
     const sourceOptions = [
         { value: "", label: "Select Source", disabled: true }, // Placeholder
         { value: "add_money", label: "+ Add Money", className: "text-success font-bold" },
         { value: "debit_money", label: "- Debit Money", className: "text-error font-bold" },
         { value: "divider", disabled: true },
-        ...sources.map(s => ({
+        ...sources.map(s => {
+            const amt = s.type === 'Card' && !s.balance && s.limit ? s.limit : (s.balance || 0);
+            return {
+                value: s._id,
+                label: `${s.name} (₹${amt.toLocaleString()})`,
+                key: s._id
+            };
+        })
+    ];
+
+    const editSourceOptions = sources.map(s => {
+        const amt = s.type === 'Card' && !s.balance && s.limit ? s.limit : (s.balance || 0);
+        return {
             value: s._id,
-            label: `${s.name} (${s.type === 'Card' ? 'Card' : s.balance})`,
+            label: `${s.name} (₹${amt.toLocaleString()})`,
+            key: s._id
+        };
+    });
+
+    const targetOptions = [
+        ...sources.filter(s => s.type !== 'Card').map(s => ({
+            value: s._id,
+            label: `${s.name} (₹${(s.balance || 0).toLocaleString()})`,
             key: s._id
         }))
     ];
 
-    const targetOptions = [
-        ...sources.filter(s => s.type !== 'Card').map(s => ({ value: s._id, label: s.name, key: s._id }))
-    ];
-
-    const categoryOptions = categories.map(c => ({ value: c._id, label: c.name, key: c._id }));
+    const categoryOptions = categories.map(c => {
+        const catBudget = (c.subCategories || []).reduce((sum, sub) => sum + (Number(sub.budget) || 0), 0);
+        const catUsed = transactions
+            .filter(t => t.type !== 'Credit' && (t.categoryId?._id === c._id || t.categoryId === c._id))
+            .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+        const rem = catBudget - catUsed;
+        const formattedRem = rem >= 0 ? `₹${rem.toLocaleString()}` : `-₹${Math.abs(rem).toLocaleString()}`;
+        return {
+            value: c._id,
+            label: `${c.name} (${formattedRem} Left)`,
+            key: c._id
+        };
+    });
 
     // --- Handlers ---
 
@@ -209,15 +303,18 @@ const ExpenseTable = () => {
                 {/* Sources Tags */}
                 {sources.length > 0 && (
                     <div className="flex flex-wrap gap-3 p-4 border-b border-base-200/50 bg-base-100">
-                        {sources.map((source) => (
-                            <div key={source._id} className="badge badge-lg py-4 px-4 gap-2 bg-base-100 border border-base-200 shadow-sm">
-                                <Wallet size={14} className="opacity-50" />
-                                <span className="font-semibold">{source.name}</span>
-                                <span className={`font-mono font-bold ${source.balance >= 0 ? 'text-success' : 'text-error'}`}>
-                                    ₹{source.balance.toLocaleString()}
-                                </span>
-                            </div>
-                        ))}
+                        {sources.map((source) => {
+                            const style = getSourceTagStyle(source, sources);
+                            return (
+                                <div key={source._id} className={`badge badge-lg py-4 px-4 gap-2 ${style.bg} ${style.text} border ${style.border} shadow-xs font-medium`}>
+                                    <Wallet size={14} className="shrink-0" />
+                                    <span className="font-semibold">{source.name}</span>
+                                    <span className={`font-mono font-bold ${source.balance >= 0 ? 'text-success' : 'text-error'}`}>
+                                        ₹{source.balance.toLocaleString()}
+                                    </span>
+                                </div>
+                            );
+                        })}
                     </div>
                 )}
 
@@ -232,30 +329,27 @@ const ExpenseTable = () => {
                         <input type="text" placeholder="Filter..." value={filters.description} onChange={(e) => setFilters({ ...filters, description: e.target.value })} className="input input-xs input-bordered w-full" />
                     </div>
                     <div className="col-span-2">
-                        <span className="mb-1 block">From</span>
+                        <span className="mb-1 block font-bold text-blue-600 dark:text-blue-400">From</span>
                         <select value={filters.sourceId} onChange={(e) => setFilters({ ...filters, sourceId: e.target.value })} className="select select-bordered select-xs w-full">
                             <option value="">All</option>
-                            {sources.map(s => <option key={s._id} value={s._id}>{s.name}</option>)}
+                            {editSourceOptions.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
                         </select>
                     </div>
                     <div className="col-span-2">
-                        <span className="mb-1 block">Category</span>
+                        <span className="mb-1 block font-bold text-purple-600 dark:text-purple-400">Category</span>
                         <select value={filters.categoryId} onChange={(e) => setFilters({ ...filters, categoryId: e.target.value, subCategoryId: "" })} className="select select-bordered select-xs w-full">
                             <option value="">All</option>
                             {categoryOptions.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
                         </select>
                     </div>
                     <div className="col-span-2">
-                        <span className="mb-1 block">Sub Category</span>
+                        <span className="mb-1 block font-bold text-amber-600 dark:text-amber-400">Sub Category</span>
                         <select value={filters.subCategoryId} onChange={(e) => setFilters({ ...filters, subCategoryId: e.target.value })} className="select select-bordered select-xs w-full">
                             <option value="">All</option>
                             {filters.categoryId
-                                ? getSubCats(filters.categoryId).map(s => <option key={s._id} value={s._id}>{s.name}</option>)
-                                : categories.flatMap(c => c.subCategories).map(s => <option key={s._id} value={s._id}>{s.name}</option>)
+                                ? getSubCatOptions(filters.categoryId).map(s => <option key={s.value} value={s.value}>{s.label}</option>)
+                                : categories.flatMap(c => getSubCatOptions(c._id)).map(s => <option key={s.value} value={s.value}>{s.label}</option>)
                             }
-                            {/* Note: FlatMap might show duplicate names if not careful, but usually subcat names are unique enough or user knows context. 
-                                Strictly filtering by Category first is better UX usually.
-                            */}
                         </select>
                     </div>
                     <div className="col-span-1 text-right mb-2">Amount</div>
@@ -338,7 +432,7 @@ const ExpenseTable = () => {
                             {/* Sub Cat */}
                             <div className="col-span-2">
                                 <DaisySelect
-                                    options={(newData.isAddMoney || newData.isManualDebit) ? [] : getSubCats(newData.categoryId).map(sub => ({ value: sub._id, label: sub.name }))}
+                                    options={(newData.isAddMoney || newData.isManualDebit) ? [] : getSubCatOptions(newData.categoryId)}
                                     value={newData.subCategoryId}
                                     placeholder={(newData.isAddMoney || newData.isManualDebit) ? "—" : "SubCat"}
                                     disabled={newData.isAddMoney || newData.isManualDebit}
@@ -383,7 +477,7 @@ const ExpenseTable = () => {
 
                                 <div className="col-span-2">
                                     <DaisySelect
-                                        options={sources.map(s => ({ value: s._id, label: s.name }))}
+                                        options={editSourceOptions}
                                         value={editData.sourceId}
                                         placeholder="Source"
                                         onChange={(val) => setEditData({ ...editData, sourceId: val })}
@@ -401,7 +495,7 @@ const ExpenseTable = () => {
 
                                 <div className="col-span-2">
                                     <DaisySelect
-                                        options={getSubCats(editData.categoryId).map(sub => ({ value: sub._id, label: sub.name }))}
+                                        options={getSubCatOptions(editData.categoryId)}
                                         value={editData.subCategoryId}
                                         placeholder="SubCat"
                                         onChange={(val) => setEditData({ ...editData, subCategoryId: val })}
@@ -418,7 +512,7 @@ const ExpenseTable = () => {
                         ) : (
                             // View Mode
                             <>
-                                <div className="col-span-2 text-base-content/60 font-medium">{dayjs(t.date).format("MMM DD, YYYY")}</div>
+                                <div className="col-span-2 text-base-content/60 font-medium text-xs">{dayjs(t.date).format("ddd, MMM DD, YYYY")}</div>
                                 <div className="col-span-2">
                                     <div className="flex flex-col">
                                         <div className="flex items-center gap-1">
@@ -428,26 +522,24 @@ const ExpenseTable = () => {
                                     </div>
                                 </div>
                                 <div className="col-span-2">
-                                    <div className="badge badge-ghost badge-sm gap-1 font-medium bg-base-200/80 border-0 text-base-content/70">
-                                        {t.sourceId?.name || 'Unknown'}
-                                    </div>
+                                    {renderSourceTag(t)}
                                 </div>
                                 <div className="col-span-2">
-                                    {t.type === 'Credit' ? (
-                                        <div className="badge badge-success badge-outline badge-sm gap-1 bg-success/5 font-bold border-success/30">
-                                            + Add Money
-                                        </div>
-                                    ) : (
-                                        <div className="text-base-content/80 font-medium">{t.categoryId?.name}</div>
-                                    )}
+                                    {renderCategoryTag(t)}
                                 </div>
-                                <div className="col-span-2 text-base-content/50 text-xs">
+                                <div className="col-span-2">
                                     {(() => {
                                         const catId = t.categoryId?._id || t.categoryId;
                                         const subId = t.subCategoryId?._id || t.subCategoryId;
                                         const cat = categories.find(c => c._id === catId);
                                         const sub = cat?.subCategories?.find(s => s._id === subId);
-                                        return sub?.name || '—';
+                                        if (!sub?.name) return <span className="text-base-content/40 text-xs">—</span>;
+                                        return (
+                                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 truncate max-w-full" title={sub.name}>
+                                                <Folder size={11} className="shrink-0 text-amber-500" />
+                                                <span className="truncate">{sub.name}</span>
+                                            </span>
+                                        );
                                     })()}
                                 </div>
                                 <div className={`col-span-1 text-right font-bold font-mono tracking-tight ${t.type === 'Credit' ? 'text-success' : 'text-error'}`}>
@@ -471,20 +563,22 @@ const ExpenseTable = () => {
             </div>
 
             {showDeleteModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-                    <div className="bg-base-100 rounded-xl shadow-2xl w-full max-w-sm flex flex-col overflow-hidden border border-base-200 p-6 text-center">
-                        <div className="mx-auto mb-4 p-3 bg-error/10 rounded-full text-error">
-                            <AlertTriangle size={32} />
+                <div className="fixed inset-0 z-[99999] bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
+                    <div className="bg-base-200 rounded-3xl shadow-2xl w-full max-w-sm h-[260px] flex flex-col justify-between overflow-hidden border border-base-300 p-6 text-center animate-in fade-in zoom-in-95 duration-200">
+                        <div>
+                            <div className="mx-auto mb-3 p-3 bg-error/10 rounded-full text-error w-fit">
+                                <AlertTriangle size={32} />
+                            </div>
+                            <h3 className="text-xl font-bold text-base-content mb-1">Delete Transaction?</h3>
+                            <p className="text-sm text-base-content/60">
+                                Are you sure you want to delete this transaction? This action cannot be undone.
+                            </p>
                         </div>
-                        <h3 className="text-xl font-bold text-base-content mb-2">Delete Transaction?</h3>
-                        <p className="text-sm text-base-content/60 mb-6">
-                            Are you sure you want to delete this transaction? This action cannot be undone.
-                        </p>
-                        <div className="flex gap-3 justify-center">
-                            <button onClick={cancelDelete} className="btn btn-sm flex-1">
+                        <div className="flex gap-3 justify-center pt-2">
+                            <button onClick={cancelDelete} className="btn btn-sm btn-soft btn-warning flex-1 rounded-xl">
                                 Cancel
                             </button>
-                            <button onClick={confirmDelete} className="btn btn-sm btn-error flex-1 text-white">
+                            <button onClick={confirmDelete} className="btn btn-sm btn-soft btn-secondary flex-1 rounded-xl">
                                 Delete
                             </button>
                         </div>

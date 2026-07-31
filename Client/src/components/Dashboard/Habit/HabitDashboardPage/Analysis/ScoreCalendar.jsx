@@ -133,7 +133,11 @@ const ScoreCalendar = ({ habitData = [], year = dayjs().year() }) => {
                         {selectedStatus === 'All' ? 'Score Calendar' : `${selectedStatus} Days`}
                         <span className="opacity-50 text-sm font-normal">in {year}</span>
                     </h3>
-                    <div className="flex items-center gap-3 text-xs opacity-60 flex-wrap justify-end">
+                    <div className="flex items-center gap-3 text-xs opacity-80 flex-wrap justify-end">
+                        <div className="flex items-center gap-1.5 font-semibold text-xs text-primary bg-primary/10 px-2.5 py-1 rounded-lg border border-primary/20">
+                            <span className="w-2.5 h-2.5 rounded-full bg-primary ring-2 ring-primary/40 animate-pulse"></span>
+                            Today: {dayjs().format('D MMM YYYY')}
+                        </div>
                         <div className="flex items-center gap-1">
                             <div className="w-3 h-3 rounded bg-base-300"></div> <span>Empty</span>
                         </div>
@@ -183,11 +187,14 @@ const ScoreCalendar = ({ habitData = [], year = dayjs().year() }) => {
                                         const entry = activeData.get(dateStr);
                                         const isActive = !!entry;
                                         const statusInfo = isActive ? STATUS_MAP[entry.status] : null;
+                                        const isToday = dateStr === dayjs().format('YYYY-MM-DD');
 
                                         return (
                                             <div
                                                 key={day}
-                                                className={`aspect-square flex items-center justify-center text-[10px] rounded-sm transition-colors ${
+                                                className={`aspect-square flex items-center justify-center text-[10px] rounded-sm transition-all relative ${
+                                                    isToday ? 'ring-2 ring-primary ring-offset-1 ring-offset-base-100 font-extrabold z-10 scale-105 border border-primary shadow-sm' : ''
+                                                } ${
                                                     isActive
                                                         ? 'font-bold shadow-sm'
                                                         : 'bg-base-100 opacity-50 hover:opacity-100'
@@ -198,9 +205,10 @@ const ScoreCalendar = ({ habitData = [], year = dayjs().year() }) => {
                                                         : {}
                                                 }
                                                 title={
-                                                    isActive
+                                                    (isToday ? 'Today - ' : '') +
+                                                    (isActive
                                                         ? `Recorded on ${dateStr}: Score ${entry.score ?? '--'}/7 (${entry.progress ?? 0}%) - ${entry.status}`
-                                                        : dateStr
+                                                        : dateStr)
                                                 }
                                             >
                                                 {day}

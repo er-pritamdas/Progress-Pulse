@@ -105,18 +105,25 @@ const CalorieScoreBoard = ({
         <div className="relative">
             {/* Info Modal */}
             {activeInfo && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={closeInfo}>
-                    <div className="bg-base-100 rounded-2xl shadow-2xl p-6 max-w-md w-full relative border border-base-300" onClick={(e) => e.stopPropagation()}>
-                        <button onClick={closeInfo} className="absolute top-4 right-4 btn btn-ghost btn-sm btn-circle">
-                            <X size={20} />
-                        </button>
-                        <h3 className="text-xl font-bold mb-2 flex items-center gap-2">
-                            <Info className="text-primary" size={24} />
-                            {activeInfo.title}
-                        </h3>
-                        <p className="text-base-content/80 leading-relaxed">
-                            {activeInfo.description}
-                        </p>
+                <div className="fixed inset-0 z-[9999] bg-black/75 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 overflow-hidden" onClick={closeInfo}>
+                    <div className="bg-base-200 rounded-3xl p-6 max-w-md w-full h-[220px] relative border border-base-300 shadow-2xl flex flex-col justify-between overflow-hidden animate-in fade-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
+                        <div>
+                            <button onClick={closeInfo} className="absolute top-4 right-4 btn btn-ghost btn-sm btn-circle">
+                                <X size={20} />
+                            </button>
+                            <h3 className="text-xl font-bold mb-2 flex items-center gap-2 pr-8">
+                                <Info className="text-primary" size={24} />
+                                {activeInfo.title}
+                            </h3>
+                            <p className="text-base-content/80 leading-relaxed text-sm">
+                                {activeInfo.description}
+                            </p>
+                        </div>
+                        <div className="flex justify-end pt-2">
+                            <button className="btn btn-sm btn-primary rounded-xl px-4" onClick={closeInfo}>
+                                Got It
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

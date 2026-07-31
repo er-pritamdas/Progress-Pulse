@@ -277,8 +277,8 @@ function DailyNutrientsModal({ isOpen, onClose, selectedDate, data, calorieTarge
       : [activeTab];
 
   return (
-    <div className="fixed inset-0 z-[9999] bg-black/75 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 overflow-hidden">
-      <div className="bg-base-200 rounded-3xl max-w-7xl w-full sm:w-[95vw] min-h-[550px] max-h-[calc(100vh-100px)] border border-base-300 shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200 -mt-6 sm:-mt-10">
+    <div className="fixed inset-0 z-[99999] bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
+      <div className="bg-base-200 rounded-3xl max-w-7xl w-full h-[680px] border border-base-300 shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         {/* Modal Header */}
         <div className="p-5 sm:p-6 bg-base-300/80 border-b border-base-300 flex justify-between items-center shrink-0">
           <div className="flex items-center gap-3">
@@ -627,8 +627,8 @@ function NutrientContributorsModal({ isOpen, onClose, nutrient, allLogs, selecte
     .sort((a, b) => b.val - a.val);
 
   return (
-    <div className="fixed inset-0 z-[10000] bg-black/75 backdrop-blur-md flex items-center justify-center p-4 overflow-hidden">
-      <div className="bg-base-200 rounded-3xl max-w-md w-full max-h-[80vh] border border-base-300 shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200 -mt-6 sm:-mt-10">
+    <div className="fixed inset-0 z-[100000] bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
+      <div className="bg-base-200 rounded-3xl max-w-md w-full h-[580px] border border-base-300 shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         {/* Header */}
         <div className="p-4 sm:p-5 bg-base-300/80 border-b border-base-300 flex justify-between items-center shrink-0">
           <div className="flex items-center gap-2.5">

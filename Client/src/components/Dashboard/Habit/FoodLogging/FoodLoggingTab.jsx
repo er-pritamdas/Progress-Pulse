@@ -23,7 +23,6 @@ import {
   Dumbbell,
   Wheat,
   PieChart,
-  RefreshCw,
   Clock,
   Sparkles,
   SlidersHorizontal,
@@ -226,10 +225,11 @@ function FoodLoggingTab() {
     const [year, month, day] = dateString.split("-");
     if (!year || !month || !day) return dateString;
     const date = new Date(Number(year), Number(month) - 1, Number(day));
+    const weekday = date.toLocaleDateString("en-US", { weekday: "short" });
     const d = String(date.getDate()).padStart(2, "0");
     const m = date.toLocaleString("default", { month: "short" });
     const y = String(date.getFullYear()).slice(2);
-    return `${d}-${m}-${y}`;
+    return `${weekday}, ${d}-${m}-${y}`;
   };
 
   const [selectedDate, setSelectedDate] = useState(getTodayDate());
@@ -258,6 +258,39 @@ function FoodLoggingTab() {
   const [logToDelete, setLogToDelete] = useState(null);
   const [logToEdit, setLogToEdit] = useState(null);
   const [isCardsExpanded, setIsCardsExpanded] = useState(false);
+
+  const MEAL_CATEGORIES = ["Breakfast", "Lunch", "Dinner", "Snacks", "Other"];
+
+  const [collapsedMeals, setCollapsedMeals] = useState(() => {
+    try {
+      const saved = localStorage.getItem("food_tracker_collapsed_meals");
+      return saved ? JSON.parse(saved) : {};
+    } catch (e) {
+      return {};
+    }
+  });
+
+  const toggleMealCollapse = (mealType) => {
+    setCollapsedMeals((prev) => {
+      const updated = { ...prev, [mealType]: !prev[mealType] };
+      localStorage.setItem("food_tracker_collapsed_meals", JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const areAllMealsCollapsed = MEAL_CATEGORIES.every((m) => collapsedMeals[m]);
+
+  const toggleAllMealsCollapse = () => {
+    setCollapsedMeals((prev) => {
+      const targetState = !areAllMealsCollapsed;
+      const updated = {};
+      MEAL_CATEGORIES.forEach((m) => {
+        updated[m] = targetState;
+      });
+      localStorage.setItem("food_tracker_collapsed_meals", JSON.stringify(updated));
+      return updated;
+    });
+  };
 
   const [tableNutrients, setTableNutrients] = useState(() => {
     try {
@@ -630,14 +663,6 @@ function FoodLoggingTab() {
           </button>
 
           <button
-            className="btn btn-sm btn-ghost border border-base-300"
-            onClick={fetchDailyLogs}
-            disabled={loading}
-          >
-            <RefreshCw size={14} className={loading ? "animate-spin" : ""} /> Refresh
-          </button>
-
-          <button
             className="btn btn-sm btn-secondary gap-1"
             onClick={() => setIsCustomModalOpen(true)}
           >
@@ -1000,41 +1025,80 @@ function FoodLoggingTab() {
 
       {/* Meal Category Breakdown Sections */}
       <div className="space-y-4">
-        <div className="flex justify-between items-center bg-base-200/80 px-4 py-3 rounded-2xl border border-base-300 shadow-xs">
+        <div className="flex flex-wrap justify-between items-center bg-base-200/80 px-4 py-3 rounded-2xl border border-base-300 shadow-xs gap-2">
           <div className="flex items-center gap-2">
             <Utensils size={18} className="text-primary" />
             <h2 className="font-bold text-sm sm:text-base">Logged Food Items</h2>
           </div>
-          <button
-            className="btn btn-xs sm:btn-sm btn-ghost border border-base-300 gap-1.5 text-xs text-primary hover:bg-primary/10 rounded-xl transition-all shadow-xs"
-            onClick={() => setIsCustomizeTableOpen(true)}
-          >
-            <SlidersHorizontal size={14} />
-            <span>Table Columns ({tableNutrients.length}/5)</span>
-          </button>
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              className="btn btn-xs sm:btn-sm btn-ghost border border-base-300 gap-1.5 text-xs text-primary hover:bg-primary/10 rounded-xl transition-all shadow-xs"
+              onClick={toggleAllMealsCollapse}
+              title={areAllMealsCollapsed ? "Expand all meal categories" : "Collapse all meal categories"}
+            >
+              {areAllMealsCollapsed ? (
+                <>
+                  <ChevronDown size={14} />
+                  <span>Expand All Categories</span>
+                </>
+              ) : (
+                <>
+                  <ChevronUp size={14} />
+                  <span>Collapse All Categories</span>
+                </>
+              )}
+            </button>
+            <button
+              className="btn btn-xs sm:btn-sm btn-ghost border border-base-300 gap-1.5 text-xs text-primary hover:bg-primary/10 rounded-xl transition-all shadow-xs"
+              onClick={() => setIsCustomizeTableOpen(true)}
+            >
+              <SlidersHorizontal size={14} />
+              <span>Table Columns ({tableNutrients.length}/5)</span>
+            </button>
+          </div>
         </div>
 
-        {["Breakfast", "Lunch", "Dinner", "Snacks", "Other"].map((mealType) => {
+        {MEAL_CATEGORIES.map((mealType) => {
           const mealLogs = data.meals[mealType] || [];
           const mealCalories = mealLogs.reduce((sum, item) => sum + item.calories, 0);
+          const isCollapsed = !!collapsedMeals[mealType];
 
           return (
             <div
               key={mealType}
-              className="bg-base-200 rounded-2xl border border-base-300 shadow-sm overflow-hidden"
+              className="bg-base-200 rounded-2xl border border-base-300 shadow-sm overflow-hidden transition-all duration-200"
             >
-              {/* Meal Header */}
-              <div className="p-4 bg-base-300/60 flex justify-between items-center border-b border-base-300">
-                <div className="flex items-center gap-3">
+              {/* Meal Header (Clickable to Collapse/Expand) */}
+              <div
+                className={`p-4 bg-base-300/60 flex justify-between items-center cursor-pointer select-none hover:bg-base-300/90 transition-colors ${
+                  !isCollapsed ? "border-b border-base-300" : ""
+                }`}
+                onClick={() => toggleMealCollapse(mealType)}
+              >
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <button
+                    type="button"
+                    className="btn btn-xs btn-circle btn-ghost text-primary hover:bg-base-100 p-0"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleMealCollapse(mealType);
+                    }}
+                    title={isCollapsed ? "Expand Category" : "Collapse Category"}
+                  >
+                    {isCollapsed ? <ChevronRight size={18} /> : <ChevronDown size={18} />}
+                  </button>
                   <h3 className="font-bold text-base flex items-center gap-2">
                     <Clock size={16} className="text-primary" /> {mealType}
                   </h3>
                   <span className="badge badge-neutral badge-sm font-semibold">
                     {mealCalories} kcal
                   </span>
+                  <span className="badge badge-ghost badge-sm font-semibold text-xs opacity-75">
+                    {mealLogs.length} {mealLogs.length === 1 ? "item" : "items"}
+                  </span>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                   {mealLogs.length > 0 && (
                     <button
                       className="btn btn-xs btn-ghost text-error hover:bg-error/10 border border-error/20 gap-1 text-xs font-semibold"
@@ -1073,123 +1137,125 @@ function FoodLoggingTab() {
               </div>
 
               {/* Meal Logs Table */}
-              <div className="p-4">
-                {mealLogs.length === 0 ? (
-                  <div className="py-6 text-center text-xs text-base-content/50 border border-dashed border-base-300 rounded-xl">
-                    No foods logged for {mealType} on this date.
-                  </div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="table table-sm w-full">
-                      <thead>
-                        <tr className="text-xs text-base-content/60 border-b border-base-300">
-                          <th className="text-left">Food Item</th>
-                          <th className="text-center">Servings</th>
-                          {tableNutrients.slice(0, 5).map((nutId) => (
-                            <th key={nutId} className="text-right whitespace-nowrap">
-                              {getNutrientMeta(nutId).label}
-                            </th>
+              {!isCollapsed && (
+                <div className="p-4 animate-in fade-in duration-200">
+                  {mealLogs.length === 0 ? (
+                    <div className="py-6 text-center text-xs text-base-content/50 border border-dashed border-base-300 rounded-xl">
+                      No foods logged for {mealType} on this date.
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="table table-sm w-full">
+                        <thead>
+                          <tr className="text-xs text-base-content/60 border-b border-base-300">
+                            <th className="text-left">Food Item</th>
+                            <th className="text-center">Servings</th>
+                            {tableNutrients.slice(0, 5).map((nutId) => (
+                              <th key={nutId} className="text-right whitespace-nowrap">
+                                {getNutrientMeta(nutId).label}
+                              </th>
+                            ))}
+                            <th className="text-center">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {mealLogs.map((log) => (
+                            <tr key={log._id} className="hover:bg-base-100/50">
+                              <td className="truncate max-w-[180px]">
+                                <div className="font-semibold text-sm truncate" title={log.foodName}>{log.foodName}</div>
+                                <div className="text-[11px] text-base-content/60 truncate">
+                                  {formatServingCalc(log)}
+                                </div>
+                              </td>
+                              <td className="text-center whitespace-nowrap">
+                                <div className="inline-flex join join-horizontal border border-base-300 rounded-lg overflow-hidden">
+                                  <button
+                                    className="join-item btn btn-xs btn-ghost px-2"
+                                    onClick={() => handleUpdateServings(log, -0.25)}
+                                  >
+                                    -
+                                  </button>
+                                  <span className="join-item px-2 py-0.5 text-xs font-bold bg-base-100 flex items-center">
+                                    {log.servings}
+                                  </span>
+                                  <button
+                                    className="join-item btn btn-xs btn-ghost px-2"
+                                    onClick={() => handleUpdateServings(log, 0.25)}
+                                  >
+                                    +
+                                  </button>
+                                </div>
+                              </td>
+                              {tableNutrients.slice(0, 5).map((nutId) => (
+                                <td
+                                  key={nutId}
+                                  className={`text-right text-xs whitespace-nowrap ${
+                                    nutId === "calories" ? "font-bold text-primary text-sm" : "font-medium"
+                                  }`}
+                                >
+                                  {getNutrientLogVal(log, nutId)}
+                                </td>
+                              ))}
+                              <td className="text-center whitespace-nowrap">
+                                <div className="flex items-center justify-center gap-1">
+                                  <button
+                                    className="btn btn-ghost btn-xs text-info hover:bg-info/10 p-1"
+                                    title="View Full Nutrition Details"
+                                    onClick={() => setSelectedFoodItemForModal(log)}
+                                  >
+                                    <Info size={15} />
+                                  </button>
+                                  <button
+                                    className="btn btn-ghost btn-xs text-warning hover:bg-warning/10 p-1"
+                                    title="Edit Meal Category or Quantity"
+                                    onClick={() => setLogToEdit(log)}
+                                  >
+                                    <Edit3 size={15} />
+                                  </button>
+                                  <button
+                                    className="btn btn-ghost btn-xs text-error hover:bg-error/10 p-1"
+                                    title="Delete Item"
+                                    onClick={() => openDeletePopup(log)}
+                                  >
+                                    <Trash2 size={15} />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
                           ))}
-                          <th className="text-center">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {mealLogs.map((log) => (
-                          <tr key={log._id} className="hover:bg-base-100/50">
-                            <td className="truncate max-w-[180px]">
-                              <div className="font-semibold text-sm truncate" title={log.foodName}>{log.foodName}</div>
-                              <div className="text-[11px] text-base-content/60 truncate">
-                                {formatServingCalc(log)}
-                              </div>
+                        </tbody>
+                        <tfoot className="border-t-2 border-primary/40 bg-base-300/80">
+                          <tr className="text-xs">
+                            <td className="text-left py-3">
+                              <span className="badge badge-primary badge-sm font-black tracking-wider uppercase px-2 py-1 shadow-xs">
+                                TOTAL ({mealType})
+                              </span>
                             </td>
-                            <td className="text-center whitespace-nowrap">
-                              <div className="inline-flex join join-horizontal border border-base-300 rounded-lg overflow-hidden">
-                                <button
-                                  className="join-item btn btn-xs btn-ghost px-2"
-                                  onClick={() => handleUpdateServings(log, -0.25)}
-                                >
-                                  -
-                                </button>
-                                <span className="join-item px-2 py-0.5 text-xs font-bold bg-base-100 flex items-center">
-                                  {log.servings}
-                                </span>
-                                <button
-                                  className="join-item btn btn-xs btn-ghost px-2"
-                                  onClick={() => handleUpdateServings(log, 0.25)}
-                                >
-                                  +
-                                </button>
-                              </div>
+                            <td className="text-center font-bold text-xs text-base-content/70">
+                              <span className="badge badge-ghost badge-xs font-semibold">
+                                {mealLogs.length} {mealLogs.length === 1 ? "item" : "items"}
+                              </span>
                             </td>
                             {tableNutrients.slice(0, 5).map((nutId) => (
                               <td
                                 key={nutId}
-                                className={`text-right text-xs whitespace-nowrap ${
-                                  nutId === "calories" ? "font-bold text-primary text-sm" : "font-medium"
+                                className={`text-right whitespace-nowrap py-3 ${
+                                  nutId === "calories"
+                                    ? "font-black text-primary text-sm tracking-tight"
+                                    : "font-extrabold text-base-content"
                                 }`}
                               >
-                                {getNutrientLogVal(log, nutId)}
+                                {getMealTotalNutrientVal(mealLogs, nutId)}
                               </td>
                             ))}
-                            <td className="text-center whitespace-nowrap">
-                              <div className="flex items-center justify-center gap-1">
-                                <button
-                                  className="btn btn-ghost btn-xs text-info hover:bg-info/10 p-1"
-                                  title="View Full Nutrition Details"
-                                  onClick={() => setSelectedFoodItemForModal(log)}
-                                >
-                                  <Info size={15} />
-                                </button>
-                                <button
-                                  className="btn btn-ghost btn-xs text-warning hover:bg-warning/10 p-1"
-                                  title="Edit Meal Category or Quantity"
-                                  onClick={() => setLogToEdit(log)}
-                                >
-                                  <Edit3 size={15} />
-                                </button>
-                                <button
-                                  className="btn btn-ghost btn-xs text-error hover:bg-error/10 p-1"
-                                  title="Delete Item"
-                                  onClick={() => openDeletePopup(log)}
-                                >
-                                  <Trash2 size={15} />
-                                </button>
-                              </div>
-                            </td>
+                            <td className="text-center text-base-content/40">-</td>
                           </tr>
-                        ))}
-                      </tbody>
-                      <tfoot className="border-t-2 border-primary/40 bg-base-300/80">
-                        <tr className="text-xs">
-                          <td className="text-left py-3">
-                            <span className="badge badge-primary badge-sm font-black tracking-wider uppercase px-2 py-1 shadow-xs">
-                              TOTAL ({mealType})
-                            </span>
-                          </td>
-                          <td className="text-center font-bold text-xs text-base-content/70">
-                            <span className="badge badge-ghost badge-xs font-semibold">
-                              {mealLogs.length} {mealLogs.length === 1 ? "item" : "items"}
-                            </span>
-                          </td>
-                          {tableNutrients.slice(0, 5).map((nutId) => (
-                            <td
-                              key={nutId}
-                              className={`text-right whitespace-nowrap py-3 ${
-                                nutId === "calories"
-                                  ? "font-black text-primary text-sm tracking-tight"
-                                  : "font-extrabold text-base-content"
-                              }`}
-                            >
-                              {getMealTotalNutrientVal(mealLogs, nutId)}
-                            </td>
-                          ))}
-                          <td className="text-center text-base-content/40">-</td>
-                        </tr>
-                      </tfoot>
-                    </table>
-                  </div>
-                )}
-              </div>
+                        </tfoot>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           );
         })}
@@ -1271,8 +1337,8 @@ function FoodLoggingTab() {
         const categoryCalories = categoryLogs.reduce((sum, item) => sum + item.calories, 0);
 
         return (
-          <div className="fixed inset-0 z-[1000] bg-black/75 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
-            <div className="bg-base-200 rounded-3xl max-w-md w-full p-6 border border-base-300 shadow-2xl space-y-4">
+          <div className="fixed inset-0 z-[9999] bg-black/75 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 overflow-hidden">
+            <div className="bg-base-200 rounded-3xl max-w-md w-full h-[280px] p-6 border border-base-300 shadow-2xl flex flex-col justify-between overflow-hidden animate-in fade-in duration-200">
               <div className="flex items-center gap-3 text-error">
                 <div className="p-3 bg-error/10 rounded-2xl">
                   <AlertTriangle size={28} />

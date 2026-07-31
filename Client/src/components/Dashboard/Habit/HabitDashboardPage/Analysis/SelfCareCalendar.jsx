@@ -104,13 +104,17 @@ const SelfCareCalendar = ({ habitData = [], selfCareList = [], year = dayjs().ye
 
             {/* Right Content: Year Calendar */}
             <div className="w-full md:w-[80%]">
-                <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center justify-between mb-6 flex-wrap gap-2">
                      <h3 className="text-lg font-semibold flex items-center gap-2">
                         {getHabitIcon(selectedActivity)} {selectedActivity} <span className="opacity-50 text-sm font-normal">in {year}</span>
                     </h3>
-                    <div className="flex items-center gap-2 text-xs opacity-60">
-                         <div className="w-3 h-3 rounded bg-base-300"></div> <span>Empty</span>
-                         <div className="w-3 h-3 rounded" style={{ backgroundColor: activityColors[selectedActivity] || '#36D399' }}></div> <span>Recorded</span>
+                    <div className="flex items-center gap-3 text-xs opacity-80 flex-wrap justify-end">
+                         <div className="flex items-center gap-1.5 font-semibold text-xs text-primary bg-primary/10 px-2.5 py-1 rounded-lg border border-primary/20">
+                             <span className="w-2.5 h-2.5 rounded-full bg-primary ring-2 ring-primary/40 animate-pulse"></span>
+                             Today: {dayjs().format('D MMM YYYY')}
+                         </div>
+                         <div className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-base-300"></div> <span>Empty</span></div>
+                         <div className="flex items-center gap-1"><div className="w-3 h-3 rounded" style={{ backgroundColor: activityColors[selectedActivity] || '#36D399' }}></div> <span>Recorded</span></div>
                     </div>
                 </div>
 
@@ -140,6 +144,7 @@ const SelfCareCalendar = ({ habitData = [], selfCareList = [], year = dayjs().ye
                                     {days.map(day => {
                                         const dateStr = monthStart.date(day).format('YYYY-MM-DD');
                                         const isActive = activeDates.has(dateStr);
+                                        const isToday = dateStr === dayjs().format('YYYY-MM-DD');
                                         
                                         // Determine color
                                         const activeColor = activityColors[selectedActivity];
@@ -148,13 +153,15 @@ const SelfCareCalendar = ({ habitData = [], selfCareList = [], year = dayjs().ye
                                         return (
                                             <div
                                                 key={day}
-                                                className={`aspect-square flex items-center justify-center text-[10px] rounded-sm transition-colors ${
+                                                className={`aspect-square flex items-center justify-center text-[10px] rounded-sm transition-all relative ${
+                                                    isToday ? 'ring-2 ring-primary ring-offset-1 ring-offset-base-100 font-extrabold z-10 scale-105 border border-primary shadow-sm' : ''
+                                                } ${
                                                     isActive 
                                                         ? 'font-bold shadow-sm' 
                                                         : 'bg-base-100 opacity-50 hover:opacity-100'
                                                 } ${!activeColor && isActive ? 'bg-success text-success-content' : ''}`}
                                                 style={style}
-                                                title={isActive ? `Recorded on ${dateStr}` : dateStr}
+                                                title={(isToday ? 'Today - ' : '') + (isActive ? `Recorded on ${dateStr}` : dateStr)}
                                             >
                                                 {day}
                                             </div>

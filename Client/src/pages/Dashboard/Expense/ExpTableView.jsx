@@ -1,69 +1,64 @@
 import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import dayjs from "dayjs";
-import { fetchDashboardData, createCategory, setMonth, copyCategoriesFromLastMonth } from "../../../services/redux/slice/ExpenseSlice";
+import { fetchDashboardData, setMonth, copyCategoriesFromLastMonth } from "../../../services/redux/slice/ExpenseSlice";
 import { useAuth } from "../../../Context/JwtAuthContext";
 import HeaderSection from "../../../components/Expense/HeaderSection";
 import CategoryCard from "../../../components/Expense/CategoryCard";
-import { Plus, ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
+import AddCategoryModal from "../../../components/Expense/AddCategoryModal";
+import ReorderCategoriesModal from "../../../components/Expense/ReorderCategoriesModal";
+import { Plus, ChevronLeft, ChevronRight, RefreshCw, FolderPlus, ArrowUpDown } from "lucide-react";
 import { message } from "antd";
 
-// This view now contains the "Expense Dashboard" UI as requested
+// This view contains the Expense Dashboard UI
 const ExpTableView = () => {
   const dispatch = useDispatch();
   const { categories, loading, currentMonth } = useSelector((state) => state.expense);
   const { user } = useAuth();
 
-  const [newCategoryName, setNewCategoryName] = useState("");
-  const [isAddingCategory, setIsAddingCategory] = useState(false);
+  const [showAddCategoryModal, setShowAddCategoryModal] = useState(false);
+  const [showReorderModal, setShowReorderModal] = useState(false);
 
   useEffect(() => {
     dispatch(fetchDashboardData(currentMonth));
   }, [currentMonth, user, dispatch]);
-
-
-  const handleAddCategory = () => {
-    if (newCategoryName.trim()) {
-      dispatch(createCategory({ name: newCategoryName, month: currentMonth }));
-      setNewCategoryName("");
-      setIsAddingCategory(false);
-    }
-  };
-
 
   if (loading && categories.length === 0) {
     return <div className="min-h-screen flex items-center justify-center">Loading Expense Data...</div>;
   }
 
   return (
-    <div className="p-4 md:p-6 lg:p-5 w-full max-w-[1600px] mx-auto space-y-8 pb-20">
+    <div className="w-full space-y-6 pb-20">
+      {/* Sticky Header */}
+      <div className="sticky top-[-17px] z-40 bg-base-100/95 backdrop-blur-md shadow-md border-b border-base-300/40 -mx-4 px-4 py-2 mt-[-16px]">
+        <div className="flex items-center justify-between p-3 flex-wrap gap-3 max-w-[1600px] mx-auto px-4 md:px-6">
+          <h1 className="text-lg font-bold text-base-content/90 flex items-center gap-2">
+            <span className="text-primary font-extrabold">Expense</span> Table View
+          </h1>
 
-      {/* Month Selector & Header */}
-      <section className="flex flex-col md:flex-row gap-4 justify-between items-center bg-base-100 rounded-xl ">
-        <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-          Financial Overview
-        </h1>
+          <div className="flex items-center gap-2 bg-base-200/60 p-1 rounded-xl border border-base-300/40">
+            <button
+              onClick={() => dispatch(setMonth(dayjs(currentMonth).subtract(1, 'month').format("YYYY-MM")))}
+              className="btn btn-xs btn-ghost btn-square"
+            >
+              <ChevronLeft size={16} />
+            </button>
 
-        <div className="flex items-center gap-2 bg-base-200/50 p-1 rounded-lg border border-base-200">
-          <button
-            onClick={() => dispatch(setMonth(dayjs(currentMonth).subtract(1, 'month').format("YYYY-MM")))}
-            className="btn btn-sm btn-ghost btn-square"
-          >
-            <ChevronLeft size={16} />
-          </button>
+            <span className="text-xs font-bold font-mono min-w-[110px] text-center">
+              {dayjs(currentMonth).format("MMMM YYYY")}
+            </span>
 
-          <span className="text-sm font-bold font-mono min-w-[120px] text-center">
-            {dayjs(currentMonth).format("MMMM YYYY")}
-          </span>
-
-          <button
-            onClick={() => dispatch(setMonth(dayjs(currentMonth).add(1, 'month').format("YYYY-MM")))}
-            className="btn btn-sm btn-ghost btn-square"
-          >
-            <ChevronRight size={16} />
-          </button>
+            <button
+              onClick={() => dispatch(setMonth(dayjs(currentMonth).add(1, 'month').format("YYYY-MM")))}
+              className="btn btn-xs btn-ghost btn-square"
+            >
+              <ChevronRight size={16} />
+            </button>
+          </div>
         </div>
-      </section>
+      </div>
+
+      <div className="px-4 md:px-6 w-full max-w-[1600px] mx-auto space-y-6">
 
       {/* Stats Header */}
       <section>
@@ -74,34 +69,44 @@ const ExpTableView = () => {
       <div className="flex items-center justify-between pb-2 border-b border-base-200">
         <h2 className="text-xl font-bold opacity-80">Expense Categories</h2>
 
-        {/* Add Category Trigger */}
-        {isAddingCategory ? (
-          <div className="join shadow-sm">
-            <input
-              value={newCategoryName}
-              onChange={(e) => setNewCategoryName(e.target.value)}
-              placeholder="New Category..."
-              className="input input-sm input-bordered join-item focus:outline-none"
-              autoFocus
-              onKeyDown={(e) => e.key === 'Enter' && handleAddCategory()}
-            />
-            <button onClick={handleAddCategory} className="btn btn-sm btn-primary join-item">Save</button>
-            <button onClick={() => setIsAddingCategory(false)} className="btn btn-sm btn-ghost join-item text-error">✕</button>
-          </div>
-        ) : (
+        {/* Category Actions */}
+        <div className="flex items-center gap-2">
+          {categories.length > 1 && (
+            <button
+              onClick={() => setShowReorderModal(true)}
+              className="btn btn-sm btn-ghost border border-base-300 gap-2 shadow-sm hover:shadow transition-all"
+              title="Reorder Expense Categories"
+            >
+              <ArrowUpDown size={16} />
+              Reorder Categories
+            </button>
+          )}
           <button
-            onClick={() => setIsAddingCategory(true)}
-            className="btn btn-sm btn-ghost gap-2 opacity-70 hover:opacity-100"
+            onClick={() => setShowAddCategoryModal(true)}
+            className="btn btn-sm btn-primary gap-2 shadow-sm hover:shadow transition-all"
           >
-            <Plus size={16} />
+            <FolderPlus size={16} />
             Add Category
           </button>
-        )}
+        </div>
       </div>
+
+      {/* Add Category Popup Modal */}
+      <AddCategoryModal
+        isOpen={showAddCategoryModal}
+        onClose={() => setShowAddCategoryModal(false)}
+        currentMonth={currentMonth}
+      />
+
+      {/* Reorder Categories Popup Modal */}
+      <ReorderCategoriesModal
+        isOpen={showReorderModal}
+        onClose={() => setShowReorderModal(false)}
+      />
 
       {/* Category Grid Section */}
       <section className="relative w-full">
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 pb-4">
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 pb-4">
           {categories.map((cat) => (
             <div key={cat._id} className="min-w-0">
               <CategoryCard category={cat} />
@@ -110,11 +115,11 @@ const ExpTableView = () => {
 
           {/* Empty State / Add Helper */}
           {categories.length === 0 && (
-            <div className="col-span-1 md:col-span-2 xl:col-span-4 h-[300px] flex flex-col items-center justify-center border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl text-gray-400 gap-4">
+            <div className="col-span-1 xl:col-span-2 h-[300px] flex flex-col items-center justify-center border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl text-gray-400 gap-4">
               <p className="text-lg font-medium">No Categories Yet</p>
 
               <div className="flex flex-col items-center gap-2">
-                <button onClick={() => setIsAddingCategory(true)} className="btn btn-primary btn-sm">Create One</button>
+                <button onClick={() => setShowAddCategoryModal(true)} className="btn btn-primary btn-sm">Create One</button>
                 <span className="text-xs opacity-50">- OR -</span>
                 <CopyFromLastMonthButton currentMonth={currentMonth} />
               </div>
@@ -123,6 +128,7 @@ const ExpTableView = () => {
         </div>
       </section>
 
+      </div>
     </div>
   );
 };

@@ -10,6 +10,7 @@ import { useLoading } from "../../../Context/LoadingContext";
 import { fetchHabitSettings, updateHabitSettings, resetHabitSettings } from "../../../services/redux/slice/habitSlice";
 import store from "../../../services/redux/store/store";
 import axiosInstance from "../../../Context/AxiosInstance";
+import ExportFoodLogModal from "../../../components/Dashboard/Habit/FoodLogging/ExportFoodLogModal";
 
 function HabitSettings() {
   TitleChanger("Progress Pulse | Habit Settings");
@@ -203,6 +204,10 @@ function HabitSettings() {
       title: "Export Habit Data",
       description: "Send an Excel spreadsheet (.xlsx) to your registered email containing Table Entry, Settings, and Logging sheets.",
     },
+    exportFoodData: {
+      title: "Export Food Logging Data",
+      description: "Send a 3-sheet Excel spreadsheet (.xlsx) to your email featuring Logged Foods with full DB nutrients, Daily Nutrition Stats (Avg, Min, Max, Total), and Meal Category Summaries.",
+    },
   };
 
   const toggle = (key) => {
@@ -244,6 +249,8 @@ function HabitSettings() {
   };
 
   const [isExporting, setIsExporting] = useState(false);
+  const [isFoodExportModalOpen, setIsFoodExportModalOpen] = useState(false);
+  const [isFoodExporting, setIsFoodExporting] = useState(false);
 
   const handleExportData = async () => {
     try {
@@ -262,6 +269,28 @@ function HabitSettings() {
     } finally {
       setIsExporting(false);
       setLoading(false);
+    }
+  };
+
+  const handleFoodExport = async (fromDate, toDate) => {
+    try {
+      setIsFoodExporting(true);
+      const response = await axiosInstance.post("/v1/dashboard/habit/food/export", {
+        startDate: fromDate,
+        endDate: toDate,
+      });
+      const msg = response.data?.message || "Food Logging export email sent! Please check your inbox.";
+      setalertSuccessMessage(msg);
+      setShowSuccessAlert(true);
+      setIsFoodExportModalOpen(false);
+      setTimeout(() => setShowSuccessAlert(false), 5000);
+    } catch (err) {
+      const errMsg = err.response?.data?.message || "Failed to export food logging data";
+      setAlertErrorMessage(errMsg);
+      setShowErrorAlert(true);
+      setTimeout(() => setShowErrorAlert(false), 5000);
+    } finally {
+      setIsFoodExporting(false);
     }
   };
 
@@ -357,36 +386,45 @@ function HabitSettings() {
 
       {/* Modal */}
       {showModal && (
-        <div className="fixed inset-0 z-[999] bg-black/75 backdrop-blur-md flex items-start justify-center pt-16 sm:pt-18 pb-6 px-3 sm:px-6 overflow-hidden">
-          <div className="bg-base-200 rounded-3xl p-6 w-[90%] max-w-md relative border border-base-300 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
-            <button className="absolute top-4 right-4 btn btn-sm btn-circle btn-ghost" onClick={() => setShowModal(false)}>
-              <X size={20} />
-            </button>
-            <h3 className="text-xl font-semibold mb-2">{modalContent.title}</h3>
-            <p className="text-base">{modalContent.description}</p>
+        <div className="fixed inset-0 z-[9999] bg-black/75 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 overflow-hidden">
+          <div className="bg-base-200 rounded-3xl p-6 w-[90%] max-w-md h-[220px] relative border border-base-300 shadow-2xl flex flex-col justify-between overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div>
+              <button className="absolute top-4 right-4 btn btn-sm btn-circle btn-ghost" onClick={() => setShowModal(false)}>
+                <X size={20} />
+              </button>
+              <h3 className="text-xl font-semibold mb-2 pr-8">{modalContent.title}</h3>
+              <p className="text-base text-base-content/80">{modalContent.description}</p>
+            </div>
+            <div className="flex justify-end pt-2">
+              <button className="btn btn-sm btn-primary rounded-xl px-4" onClick={() => setShowModal(false)}>
+                Got It
+              </button>
+            </div>
           </div>
         </div>
       )}
 
       {/* Unsaved Changes Blocker Modal */}
       {blocker.state === "blocked" && (
-        <div className="fixed inset-0 z-[999] bg-black/75 backdrop-blur-md flex items-start justify-center pt-16 sm:pt-18 pb-6 px-3 sm:px-6 overflow-hidden">
-          <div className="bg-base-100 rounded-3xl p-6 w-[90%] max-w-md shadow-2xl border border-warning animate-in fade-in zoom-in-95 duration-200">
-            <h3 className="text-xl font-bold mb-2 text-warning flex items-center gap-2">
-              <Info size={24} /> Unsaved Changes
-            </h3>
-            <p className="text-base mb-6">
-              You have unsaved changes. Are you sure you want to leave? Your changes will be lost.
-            </p>
-            <div className="flex justify-end gap-4">
+        <div className="fixed inset-0 z-[9999] bg-black/75 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 overflow-hidden">
+          <div className="bg-base-100 rounded-3xl p-6 w-[90%] max-w-md h-[240px] shadow-2xl border border-warning flex flex-col justify-between overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div>
+              <h3 className="text-xl font-bold mb-2 text-warning flex items-center gap-2">
+                <Info size={24} /> Unsaved Changes
+              </h3>
+              <p className="text-base text-base-content/80">
+                You have unsaved changes. Are you sure you want to leave? Your changes will be lost.
+              </p>
+            </div>
+            <div className="flex justify-end gap-3 pt-2">
               <button
-                className="btn btn-neutral"
+                className="btn btn-sm btn-neutral rounded-xl"
                 onClick={() => blocker.reset()}
               >
                 Stay
               </button>
               <button
-                className="btn btn-error"
+                className="btn btn-sm btn-error rounded-xl"
                 onClick={() => blocker.proceed()}
               >
                 Leave
@@ -592,7 +630,7 @@ function HabitSettings() {
             ))}
 
             {/* Export Habit Data */}
-            <div className="flex items-center justify-between py-3">
+            <div className="flex items-center justify-between py-3 border-b border-base-300">
               <div className="flex flex-col gap-1">
                 <div className="flex items-center gap-2">
                   <p className="font-medium text-base">Export Habit Data</p>
@@ -613,9 +651,39 @@ function HabitSettings() {
                 {isExporting ? "Exporting..." : "Export"}
               </button>
             </div>
+
+            {/* Export Food Logging Data */}
+            <div className="flex items-center justify-between py-3">
+              <div className="flex flex-col gap-1">
+                <div className="flex items-center gap-2">
+                  <p className="font-medium text-base">Export Food Logging</p>
+                  <button onClick={() => openModal("exportFoodData")}>
+                    <Info size={16} />
+                  </button>
+                </div>
+                <p className="text-sm text-muted">
+                  Generate 3-sheet Excel report of food logs, nutrition stats & category summaries.
+                </p>
+              </div>
+              <button
+                className="btn btn-sm btn-success text-white flex items-center gap-1"
+                onClick={() => setIsFoodExportModalOpen(true)}
+              >
+                <FileSpreadsheet size={16} />
+                Export
+              </button>
+            </div>
           </div>
         </div>
       </div>
+
+      {/* Export Food Log Modal */}
+      <ExportFoodLogModal
+        isOpen={isFoodExportModalOpen}
+        onClose={() => setIsFoodExportModalOpen(false)}
+        onExport={handleFoodExport}
+        isExporting={isFoodExporting}
+      />
     </div>
   );
 }

@@ -64,11 +64,14 @@ function HabitTableEntry() {
 
   // Format Date Function
   const formatDate = (dateString) => {
-    const date = new Date(dateString);
+    if (!dateString) return "";
+    const date = new Date(dateString.includes("T") ? dateString : `${dateString}T00:00:00`);
+    if (isNaN(date.getTime())) return dateString;
+    const weekday = date.toLocaleDateString("en-US", { weekday: "short" });
     const day = String(date.getDate()).padStart(2, "0");
-    const month = date.toLocaleString("default", { month: "short" });
+    const month = date.toLocaleDateString("en-US", { month: "short" });
     const year = String(date.getFullYear()).slice(2);
-    return `${day}-${month}-${year}`;
+    return `${weekday}, ${day}-${month}-${year}`;
   };
 
   // variables
@@ -271,7 +274,7 @@ function HabitTableEntry() {
     setIsJournalModalOpen(true);
   };
 
-  const handleJournalSave = async (text) => {
+  const handleJournalSave = async (text, mood) => {
     if (!currentJournalItem) return;
 
     try {
@@ -283,7 +286,7 @@ function HabitTableEntry() {
         read: currentJournalItem.read,
         intake: currentJournalItem.intake,
         selfcare: currentJournalItem.selfcare,
-        mood: currentJournalItem.mood,
+        mood: mood !== undefined ? mood : currentJournalItem.mood,
         journal: text,
         progress: Number(currentJournalItem.progress),
         score: Number(currentJournalItem.score)
@@ -563,7 +566,7 @@ function HabitTableEntry() {
                       <div
                         tabIndex={0}
                         role="button"
-                        className="input text-xs w-25"
+                        className="input text-xs w-[125px] flex items-center justify-center font-medium"
                       >
                         {formatDate(fromDate) || "-- / --- / --"}
                       </div>
@@ -603,7 +606,7 @@ function HabitTableEntry() {
                       <div
                         tabIndex={0}
                         role="button"
-                        className="input text-xs w-25"
+                        className="input text-xs w-[125px] flex items-center justify-center font-medium"
                       >
                         {formatDate(toDate) || "-- / --- / --"}
                       </div>
@@ -660,7 +663,7 @@ function HabitTableEntry() {
 
             {/* Heading Row */}
             <tr>
-              <th className="w-[80px] text-center border border-base-100">
+              <th className="w-[115px] text-center border border-base-100">
                 <div className="flex items-center justify-center gap-1">
                   <CalendarDays className="w-4 h-4" />
                   Date
@@ -1179,6 +1182,8 @@ function HabitTableEntry() {
         isOpen={isJournalModalOpen}
         onClose={() => setIsJournalModalOpen(false)}
         initialData={currentJournalItem?.journal}
+        initialMood={currentJournalItem?.mood}
+        date={currentJournalItem?.date}
         onSave={handleJournalSave}
       />
         </>

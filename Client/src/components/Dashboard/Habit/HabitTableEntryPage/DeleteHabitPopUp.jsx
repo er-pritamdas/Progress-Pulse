@@ -15,8 +15,8 @@ function DeleteHabitPopUp({ isDeletePopupOpen, onClose, onConfirm }) {
   if (!isDeletePopupOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[999] bg-black/75 backdrop-blur-md flex items-start justify-center pt-16 sm:pt-18 pb-6 px-3 sm:px-6 overflow-hidden">
-      <div className="bg-base-200 w-full max-w-sm rounded-3xl shadow-2xl border border-base-300 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-[99999] bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
+      <div className="bg-base-200 w-full max-w-md h-[250px] rounded-3xl shadow-2xl border border-base-300 flex flex-col justify-between overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         {/* Header */}
         <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
           <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100">

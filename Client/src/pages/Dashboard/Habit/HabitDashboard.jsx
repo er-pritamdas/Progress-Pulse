@@ -17,7 +17,7 @@ import WaterAnalysis from "../../../components/Dashboard/Habit/HabitDashboardPag
 import SleepAnalysis from "../../../components/Dashboard/Habit/HabitDashboardPage/Analysis/SleepAnalysis";
 import ReadAnalysis from "../../../components/Dashboard/Habit/HabitDashboardPage/Analysis/ReadAnalysis";
 
-import { Flame, Droplet, Moon, BookOpen, Smile, Heart, Book, ChevronDown, ChevronUp, Trophy, Apple } from "lucide-react";
+import { Flame, Droplet, Moon, BookOpen, Smile, Heart, Book, ChevronDown, ChevronUp, Trophy, Apple, CalendarCheck } from "lucide-react";
 import MoodAnalysis from "../../../components/Dashboard/Habit/HabitDashboardPage/Analysis/MoodAnalysis.jsx";
 import SelfCareAnalysis from "../../../components/Dashboard/Habit/HabitDashboardPage/Analysis/SelfCareAnalysis.jsx";
 import JournalAnalysis from "../../../components/Dashboard/Habit/HabitDashboardPage/Analysis/JournalAnalysis.jsx";
@@ -59,7 +59,7 @@ function HabitDashboard() {
     { id: "selfcare", label: "Self Care", icon: Heart, color: "text-secondary" },
     { id: "mood", label: "Mood", icon: Smile, color: "text-accent" },
     { id: "scores", label: "Scores", icon: Trophy, color: "text-amber-400" },
-    { id: "journal", label: "Journal", icon: Book, color: "text-info" },
+    { id: "journal", label: "Daily Overview", icon: CalendarCheck, color: "text-info" },
     { id: "nutrients", label: "Nutrients", icon: Apple, color: "text-success" },
   ];
 
@@ -68,11 +68,14 @@ function HabitDashboard() {
 
   // Format Date Function
   const formatDate = (dateString) => {
-    const date = new Date(dateString);
+    if (!dateString) return "";
+    const date = new Date(dateString.includes("T") ? dateString : `${dateString}T00:00:00`);
+    if (isNaN(date.getTime())) return dateString;
+    const weekday = date.toLocaleDateString("en-US", { weekday: "short" });
     const day = String(date.getDate()).padStart(2, "0");
-    const month = date.toLocaleString("default", { month: "short" });
+    const month = date.toLocaleDateString("en-US", { month: "short" });
     const year = String(date.getFullYear()).slice(2);
-    return `${day}-${month}-${year}`;
+    return `${weekday}, ${day}-${month}-${year}`;
   };
 
   const resetFilters = () => {
@@ -239,7 +242,7 @@ function HabitDashboard() {
 
             {/* FROM DATE PICKER */}
             <div className="dropdown dropdown-end floating-label">
-              <div tabIndex={0} role="button" className="input text-xs w-25">
+              <div tabIndex={0} role="button" className="input text-xs w-[125px] flex items-center justify-center font-medium">
                 {formatDate(fromDate) || "-- / --- / --"}
               </div>
               <span>From Date</span>
@@ -272,7 +275,7 @@ function HabitDashboard() {
             </div>
             {/* TO DATE PICKER */}
             <div className="dropdown dropdown-end floating-label">
-              <div tabIndex={0} role="button" className="input text-xs w-25">
+              <div tabIndex={0} role="button" className="input text-xs w-[125px] flex items-center justify-center font-medium">
                 {formatDate(toDate) || "-- / --- / --"}
               </div>
               <span>To Date</span>
