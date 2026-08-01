@@ -30,6 +30,11 @@ const expenseTransactionSchema = new mongoose.Schema({
         ref: PaymentSource,
         required: true
     },
+    targetSourceId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: PaymentSource
+        // Required for Bank-to-Bank Transfer
+    },
     categoryId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: ExpenseCategory
@@ -46,7 +51,7 @@ const expenseTransactionSchema = new mongoose.Schema({
     },
     type: {
         type: String,
-        enum: ["Credit", "Debit"],
+        enum: ["Credit", "Debit", "Transfer"],
         default: "Debit"
     },
     isReimbursable: {

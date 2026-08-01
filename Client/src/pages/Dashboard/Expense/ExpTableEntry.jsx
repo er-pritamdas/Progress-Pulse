@@ -3,69 +3,123 @@ import { useDispatch, useSelector } from "react-redux";
 import { fetchDashboardData, setMonth } from "../../../services/redux/slice/ExpenseSlice";
 import { useAuth } from "../../../Context/JwtAuthContext";
 import ExpenseTable from "../../../components/Expense/ExpenseTable";
+import BankBalancesModal from "../../../components/Expense/BankBalancesModal";
 import dayjs from "dayjs";
-import { ChevronLeft, ChevronRight, TrendingUp, TrendingDown, Eye, EyeOff, Calendar, X, Wallet, Search, Folder, ExternalLink, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
+import { ChevronLeft, ChevronRight, TrendingUp, TrendingDown, Eye, EyeOff, Calendar, X, Wallet, Search, Folder, ExternalLink, ArrowUp, ArrowDown, ArrowUpDown, ArrowRightLeft, Sparkles, Filter, ChevronDown, Building2 } from "lucide-react";
 import { getSourceTagStyle, getCategoryTagStyle } from "../../../utils/expenseTheme";
 
 const ExpTableEntry = () => {
   const dispatch = useDispatch();
-  const { transactions, loading, currentMonth, salary, sources } = useSelector((state) => state.expense);
+  const { transactions, loading, currentMonth, salary, sources, categories } = useSelector((state) => state.expense);
   const { user } = useAuth();
 
   const [showDebit, setShowDebit] = useState(true);
   const [showCredit, setShowCredit] = useState(true);
   const [showHeatmapModal, setShowHeatmapModal] = useState(false);
   const [showTransactionModal, setShowTransactionModal] = useState(null); // 'debit' | 'credit' | null
+  const [showBankBalancesModal, setShowBankBalancesModal] = useState(false);
+
+  // Table Controls & Filters State
+  const [filters, setFilters] = useState({
+    date: "",
+    description: "",
+    sourceId: "",
+    categoryId: "",
+    subCategoryId: ""
+  });
+  const [sortOrder, setSortOrder] = useState(() => localStorage.getItem("expense_sort_order") || "newest");
+  const [rowLimit, setRowLimit] = useState("all");
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+
+  // Collapsible Sidebar Sections (Collapsed by default)
+  const [isFiltersExpanded, setIsFiltersExpanded] = useState(false);
+  const [isSortExpanded, setIsSortExpanded] = useState(false);
+
+  const handleSortChange = (newOrder) => {
+    setSortOrder(newOrder);
+    localStorage.setItem("expense_sort_order", newOrder);
+  };
+
+  const monthCategories = categories.filter(c => !c.month || c.month === currentMonth);
+  const selectedFilterCategoryObj = monthCategories.find(c => String(c._id) === String(filters.categoryId));
+
+  const hasActiveFilters = Boolean(filters.date || filters.description || filters.sourceId || filters.categoryId || filters.subCategoryId);
+  const clearFilters = () => {
+    setFilters({
+      date: "",
+      description: "",
+      sourceId: "",
+      categoryId: "",
+      subCategoryId: ""
+    });
+  };
 
   useEffect(() => {
     dispatch(fetchDashboardData(currentMonth));
   }, [currentMonth, user, dispatch]);
 
   // Sidebar Stats
-  const debitTransactions = transactions.filter(t => t.type !== 'Credit'); // Default to Debit if missing
+  const debitTransactions = transactions.filter(t => t.type === 'Debit');
   const creditTransactions = transactions.filter(t => t.type === 'Credit');
 
   const totalDebited = debitTransactions.reduce((sum, t) => sum + t.amount, 0);
-  const debitCount = debitTransactions.length;
 
   const totalCredited = creditTransactions.reduce((sum, t) => sum + t.amount, 0);
-  const creditCount = creditTransactions.length;
 
   return (
     <div className="p-4 md:p-2 w-full max-w-[1600px] mx-auto pb-20">
 
       <div className="flex flex-col lg:flex-row gap-6">
 
-        {/* Sidebar Stats (Left) - Sticky */}
+        {/* Sidebar Controls (Left) - Sticky */}
         <div className="w-full lg:w-72 shrink-0 space-y-6 lg:sticky lg:top-6 lg:h-fit">
 
-          {/* Month Selector */}
-          <div className="card bg-gradient-to-br from-base-100 to-base-200 shadow-md border border-base-200/50">
-            <div className="card-body p-6">
-              <h3 className="text-xs font-bold text-base-content/50 uppercase tracking-widest mb-2">Current Period</h3>
-
-              <div className="flex items-center justify-between bg-base-100 rounded-lg p-1 border border-base-200">
-                <button
-                  onClick={() => dispatch(setMonth(dayjs(currentMonth).subtract(1, 'month').format("YYYY-MM")))}
-                  className="btn btn-sm btn-ghost btn-square"
-                >
-                  <ChevronLeft size={16} />
-                </button>
-
-                <span className="text-lg font-bold text-base-content font-sans tracking-wide">
-                  {dayjs(currentMonth).format("MMMM YYYY")}
+          {/* Bank Balances Card (4x4 Matrix) - Clickable to open Popup */}
+          <div
+            onClick={() => setShowBankBalancesModal(true)}
+            className="card bg-gradient-to-br from-base-100 to-base-200 shadow-xl overflow-hidden relative group cursor-pointer hover:scale-[1.02] transition-all border border-transparent hover:border-primary/40"
+          >
+            <div className="card-body p-4 relative z-10 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-extrabold text-base-content/70 uppercase tracking-wider flex items-center gap-1.5">
+                  <Building2 size={14} className="text-primary" />
+                  <span>Bank Balances</span>
+                </h3>
+                <span className="text-[10px] font-extrabold text-primary bg-primary/10 px-2 py-0.5 rounded-md flex items-center gap-1 group-hover:scale-105 transition-transform">
+                  View All <ExternalLink size={10} />
                 </span>
-
-                <button
-                  onClick={() => dispatch(setMonth(dayjs(currentMonth).add(1, 'month').format("YYYY-MM")))}
-                  className="btn btn-sm btn-ghost btn-square"
-                >
-                  <ChevronRight size={16} />
-                </button>
               </div>
+
+              {/* 4x4 Matrix Grid Display */}
+              <div className="grid grid-cols-2 gap-1.5">
+                {sources.slice(0, 4).map((source) => {
+                  const style = getSourceTagStyle(source, sources);
+                  const amt = source.type === 'Card' && !source.balance && source.limit ? source.limit : (source.balance || 0);
+
+                  return (
+                    <div
+                      key={source._id}
+                      className={`p-2 rounded-xl border text-xs flex flex-col justify-between ${style.bg} ${style.text} ${style.border} transition-all`}
+                    >
+                      <div className="flex items-center gap-1 font-bold text-[10px] truncate">
+                        <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${style.swatch}`}></span>
+                        <span className="truncate">{source.name}</span>
+                      </div>
+                      <span className="font-mono font-extrabold text-[11px] mt-1 block">
+                        ₹{amt.toLocaleString()}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {sources.length > 4 && (
+                <div className="text-[10px] text-center font-bold opacity-60 pt-0.5">
+                  + {sources.length - 4} more accounts (Click to view full matrix)
+                </div>
+              )}
             </div>
           </div>
-
 
           {/* Debited Card */}
           <div
@@ -98,7 +152,6 @@ const ExpTableEntry = () => {
               <div className="flex items-center justify-between mt-2">
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full bg-error animate-pulse"></div>
-                  <span className="text-xs text-base-content/60 font-medium">{debitCount} Transactions</span>
                 </div>
                 <span className="text-[10px] font-bold text-error bg-error/10 px-2 py-0.5 rounded-md opacity-80 group-hover:opacity-100 transition-opacity">
                   View Breakdown →
@@ -138,7 +191,6 @@ const ExpTableEntry = () => {
               <div className="flex items-center justify-between mt-2">
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full bg-success animate-pulse"></div>
-                  <span className="text-xs text-base-content/60 font-medium">{creditCount} Transactions</span>
                 </div>
                 <span className="text-[10px] font-bold text-success bg-success/10 px-2 py-0.5 rounded-md opacity-80 group-hover:opacity-100 transition-opacity">
                   View Breakdown →
@@ -147,27 +199,84 @@ const ExpTableEntry = () => {
             </div>
           </div>
 
-
-          {/* EveryDay Spending Card */}
-          <div
-            onClick={() => setShowHeatmapModal(true)}
-            className="card bg-gradient-to-br from-base-100 to-base-200 shadow-md border border-base-200/50 cursor-pointer hover:scale-[1.02] transition-transform"
-          >
-            <div className="card-body p-6 flex flex-row items-center gap-4">
-              <div className="p-3 bg-primary/10 rounded-xl text-primary">
-                <Calendar size={24} />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold">Daily Spending</h3>
-                <p className="text-xs opacity-60">View heatmap of daily expenses</p>
-              </div>
-            </div>
-          </div>
         </div>
 
         {/* Main Table Area (Right) */}
         <div className="flex-1 flex flex-col gap-6">
-          <ExpenseTable />
+
+          {/* Month Selector Banner & Add Transaction Modal Button (Top of Table) */}
+          <div className="card bg-gradient-to-br from-base-100 to-base-200 shadow-md border border-base-200/50 p-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+            
+            {/* Period Header & Title */}
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-primary/10 text-primary">
+                <Calendar size={20} />
+              </div>
+              <div>
+                <h3 className="text-xs font-bold text-base-content/50 uppercase tracking-widest">
+                  Current Period
+                </h3>
+                <span className="text-xl font-extrabold text-base-content font-sans tracking-wide">
+                  {dayjs(currentMonth).format("MMMM YYYY")}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 flex-wrap">
+              {/* Month Navigation */}
+              <div className="flex items-center gap-2 bg-base-100 p-1.5 rounded-xl border border-base-200 shadow-2xs">
+                <button
+                  onClick={() => dispatch(setMonth(dayjs(currentMonth).subtract(1, 'month').format("YYYY-MM")))}
+                  className="btn btn-xs btn-ghost btn-square font-bold"
+                  title="Previous Month"
+                >
+                  <ChevronLeft size={16} />
+                </button>
+
+                <span className="text-xs font-extrabold font-mono px-3 text-primary">
+                  {dayjs(currentMonth).format("MMM YYYY")}
+                </span>
+
+                <button
+                  onClick={() => dispatch(setMonth(dayjs(currentMonth).add(1, 'month').format("YYYY-MM")))}
+                  className="btn btn-xs btn-ghost btn-square font-bold"
+                  title="Next Month"
+                >
+                  <ChevronRight size={16} />
+                </button>
+              </div>
+
+              {/* Heatmap Trigger Button (Outline / Skeleton style) */}
+              <button
+                onClick={() => setShowHeatmapModal(true)}
+                className="btn btn-outline btn-primary btn-sm font-bold gap-2 rounded-xl shadow-xs"
+                title="View Daily Spending Heatmap"
+              >
+                <Calendar size={16} />
+                <span>Daily Heatmap 📊</span>
+              </button>
+
+              {/* Primary Action Button: Add Transaction Modal (Outline / Skeleton style) */}
+              <button
+                onClick={() => setIsAddModalOpen(true)}
+                className="btn btn-outline btn-primary btn-sm font-bold gap-2 rounded-xl shadow-xs"
+              >
+                <Sparkles size={16} />
+                <span>+ Add Transaction (Modal)</span>
+              </button>
+            </div>
+          </div>
+
+          <ExpenseTable
+            externalFilters={filters}
+            externalSetFilters={setFilters}
+            externalSortOrder={sortOrder}
+            externalSetSortOrder={setSortOrder}
+            externalRowLimit={rowLimit}
+            externalSetRowLimit={setRowLimit}
+            externalIsAddModalOpen={isAddModalOpen}
+            externalSetIsAddModalOpen={setIsAddModalOpen}
+          />
         </div>
 
       </div>
@@ -190,6 +299,12 @@ const ExpTableEntry = () => {
           onClose={() => setShowTransactionModal(null)}
         />
       )}
+
+      {/* Bank Balances & Accounts Detailed Popup Modal */}
+      <BankBalancesModal
+        isOpen={showBankBalancesModal}
+        onClose={() => setShowBankBalancesModal(false)}
+      />
     </div>
   );
 };
@@ -309,8 +424,15 @@ const HeatmapModal = ({ transactions, currentMonth, onClose }) => {
 const TransactionListModal = ({ type, transactions, currentMonth, onClose }) => {
   const { categories, sources } = useSelector((state) => state.expense);
   const [searchTerm, setSearchTerm] = useState("");
-  const [sortOrder, setSortOrder] = useState("newest"); // "newest" | "oldest"
+  const [sortOrder, setSortOrder] = useState(() => {
+    return localStorage.getItem("expense_sort_order") || "newest";
+  }); // "newest" | "oldest"
   const [limitCount, setLimitCount] = useState("all"); // "10" | "20" | "30" | "40" | "all"
+
+  const handleSortChange = (newOrder) => {
+    setSortOrder(newOrder);
+    localStorage.setItem("expense_sort_order", newOrder);
+  };
 
   const isDebit = type === "debit";
   const title = isDebit ? "Debited Transactions" : "Credited Transactions";
@@ -344,8 +466,18 @@ const TransactionListModal = ({ type, transactions, currentMonth, onClose }) => 
     });
 
     list.sort((a, b) => {
-      const diff = new Date(b.date) - new Date(a.date);
-      return sortOrder === "newest" ? diff : -diff;
+      const timeA = new Date(a.date).getTime();
+      const timeB = new Date(b.date).getTime();
+
+      if (timeA !== timeB) {
+        return sortOrder === "newest" ? timeB - timeA : timeA - timeB;
+      }
+
+      // Tie-breaker for identical dates based on updated/created timestamp
+      const updateA = new Date(a.updatedAt || a.createdAt || a.date).getTime();
+      const updateB = new Date(b.updatedAt || b.createdAt || b.date).getTime();
+
+      return sortOrder === "newest" ? updateB - updateA : updateA - updateB;
     });
 
     if (limitCount !== "all") {
@@ -412,14 +544,14 @@ const TransactionListModal = ({ type, transactions, currentMonth, onClose }) => 
             {/* Sort Order Toggle */}
             <div className="join border border-base-300 rounded-xl p-0.5 bg-base-200/40">
               <button
-                onClick={() => setSortOrder("newest")}
+                onClick={() => handleSortChange("newest")}
                 className={`join-item btn btn-xs rounded-lg font-bold gap-1 ${sortOrder === "newest" ? "btn-primary shadow-2xs" : "btn-ghost opacity-70"}`}
                 title="Show Newest First"
               >
                 <ArrowDown size={12} /> New First
               </button>
               <button
-                onClick={() => setSortOrder("oldest")}
+                onClick={() => handleSortChange("oldest")}
                 className={`join-item btn btn-xs rounded-lg font-bold gap-1 ${sortOrder === "oldest" ? "btn-primary shadow-2xs" : "btn-ghost opacity-70"}`}
                 title="Show Oldest First"
               >
@@ -452,15 +584,19 @@ const TransactionListModal = ({ type, transactions, currentMonth, onClose }) => 
                   <tr>
                     <th className="py-3 px-4">Date</th>
                     <th className="py-3 px-4">Description</th>
-                    <th className="py-3 px-4">Category</th>
+                    <th className="py-3 px-4">Category / To</th>
                     <th className="py-3 px-4">Payment Source</th>
                     <th className="py-3 px-4 text-right">Amount</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-base-200/70 font-medium">
                   {filteredTransactions.map((t) => {
+                    const isTrf = t.type === 'Transfer';
                     const catObj = categories.find((c) => String(c._id) === String(t.categoryId?._id || t.categoryId));
                     const catTagStyle = getCategoryTagStyle(catObj, categories);
+
+                    const targetObj = t.targetSourceId;
+                    const targetName = targetObj?.name || (typeof targetObj === 'string' ? targetObj : 'Bank');
 
                     const srcObj = sources.find((s) => String(s._id) === String(t.sourceId?._id || t.sourceId));
                     const srcTagStyle = getSourceTagStyle(srcObj);
@@ -474,12 +610,22 @@ const TransactionListModal = ({ type, transactions, currentMonth, onClose }) => 
                           {t.description || <span className="opacity-40 italic">No description</span>}
                         </td>
                         <td className="py-3 px-4">
-                          <span
-                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold ${catTagStyle.bg} ${catTagStyle.text} border ${catTagStyle.border}`}
-                          >
-                            <Folder size={12} />
-                            {catObj?.name || t.categoryName || "Uncategorized"}
-                          </span>
+                          {isTrf ? (() => {
+                            const trgStyle = getSourceTagStyle(targetObj || targetName, sources);
+                            return (
+                              <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold ${trgStyle.bg} ${trgStyle.text} border ${trgStyle.border}`}>
+                                <ArrowRightLeft size={12} />
+                                To: {targetName}
+                              </span>
+                            );
+                          })() : (
+                            <span
+                              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold ${catTagStyle.bg} ${catTagStyle.text} border ${catTagStyle.border}`}
+                            >
+                              <Folder size={12} />
+                              {catObj?.name || t.categoryName || "Uncategorized"}
+                            </span>
+                          )}
                         </td>
                         <td className="py-3 px-4">
                           <span
@@ -490,8 +636,8 @@ const TransactionListModal = ({ type, transactions, currentMonth, onClose }) => 
                           </span>
                         </td>
                         <td className="py-3 px-4 text-right font-mono font-extrabold whitespace-nowrap">
-                          <span className={isDebit ? "text-error" : "text-success"}>
-                            {isDebit ? "-" : "+"}₹{Number(t.amount || 0).toLocaleString()}
+                          <span className={isTrf ? "text-amber-500 dark:text-amber-400" : (isDebit ? "text-error" : "text-success")}>
+                            {isTrf ? "" : (isDebit ? "-" : "+")}₹{Number(t.amount || 0).toLocaleString()}
                           </span>
                         </td>
                       </tr>

@@ -196,10 +196,14 @@ export const deleteSource = createAsyncThunk(
 // Transactions
 export const addTransaction = createAsyncThunk(
     "expense/addTransaction",
-    async (transactionData, { rejectWithValue }) => {
+    async (transactionData, { dispatch, getState, rejectWithValue }) => {
         try {
             const response = await axiosInstance.post(`${BASE_URL}/transaction`, transactionData);
-            return response.data.data;
+            const month = getState().expense.currentMonth;
+            if (month) {
+                dispatch(fetchDashboardData(month));
+            }
+            return response.data; // Contains { success: true, data: transaction, sources: [...] }
         } catch (error) {
             return rejectWithValue(error.response?.data?.message || "Failed to add transaction");
         }
@@ -208,10 +212,14 @@ export const addTransaction = createAsyncThunk(
 
 export const updateTransaction = createAsyncThunk(
     "expense/updateTransaction",
-    async ({ id, data }, { rejectWithValue }) => {
+    async ({ id, data }, { dispatch, getState, rejectWithValue }) => {
         try {
             const response = await axiosInstance.patch(`${BASE_URL}/transaction/${id}`, data);
-            return response.data.data;
+            const month = getState().expense.currentMonth;
+            if (month) {
+                dispatch(fetchDashboardData(month));
+            }
+            return response.data; // Contains { success: true, data: transaction, sources: [...] }
         } catch (error) {
             return rejectWithValue(error.response?.data?.message || "Failed to update transaction");
         }
@@ -220,9 +228,13 @@ export const updateTransaction = createAsyncThunk(
 
 export const deleteTransaction = createAsyncThunk(
     "expense/deleteTransaction",
-    async (id, { rejectWithValue }) => {
+    async (id, { dispatch, getState, rejectWithValue }) => {
         try {
             const response = await axiosInstance.delete(`${BASE_URL}/transaction/${id}`);
+            const month = getState().expense.currentMonth;
+            if (month) {
+                dispatch(fetchDashboardData(month));
+            }
             return response.data.data; // Now returns { id, updatedSource }
         } catch (error) {
             return rejectWithValue(error.response?.data?.message || "Failed to delete transaction");
@@ -347,30 +359,30 @@ const expenseSlice = createSlice({
 
             // Transactions
             .addCase(addTransaction.fulfilled, (state, action) => {
-                state.transactions.unshift(action.payload); // Add new to top
+                const transactionData = action.payload.data || action.payload;
+                state.transactions.unshift(transactionData);
 
-                // Update Source Balance dynamically
-                const updatedSource = action.payload.sourceId; // This is populated
-                if (updatedSource && updatedSource._id) {
-                    const index = state.sources.findIndex(s => s._id === updatedSource._id);
-                    if (index !== -1) {
-                        state.sources[index] = { ...state.sources[index], ...updatedSource };
-                    }
+                if (action.payload.sources && Array.isArray(action.payload.sources)) {
+                    state.sources = action.payload.sources;
                 }
             })
             .addCase(updateTransaction.fulfilled, (state, action) => {
-                const index = state.transactions.findIndex(t => t._id === action.payload._id);
-                if (index !== -1) state.transactions[index] = action.payload;
+                const transactionData = action.payload.data || action.payload;
+                const index = state.transactions.findIndex(t => t._id === transactionData._id);
+                if (index !== -1) state.transactions[index] = transactionData;
+
+                if (action.payload.sources && Array.isArray(action.payload.sources)) {
+                    state.sources = action.payload.sources;
+                }
             })
             .addCase(deleteTransaction.fulfilled, (state, action) => {
-                const { id, updatedSource } = action.payload;
-                // Remove Transaction
-                state.transactions = state.transactions.filter(t => t._id !== id);
-
-                // Update Source Balance (if returned)
-                if (updatedSource) {
-                    const index = state.sources.findIndex(s => s._id === updatedSource._id);
-                    if (index !== -1) state.sources[index] = updatedSource;
+                const id = action.payload.id || action.payload.data?.id;
+                if (id) {
+                    state.transactions = state.transactions.filter(t => t._id !== id);
+                }
+                const sources = action.payload.sources || action.payload.data?.sources;
+                if (sources && Array.isArray(sources)) {
+                    state.sources = sources;
                 }
             });
     },

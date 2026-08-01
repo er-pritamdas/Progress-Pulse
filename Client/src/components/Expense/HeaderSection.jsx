@@ -81,27 +81,6 @@ const HeaderSection = () => {
                             <span className="text-base-content/50">Net: ••••••</span>
                         )}
                     </div>
-
-                    {/* Bank & Card Breakdown (Max 4) */}
-                    <div className="w-full mt-2 pt-2 border-t border-base-300/60 relative z-10 flex flex-col gap-1">
-                        {breakdownSources.length > 0 ? (
-                            <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-xs">
-                                {breakdownSources.map((source) => (
-                                    <div key={source._id} className="flex justify-between items-center bg-base-100/70 px-2 py-1 rounded-md border border-base-300/40">
-                                        <span className="font-medium text-base-content/80 truncate max-w-[70px]" title={source.name}>{source.name}</span>
-                                        <span className={`font-mono font-semibold ${source.type === 'Card' ? 'text-error' : 'text-success'}`}>
-                                            {showBalance
-                                                ? (source.type === 'Card' ? `-₹${(source.spent || 0).toLocaleString()}` : `₹${(source.balance || 0).toLocaleString()}`)
-                                                : "••••"
-                                            }
-                                        </span>
-                                    </div>
-                                ))}
-                            </div>
-                        ) : (
-                            <div className="stat-desc text-center">No active accounts</div>
-                        )}
-                    </div>
                     <Wallet className="absolute -bottom-4 -right-4 w-24 h-24 text-base-content/5 rotate-12 -z-0" />
                 </div>
 

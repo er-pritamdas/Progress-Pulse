@@ -55,7 +55,7 @@ export const getDashboardData = async (req, res) => {
             ExpenseTransaction.find({
                 userId,
                 date: { $gte: startDate, $lte: endDate }
-            }).sort({ date: 1 }).populate('sourceId', 'name color').populate('categoryId', 'name color')
+            }).sort({ date: 1 }).populate('sourceId', 'name color type balance').populate('targetSourceId', 'name color type balance').populate('categoryId', 'name color')
         ]);
 
         // Keep full subcategories data intact for month-by-month analysis
@@ -382,42 +382,53 @@ export const deleteSource = async (req, res) => {
 export const addTransaction = async (req, res) => {
     try {
         const { _id: userId } = req.user;
-        const { date, description, sourceId, categoryId, subCategoryId, amount, type, isReimbursable } = req.body; // type: Credit | Debit
+        const { date, description, sourceId, targetSourceId, categoryId, subCategoryId, amount, type, isReimbursable } = req.body;
+
+        const cleanSourceId = typeof sourceId === 'object' && sourceId !== null ? sourceId._id : sourceId;
+        const cleanTargetId = typeof targetSourceId === 'object' && targetSourceId !== null ? targetSourceId._id : targetSourceId;
+        const cleanCatId = typeof categoryId === 'object' && categoryId !== null ? categoryId._id : categoryId;
+        const cleanSubCatId = typeof subCategoryId === 'object' && subCategoryId !== null ? subCategoryId._id : subCategoryId;
 
         const transactionType = type || "Debit";
+        const numAmount = Number(amount || 0);
 
         const transaction = await ExpenseTransaction.create({
             userId,
-            date,
+            date: date || new Date(),
             description,
-            sourceId,
-            categoryId: transactionType === "Debit" ? categoryId : undefined, // Optional for Credit
-            subCategoryId: transactionType === "Debit" ? subCategoryId : undefined, // Optional for Credit
-            amount,
+            sourceId: cleanSourceId,
+            targetSourceId: transactionType === "Transfer" ? cleanTargetId : undefined,
+            categoryId: transactionType === "Debit" ? cleanCatId : undefined,
+            subCategoryId: transactionType === "Debit" ? cleanSubCatId : undefined,
+            amount: numAmount,
             type: transactionType,
             isReimbursable: isReimbursable || false
         });
 
-        // Update Source Balance
-        const source = await PaymentSource.findById(sourceId);
-        if (source) {
-            if (transactionType === "Credit") {
-                source.balance += Number(amount);
-            } else {
-                // Debit
-                source.balance -= Number(amount);
-            }
-            await source.save();
+        // Atomic balance update
+        if (transactionType === "Transfer") {
+            if (cleanSourceId) await PaymentSource.findByIdAndUpdate(cleanSourceId, { $inc: { balance: -numAmount } });
+            if (cleanTargetId) await PaymentSource.findByIdAndUpdate(cleanTargetId, { $inc: { balance: numAmount } });
+        } else if (transactionType === "Credit") {
+            if (cleanSourceId) await PaymentSource.findByIdAndUpdate(cleanSourceId, { $inc: { balance: numAmount } });
+        } else {
+            // Debit
+            if (cleanSourceId) await PaymentSource.findByIdAndUpdate(cleanSourceId, { $inc: { balance: -numAmount } });
         }
 
-        // Populate match the getDashboard format for immediate UI update
-        await transaction.populate('sourceId', 'name color type balance');
+        await transaction.populate('sourceId', 'name color type balance limit');
+        if (transactionType === "Transfer") {
+            await transaction.populate('targetSourceId', 'name color type balance limit');
+        }
         if (transactionType === "Debit") {
             await transaction.populate('categoryId', 'name color');
         }
 
-        res.status(201).json({ success: true, data: transaction });
+        const sources = await PaymentSource.find({ userId }).sort({ createdAt: 1 });
+
+        res.status(201).json({ success: true, data: transaction, sources });
     } catch (error) {
+        console.error("Add Transaction Error:", error);
         res.status(500).json({ success: false, message: error.message });
     }
 };
@@ -425,16 +436,84 @@ export const addTransaction = async (req, res) => {
 export const updateTransaction = async (req, res) => {
     try {
         const { id } = req.params;
-        const updateData = req.body;
+        const { date, description, sourceId, targetSourceId, categoryId, subCategoryId, amount, type, isReimbursable } = req.body;
+
+        const cleanSourceId = typeof sourceId === 'object' && sourceId !== null ? sourceId._id : sourceId;
+        const cleanTargetId = typeof targetSourceId === 'object' && targetSourceId !== null ? targetSourceId._id : targetSourceId;
+        const cleanCatId = typeof categoryId === 'object' && categoryId !== null ? categoryId._id : categoryId;
+        const cleanSubCatId = typeof subCategoryId === 'object' && subCategoryId !== null ? subCategoryId._id : subCategoryId;
+
+        const oldTransaction = await ExpenseTransaction.findById(id);
+        if (!oldTransaction) {
+            return res.status(404).json({ success: false, message: "Transaction not found" });
+        }
+
+        // 1. Revert old transaction balance changes
+        const oldSrcId = oldTransaction.sourceId;
+        const oldTrgId = oldTransaction.targetSourceId;
+        const oldAmt = Number(oldTransaction.amount || 0);
+
+        if (oldTransaction.type === "Transfer") {
+            if (oldSrcId) await PaymentSource.findByIdAndUpdate(oldSrcId, { $inc: { balance: oldAmt } });
+            if (oldTrgId) await PaymentSource.findByIdAndUpdate(oldTrgId, { $inc: { balance: -oldAmt } });
+        } else if (oldTransaction.type === "Credit") {
+            if (oldSrcId) await PaymentSource.findByIdAndUpdate(oldSrcId, { $inc: { balance: -oldAmt } });
+        } else {
+            // Debit
+            if (oldSrcId) await PaymentSource.findByIdAndUpdate(oldSrcId, { $inc: { balance: oldAmt } });
+        }
+
+        // 2. Prepare update payload
+        const newType = type || oldTransaction.type || "Debit";
+        const newAmt = Number(amount !== undefined ? amount : oldTransaction.amount);
+
+        const updateFields = {
+            date: date || oldTransaction.date,
+            description: description !== undefined ? description : oldTransaction.description,
+            sourceId: cleanSourceId || oldTransaction.sourceId,
+            targetSourceId: newType === "Transfer" ? (cleanTargetId || null) : null,
+            categoryId: newType === "Debit" ? (cleanCatId || null) : null,
+            subCategoryId: newType === "Debit" ? (cleanSubCatId || null) : null,
+            amount: newAmt,
+            type: newType,
+            isReimbursable: isReimbursable !== undefined ? isReimbursable : oldTransaction.isReimbursable
+        };
 
         const transaction = await ExpenseTransaction.findByIdAndUpdate(
             id,
-            updateData,
+            updateFields,
             { new: true }
-        ).populate('sourceId', 'name color').populate('categoryId', 'name color');
+        );
 
-        res.status(200).json({ success: true, data: transaction });
+        // 3. Apply new transaction balance changes
+        const newSrcId = transaction.sourceId;
+        const newTrgId = transaction.targetSourceId;
+
+        if (transaction.type === "Transfer") {
+            if (newSrcId) await PaymentSource.findByIdAndUpdate(newSrcId, { $inc: { balance: -newAmt } });
+            if (newTrgId) await PaymentSource.findByIdAndUpdate(newTrgId, { $inc: { balance: newAmt } });
+        } else if (transaction.type === "Credit") {
+            if (newSrcId) await PaymentSource.findByIdAndUpdate(newSrcId, { $inc: { balance: newAmt } });
+        } else {
+            // Debit
+            if (newSrcId) await PaymentSource.findByIdAndUpdate(newSrcId, { $inc: { balance: -newAmt } });
+        }
+
+        // 4. Populate for UI response
+        await transaction.populate('sourceId', 'name color type balance limit');
+        if (transaction.type === "Transfer") {
+            await transaction.populate('targetSourceId', 'name color type balance limit');
+        }
+        if (transaction.type === "Debit") {
+            await transaction.populate('categoryId', 'name color');
+        }
+
+        const userId = oldTransaction.userId;
+        const sources = await PaymentSource.find({ userId }).sort({ createdAt: 1 });
+
+        res.status(200).json({ success: true, data: transaction, sources });
     } catch (error) {
+        console.error("Update Transaction Error:", error);
         res.status(500).json({ success: false, message: error.message });
     }
 };
@@ -448,23 +527,27 @@ export const deleteTransaction = async (req, res) => {
             return res.status(404).json({ success: false, message: "Transaction not found" });
         }
 
-        // Revert Balance Logic
-        const source = await PaymentSource.findById(transaction.sourceId);
-        if (source) {
-            if (transaction.type === "Credit") {
-                // Was Added -> Subtract
-                source.balance -= Number(transaction.amount);
-            } else {
-                // Was Debited -> Add Back
-                source.balance += Number(transaction.amount);
-            }
-            await source.save();
+        const srcId = transaction.sourceId;
+        const trgId = transaction.targetSourceId;
+        const amt = Number(transaction.amount || 0);
+
+        if (transaction.type === "Transfer") {
+            if (srcId) await PaymentSource.findByIdAndUpdate(srcId, { $inc: { balance: amt } });
+            if (trgId) await PaymentSource.findByIdAndUpdate(trgId, { $inc: { balance: -amt } });
+        } else if (transaction.type === "Credit") {
+            if (srcId) await PaymentSource.findByIdAndUpdate(srcId, { $inc: { balance: -amt } });
+        } else {
+            // Debit
+            if (srcId) await PaymentSource.findByIdAndUpdate(srcId, { $inc: { balance: amt } });
         }
 
         await ExpenseTransaction.findByIdAndDelete(id);
 
-        res.status(200).json({ success: true, message: "Transaction deleted", data: { id, updatedSource: source } });
+        const sources = await PaymentSource.find({ userId: transaction.userId }).sort({ createdAt: 1 });
+
+        res.status(200).json({ success: true, message: "Transaction deleted", data: { id, sources } });
     } catch (error) {
+        console.error("Delete Transaction Error:", error);
         res.status(500).json({ success: false, message: error.message });
     }
 };
