@@ -1,6 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import { Home, BookOpen, Navigation, TrendingUp, Wallet, CalendarCheck, Grid2x2Plus, Grid2x2Check, Settings2 } from 'lucide-react';
 import Dashboard from '../../utils/Icons/Dashboard';
+import QuickCalculator from '../Expense/QuickCalculator';
 
 export default function ThemedBreadcrumbs() {
   const location = useLocation();
@@ -23,6 +24,8 @@ export default function ThemedBreadcrumbs() {
   const mainCategoryRaw = pathnames[1]; // habit, expense, investment
   const subCategoryRaw = pathnames[2]; // table-entry, dashboard, table-view, settings
 
+  const isExpensePage = location.pathname.toLowerCase().includes('/expense');
+
   const mainCategory = mainCategoryRaw
     ? mainCategoryRaw.charAt(0).toUpperCase() + mainCategoryRaw.slice(1)
     : null;
@@ -35,36 +38,46 @@ export default function ThemedBreadcrumbs() {
     : null;
 
   return (
-    <div className="breadcrumbs text-sm p-4 bg-base-200 text-base-content rounded-box shadow-sm mb-4">
-      <ul className="flex flex-wrap items-center gap-2">
-        <li>
-          <Link to="/dashboard" className="hover:text-primary transition-colors flex items-center gap-1">
-            <Home className="w-4 h-4" />
-            Home
-          </Link>
-        </li>
-
-        {mainCategory && (
+    <div className="flex items-center justify-between gap-3 mb-4 relative z-[9999]">
+      {/* DaisyUI Breadcrumb navigation bar */}
+      <div className="breadcrumbs text-sm px-4 py-2.5 bg-base-200 text-base-content rounded-box shadow-sm flex-1 min-w-0">
+        <ul className="flex items-center gap-2">
           <li>
-            <Link
-              to={`/dashboard/${mainCategoryRaw}`}
-              className="hover:text-primary transition-colors flex items-center gap-1"
-            >
-              {mainCategoryIcon[mainCategory] || <BookOpen className="w-4 h-4" />}
-              {mainCategory}
+            <Link to="/dashboard" className="hover:text-primary transition-colors flex items-center gap-1 font-medium">
+              <Home className="w-4 h-4" />
+              Home
             </Link>
           </li>
-        )}
 
-        {subCategory && (
-          <li>
-            <span className="text-primary font-medium flex items-center gap-1">
-              {subCategoryIcon[subCategory] || <Navigation className="w-4 h-4" />}
-              {subCategory}
-            </span>
-          </li>
-        )}
-      </ul>
+          {mainCategory && (
+            <li>
+              <Link
+                to={`/dashboard/${mainCategoryRaw}`}
+                className="hover:text-primary transition-colors flex items-center gap-1 font-medium"
+              >
+                {mainCategoryIcon[mainCategory] || <BookOpen className="w-4 h-4" />}
+                {mainCategory}
+              </Link>
+            </li>
+          )}
+
+          {subCategory && (
+            <li>
+              <span className="text-primary font-bold flex items-center gap-1">
+                {subCategoryIcon[subCategory] || <Navigation className="w-4 h-4" />}
+                {subCategory}
+              </span>
+            </li>
+          )}
+        </ul>
+      </div>
+
+      {/* Extreme Right Action: Quick Calculator for Expense Pages */}
+      {isExpensePage && (
+        <div className="shrink-0 relative z-40">
+          <QuickCalculator />
+        </div>
+      )}
     </div>
   );
 }

@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchDashboardData, createSource, updateSource, deleteSource, updateSalary } from '../../../services/redux/slice/ExpenseSlice';
 import { TitleChanger } from '../../../utils/TitleChanger';
-import { COLOR_OPTIONS, getSourceTagStyle } from '../../../utils/expenseTheme';
-import { Plus, Info, Trash2, Wallet, Building2, CreditCard, X, ShieldAlert, Pencil, Banknote, Check, Palette } from 'lucide-react';
+import { COLOR_OPTIONS, getSourceTagStyle, getCategoryTagStyle } from '../../../utils/expenseTheme';
+import { Plus, Info, Trash2, Wallet, Building2, CreditCard, X, ShieldAlert, Pencil, Banknote, Check, Palette, Search, ArrowDown, ArrowUp, ArrowRightLeft, Folder, Filter } from 'lucide-react';
 import { message } from 'antd';
 import dayjs from 'dayjs';
 
@@ -32,6 +32,26 @@ function ExpSettings() {
     // History Modal State
     const [historySourceId, setHistorySourceId] = useState(null);
     const [showHistoryModal, setShowHistoryModal] = useState(false);
+    const [historySearchTerm, setHistorySearchTerm] = useState("");
+    const [historySortOrder, setHistorySortOrder] = useState(() => localStorage.getItem("expense_sort_order") || "newest");
+    const [historyLimitCount, setHistoryLimitCount] = useState("all");
+    const [historyColFilters, setHistoryColFilters] = useState({
+        date: "",
+        description: "",
+        categoryId: ""
+    });
+
+    const currentMonthCategories = useMemo(() => {
+        const raw = (categories || []).filter(c => !c.month || c.month === currentMonth);
+        const seen = new Set();
+        return raw.filter(c => {
+            if (!c.name) return false;
+            const key = c.name.trim().toLowerCase();
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+        });
+    }, [categories, currentMonth]);
 
     useEffect(() => {
         dispatch(fetchDashboardData(currentMonth));
@@ -469,76 +489,362 @@ function ExpSettings() {
             </div>
 
             {/* Source Transaction History Modal */}
-            {showHistoryModal && (
-                <div className="fixed inset-0 z-[99999] bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
-                    <div className="bg-base-200 rounded-3xl shadow-2xl w-full max-w-2xl h-[580px] flex flex-col justify-between overflow-hidden border border-base-300 animate-in fade-in zoom-in-95 duration-200">
-                        {/* Modal Header */}
-                        <div className="shrink-0 p-4 border-b border-base-300 flex justify-between items-center bg-base-100">
-                            <div>
-                                <h3 className="font-bold text-lg">
-                                    {sources.find(s => s._id === historySourceId)?.name} Transaction History
-                                </h3>
-                                <p className="text-xs opacity-50">Log of debits and credits for this source</p>
+            {showHistoryModal && (() => {
+                const targetSource = sources.find(s => String(s._id) === String(historySourceId));
+
+                // Filter transactions for this source
+                const sourceTxns = transactions.filter(t => {
+                    const sId = String(t.sourceId?._id || t.sourceId || '');
+                    const trgId = String(t.targetSourceId?._id || t.targetSourceId || '');
+                    return sId === String(historySourceId) || trgId === String(historySourceId);
+                });
+
+                const getDelta = (t) => {
+                    const sId = String(t.sourceId?._id || t.sourceId || '');
+                    const trgId = String(t.targetSourceId?._id || t.targetSourceId || '');
+                    const amt = Number(t.amount || 0);
+
+                    if (t.type === 'Credit') return amt;
+                    if (t.type === 'Debit') return -amt;
+                    if (t.type === 'Transfer') {
+                        if (trgId === String(historySourceId)) return amt;
+                        if (sId === String(historySourceId)) return -amt;
+                    }
+                    return 0;
+                };
+
+                // Calculate closing balance for each transaction chronologically (oldest to newest)
+                const txsAsc = [...sourceTxns].sort((a, b) => new Date(a.date) - new Date(b.date) || new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
+                const currentBal = targetSource?.balance || 0;
+                const totalDelta = txsAsc.reduce((sum, t) => sum + getDelta(t), 0);
+                let runningBal = currentBal - totalDelta;
+
+                const closingBalMap = new Map();
+                txsAsc.forEach((t) => {
+                    runningBal += getDelta(t);
+                    closingBalMap.set(String(t._id || t.id), runningBal);
+                });
+
+                const hasHistoryColFilters = Boolean(historyColFilters.date || historyColFilters.description || historyColFilters.categoryId);
+                const clearHistoryColFilters = () => setHistoryColFilters({ date: "", description: "", categoryId: "" });
+
+                // Filter by search query + column filters
+                let filteredList = sourceTxns.filter((t) => {
+                    // Top search query
+                    if (historySearchTerm.trim()) {
+                        const query = historySearchTerm.toLowerCase();
+                        const catObj = categories.find((c) => String(c._id) === String(t.categoryId?._id || t.categoryId));
+                        const catName = catObj?.name || t.categoryName || "";
+                        const desc = t.description || "";
+                        const amountStr = String(t.amount || "");
+                        const dateStr = dayjs(t.date).format("DD MMM YYYY");
+
+                        const matchesQuery = (
+                            desc.toLowerCase().includes(query) ||
+                            catName.toLowerCase().includes(query) ||
+                            amountStr.includes(query) ||
+                            dateStr.toLowerCase().includes(query)
+                        );
+                        if (!matchesQuery) return false;
+                    }
+
+                    // Column filters
+                    if (historyColFilters.date && dayjs(t.date).format("YYYY-MM-DD") !== historyColFilters.date) return false;
+                    if (historyColFilters.description && !(t.description || "").toLowerCase().includes(historyColFilters.description.toLowerCase())) return false;
+                    if (historyColFilters.categoryId && String(t.categoryId?._id || t.categoryId) !== String(historyColFilters.categoryId)) return false;
+
+                    return true;
+                });
+
+                // Sort Order
+                filteredList.sort((a, b) => {
+                    const timeA = new Date(a.date).getTime();
+                    const timeB = new Date(b.date).getTime();
+                    if (timeA !== timeB) {
+                        return historySortOrder === "newest" ? timeB - timeA : timeA - timeB;
+                    }
+                    const updateA = new Date(a.updatedAt || a.createdAt || a.date).getTime();
+                    const updateB = new Date(b.updatedAt || b.createdAt || b.date).getTime();
+                    return historySortOrder === "newest" ? updateB - updateA : updateA - updateB;
+                });
+
+                if (historyLimitCount !== "all") {
+                    filteredList = filteredList.slice(0, Number(historyLimitCount));
+                }
+
+                const netSum = filteredList.reduce((sum, t) => sum + getDelta(t), 0);
+
+                return (
+                    <div className="fixed inset-0 z-[99999] bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
+                        <div className="bg-base-100 rounded-3xl shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden border border-base-300 animate-in fade-in zoom-in-95 duration-200">
+                            {/* Header */}
+                            <div className="p-5 border-b border-base-200 flex justify-between items-center bg-base-200/50">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2.5 rounded-2xl bg-primary/15 text-primary">
+                                        <Building2 size={22} />
+                                    </div>
+                                    <div>
+                                        <h3 className="font-extrabold text-lg flex items-center gap-2">
+                                            <span>{targetSource?.name} History</span>
+                                        </h3>
+                                        <p className="text-xs opacity-60 font-medium mt-0.5">
+                                            Showing {filteredList.length} of {sourceTxns.length} transactions for this source
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center gap-3">
+                                    <span className="px-3 py-1 rounded-xl text-sm font-extrabold font-mono border bg-primary/10 text-primary border-primary/20">
+                                        Current Balance: ₹{currentBal.toLocaleString()}
+                                    </span>
+                                    <button onClick={() => setShowHistoryModal(false)} className="btn btn-sm btn-ghost btn-circle rounded-full">
+                                        <X size={18} />
+                                    </button>
+                                </div>
                             </div>
-                            <button onClick={() => setShowHistoryModal(false)} className="btn btn-sm btn-ghost btn-square rounded-full">
-                                <X size={20} />
-                            </button>
-                        </div>
 
-                        {/* Modal Content - Table */}
-                        <div className="overflow-y-auto p-0 flex-1">
-                            <table className="table table-xs table-pin-rows w-full">
-                                <thead>
-                                    <tr className="bg-base-100">
-                                        <th className="bg-base-300/50">Date</th>
-                                        <th className="bg-base-300/50">Description</th>
-                                        <th className="bg-base-300/50">Category</th>
-                                        <th className="bg-base-300/50 text-right">Amount</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {transactions.filter(t => (t.sourceId?._id === historySourceId || t.sourceId === historySourceId)).length > 0 ? (
-                                        transactions
-                                            .filter(t => (t.sourceId?._id === historySourceId || t.sourceId === historySourceId))
-                                            .sort((a, b) => new Date(b.date) - new Date(a.date))
-                                            .map(t => (
-                                                <tr key={t._id} className="hover:bg-base-100/60 border-b border-base-300/30">
-                                                    <td className="whitespace-nowrap font-mono opacity-70">{new Date(t.date).toLocaleDateString()}</td>
-                                                    <td className="font-medium">{t.description}</td>
-                                                    <td>{t.categoryId?.name || <span className="opacity-30">—</span>}</td>
-                                                    <td className={`text-right font-mono font-bold ${t.type === 'Credit' ? 'text-success' : 'text-error'}`}>
-                                                        {t.type === 'Credit' ? '+' : '-'}₹{t.amount.toLocaleString()}
-                                                    </td>
-                                                </tr>
-                                            ))
-                                    ) : (
-                                        <tr>
-                                            <td colSpan="4" className="text-center py-16 flex flex-col items-center justify-center opacity-40 gap-2">
-                                                <Info size={32} />
-                                                <span>No transactions recorded for this payment source</span>
-                                            </td>
-                                        </tr>
+                            {/* Controls Bar: Search + Sort Order + Limit Selector + Clear Filters */}
+                            <div className="p-4 border-b border-base-200 bg-base-100 flex flex-col sm:flex-row gap-3 items-center justify-between">
+                                <div className="flex items-center gap-2 w-full sm:w-auto">
+                                    <div className="relative w-full sm:w-64">
+                                        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-base-content/40 w-4 h-4" />
+                                        <input
+                                            type="text"
+                                            placeholder="Search transactions..."
+                                            value={historySearchTerm}
+                                            onChange={(e) => setHistorySearchTerm(e.target.value)}
+                                            className="input input-sm select-bordered w-full pl-10 pr-8 bg-base-200/60 text-xs font-medium rounded-xl focus:bg-base-100 transition-colors"
+                                        />
+                                        {historySearchTerm && (
+                                            <button
+                                                onClick={() => setHistorySearchTerm("")}
+                                                className="absolute right-3 top-1/2 -translate-y-1/2 text-base-content/40 hover:text-base-content"
+                                            >
+                                                <X size={14} />
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    {hasHistoryColFilters && (
+                                        <button
+                                            onClick={clearHistoryColFilters}
+                                            className="btn btn-xs btn-ghost border border-error/30 text-error hover:bg-error/10 rounded-xl font-bold gap-1 shrink-0"
+                                        >
+                                            <X size={12} /> Clear Filters
+                                        </button>
                                     )}
-                                </tbody>
-                            </table>
-                        </div>
+                                </div>
 
-                        {/* Modal Footer */}
-                        <div className="p-4 border-t border-base-300 bg-base-100 flex justify-between items-center text-xs">
-                            <span className="opacity-70">
-                                Net Activity: <span className="font-mono font-bold text-base-content">
-                                    ₹{transactions.filter(t => (t.sourceId?._id === historySourceId || t.sourceId === historySourceId))
-                                        .reduce((acc, t) => acc + (t.type === 'Credit' ? t.amount : -t.amount), 0)
-                                        .toLocaleString()}
+                                <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto justify-end text-xs">
+                                    {/* Sort Order Toggle */}
+                                    <div className="join border border-base-300 rounded-xl p-0.5 bg-base-200/40">
+                                        <button
+                                            onClick={() => setHistorySortOrder("newest")}
+                                            className={`join-item btn btn-xs rounded-lg font-bold gap-1 ${historySortOrder === "newest" ? "btn-primary shadow-2xs" : "btn-ghost opacity-70"}`}
+                                            title="Show Newest First"
+                                        >
+                                            <ArrowDown size={12} /> New First
+                                        </button>
+                                        <button
+                                            onClick={() => setHistorySortOrder("oldest")}
+                                            className={`join-item btn btn-xs rounded-lg font-bold gap-1 ${historySortOrder === "oldest" ? "btn-primary shadow-2xs" : "btn-ghost opacity-70"}`}
+                                            title="Show Oldest First"
+                                        >
+                                            <ArrowUp size={12} /> Old First
+                                        </button>
+                                    </div>
+
+                                    {/* Row Limit Selector */}
+                                    <div className="flex items-center gap-1 bg-base-200/40 border border-base-300 p-0.5 rounded-xl">
+                                        <span className="px-2 text-[11px] font-bold opacity-60">Show:</span>
+                                        {["10", "20", "30", "40", "all"].map((val) => (
+                                            <button
+                                                key={val}
+                                                onClick={() => setHistoryLimitCount(val)}
+                                                className={`btn btn-xs rounded-lg font-bold capitalize ${historyLimitCount === val ? "btn-neutral shadow-2xs" : "btn-ghost opacity-70"}`}
+                                            >
+                                                {val === "all" ? "All" : val}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Transactions Table */}
+                            <div className="flex-1 overflow-y-auto p-4">
+                                {filteredList.length > 0 ? (
+                                    <div className="overflow-x-auto rounded-2xl border border-base-200 shadow-2xs">
+                                        <table className="table table-sm w-full text-xs">
+                                            <thead className="bg-base-200/70 text-base-content font-bold uppercase tracking-wider text-[11px]">
+                                                <tr>
+                                                    {/* Date Header Filter */}
+                                                    <th className="py-3 px-4">
+                                                        <div className="flex items-center gap-1.5">
+                                                            <span>Date</span>
+                                                            <div className="dropdown dropdown-bottom">
+                                                                <button
+                                                                    tabIndex={0}
+                                                                    className={`btn btn-xs btn-square btn-ghost ${historyColFilters.date ? 'text-primary bg-primary/15' : 'opacity-40 hover:opacity-100'}`}
+                                                                    title="Filter Date"
+                                                                >
+                                                                    <Filter size={11} />
+                                                                </button>
+                                                                <div tabIndex={0} className="dropdown-content z-[99999] bg-base-100 p-3 rounded-2xl shadow-2xl border border-base-300 w-52 mt-1 space-y-2 font-normal text-xs normal-case">
+                                                                    <label className="text-[10px] font-bold text-base-content/50 uppercase block">Filter by Date</label>
+                                                                    <input
+                                                                        type="date"
+                                                                        value={historyColFilters.date}
+                                                                        onChange={(e) => setHistoryColFilters({ ...historyColFilters, date: e.target.value })}
+                                                                        className="input input-xs input-bordered w-full rounded-lg font-medium"
+                                                                    />
+                                                                    {historyColFilters.date && (
+                                                                        <button
+                                                                            onClick={() => setHistoryColFilters({ ...historyColFilters, date: "" })}
+                                                                            className="text-[10px] text-error font-bold hover:underline block text-right w-full"
+                                                                        >
+                                                                            Clear Date
+                                                                        </button>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </th>
+
+                                                    {/* Description Header Filter */}
+                                                    <th className="py-3 px-4">
+                                                        <div className="flex items-center gap-1.5">
+                                                            <span>Description</span>
+                                                            <div className="dropdown dropdown-bottom">
+                                                                <button
+                                                                    tabIndex={0}
+                                                                    className={`btn btn-xs btn-square btn-ghost ${historyColFilters.description ? 'text-primary bg-primary/15' : 'opacity-40 hover:opacity-100'}`}
+                                                                    title="Filter Description"
+                                                                >
+                                                                    <Filter size={11} />
+                                                                </button>
+                                                                <div tabIndex={0} className="dropdown-content z-[99999] bg-base-100 p-3 rounded-2xl shadow-2xl border border-base-300 w-56 mt-1 space-y-2 font-normal text-xs normal-case">
+                                                                    <label className="text-[10px] font-bold text-base-content/50 uppercase block">Search Description</label>
+                                                                    <div className="relative">
+                                                                        <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 opacity-50" />
+                                                                        <input
+                                                                            type="text"
+                                                                            placeholder="Search text..."
+                                                                            value={historyColFilters.description}
+                                                                            onChange={(e) => setHistoryColFilters({ ...historyColFilters, description: e.target.value })}
+                                                                            className="input input-xs input-bordered w-full pl-7 font-medium rounded-lg"
+                                                                        />
+                                                                    </div>
+                                                                    {historyColFilters.description && (
+                                                                        <button
+                                                                            onClick={() => setHistoryColFilters({ ...historyColFilters, description: "" })}
+                                                                            className="text-[10px] text-error font-bold hover:underline block text-right w-full"
+                                                                        >
+                                                                            Clear Search
+                                                                        </button>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </th>
+
+                                                    {/* Category Header Filter */}
+                                                    <th className="py-3 px-4">
+                                                        <div className="flex items-center gap-1.5">
+                                                            <span className="text-purple-600 dark:text-purple-400">Category</span>
+                                                            <div className="dropdown dropdown-bottom">
+                                                                <button
+                                                                    tabIndex={0}
+                                                                    className={`btn btn-xs btn-square btn-ghost ${historyColFilters.categoryId ? 'text-purple-600 bg-purple-500/15' : 'opacity-40 hover:opacity-100'}`}
+                                                                    title="Filter Category"
+                                                                >
+                                                                    <Filter size={11} />
+                                                                </button>
+                                                                <ul tabIndex={0} className="dropdown-content z-[99999] menu p-1.5 bg-base-100 rounded-2xl shadow-2xl border border-base-300 w-56 mt-1 font-medium text-xs normal-case max-h-60 overflow-y-auto overflow-x-hidden">
+                                                                    <li className="menu-title text-[10px] uppercase font-bold text-base-content/50">Filter Category</li>
+                                                                    <li>
+                                                                        <a onClick={() => setHistoryColFilters({ ...historyColFilters, categoryId: "" })} className={!historyColFilters.categoryId ? "font-bold text-primary" : ""}>
+                                                                            All Categories
+                                                                        </a>
+                                                                    </li>
+                                                                    {currentMonthCategories.map((c) => (
+                                                                        <li key={c._id}>
+                                                                            <a onClick={() => setHistoryColFilters({ ...historyColFilters, categoryId: c._id })} className={`truncate max-w-[200px] ${String(historyColFilters.categoryId) === String(c._id) ? "font-bold text-primary" : ""}`}>
+                                                                                {c.name}
+                                                                            </a>
+                                                                        </li>
+                                                                    ))}
+                                                                </ul>
+                                                            </div>
+                                                        </div>
+                                                    </th>
+
+                                                    <th className="py-3 px-4 text-right">Amount</th>
+                                                    <th className="py-3 px-4 text-right">Closing Balance</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-base-200/70 font-medium">
+                                                {filteredList.map((t) => {
+                                                    const isCredit = t.type === 'Credit';
+                                                    const isTransfer = t.type === 'Transfer';
+                                                    const catObj = categories.find((c) => String(c._id) === String(t.categoryId?._id || t.categoryId));
+                                                    const catTagStyle = getCategoryTagStyle(catObj, categories);
+                                                    const closingBal = closingBalMap.get(String(t._id || t.id)) ?? 0;
+
+                                                    return (
+                                                        <tr key={t._id || t.id} className="hover:bg-base-200/40 transition-colors">
+                                                            <td className="py-3 px-4 font-mono text-base-content/70 whitespace-nowrap">
+                                                                {dayjs(t.date).format("DD MMM YYYY")}
+                                                            </td>
+                                                            <td className="py-3 px-4 font-semibold text-base-content">
+                                                                {t.description || <span className="opacity-40 italic">No description</span>}
+                                                            </td>
+                                                            <td className="py-3 px-4">
+                                                                {isTransfer ? (
+                                                                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-amber-500/10 text-amber-500 border border-amber-500/20">
+                                                                        <ArrowRightLeft size={12} />
+                                                                        Transfer
+                                                                    </span>
+                                                                ) : (
+                                                                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold ${catTagStyle.bg} ${catTagStyle.text} border ${catTagStyle.border}`}>
+                                                                        <Folder size={12} />
+                                                                        {catObj?.name || t.categoryName || "Uncategorized"}
+                                                                    </span>
+                                                                )}
+                                                            </td>
+                                                            <td className="py-3 px-4 text-right font-mono font-extrabold whitespace-nowrap">
+                                                                <span className={isTransfer ? "text-amber-500" : (isCredit ? "text-success" : "text-error")}>
+                                                                    {isCredit ? '+' : (isTransfer ? '⇄ ' : '-')}₹{Number(t.amount || 0).toLocaleString()}
+                                                                </span>
+                                                            </td>
+                                                            <td className="py-3 px-4 text-right font-mono font-extrabold whitespace-nowrap text-base-content/90">
+                                                                ₹{closingBal.toLocaleString()}
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                ) : (
+                                    <div className="p-12 text-center text-sm opacity-50 italic">
+                                        No transactions found for this payment source.
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Footer Summary */}
+                            <div className="p-4 border-t border-base-200 bg-base-200/50 flex justify-between items-center text-xs">
+                                <span className="font-semibold text-base-content/70">
+                                    Showing <strong className="font-mono">{filteredList.length}</strong> transactions | Net Activity: <strong className="font-mono font-bold text-primary">₹{netSum.toLocaleString()}</strong>
                                 </span>
-                            </span>
-                            <button onClick={() => setShowHistoryModal(false)} className="btn btn-xs btn-ghost">
-                                Close
-                            </button>
+                                <button onClick={() => setShowHistoryModal(false)} className="btn btn-sm btn-primary rounded-xl font-bold px-5">
+                                    Close
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
+                );
+            })()}
         </div>
     );
 }

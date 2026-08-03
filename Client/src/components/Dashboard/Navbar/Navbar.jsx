@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useLocation } from "react-router-dom";
 import { useLoading } from '../../../Context/LoadingContext.jsx';
 import ErrorAlert from '../../../utils/Alerts/ErrorAlert';
 import SuccessAlert from '../../../utils/Alerts/SuccessAlert';
@@ -9,12 +9,15 @@ import { useAuth } from '../../../Context/JwtAuthContext.jsx';
 
 // Importing Components
 import ThemeSwitcher from '../../../utils/ThemeSwitches'
+import QuickCalculator from '../../Expense/QuickCalculator';
 
 function Navbar() {
 
     const {validToken, setvalidToken} = useAuth();
 
     const navigate = useNavigate();
+    const location = useLocation();
+    const isExpensePage = location.pathname.toLowerCase().includes('/expense');
     const { setLoading } = useLoading();
     const [disableButton, setDisableButton] = useState(false);
 

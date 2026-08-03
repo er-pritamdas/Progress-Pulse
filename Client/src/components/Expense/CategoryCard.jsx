@@ -1,9 +1,9 @@
 import React, { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import dayjs from "dayjs";
-import { Trash2, Edit2, Plus, X, Save, Info, Home, Utensils, Car, Zap, HeartPulse, Gamepad2, ShoppingBag, PiggyBank, Folder, GripVertical, Palette, Check } from "lucide-react";
+import { Trash2, Edit2, Plus, X, Save, Info, Home, Utensils, Car, Zap, HeartPulse, Gamepad2, ShoppingBag, PiggyBank, Folder, GripVertical, Palette, Check, Search, ArrowDown, ArrowUp, Wallet } from "lucide-react";
 import { addSubCategory, updateSubCategory, deleteSubCategory, deleteCategory, updateCategory, reorderSubCategories, setLocalSubCategoriesOrder } from "../../services/redux/slice/ExpenseSlice";
-import { COLOR_OPTIONS, getCategoryTagStyle } from "../../utils/expenseTheme";
+import { COLOR_OPTIONS, getCategoryTagStyle, getSourceTagStyle } from "../../utils/expenseTheme";
 
 // Helper to determine category icon and accent styling based on category
 const getCategoryTheme = (category = {}, categoriesList = []) => {
@@ -24,7 +24,8 @@ const getCategoryTheme = (category = {}, categoriesList = []) => {
         bg: style.bg,
         border: style.border,
         text: style.text,
-        style
+        badgeBg: style.badgeBg,
+        swatch: style.swatch
     };
 };
 
@@ -67,7 +68,7 @@ const getUsedPercentageColor = (pct) => {
 
 const CategoryCard = ({ category }) => {
     const dispatch = useDispatch();
-    const { transactions, categories, currentMonth } = useSelector((state) => state.expense);
+    const { transactions, categories, sources, currentMonth } = useSelector((state) => state.expense);
 
     const [isEditingTitle, setIsEditingTitle] = useState(false);
     const [newTitle, setNewTitle] = useState(category.name);
@@ -86,6 +87,18 @@ const CategoryCard = ({ category }) => {
     const [historySubId, setHistorySubId] = useState(null);
     const [showHistoryModal, setShowHistoryModal] = useState(false);
     const [showCategoryHistoryModal, setShowCategoryHistoryModal] = useState(false);
+
+    // Category History Modal Search, Sort, Limit & Column Filters State
+    const [catSearchTerm, setCatSearchTerm] = useState("");
+    const [catSortOrder, setCatSortOrder] = useState("newest");
+    const [catLimitCount, setCatLimitCount] = useState("all");
+    const [catColFilters, setCatColFilters] = useState({ date: "", description: "", subCategoryId: "", sourceId: "" });
+
+    // Subcategory History Modal Search, Sort, Limit & Column Filters State
+    const [subSearchTerm, setSubSearchTerm] = useState("");
+    const [subSortOrder, setSubSortOrder] = useState("newest");
+    const [subRowLimit, setSubRowLimit] = useState("all");
+    const [subColFilters, setSubColFilters] = useState({ date: "", description: "", sourceId: "" });
 
     // Drag state
     const [draggedSubIndex, setDraggedSubIndex] = useState(null);
@@ -355,7 +368,7 @@ const CategoryCard = ({ category }) => {
                                         </td>
 
                                         {/* Used */}
-                                        <td className="py-3 px-4 text-right font-mono font-medium text-sm text-warning">
+                                        <td className="py-3 px-4 text-right font-mono font-bold text-sm text-rose-500 dark:text-rose-400">
                                             ₹{sub.used.toLocaleString()}
                                         </td>
 
@@ -437,7 +450,7 @@ const CategoryCard = ({ category }) => {
                     <div className="flex gap-6">
                         <div className="flex flex-col">
                             <span className="opacity-50 text-[10px] uppercase font-bold">Total Spent</span>
-                            <span className="font-mono text-sm text-warning">₹{totalUsed.toLocaleString()}</span>
+                            <span className="font-mono text-sm font-bold text-rose-500 dark:text-rose-400">₹{totalUsed.toLocaleString()}</span>
                         </div>
                         <div className="flex flex-col">
                             <span className="opacity-50 text-[10px] uppercase font-bold">Total Remaining</span>
@@ -456,145 +469,676 @@ const CategoryCard = ({ category }) => {
                 </div>
             </div>
 
-            {/* Subcategory History Modal */}
-            {showHistoryModal && (
-                <div className="fixed inset-0 z-[99999] bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
-                    <div className="bg-base-100 rounded-3xl shadow-2xl w-full max-w-2xl h-[580px] flex flex-col justify-between overflow-hidden border border-base-300 animate-in fade-in zoom-in-95 duration-200">
-                        {/* Modal Header */}
-                        <div className="shrink-0 p-4 border-b border-base-200 flex justify-between items-center bg-base-200/50">
-                            <div>
-                                <h3 className="font-bold text-lg">{category.subCategories.find(s => s._id === historySubId)?.name} History</h3>
-                                <p className="text-xs opacity-50">Logged Transactions</p>
+            {/* Subcategory Level History Modal */}
+            {showHistoryModal && (() => {
+                const selectedSub = (category.subCategories || []).find(s => s._id === historySubId);
+                const subTxns = transactions.filter(t => t.type !== 'Credit' && (
+                    t.subCategoryId?._id === historySubId ||
+                    t.subCategoryId === historySubId
+                ));
+
+                const hasSubColFilters = Boolean(subColFilters.date || subColFilters.description || subColFilters.sourceId);
+                const clearSubColFilters = () => setSubColFilters({ date: "", description: "", sourceId: "" });
+
+                let filteredList = subTxns.filter(t => {
+                    // Top search
+                    if (subSearchTerm.trim()) {
+                        const query = subSearchTerm.toLowerCase();
+                        const desc = t.description || "";
+                        const srcName = t.sourceId?.name || sources.find(s => String(s._id) === String(t.sourceId?._id || t.sourceId))?.name || "";
+                        const amountStr = String(t.amount || "");
+                        const dateStr = dayjs(t.date).format("DD MMM YYYY");
+
+                        const matchesQuery = (
+                            desc.toLowerCase().includes(query) ||
+                            srcName.toLowerCase().includes(query) ||
+                            amountStr.includes(query) ||
+                            dateStr.toLowerCase().includes(query)
+                        );
+                        if (!matchesQuery) return false;
+                    }
+
+                    // Column filters
+                    if (subColFilters.date && dayjs(t.date).format("YYYY-MM-DD") !== subColFilters.date) return false;
+                    if (subColFilters.description && !(t.description || "").toLowerCase().includes(subColFilters.description.toLowerCase())) return false;
+                    if (subColFilters.sourceId && String(t.sourceId?._id || t.sourceId) !== String(subColFilters.sourceId)) return false;
+
+                    return true;
+                });
+
+                filteredList.sort((a, b) => {
+                    const timeA = new Date(a.date).getTime();
+                    const timeB = new Date(b.date).getTime();
+                    if (timeA !== timeB) {
+                        return subSortOrder === "newest" ? timeB - timeA : timeA - timeB;
+                    }
+                    return 0;
+                });
+
+                if (subRowLimit !== "all") {
+                    filteredList = filteredList.slice(0, Number(subRowLimit));
+                }
+
+                const totalSubSpent = filteredList.reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+
+                return (
+                    <div className="fixed inset-0 z-[99999] bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
+                        <div className="bg-base-100 rounded-3xl shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden border border-base-300 animate-in fade-in zoom-in-95 duration-200">
+                            {/* Modal Header */}
+                            <div className="p-5 border-b border-base-200 flex justify-between items-center bg-base-200/50">
+                                <div className="flex items-center gap-3">
+                                    <div className={`p-2.5 rounded-2xl bg-base-200 border ${theme.border} ${theme.text}`}>
+                                        {theme.icon}
+                                    </div>
+                                    <div>
+                                        <h3 className="font-extrabold text-lg flex items-center gap-2">
+                                            <span>{selectedSub?.name || "Subcategory"} Transactions</span>
+                                        </h3>
+                                        <p className="text-xs opacity-60 font-medium mt-0.5">
+                                            Showing {filteredList.length} of {subTxns.length} logged expenses under {category.name}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center gap-3">
+                                    <span className="px-3 py-1 rounded-xl text-sm font-extrabold font-mono border bg-error/10 text-error border-error/20">
+                                        Total Spent: ₹{totalSubSpent.toLocaleString()}
+                                    </span>
+                                    <button onClick={() => setShowHistoryModal(false)} className="btn btn-sm btn-ghost btn-circle rounded-full">
+                                        <X size={18} />
+                                    </button>
+                                </div>
                             </div>
-                            <button onClick={() => setShowHistoryModal(false)} className="btn btn-sm btn-ghost btn-square rounded-full">
-                                <X size={18} />
-                            </button>
-                        </div>
 
-                        {/* Modal Content */}
-                        <div className="overflow-y-auto p-0 flex-1 custom-scrollbar">
-                            <table className="table table-xs table-pin-rows w-full">
-                                <thead>
-                                    <tr className="bg-base-200/50">
-                                        <th>Date</th>
-                                        <th>Description</th>
-                                        <th>Payment Source</th>
-                                        <th className="text-right">Amount</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {transactions.filter(t => (t.subCategoryId?._id === historySubId || t.subCategoryId === historySubId)).length > 0 ? (
-                                        transactions
-                                            .filter(t => (t.subCategoryId?._id === historySubId || t.subCategoryId === historySubId))
-                                            .sort((a, b) => new Date(b.date) - new Date(a.date))
-                                            .map(t => (
-                                                <tr key={t._id} className="hover:bg-base-200/40 border-b border-base-200/40">
-                                                    <td className="whitespace-nowrap font-mono opacity-70">{new Date(t.date).toLocaleDateString()}</td>
-                                                    <td className="font-medium">{t.description || "Expense Transaction"}</td>
-                                                    <td>{t.sourceId?.name || <span className="opacity-30">-</span>}</td>
-                                                    <td className="text-right font-mono font-bold text-error">-₹{t.amount.toLocaleString()}</td>
-                                                </tr>
-                                            ))
-                                    ) : (
-                                        <tr>
-                                            <td colSpan="4" className="text-center py-12 flex flex-col items-center justify-center opacity-40 gap-2">
-                                                <Info size={32} />
-                                                <span>No transactions found for this item</span>
-                                            </td>
-                                        </tr>
+                            {/* Controls Bar: Search + Sort Order + Limit Selector + Clear Filters */}
+                            <div className="p-4 border-b border-base-200 bg-base-100 flex flex-col sm:flex-row gap-3 items-center justify-between">
+                                <div className="flex items-center gap-2 w-full sm:w-auto">
+                                    <div className="relative w-full sm:w-64">
+                                        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-base-content/40 w-4 h-4" />
+                                        <input
+                                            type="text"
+                                            placeholder="Search subcategory expenses..."
+                                            value={subSearchTerm}
+                                            onChange={(e) => setSubSearchTerm(e.target.value)}
+                                            className="input input-sm select-bordered w-full pl-10 pr-8 bg-base-200/60 text-xs font-medium rounded-xl focus:bg-base-100 transition-colors"
+                                        />
+                                        {subSearchTerm && (
+                                            <button
+                                                onClick={() => setSubSearchTerm("")}
+                                                className="absolute right-3 top-1/2 -translate-y-1/2 text-base-content/40 hover:text-base-content"
+                                            >
+                                                <X size={14} />
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    {hasSubColFilters && (
+                                        <button
+                                            onClick={clearSubColFilters}
+                                            className="btn btn-xs btn-ghost border border-error/30 text-error hover:bg-error/10 rounded-xl font-bold gap-1 shrink-0"
+                                        >
+                                            <X size={12} /> Clear Filters
+                                        </button>
                                     )}
-                                </tbody>
-                            </table>
-                        </div>
+                                </div>
 
-                        {/* Modal Footer */}
-                        <div className="shrink-0 p-3 border-t border-base-200 bg-base-100 flex justify-between items-center text-xs opacity-60">
-                            <span>Total Spent: ₹{transactions.filter(t => (t.subCategoryId?._id === historySubId || t.subCategoryId === historySubId)).reduce((acc, curr) => acc + curr.amount, 0).toLocaleString()}</span>
-                            <button onClick={() => setShowHistoryModal(false)} className="btn btn-xs btn-ghost">Close</button>
+                                <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto justify-end text-xs">
+                                    {/* Sort Order Toggle */}
+                                    <div className="join border border-base-300 rounded-xl p-0.5 bg-base-200/40">
+                                        <button
+                                            onClick={() => setSubSortOrder("newest")}
+                                            className={`join-item btn btn-xs rounded-lg font-bold gap-1 ${subSortOrder === "newest" ? "btn-primary shadow-2xs" : "btn-ghost opacity-70"}`}
+                                            title="Show Newest First"
+                                        >
+                                            <ArrowDown size={12} /> New First
+                                        </button>
+                                        <button
+                                            onClick={() => setSubSortOrder("oldest")}
+                                            className={`join-item btn btn-xs rounded-lg font-bold gap-1 ${subSortOrder === "oldest" ? "btn-primary shadow-2xs" : "btn-ghost opacity-70"}`}
+                                            title="Show Oldest First"
+                                        >
+                                            <ArrowUp size={12} /> Old First
+                                        </button>
+                                    </div>
+
+                                    {/* Row Limit Selector */}
+                                    <div className="flex items-center gap-1 bg-base-200/40 border border-base-300 p-0.5 rounded-xl">
+                                        <span className="px-2 text-[11px] font-bold opacity-60">Show:</span>
+                                        {["10", "20", "30", "40", "all"].map((val) => (
+                                            <button
+                                                key={val}
+                                                onClick={() => setSubRowLimit(val)}
+                                                className={`btn btn-xs rounded-lg font-bold capitalize ${subRowLimit === val ? "btn-neutral shadow-2xs" : "btn-ghost opacity-70"}`}
+                                            >
+                                                {val === "all" ? "All" : val}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Transactions Table */}
+                            <div className="flex-1 overflow-y-auto p-4">
+                                {filteredList.length > 0 ? (
+                                    <div className="overflow-x-auto rounded-2xl border border-base-200 shadow-2xs">
+                                        <table className="table table-sm w-full text-xs">
+                                            <thead className="bg-base-200/70 text-base-content font-bold uppercase tracking-wider text-[11px]">
+                                                <tr>
+                                                    {/* Date Header Filter */}
+                                                    <th className="py-3 px-4">
+                                                        <div className="flex items-center gap-1.5">
+                                                            <span>Date</span>
+                                                            <div className="dropdown dropdown-bottom">
+                                                                <button
+                                                                    tabIndex={0}
+                                                                    className={`btn btn-xs btn-square btn-ghost ${subColFilters.date ? 'text-primary bg-primary/15' : 'opacity-40 hover:opacity-100'}`}
+                                                                    title="Filter Date"
+                                                                >
+                                                                    <Filter size={11} />
+                                                                </button>
+                                                                <div tabIndex={0} className="dropdown-content z-[99999] bg-base-100 p-3 rounded-2xl shadow-2xl border border-base-300 w-52 mt-1 space-y-2 font-normal text-xs normal-case">
+                                                                    <label className="text-[10px] font-bold text-base-content/50 uppercase block">Filter by Date</label>
+                                                                    <input
+                                                                        type="date"
+                                                                        value={subColFilters.date}
+                                                                        onChange={(e) => setSubColFilters({ ...subColFilters, date: e.target.value })}
+                                                                        className="input input-xs input-bordered w-full rounded-lg font-medium"
+                                                                    />
+                                                                    {subColFilters.date && (
+                                                                        <button
+                                                                            onClick={() => setSubColFilters({ ...subColFilters, date: "" })}
+                                                                            className="text-[10px] text-error font-bold hover:underline block text-right w-full"
+                                                                        >
+                                                                            Clear Date
+                                                                        </button>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </th>
+
+                                                    <th className="py-3 px-4">Subcategory</th>
+
+                                                    {/* Description Header Filter */}
+                                                    <th className="py-3 px-4">
+                                                        <div className="flex items-center gap-1.5">
+                                                            <span>Description</span>
+                                                            <div className="dropdown dropdown-bottom">
+                                                                <button
+                                                                    tabIndex={0}
+                                                                    className={`btn btn-xs btn-square btn-ghost ${subColFilters.description ? 'text-primary bg-primary/15' : 'opacity-40 hover:opacity-100'}`}
+                                                                    title="Filter Description"
+                                                                >
+                                                                    <Filter size={11} />
+                                                                </button>
+                                                                <div tabIndex={0} className="dropdown-content z-[99999] bg-base-100 p-3 rounded-2xl shadow-2xl border border-base-300 w-56 mt-1 space-y-2 font-normal text-xs normal-case">
+                                                                    <label className="text-[10px] font-bold text-base-content/50 uppercase block">Search Description</label>
+                                                                    <div className="relative">
+                                                                        <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 opacity-50" />
+                                                                        <input
+                                                                            type="text"
+                                                                            placeholder="Search text..."
+                                                                            value={subColFilters.description}
+                                                                            onChange={(e) => setSubColFilters({ ...subColFilters, description: e.target.value })}
+                                                                            className="input input-xs input-bordered w-full pl-7 font-medium rounded-lg"
+                                                                        />
+                                                                    </div>
+                                                                    {subColFilters.description && (
+                                                                        <button
+                                                                            onClick={() => setSubColFilters({ ...subColFilters, description: "" })}
+                                                                            className="text-[10px] text-error font-bold hover:underline block text-right w-full"
+                                                                        >
+                                                                            Clear Search
+                                                                        </button>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </th>
+
+                                                    {/* Payment Source Header Filter */}
+                                                    <th className="py-3 px-4">
+                                                        <div className="flex items-center gap-1.5">
+                                                            <span className="text-blue-600 dark:text-blue-400">Payment Source</span>
+                                                            <div className="dropdown dropdown-bottom">
+                                                                <button
+                                                                    tabIndex={0}
+                                                                    className={`btn btn-xs btn-square btn-ghost ${subColFilters.sourceId ? 'text-blue-600 bg-blue-500/15' : 'opacity-40 hover:opacity-100'}`}
+                                                                    title="Filter Payment Source"
+                                                                >
+                                                                    <Filter size={11} />
+                                                                </button>
+                                                                <ul tabIndex={0} className="dropdown-content z-[99999] menu p-1.5 bg-base-100 rounded-2xl shadow-2xl border border-base-300 w-52 mt-1 font-medium text-xs normal-case max-h-56 overflow-y-auto">
+                                                                    <li className="menu-title text-[10px] uppercase font-bold text-base-content/50">Filter Account</li>
+                                                                    <li>
+                                                                        <a onClick={() => setSubColFilters({ ...subColFilters, sourceId: "" })} className={!subColFilters.sourceId ? "font-bold text-primary" : ""}>
+                                                                            All Accounts
+                                                                        </a>
+                                                                    </li>
+                                                                    {sources.map((s) => (
+                                                                        <li key={s._id}>
+                                                                            <a onClick={() => setSubColFilters({ ...subColFilters, sourceId: s._id })} className={String(subColFilters.sourceId) === String(s._id) ? "font-bold text-primary" : ""}>
+                                                                                {s.name}
+                                                                            </a>
+                                                                        </li>
+                                                                    ))}
+                                                                </ul>
+                                                            </div>
+                                                        </div>
+                                                    </th>
+
+                                                    <th className="py-3 px-4 text-right">Amount</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-base-200/70 font-medium">
+                                                {filteredList.map((t) => {
+                                                    const srcObj = sources.find((s) => String(s._id) === String(t.sourceId?._id || t.sourceId));
+                                                    const srcTagStyle = getSourceTagStyle(srcObj);
+
+                                                    return (
+                                                        <tr key={t._id || t.id} className="hover:bg-base-200/40 transition-colors">
+                                                            <td className="py-3 px-4 font-mono text-base-content/70 whitespace-nowrap">
+                                                                {dayjs(t.date).format("DD MMM YYYY")}
+                                                            </td>
+                                                            <td className="py-3 px-4">
+                                                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold ${theme.bg} ${theme.text} border ${theme.border}`}>
+                                                                    <Folder size={12} />
+                                                                    {selectedSub?.name || "Subcategory"}
+                                                                </span>
+                                                            </td>
+                                                            <td className="py-3 px-4 font-semibold text-base-content">
+                                                                {t.description || <span className="opacity-40 italic">No description</span>}
+                                                            </td>
+                                                            <td className="py-3 px-4">
+                                                                {srcObj ? (
+                                                                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold ${srcTagStyle.bg} ${srcTagStyle.text} border ${srcTagStyle.border}`}>
+                                                                        <Wallet size={12} />
+                                                                        {srcObj.name}
+                                                                    </span>
+                                                                ) : (
+                                                                    <span className="opacity-30">—</span>
+                                                                )}
+                                                            </td>
+                                                            <td className="py-3 px-4 text-right font-mono font-extrabold whitespace-nowrap text-error">
+                                                                -₹{Number(t.amount || 0).toLocaleString()}
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                ) : (
+                                    <div className="p-12 text-center text-sm opacity-50 italic">
+                                        No transactions found for {selectedSub?.name || "this subcategory"}.
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Modal Footer */}
+                            <div className="p-4 border-t border-base-200 bg-base-200/50 flex justify-between items-center text-xs">
+                                <span className="font-semibold text-base-content/70">
+                                    Total Spent in {selectedSub?.name}: <strong className="font-mono font-bold text-error">₹{totalSubSpent.toLocaleString()}</strong>
+                                </span>
+                                <button onClick={() => setShowHistoryModal(false)} className="btn btn-sm btn-primary rounded-xl font-bold px-5">
+                                    Close
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
+                );
+            })()}
 
             {/* Category Level History Modal */}
-            {showCategoryHistoryModal && (
-                <div className="fixed inset-0 z-[99999] bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
-                    <div className="bg-base-100 rounded-3xl shadow-2xl w-full max-w-3xl h-[620px] flex flex-col justify-between overflow-hidden border border-base-300 animate-in fade-in zoom-in-95 duration-200">
-                        {/* Modal Header */}
-                        <div className="shrink-0 p-4 border-b border-base-200 flex justify-between items-center bg-base-200/60">
-                            <div className="flex items-center gap-3">
-                                <div className={`p-2.5 rounded-xl bg-base-200 border ${theme.border} ${theme.text}`}>
-                                    {theme.icon}
+            {showCategoryHistoryModal && (() => {
+                const catTxns = transactions.filter(t => t.type !== 'Credit' && (
+                    t.categoryId?._id === category._id ||
+                    t.categoryId === category._id ||
+                    (category.subCategories || []).some(s => s._id === (t.subCategoryId?._id || t.subCategoryId))
+                ));
+
+                const hasCatColFilters = Boolean(catColFilters.date || catColFilters.description || catColFilters.subCategoryId || catColFilters.sourceId);
+                const clearCatColFilters = () => setCatColFilters({ date: "", description: "", subCategoryId: "", sourceId: "" });
+
+                let filteredList = catTxns.filter(t => {
+                    // Top search
+                    if (catSearchTerm.trim()) {
+                        const query = catSearchTerm.toLowerCase();
+                        const subName = t.subCategoryId?.name || category.subCategories?.find(s => s._id === (t.subCategoryId?._id || t.subCategoryId))?.name || "";
+                        const desc = t.description || "";
+                        const amountStr = String(t.amount || "");
+                        const dateStr = dayjs(t.date).format("DD MMM YYYY");
+
+                        const matchesQuery = (
+                            desc.toLowerCase().includes(query) ||
+                            subName.toLowerCase().includes(query) ||
+                            amountStr.includes(query) ||
+                            dateStr.toLowerCase().includes(query)
+                        );
+                        if (!matchesQuery) return false;
+                    }
+
+                    // Column filters
+                    if (catColFilters.date && dayjs(t.date).format("YYYY-MM-DD") !== catColFilters.date) return false;
+                    if (catColFilters.description && !(t.description || "").toLowerCase().includes(catColFilters.description.toLowerCase())) return false;
+                    if (catColFilters.subCategoryId && String(t.subCategoryId?._id || t.subCategoryId) !== String(catColFilters.subCategoryId)) return false;
+                    if (catColFilters.sourceId && String(t.sourceId?._id || t.sourceId) !== String(catColFilters.sourceId)) return false;
+
+                    return true;
+                });
+
+                filteredList.sort((a, b) => {
+                    const timeA = new Date(a.date).getTime();
+                    const timeB = new Date(b.date).getTime();
+                    if (timeA !== timeB) {
+                        return catSortOrder === "newest" ? timeB - timeA : timeA - timeB;
+                    }
+                    return 0;
+                });
+
+                if (catLimitCount !== "all") {
+                    filteredList = filteredList.slice(0, Number(catLimitCount));
+                }
+
+                const totalCategorySpent = filteredList.reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+
+                return (
+                    <div className="fixed inset-0 z-[99999] bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
+                        <div className="bg-base-100 rounded-3xl shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden border border-base-300 animate-in fade-in zoom-in-95 duration-200">
+                            {/* Modal Header */}
+                            <div className="p-5 border-b border-base-200 flex justify-between items-center bg-base-200/50">
+                                <div className="flex items-center gap-3">
+                                    <div className={`p-2.5 rounded-2xl bg-base-200 border ${theme.border} ${theme.text}`}>
+                                        {theme.icon}
+                                    </div>
+                                    <div>
+                                        <h3 className="font-extrabold text-lg flex items-center gap-2">
+                                            <span>{category.name} Transactions</span>
+                                        </h3>
+                                        <p className="text-xs opacity-60 font-medium mt-0.5">
+                                            Showing {filteredList.length} of {catTxns.length} logged expenses for this category
+                                        </p>
+                                    </div>
                                 </div>
-                                <div>
-                                    <h3 className="font-bold text-lg leading-tight">{category.name} Transactions</h3>
-                                    <p className="text-xs opacity-60">All logged expenses for this category</p>
+
+                                <div className="flex items-center gap-3">
+                                    <span className="px-3 py-1 rounded-xl text-sm font-extrabold font-mono border bg-error/10 text-error border-error/20">
+                                        Total Spent: ₹{totalCategorySpent.toLocaleString()}
+                                    </span>
+                                    <button onClick={() => setShowCategoryHistoryModal(false)} className="btn btn-sm btn-ghost btn-circle rounded-full">
+                                        <X size={18} />
+                                    </button>
                                 </div>
                             </div>
-                            <button onClick={() => setShowCategoryHistoryModal(false)} className="btn btn-sm btn-ghost btn-square rounded-full">
-                                <X size={18} />
-                            </button>
-                        </div>
 
-                        {/* Modal Content */}
-                        <div className="overflow-y-auto p-0 flex-1 custom-scrollbar">
-                            <table className="table table-xs table-pin-rows w-full">
-                                <thead>
-                                    <tr className="bg-base-200/50 text-xs">
-                                        <th>Date</th>
-                                        <th>Subcategory</th>
-                                        <th>Description</th>
-                                        <th>Payment Source</th>
-                                        <th className="text-right">Amount</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {(() => {
-                                        const catTxns = transactions
-                                            .filter(t => t.type !== 'Credit' && (
-                                                t.categoryId?._id === category._id ||
-                                                t.categoryId === category._id ||
-                                                (category.subCategories || []).some(s => s._id === (t.subCategoryId?._id || t.subCategoryId))
-                                            ))
-                                            .sort((a, b) => new Date(b.date) - new Date(a.date));
+                            {/* Controls Bar: Search + Sort Order + Limit Selector + Clear Filters */}
+                            <div className="p-4 border-b border-base-200 bg-base-100 flex flex-col sm:flex-row gap-3 items-center justify-between">
+                                <div className="flex items-center gap-2 w-full sm:w-auto">
+                                    <div className="relative w-full sm:w-64">
+                                        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-base-content/40 w-4 h-4" />
+                                        <input
+                                            type="text"
+                                            placeholder="Search category expenses..."
+                                            value={catSearchTerm}
+                                            onChange={(e) => setCatSearchTerm(e.target.value)}
+                                            className="input input-sm select-bordered w-full pl-10 pr-8 bg-base-200/60 text-xs font-medium rounded-xl focus:bg-base-100 transition-colors"
+                                        />
+                                        {catSearchTerm && (
+                                            <button
+                                                onClick={() => setCatSearchTerm("")}
+                                                className="absolute right-3 top-1/2 -translate-y-1/2 text-base-content/40 hover:text-base-content"
+                                            >
+                                                <X size={14} />
+                                            </button>
+                                        )}
+                                    </div>
 
-                                        if (catTxns.length > 0) {
-                                            return catTxns.map(t => {
-                                                const subName = t.subCategoryId?.name || category.subCategories?.find(s => s._id === t.subCategoryId)?.name || "-";
-                                                return (
-                                                    <tr key={t._id} className="hover:bg-base-200/40 border-b border-base-200/40">
-                                                        <td className="whitespace-nowrap font-mono opacity-70 text-xs">{dayjs(t.date).format("ddd, MMM DD, YYYY")}</td>
-                                                        <td className="font-semibold text-primary/80">{subName}</td>
-                                                        <td className="font-medium">{t.description || "Expense Transaction"}</td>
-                                                        <td>{t.sourceId?.name || <span className="opacity-30">-</span>}</td>
-                                                        <td className="text-right font-mono font-bold text-error">-₹{t.amount.toLocaleString()}</td>
-                                                    </tr>
-                                                );
-                                            });
-                                        }
-                                        return (
-                                            <tr>
-                                                <td colSpan="5" className="text-center py-12 flex flex-col items-center justify-center opacity-40 gap-2">
-                                                    <Info size={32} />
-                                                    <span>No transactions found for {category.name}</span>
-                                                </td>
-                                            </tr>
-                                        );
-                                    })()}
-                                </tbody>
-                            </table>
-                        </div>
+                                    {hasCatColFilters && (
+                                        <button
+                                            onClick={clearCatColFilters}
+                                            className="btn btn-xs btn-ghost border border-error/30 text-error hover:bg-error/10 rounded-xl font-bold gap-1 shrink-0"
+                                        >
+                                            <X size={12} /> Clear Filters
+                                        </button>
+                                    )}
+                                </div>
 
-                        {/* Modal Footer */}
-                        <div className="shrink-0 p-4 border-t border-base-200 bg-base-100 flex justify-between items-center text-xs font-semibold">
-                            <span className="opacity-70">
-                                Total Spent in {category.name}: <strong className="font-mono text-sm text-error">₹{totalUsed.toLocaleString()}</strong>
-                            </span>
-                            <button onClick={() => setShowCategoryHistoryModal(false)} className="btn btn-xs btn-ghost">Close</button>
+                                <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto justify-end text-xs">
+                                    {/* Sort Order Toggle */}
+                                    <div className="join border border-base-300 rounded-xl p-0.5 bg-base-200/40">
+                                        <button
+                                            onClick={() => setCatSortOrder("newest")}
+                                            className={`join-item btn btn-xs rounded-lg font-bold gap-1 ${catSortOrder === "newest" ? "btn-primary shadow-2xs" : "btn-ghost opacity-70"}`}
+                                            title="Show Newest First"
+                                        >
+                                            <ArrowDown size={12} /> New First
+                                        </button>
+                                        <button
+                                            onClick={() => setCatSortOrder("oldest")}
+                                            className={`join-item btn btn-xs rounded-lg font-bold gap-1 ${catSortOrder === "oldest" ? "btn-primary shadow-2xs" : "btn-ghost opacity-70"}`}
+                                            title="Show Oldest First"
+                                        >
+                                            <ArrowUp size={12} /> Old First
+                                        </button>
+                                    </div>
+
+                                    {/* Row Limit Selector */}
+                                    <div className="flex items-center gap-1 bg-base-200/40 border border-base-300 p-0.5 rounded-xl">
+                                        <span className="px-2 text-[11px] font-bold opacity-60">Show:</span>
+                                        {["10", "20", "30", "40", "all"].map((val) => (
+                                            <button
+                                                key={val}
+                                                onClick={() => setCatLimitCount(val)}
+                                                className={`btn btn-xs rounded-lg font-bold capitalize ${catLimitCount === val ? "btn-neutral shadow-2xs" : "btn-ghost opacity-70"}`}
+                                            >
+                                                {val === "all" ? "All" : val}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Transactions Table */}
+                            <div className="flex-1 overflow-y-auto p-4">
+                                {filteredList.length > 0 ? (
+                                    <div className="overflow-x-auto rounded-2xl border border-base-200 shadow-2xs">
+                                        <table className="table table-sm w-full text-xs">
+                                            <thead className="bg-base-200/70 text-base-content font-bold uppercase tracking-wider text-[11px]">
+                                                <tr>
+                                                    {/* Date Header Filter */}
+                                                    <th className="py-3 px-4">
+                                                        <div className="flex items-center gap-1.5">
+                                                            <span>Date</span>
+                                                            <div className="dropdown dropdown-bottom">
+                                                                <button
+                                                                    tabIndex={0}
+                                                                    className={`btn btn-xs btn-square btn-ghost ${catColFilters.date ? 'text-primary bg-primary/15' : 'opacity-40 hover:opacity-100'}`}
+                                                                    title="Filter Date"
+                                                                >
+                                                                    <Filter size={11} />
+                                                                </button>
+                                                                <div tabIndex={0} className="dropdown-content z-[99999] bg-base-100 p-3 rounded-2xl shadow-2xl border border-base-300 w-52 mt-1 space-y-2 font-normal text-xs normal-case">
+                                                                    <label className="text-[10px] font-bold text-base-content/50 uppercase block">Filter by Date</label>
+                                                                    <input
+                                                                        type="date"
+                                                                        value={catColFilters.date}
+                                                                        onChange={(e) => setCatColFilters({ ...catColFilters, date: e.target.value })}
+                                                                        className="input input-xs input-bordered w-full rounded-lg font-medium"
+                                                                    />
+                                                                    {catColFilters.date && (
+                                                                        <button
+                                                                            onClick={() => setCatColFilters({ ...catColFilters, date: "" })}
+                                                                            className="text-[10px] text-error font-bold hover:underline block text-right w-full"
+                                                                        >
+                                                                            Clear Date
+                                                                        </button>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </th>
+
+                                                    {/* Subcategory Header Filter */}
+                                                    <th className="py-3 px-4">
+                                                        <div className="flex items-center gap-1.5">
+                                                            <span>Subcategory</span>
+                                                            <div className="dropdown dropdown-bottom">
+                                                                <button
+                                                                    tabIndex={0}
+                                                                    className={`btn btn-xs btn-square btn-ghost ${catColFilters.subCategoryId ? 'text-amber-600 bg-amber-500/15' : 'opacity-40 hover:opacity-100'}`}
+                                                                    title="Filter Subcategory"
+                                                                >
+                                                                    <Filter size={11} />
+                                                                </button>
+                                                                <ul tabIndex={0} className="dropdown-content z-[99999] menu p-1.5 bg-base-100 rounded-2xl shadow-2xl border border-base-300 w-56 mt-1 font-medium text-xs normal-case max-h-60 overflow-y-auto">
+                                                                    <li className="menu-title text-[10px] uppercase font-bold text-base-content/50">Filter Subcategory</li>
+                                                                    <li>
+                                                                        <a onClick={() => setCatColFilters({ ...catColFilters, subCategoryId: "" })} className={!catColFilters.subCategoryId ? "font-bold text-primary" : ""}>
+                                                                            All Subcategories
+                                                                        </a>
+                                                                    </li>
+                                                                    {(category.subCategories || []).map((sub) => (
+                                                                        <li key={sub._id}>
+                                                                            <a onClick={() => setCatColFilters({ ...catColFilters, subCategoryId: sub._id })} className={String(catColFilters.subCategoryId) === String(sub._id) ? "font-bold text-primary" : ""}>
+                                                                                {sub.name}
+                                                                            </a>
+                                                                        </li>
+                                                                    ))}
+                                                                </ul>
+                                                            </div>
+                                                        </div>
+                                                    </th>
+
+                                                    {/* Description Header Filter */}
+                                                    <th className="py-3 px-4">
+                                                        <div className="flex items-center gap-1.5">
+                                                            <span>Description</span>
+                                                            <div className="dropdown dropdown-bottom">
+                                                                <button
+                                                                    tabIndex={0}
+                                                                    className={`btn btn-xs btn-square btn-ghost ${catColFilters.description ? 'text-primary bg-primary/15' : 'opacity-40 hover:opacity-100'}`}
+                                                                    title="Filter Description"
+                                                                >
+                                                                    <Filter size={11} />
+                                                                </button>
+                                                                <div tabIndex={0} className="dropdown-content z-[99999] bg-base-100 p-3 rounded-2xl shadow-2xl border border-base-300 w-56 mt-1 space-y-2 font-normal text-xs normal-case">
+                                                                    <label className="text-[10px] font-bold text-base-content/50 uppercase block">Search Description</label>
+                                                                    <div className="relative">
+                                                                        <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 opacity-50" />
+                                                                        <input
+                                                                            type="text"
+                                                                            placeholder="Search text..."
+                                                                            value={catColFilters.description}
+                                                                            onChange={(e) => setCatColFilters({ ...catColFilters, description: e.target.value })}
+                                                                            className="input input-xs input-bordered w-full pl-7 font-medium rounded-lg"
+                                                                        />
+                                                                    </div>
+                                                                    {catColFilters.description && (
+                                                                        <button
+                                                                            onClick={() => setCatColFilters({ ...catColFilters, description: "" })}
+                                                                            className="text-[10px] text-error font-bold hover:underline block text-right w-full"
+                                                                        >
+                                                                            Clear Search
+                                                                        </button>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </th>
+
+                                                    {/* Payment Source Header Filter */}
+                                                    <th className="py-3 px-4">
+                                                        <div className="flex items-center gap-1.5">
+                                                            <span className="text-blue-600 dark:text-blue-400">Payment Source</span>
+                                                            <div className="dropdown dropdown-bottom">
+                                                                <button
+                                                                    tabIndex={0}
+                                                                    className={`btn btn-xs btn-square btn-ghost ${catColFilters.sourceId ? 'text-blue-600 bg-blue-500/15' : 'opacity-40 hover:opacity-100'}`}
+                                                                    title="Filter Payment Source"
+                                                                >
+                                                                    <Filter size={11} />
+                                                                </button>
+                                                                <ul tabIndex={0} className="dropdown-content z-[99999] menu p-1.5 bg-base-100 rounded-2xl shadow-2xl border border-base-300 w-52 mt-1 font-medium text-xs normal-case max-h-56 overflow-y-auto">
+                                                                    <li className="menu-title text-[10px] uppercase font-bold text-base-content/50">Filter Account</li>
+                                                                    <li>
+                                                                        <a onClick={() => setCatColFilters({ ...catColFilters, sourceId: "" })} className={!catColFilters.sourceId ? "font-bold text-primary" : ""}>
+                                                                            All Accounts
+                                                                        </a>
+                                                                    </li>
+                                                                    {sources.map((s) => (
+                                                                        <li key={s._id}>
+                                                                            <a onClick={() => setCatColFilters({ ...catColFilters, sourceId: s._id })} className={String(catColFilters.sourceId) === String(s._id) ? "font-bold text-primary" : ""}>
+                                                                                {s.name}
+                                                                            </a>
+                                                                        </li>
+                                                                    ))}
+                                                                </ul>
+                                                            </div>
+                                                        </div>
+                                                    </th>
+
+                                                    <th className="py-3 px-4 text-right">Amount</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-base-200/70 font-medium">
+                                                {filteredList.map((t) => {
+                                                    const subName = t.subCategoryId?.name || category.subCategories?.find(s => s._id === t.subCategoryId)?.name || "General";
+                                                    const srcObj = sources.find((s) => String(s._id) === String(t.sourceId?._id || t.sourceId));
+                                                    const srcTagStyle = getSourceTagStyle(srcObj);
+
+                                                    return (
+                                                        <tr key={t._id || t.id} className="hover:bg-base-200/40 transition-colors">
+                                                            <td className="py-3 px-4 font-mono text-base-content/70 whitespace-nowrap">
+                                                                {dayjs(t.date).format("DD MMM YYYY")}
+                                                            </td>
+                                                            <td className="py-3 px-4">
+                                                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold ${theme.bg} ${theme.text} border ${theme.border}`}>
+                                                                    <Folder size={12} />
+                                                                    {subName}
+                                                                </span>
+                                                            </td>
+                                                            <td className="py-3 px-4 font-semibold text-base-content">
+                                                                {t.description || <span className="opacity-40 italic">No description</span>}
+                                                            </td>
+                                                            <td className="py-3 px-4">
+                                                                {srcObj ? (
+                                                                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold ${srcTagStyle.bg} ${srcTagStyle.text} border ${srcTagStyle.border}`}>
+                                                                        <Wallet size={12} />
+                                                                        {srcObj.name}
+                                                                    </span>
+                                                                ) : (
+                                                                    <span className="opacity-30">—</span>
+                                                                )}
+                                                            </td>
+                                                            <td className="py-3 px-4 text-right font-mono font-extrabold whitespace-nowrap text-error">
+                                                                -₹{Number(t.amount || 0).toLocaleString()}
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                ) : (
+                                    <div className="p-12 text-center text-sm opacity-50 italic">
+                                        No transactions found for {category.name}.
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Modal Footer */}
+                            <div className="p-4 border-t border-base-200 bg-base-200/50 flex justify-between items-center text-xs">
+                                <span className="font-semibold text-base-content/70">
+                                    Total Spent in {category.name}: <strong className="font-mono font-bold text-error">₹{totalCategorySpent.toLocaleString()}</strong>
+                                </span>
+                                <button onClick={() => setShowCategoryHistoryModal(false)} className="btn btn-sm btn-primary rounded-xl font-bold px-5">
+                                    Close
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
+                );
+            })()}
         </div>
     );
 };

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import dayjs from "dayjs";
 import { addTransaction, updateTransaction, deleteTransaction } from "../../services/redux/slice/ExpenseSlice";
@@ -178,7 +178,17 @@ const ExpenseTable = ({
 
     const [isTableFiltersOpen, setIsTableFiltersOpen] = useState(false);
 
-    const monthCategories = categories.filter(c => !c.month || c.month === currentMonth);
+    const monthCategories = useMemo(() => {
+        const raw = (categories || []).filter(c => !c.month || c.month === currentMonth);
+        const seen = new Set();
+        return raw.filter(c => {
+            if (!c.name) return false;
+            const key = c.name.trim().toLowerCase();
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+        });
+    }, [categories, currentMonth]);
     const selectedFilterCategoryObj = monthCategories.find(c => String(c._id) === String(filters.categoryId));
     const hasActiveFilters = Boolean(filters.date || filters.description || filters.sourceId || filters.categoryId || filters.subCategoryId);
     const clearFilters = () => {
@@ -198,6 +208,22 @@ const ExpenseTable = ({
 
     // Render Source Tag Helper
     const renderSourceTag = (t) => {
+        if (t.type === 'Credit') {
+            return (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 truncate max-w-full">
+                    <TrendingUp size={12} className="shrink-0 text-emerald-500" />
+                    <span className="truncate">+ Add Money</span>
+                </span>
+            );
+        }
+        if (t.type === 'Debit' && !t.categoryId) {
+            return (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30 truncate max-w-full">
+                    <TrendingDown size={12} className="shrink-0 text-rose-500" />
+                    <span className="truncate">- Debit Money</span>
+                </span>
+            );
+        }
         const sourceObj = t.sourceId;
         const sourceName = sourceObj?.name || (typeof sourceObj === 'string' ? sourceObj : 'Unknown');
         const style = getSourceTagStyle(sourceObj || sourceName, sources);
@@ -223,18 +249,24 @@ const ExpenseTable = ({
             );
         }
         if (t.type === 'Credit') {
+            const sourceObj = t.sourceId;
+            const sourceName = sourceObj?.name || (typeof sourceObj === 'string' ? sourceObj : 'Bank');
+            const style = getSourceTagStyle(sourceObj || sourceName, sources);
             return (
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 truncate max-w-full">
-                    <TrendingUp size={12} className="shrink-0 text-emerald-500" />
-                    <span className="truncate">+ Add Money</span>
+                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold ${style.bg} ${style.text} border ${style.border} truncate max-w-full`} title={`Added to ${sourceName}`}>
+                    <Wallet size={12} className="shrink-0 text-emerald-500" />
+                    <span className="truncate">To: {sourceName}</span>
                 </span>
             );
         }
         if (t.type === 'Debit' && !t.categoryId) {
+            const sourceObj = t.sourceId;
+            const sourceName = sourceObj?.name || (typeof sourceObj === 'string' ? sourceObj : 'Bank');
+            const style = getSourceTagStyle(sourceObj || sourceName, sources);
             return (
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30 truncate max-w-full">
-                    <TrendingDown size={12} className="shrink-0 text-rose-500" />
-                    <span className="truncate">- Debit Money</span>
+                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold ${style.bg} ${style.text} border ${style.border} truncate max-w-full`} title={`Debited from ${sourceName}`}>
+                    <Wallet size={12} className="shrink-0 text-rose-500" />
+                    <span className="truncate">From: {sourceName}</span>
                 </span>
             );
         }
@@ -304,6 +336,29 @@ const ExpenseTable = ({
         isTransfer: false,
         isReimbursable: false
     });
+
+    // Global Keyboard Bindings:
+    // 'I' : Inline add Transaction
+    // 'M' : Modal Transaction
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            const activeTag = document.activeElement?.tagName?.toLowerCase();
+            const isEditable = activeTag === 'input' || activeTag === 'textarea' || activeTag === 'select' || document.activeElement?.isContentEditable;
+
+            if (isEditable) return;
+
+            if (e.key === 'i' || e.key === 'I') {
+                e.preventDefault();
+                setIsAdding(true);
+            } else if (e.key === 'm' || e.key === 'M') {
+                e.preventDefault();
+                setIsAddModalOpen(true);
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [setIsAdding, setIsAddModalOpen]);
 
     // Categories filtered for currentMonth
     const currentMonthCategories = categories.filter(c => !c.month || c.month === currentMonth);
@@ -378,11 +433,11 @@ const ExpenseTable = ({
     });
 
     const targetOptions = [
-        ...sources.filter(s => s.type !== 'Card').map(s => {
+        ...sources.map(s => {
             const tagStyle = getSourceTagStyle(s, sources);
             return {
                 value: s._id,
-                label: `${s.name} (₹${(s.balance || 0).toLocaleString()})`,
+                label: s.name,
                 key: s._id,
                 tagStyle,
                 sourceObj: s
@@ -428,14 +483,14 @@ const ExpenseTable = ({
 
     // Add Transaction
     const handleAdd = () => {
-        if (!newData.description || !newData.sourceId || !newData.amount) {
-            alert("Please fill required fields (Description, From Source, Amount)");
+        if (!newData.description || !newData.amount) {
+            alert("Please fill required fields (Description and Amount)");
             return;
         }
 
         if (newData.isTransfer) {
-            if (!newData.targetSourceId) {
-                alert("Please select a target bank to transfer to");
+            if (!newData.sourceId || !newData.targetSourceId) {
+                alert("Please select both From Bank and Target Bank for transfer");
                 return;
             }
             if (newData.sourceId === newData.targetSourceId) {
@@ -452,6 +507,10 @@ const ExpenseTable = ({
                 isReimbursable: newData.isReimbursable
             }));
         } else if (newData.isAddMoney) {
+            if (!newData.sourceId) {
+                alert("Please select a target bank account to add money to");
+                return;
+            }
             dispatch(addTransaction({
                 date: newData.date || new Date(),
                 description: newData.description,
@@ -461,6 +520,10 @@ const ExpenseTable = ({
                 isReimbursable: newData.isReimbursable
             }));
         } else if (newData.isManualDebit) {
+            if (!newData.sourceId) {
+                alert("Please select a bank account to debit from");
+                return;
+            }
             dispatch(addTransaction({
                 date: newData.date || new Date(),
                 description: newData.description,
@@ -470,6 +533,10 @@ const ExpenseTable = ({
                 isReimbursable: newData.isReimbursable
             }));
         } else {
+            if (!newData.sourceId) {
+                alert("Please select a From payment source");
+                return;
+            }
             if (!newData.categoryId) {
                 alert("Please select a Category or Bank");
                 return;
@@ -694,7 +761,7 @@ const ExpenseTable = ({
                             >
                                 <Filter size={11} />
                             </button>
-                            <ul tabIndex={0} className="dropdown-content z-[9999] menu p-1.5 bg-base-100 rounded-2xl shadow-2xl border border-base-300 w-56 mt-1 font-medium text-xs normal-case max-h-60 overflow-y-auto">
+                            <ul tabIndex={0} className="dropdown-content z-[9999] menu p-1.5 bg-base-100 rounded-2xl shadow-2xl border border-base-300 w-56 mt-1 font-medium text-xs normal-case max-h-60 overflow-y-auto overflow-x-hidden">
                                 <li className="menu-title text-[10px] uppercase font-bold text-base-content/50">Filter Category</li>
                                 <li>
                                     <a onClick={() => setFilters({ ...filters, categoryId: "", subCategoryId: "" })} className={!filters.categoryId ? "font-bold text-primary" : ""}>
@@ -703,7 +770,7 @@ const ExpenseTable = ({
                                 </li>
                                 {monthCategories.map((c) => (
                                     <li key={c._id}>
-                                        <a onClick={() => setFilters({ ...filters, categoryId: c._id, subCategoryId: "" })} className={String(filters.categoryId) === String(c._id) ? "font-bold text-primary" : ""}>
+                                        <a onClick={() => setFilters({ ...filters, categoryId: c._id, subCategoryId: "" })} className={`truncate max-w-[200px] ${String(filters.categoryId) === String(c._id) ? "font-bold text-primary" : ""}`}>
                                             {c.name}
                                         </a>
                                     </li>
@@ -779,7 +846,15 @@ const ExpenseTable = ({
                     const renderInlineAddRow = () => (
                         <div className={`transition-all duration-300 ${isAdding ? 'bg-base-200/30 py-4 px-4 border-b border-primary/20 z-20 relative' : 'p-2 border-b border-base-200/50 flex justify-center'}`}>
                             {isAdding ? (
-                                <div className="grid grid-cols-12 gap-2 items-center animate-in fade-in slide-in-from-top-2 w-full">
+                                <div
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                            e.preventDefault();
+                                            handleAdd();
+                                        }
+                                    }}
+                                    className="grid grid-cols-12 gap-2 items-center animate-in fade-in slide-in-from-top-2 w-full"
+                                >
                                     {/* Date & Reimbursable Toggle */}
                                     <div className="col-span-2 flex items-center gap-1">
                                         <button
@@ -823,7 +898,7 @@ const ExpenseTable = ({
                                             <DaisySelect
                                                 options={targetOptions}
                                                 value={newData.sourceId}
-                                                placeholder="Target"
+                                                placeholder="Select Bank"
                                                 onChange={(val) => setNewData({ ...newData, sourceId: val })}
                                                 className="text-success"
                                             />
@@ -831,7 +906,7 @@ const ExpenseTable = ({
                                             <DaisySelect
                                                 options={targetOptions}
                                                 value={newData.sourceId}
-                                                placeholder="Debit From"
+                                                placeholder="Select Bank"
                                                 onChange={(val) => setNewData({ ...newData, sourceId: val })}
                                                 className="text-error"
                                             />
@@ -845,6 +920,7 @@ const ExpenseTable = ({
                                                         const trgId = val.replace("bank_", "");
                                                         setNewData({
                                                             ...newData,
+                                                            isAddMoney: false,
                                                             isTransfer: true,
                                                             targetSourceId: trgId,
                                                             categoryId: "",
@@ -853,6 +929,7 @@ const ExpenseTable = ({
                                                     } else {
                                                         setNewData({
                                                             ...newData,
+                                                            isAddMoney: false,
                                                             isTransfer: false,
                                                             targetSourceId: "",
                                                             categoryId: val,
@@ -886,7 +963,25 @@ const ExpenseTable = ({
                                 </div>
                             ) : (
                                 <div className="flex items-center justify-center gap-2 px-2 py-1">
-                                    <button onClick={() => setIsAdding(true)} className="btn btn-ghost btn-xs text-primary font-bold gap-1 hover:bg-primary/10 rounded-xl px-4">
+                                    <button
+                                        onClick={() => {
+                                            setNewData({
+                                                date: dayjs().format("YYYY-MM-DD"),
+                                                description: "",
+                                                sourceId: "",
+                                                targetSourceId: "",
+                                                categoryId: "",
+                                                subCategoryId: "",
+                                                amount: "",
+                                                isAddMoney: false,
+                                                isManualDebit: false,
+                                                isTransfer: false,
+                                                isReimbursable: false
+                                            });
+                                            setIsAdding(true);
+                                        }}
+                                        className="btn btn-ghost btn-xs text-primary font-bold gap-1 hover:bg-primary/10 rounded-xl px-4"
+                                    >
                                         <Plus size={15} /> + Inline Add Transaction
                                     </button>
                                 </div>

@@ -104,7 +104,7 @@ const AddTransactionModal = ({ isOpen, onClose }) => {
         categoryId: transactionType === "Debit" ? categoryId : undefined,
         subCategoryId: (transactionType === "Debit" && subCategoryId) ? subCategoryId : undefined,
         amount: Number(amount),
-        type: transactionType,
+        type: (transactionType === "DebitMoney" || transactionType === "Debit") ? "Debit" : transactionType,
         isReimbursable
       })).unwrap();
 
@@ -152,11 +152,11 @@ const AddTransactionModal = ({ isOpen, onClose }) => {
               <span className="block font-extrabold text-base-content/60 uppercase tracking-wider text-[10px] mb-1.5">
                 1. Transaction Type
               </span>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 <button
                   type="button"
                   onClick={() => handleTypeSelect("Debit")}
-                  className={`py-2 px-2.5 rounded-xl border flex items-center justify-center gap-1.5 transition-all text-center ${
+                  className={`py-2 px-2 rounded-xl border flex items-center justify-center gap-1 transition-all text-center ${
                     transactionType === "Debit"
                       ? "bg-rose-500/15 border-rose-500 text-rose-600 dark:text-rose-400 font-extrabold shadow-2xs scale-[1.02]"
                       : "border-base-200 bg-base-100 hover:bg-base-200/50 text-base-content/70 opacity-75"
@@ -168,8 +168,21 @@ const AddTransactionModal = ({ isOpen, onClose }) => {
 
                 <button
                   type="button"
+                  onClick={() => handleTypeSelect("DebitMoney")}
+                  className={`py-2 px-2 rounded-xl border flex items-center justify-center gap-1 transition-all text-center ${
+                    transactionType === "DebitMoney"
+                      ? "bg-rose-500/15 border-rose-500 text-rose-600 dark:text-rose-400 font-extrabold shadow-2xs scale-[1.02]"
+                      : "border-base-200 bg-base-100 hover:bg-base-200/50 text-base-content/70 opacity-75"
+                  }`}
+                >
+                  <TrendingDown size={14} className={transactionType === "DebitMoney" ? "text-rose-500" : ""} />
+                  <span className="font-bold text-[11px]">Debit Money</span>
+                </button>
+
+                <button
+                  type="button"
                   onClick={() => handleTypeSelect("Credit")}
-                  className={`py-2 px-2.5 rounded-xl border flex items-center justify-center gap-1.5 transition-all text-center ${
+                  className={`py-2 px-2 rounded-xl border flex items-center justify-center gap-1 transition-all text-center ${
                     transactionType === "Credit"
                       ? "bg-emerald-500/15 border-emerald-500 text-emerald-600 dark:text-emerald-400 font-extrabold shadow-2xs scale-[1.02]"
                       : "border-base-200 bg-base-100 hover:bg-base-200/50 text-base-content/70 opacity-75"
@@ -182,7 +195,7 @@ const AddTransactionModal = ({ isOpen, onClose }) => {
                 <button
                   type="button"
                   onClick={() => handleTypeSelect("Transfer")}
-                  className={`py-2 px-2.5 rounded-xl border flex items-center justify-center gap-1.5 transition-all text-center ${
+                  className={`py-2 px-2 rounded-xl border flex items-center justify-center gap-1 transition-all text-center ${
                     transactionType === "Transfer"
                       ? "bg-amber-500/15 border-amber-500 text-amber-600 dark:text-amber-400 font-extrabold shadow-2xs scale-[1.02]"
                       : "border-base-200 bg-base-100 hover:bg-base-200/50 text-base-content/70 opacity-75"

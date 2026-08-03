@@ -1,8 +1,8 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { updateSalary } from "../../services/redux/slice/ExpenseSlice";
-import { Eye, EyeOff, Wallet, Banknote, Calculator, PiggyBank, Flame } from "lucide-react";
+import { Eye, EyeOff, Wallet, Banknote, Calculator, PiggyBank, Flame, ChevronLeft, ChevronRight } from "lucide-react";
 
 const HeaderSection = () => {
     const dispatch = useDispatch();
@@ -13,28 +13,86 @@ const HeaderSection = () => {
 
     // Privacy State
     const [showBalance, setShowBalance] = useState(true);
+    const headerScrollRef = useRef(null);
 
     // Sync tempSalary when salary updates from store
     useEffect(() => {
         setTempSalary(salary);
     }, [salary]);
 
-    // Calculate Global Used
+    // Excluded Sources State (persisted in localStorage and synced across components)
+    const [excludedSourceIds, setExcludedSourceIds] = useState(() => {
+        try {
+            const saved = localStorage.getItem("expense_excluded_sources");
+            return saved ? JSON.parse(saved) : [];
+        } catch (e) {
+            return [];
+        }
+    });
+
+    useEffect(() => {
+        const handleSync = () => {
+            try {
+                const saved = localStorage.getItem("expense_excluded_sources");
+                setExcludedSourceIds(saved ? JSON.parse(saved) : []);
+            } catch (e) {}
+        };
+        window.addEventListener("excluded_sources_updated", handleSync);
+        return () => window.removeEventListener("excluded_sources_updated", handleSync);
+    }, []);
+
+    const toggleExcludeSource = (sourceId) => {
+        const sId = String(sourceId);
+        const updated = excludedSourceIds.includes(sId)
+            ? excludedSourceIds.filter(id => id !== sId)
+            : [...excludedSourceIds, sId];
+        setExcludedSourceIds(updated);
+        try {
+            localStorage.setItem("expense_excluded_sources", JSON.stringify(updated));
+            window.dispatchEvent(new Event("excluded_sources_updated"));
+        } catch (e) {}
+    };
+
+    // Calculate Global Used (only Debit transactions with a valid Category count as category spending)
     const totalUsed = transactions
-        .filter(t => t.type !== 'Credit')
+        .filter(t => t.type === 'Debit' && Boolean(t.categoryId?._id || t.categoryId))
         .reduce((sum, t) => sum + t.amount, 0);
     const totalRemaining = salary - totalUsed;
 
-    // Calculate Source Totals
+    // Calculate Source Totals & Sorted Sources (Banks first by highest balance, then Cards by highest spent/money)
     const sourceTotals = sources.map(source => {
         const spent = transactions
-            .filter(t => t.type !== 'Credit' && (t.sourceId?._id === source._id || t.sourceId === source._id))
+            .filter(t => t.type === 'Debit' && (t.sourceId?._id === source._id || t.sourceId === source._id))
             .reduce((sum, t) => sum + t.amount, 0);
         return { ...source, spent };
     });
 
-    const totalBankBalance = sourceTotals.filter(s => s.type === 'Bank').reduce((sum, s) => sum + s.balance, 0);
-    const totalCardSpent = sourceTotals.filter(s => s.type === 'Card').reduce((sum, s) => sum + s.spent, 0);
+    const sortedSources = [...sources].sort((a, b) => {
+        const isABank = a.type === 'Bank';
+        const isBBank = b.type === 'Bank';
+
+        if (isABank && !isBBank) return -1;
+        if (!isABank && isBBank) return 1;
+
+        const getAmt = (s) => {
+            if (s.type === 'Card') {
+                const st = sourceTotals.find(item => item._id === s._id);
+                return st?.spent ?? s.balance ?? 0;
+            }
+            return s.balance || 0;
+        };
+
+        return getAmt(b) - getAmt(a);
+    });
+
+    const totalBankBalance = sourceTotals
+        .filter(s => (s.type === 'Bank' || !s.type) && !excludedSourceIds.includes(String(s._id)))
+        .reduce((sum, s) => sum + (s.balance || 0), 0);
+
+    const totalCardSpent = sourceTotals
+        .filter(s => s.type === 'Card' && !excludedSourceIds.includes(String(s._id)))
+        .reduce((sum, s) => sum + (s.spent || 0), 0);
+
     const netAssetsAfterCards = totalBankBalance - totalCardSpent;
 
     const breakdownSources = sourceTotals
@@ -64,23 +122,101 @@ const HeaderSection = () => {
                     </button>
                 </div>
 
-                {/* 1. Total Assets Card (with Max 4 Banks & Cards Breakdown & Net Assets Calculation) */}
+                {/* 1. Total Assets Card (with Compact Scrollable Bank & Card Balance List - Side Arrows) */}
                 <div className="stat place-items-center relative overflow-hidden p-5">
-                    <div className="stat-title text-base-content/60 font-medium uppercase tracking-wide text-xs relative z-10">Total Assets</div>
-                    <div className="stat-value text-success text-3xl relative z-10">
-                        {showBalance ? `₹${totalBankBalance.toLocaleString()}` : "••••••••"}
+                    <div className="stat-title text-base-content/60 font-medium uppercase tracking-wide text-xs relative z-10 flex items-center gap-1">
+                        <span>Total Net Assets</span>
+                        {excludedSourceIds.length > 0 && (
+                            <span className="text-[10px] text-amber-500 font-bold">({excludedSourceIds.length} Excluded)</span>
+                        )}
+                    </div>
+                    <div className={`stat-value text-3xl relative z-10 ${netAssetsAfterCards < 0 ? 'text-error' : 'text-success'}`}>
+                        {showBalance ? (netAssetsAfterCards < 0 ? `-₹${Math.abs(netAssetsAfterCards).toLocaleString()}` : `₹${netAssetsAfterCards.toLocaleString()}`) : "••••••••"}
                     </div>
 
                     {/* Net Liquid Money after Credit Card Bills */}
                     <div className="stat-desc font-medium text-[11px] relative z-10 mt-0.5">
                         {showBalance ? (
-                            <span className={netAssetsAfterCards < 0 ? "text-error font-semibold" : "text-info font-medium"}>
-                                Net: ₹{netAssetsAfterCards.toLocaleString()} (After CC Bills)
+                            <span className="text-base-content/70 font-medium">
+                                Banks: ₹{totalBankBalance.toLocaleString()} | Cards: <span className="text-error font-bold">-₹{totalCardSpent.toLocaleString()}</span>
                             </span>
                         ) : (
                             <span className="text-base-content/50">Net: ••••••</span>
                         )}
                     </div>
+
+                    {/* Compact Scrollable List of Bank & Card Balances (Side arrows) */}
+                    {sortedSources.length > 0 && (
+                        <div className="w-full mt-2 pt-1.5 border-t border-base-300/50 relative z-10 flex items-center gap-1">
+                            {sortedSources.length > 3 ? (
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        headerScrollRef.current?.scrollBy({ top: -38, behavior: 'smooth' });
+                                    }}
+                                    className="opacity-30 hover:opacity-90 transition-opacity p-0.5 text-base-content hover:scale-110 shrink-0"
+                                    title="Scroll Up"
+                                >
+                                    <ChevronLeft size={14} />
+                                </button>
+                            ) : <div className="w-3 shrink-0" />}
+
+                            {/* List Container (Scrollable, compact height) */}
+                            <div
+                                ref={headerScrollRef}
+                                className="flex-1 max-h-[66px] overflow-y-auto space-y-1 px-0.5 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+                            >
+                                {sortedSources.map((source) => {
+                                    const isCard = source.type === 'Card';
+                                    const rawAmt = isCard
+                                        ? (sourceTotals.find(s => s._id === source._id)?.spent ?? source.balance ?? 0)
+                                        : (source.balance || 0);
+                                    const isNegativeBank = !isCard && rawAmt < 0;
+                                    const isErrorColor = isCard || isNegativeBank;
+                                    const isExcluded = excludedSourceIds.includes(String(source._id));
+
+                                    return (
+                                        <div
+                                            key={source._id}
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                toggleExcludeSource(source._id);
+                                            }}
+                                            className={`flex items-center justify-between text-xs py-0.5 border-b border-base-300/20 last:border-0 gap-1.5 cursor-pointer hover:bg-base-300/30 px-1 rounded transition-all ${
+                                                isExcluded ? 'opacity-40 line-through select-none' : ''
+                                            }`}
+                                            title={isExcluded ? "Click to include in Total calculation" : "Click to exclude from Total calculation"}
+                                        >
+                                            <span className="font-semibold text-base-content/70 truncate text-[11px] text-left flex items-center gap-1">
+                                                {isExcluded && <EyeOff size={10} className="shrink-0 text-amber-500" />}
+                                                {source.name}
+                                            </span>
+                                            <span className={`font-mono font-extrabold text-[11px] shrink-0 text-right ${isExcluded ? 'text-base-content/40' : (isErrorColor ? 'text-error' : 'text-success')}`}>
+                                                {showBalance
+                                                    ? (isCard ? `-₹${Math.abs(rawAmt).toLocaleString()}` : (rawAmt < 0 ? `-₹${Math.abs(rawAmt).toLocaleString()}` : `₹${rawAmt.toLocaleString()}`))
+                                                    : "••••"
+                                                }
+                                            </span>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+
+                            {sortedSources.length > 3 ? (
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        headerScrollRef.current?.scrollBy({ top: 38, behavior: 'smooth' });
+                                    }}
+                                    className="opacity-30 hover:opacity-90 transition-opacity p-0.5 text-base-content hover:scale-110 shrink-0"
+                                    title="Scroll Down"
+                                >
+                                    <ChevronRight size={14} />
+                                </button>
+                            ) : <div className="w-3 shrink-0" />}
+                        </div>
+                    )}
+
                     <Wallet className="absolute -bottom-4 -right-4 w-24 h-24 text-base-content/5 rotate-12 -z-0" />
                 </div>
 

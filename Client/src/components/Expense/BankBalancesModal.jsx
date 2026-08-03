@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useSelector } from "react-redux";
 import { getSourceTagStyle } from "../../utils/expenseTheme";
 import {
@@ -9,19 +9,54 @@ import {
   ArrowUpRight,
   ShieldCheck,
   Search,
-  Plus
+  Plus,
+  EyeOff
 } from "lucide-react";
 
 const BankBalancesModal = ({ isOpen, onClose }) => {
   const { sources, transactions } = useSelector((state) => state.expense);
   const [searchQuery, setSearchQuery] = useState("");
+  const [typeFilter, setTypeFilter] = useState("all"); // "all" | "Bank" | "Card" | "Wallet"
+
+  // Excluded Sources State (persisted in localStorage and synced across components)
+  const [excludedSourceIds, setExcludedSourceIds] = useState(() => {
+    try {
+      const saved = localStorage.getItem("expense_excluded_sources");
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    const handleSync = () => {
+      try {
+        const saved = localStorage.getItem("expense_excluded_sources");
+        setExcludedSourceIds(saved ? JSON.parse(saved) : []);
+      } catch (e) {}
+    };
+    window.addEventListener("excluded_sources_updated", handleSync);
+    return () => window.removeEventListener("excluded_sources_updated", handleSync);
+  }, []);
+
+  const toggleExcludeSource = (sourceId) => {
+    const sId = String(sourceId);
+    const updated = excludedSourceIds.includes(sId)
+      ? excludedSourceIds.filter(id => id !== sId)
+      : [...excludedSourceIds, sId];
+    setExcludedSourceIds(updated);
+    try {
+      localStorage.setItem("expense_excluded_sources", JSON.stringify(updated));
+      window.dispatchEvent(new Event("excluded_sources_updated"));
+    } catch (e) {}
+  };
 
   if (!isOpen) return null;
 
-  // Calculate totals
-  const bankSources = sources.filter((s) => s.type === "Bank" || !s.type);
-  const cardSources = sources.filter((s) => s.type === "Card");
-  const walletSources = sources.filter((s) => s.type === "Wallet");
+  // Calculate totals excluding disabled sources
+  const bankSources = sources.filter((s) => (s.type === "Bank" || !s.type) && !excludedSourceIds.includes(String(s._id)));
+  const cardSources = sources.filter((s) => s.type === "Card" && !excludedSourceIds.includes(String(s._id)));
+  const walletSources = sources.filter((s) => s.type === "Wallet" && !excludedSourceIds.includes(String(s._id)));
 
   const totalBankBalance = bankSources.reduce((sum, s) => sum + (s.balance || 0), 0);
   const totalWalletBalance = walletSources.reduce((sum, s) => sum + (s.balance || 0), 0);
@@ -31,12 +66,16 @@ const BankBalancesModal = ({ isOpen, onClose }) => {
     const cardSpent = transactions
       .filter((t) => t.type === "Debit" && String(t.sourceId?._id || t.sourceId) === String(source._id))
       .reduce((s, t) => s + (t.amount || 0), 0);
-    return sum + cardSpent;
+    return sum + (cardSpent || source.balance || 0);
   }, 0);
 
-  const filteredSources = sources.filter((s) =>
-    s.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredSources = sources.filter((s) => {
+    const matchesName = s.name.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesType = typeFilter === "all" ? true : (s.type || "Bank") === typeFilter;
+    return matchesName && matchesType;
+  });
+
+  const netAssets = totalAssets - totalCardSpent;
 
   return (
     <div className="fixed inset-0 z-[99999] bg-black/65 backdrop-blur-md flex items-center justify-center p-4">
@@ -51,8 +90,13 @@ const BankBalancesModal = ({ isOpen, onClose }) => {
             <div>
               <h3 className="font-extrabold text-lg flex items-center gap-2">
                 <span>Bank Accounts & Balances</span>
+                {excludedSourceIds.length > 0 && (
+                  <span className="text-xs font-bold text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-md">
+                    {excludedSourceIds.length} Excluded
+                  </span>
+                )}
               </h3>
-              <p className="text-xs opacity-60 font-medium">Complete breakdown of all registered accounts and liquid assets</p>
+              <p className="text-xs opacity-60 font-medium">Click any account card below to exclude it from Total Net Assets</p>
             </div>
           </div>
 
@@ -64,9 +108,9 @@ const BankBalancesModal = ({ isOpen, onClose }) => {
         {/* Top Summary Banner */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-5 bg-base-200/30 border-b border-base-200 text-xs">
           <div className="p-3.5 rounded-2xl bg-base-100 border border-base-200 shadow-2xs">
-            <span className="text-[10px] font-bold text-base-content/50 uppercase block tracking-wider mb-1">Total Assets</span>
-            <span className="text-xl font-extrabold font-mono text-emerald-600 dark:text-emerald-400">
-              ₹{totalAssets.toLocaleString()}
+            <span className="text-[10px] font-bold text-base-content/50 uppercase block tracking-wider mb-1">Total Net Assets</span>
+            <span className={`text-xl font-extrabold font-mono ${netAssets < 0 ? 'text-error' : 'text-emerald-600 dark:text-emerald-400'}`}>
+              {netAssets < 0 ? `-₹${Math.abs(netAssets).toLocaleString()}` : `₹${netAssets.toLocaleString()}`}
             </span>
           </div>
 
@@ -78,16 +122,16 @@ const BankBalancesModal = ({ isOpen, onClose }) => {
           </div>
 
           <div className="p-3.5 rounded-2xl bg-base-100 border border-base-200 shadow-2xs">
-            <span className="text-[10px] font-bold text-base-content/50 uppercase block tracking-wider mb-1">Card Spending</span>
-            <span className="text-xl font-extrabold font-mono text-rose-500">
-              ₹{totalCardSpent.toLocaleString()}
+            <span className="text-[10px] font-bold text-base-content/50 uppercase block tracking-wider mb-1">Card Liabilities</span>
+            <span className="text-xl font-extrabold font-mono text-error">
+              -₹{totalCardSpent.toLocaleString()}
             </span>
           </div>
         </div>
 
         {/* Search & Filter Bar */}
-        <div className="px-5 pt-4 flex items-center justify-between gap-3">
-          <div className="relative flex-1">
+        <div className="px-5 pt-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div className="relative w-full sm:w-64">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 opacity-50" />
             <input
               type="text"
@@ -97,9 +141,24 @@ const BankBalancesModal = ({ isOpen, onClose }) => {
               className="input input-sm input-bordered w-full pl-8 text-xs font-semibold rounded-xl focus:input-primary"
             />
           </div>
-          <span className="text-xs font-bold text-base-content/60">
-            {filteredSources.length} Account{filteredSources.length !== 1 ? 's' : ''}
-          </span>
+
+          <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
+            <div className="join border border-base-300 rounded-xl p-0.5 bg-base-200/40 text-xs">
+              {["all", "Bank", "Card", "Wallet"].map((t) => (
+                <button
+                  key={t}
+                  onClick={() => setTypeFilter(t)}
+                  className={`join-item btn btn-xs rounded-lg font-bold capitalize ${typeFilter === t ? "btn-primary shadow-2xs" : "btn-ghost opacity-70"}`}
+                >
+                  {t === "all" ? "All Accounts" : `${t}s`}
+                </button>
+              ))}
+            </div>
+
+            <span className="text-xs font-bold text-base-content/60">
+              {filteredSources.length} Account{filteredSources.length !== 1 ? 's' : ''}
+            </span>
+          </div>
         </div>
 
         {/* Accounts Grid List */}
@@ -108,18 +167,29 @@ const BankBalancesModal = ({ isOpen, onClose }) => {
             const style = getSourceTagStyle(source, sources);
             const isCard = source.type === "Card";
             const isWallet = source.type === "Wallet";
+            const isExcluded = excludedSourceIds.includes(String(source._id));
 
             let cardSpent = 0;
             if (isCard) {
               cardSpent = transactions
                 .filter((t) => t.type === "Debit" && String(t.sourceId?._id || t.sourceId) === String(source._id))
-                .reduce((s, t) => s + (t.amount || 0), 0);
+                .reduce((s, t) => s + (t.amount || 0), 0) || source.balance || 0;
             }
+
+            const rawAmt = isCard ? cardSpent : (source.balance || 0);
+            const isNegativeBank = !isCard && rawAmt < 0;
+            const isErrorColor = isCard || isNegativeBank;
 
             return (
               <div
                 key={source._id}
-                className={`p-4 rounded-2xl border-2 transition-all flex flex-col justify-between space-y-2 ${style.bg} ${style.text} ${style.border} shadow-2xs hover:shadow-md`}
+                onClick={() => toggleExcludeSource(source._id)}
+                className={`p-4 rounded-2xl border-2 transition-all flex flex-col justify-between space-y-2 cursor-pointer ${
+                  isExcluded
+                    ? "bg-base-200/50 border-base-300 opacity-50 grayscale hover:opacity-75"
+                    : `${style.bg} ${style.text} ${style.border} shadow-2xs hover:shadow-md`
+                }`}
+                title={isExcluded ? "Click to include in Total calculation" : "Click to exclude from Total calculation"}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -127,21 +197,21 @@ const BankBalancesModal = ({ isOpen, onClose }) => {
                     {isCard && <CreditCard size={15} className="shrink-0" />}
                     {isWallet && <Wallet size={15} className="shrink-0" />}
                     {!isCard && !isWallet && <Building2 size={15} className="shrink-0" />}
-                    <span className="font-extrabold text-sm truncate">{source.name}</span>
+                    <span className={`font-extrabold text-sm truncate ${isExcluded ? 'line-through' : ''}`}>{source.name}</span>
                   </div>
 
-                  <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-md bg-base-100/60 border border-base-300">
-                    {source.type || "Bank"}
+                  <span className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-md ${isExcluded ? 'bg-amber-500/20 text-amber-600 border border-amber-500/30' : 'bg-base-100/60 border border-base-300'}`}>
+                    {isExcluded ? "Excluded" : (source.type || "Bank")}
                   </span>
                 </div>
 
                 <div className="flex items-end justify-between pt-1">
                   <div>
                     <span className="text-[10px] opacity-70 font-semibold block uppercase tracking-wider">
-                      {isCard ? "Total Spent" : "Current Balance"}
+                      {isCard ? "Card Balance / Due" : "Current Balance"}
                     </span>
-                    <span className="text-xl font-extrabold font-mono tracking-tight">
-                      {isCard ? `₹${cardSpent.toLocaleString()}` : `₹${(source.balance || 0).toLocaleString()}`}
+                    <span className={`text-xl font-extrabold font-mono tracking-tight ${isExcluded ? 'line-through opacity-60' : (isErrorColor ? 'text-error' : '')}`}>
+                      {isCard ? `-₹${Math.abs(rawAmt).toLocaleString()}` : (rawAmt < 0 ? `-₹${Math.abs(rawAmt).toLocaleString()}` : `₹${rawAmt.toLocaleString()}`)}
                     </span>
                   </div>
 
