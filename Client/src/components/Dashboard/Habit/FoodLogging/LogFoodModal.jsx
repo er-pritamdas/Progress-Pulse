@@ -85,6 +85,7 @@ function LogFoodModal({ isOpen, onClose, selectedDate, initialMeal = "Breakfast"
   const [error, setError] = useState("");
 
   const [stagedItems, setStagedItems] = useState([]);
+  const [editingQueueItem, setEditingQueueItem] = useState(null);
 
   const [sourceTab, setSourceTab] = useState("database"); // "database" | "history"
   const [historyDate, setHistoryDate] = useState(() => getYesterdayDateStr(selectedDate));
@@ -109,6 +110,7 @@ function LogFoodModal({ isOpen, onClose, selectedDate, initialMeal = "Breakfast"
       if (normalizedInitial === "Others") normalizedInitial = "Other";
       setMealType(["Breakfast", "Lunch", "Dinner", "Snacks", "Other"].includes(normalizedInitial) ? normalizedInitial : "Breakfast");
       setSelectedFood(null);
+      setEditingQueueItem(null);
       setServings(1);
       setSearchQuery("");
       setSelectedCategory("All");
@@ -208,7 +210,7 @@ function LogFoodModal({ isOpen, onClose, selectedDate, initialMeal = "Breakfast"
     if (!selectedFood) return;
     const numServings = Number(servings) || 1;
     const newItem = {
-      id: Date.now() + Math.random(),
+      id: editingQueueItem ? editingQueueItem.id : Date.now() + Math.random(),
       food: selectedFood,
       mealType,
       servings: numServings,
@@ -220,6 +222,15 @@ function LogFoodModal({ isOpen, onClose, selectedDate, initialMeal = "Breakfast"
     setStagedItems((prev) => [...prev, newItem]);
     setSelectedFood(null);
     setServings(1);
+    setEditingQueueItem(null);
+  };
+
+  const handleBackToQueue = () => {
+    if (editingQueueItem) {
+      setStagedItems((prev) => [...prev, editingQueueItem]);
+      setEditingQueueItem(null);
+    }
+    setSelectedFood(null);
   };
 
   const handleRemoveFromQueue = (id) => {
@@ -261,6 +272,7 @@ function LogFoodModal({ isOpen, onClose, selectedDate, initialMeal = "Breakfast"
     setSelectedFood(item.food);
     setMealType(item.mealType);
     setServings(item.servings);
+    setEditingQueueItem(item);
     setStagedItems((prev) => prev.filter((i) => i.id !== item.id));
   };
 
@@ -667,9 +679,24 @@ function LogFoodModal({ isOpen, onClose, selectedDate, initialMeal = "Breakfast"
                     <>
                       <div className="space-y-3 bg-base-200/50 p-3 rounded-xl border border-base-300">
                       <div>
-                        <span className="text-[10px] font-bold text-primary uppercase tracking-wider">
-                          Selected Food
-                        </span>
+                        <div className="flex justify-between items-center">
+                          <span className="text-[10px] font-bold text-primary uppercase tracking-wider">
+                            Selected Food
+                          </span>
+                          {(stagedItems.length > 0 || editingQueueItem) && (
+                            <button
+                              type="button"
+                              className="btn btn-ghost btn-xs text-primary hover:bg-primary/10 p-1 flex items-center gap-1 font-bold rounded-lg"
+                              title="Return to Queue"
+                              onClick={handleBackToQueue}
+                            >
+                              <ChevronLeft size={14} />
+                              <span className="text-[11px]">
+                                Back to Queue ({stagedItems.length + (editingQueueItem ? 1 : 0)})
+                              </span>
+                            </button>
+                          )}
+                        </div>
                         <div className="flex justify-between items-center mt-0.5">
                           <h4 className="font-bold text-base leading-tight">{selectedFood.name}</h4>
                           <button
@@ -933,9 +960,20 @@ function LogFoodModal({ isOpen, onClose, selectedDate, initialMeal = "Breakfast"
 
                 {/* Footer Buttons */}
                 <div className="pt-3 border-t border-base-200 flex gap-2 shrink-0">
-                  <button className="btn btn-sm btn-ghost flex-1" onClick={onClose}>
-                    Cancel
-                  </button>
+                  {selectedFood && (stagedItems.length > 0 || editingQueueItem) ? (
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-ghost gap-1.5 font-bold text-base-content/70 hover:text-base-content flex-1"
+                      onClick={handleBackToQueue}
+                      title="Return to queued items"
+                    >
+                      <ChevronLeft size={16} /> Back to Queue ({stagedItems.length + (editingQueueItem ? 1 : 0)})
+                    </button>
+                  ) : (
+                    <button className="btn btn-sm btn-ghost flex-1" onClick={onClose}>
+                      Cancel
+                    </button>
+                  )}
                   {stagedItems.length > 0 ? (
                     <button
                       className="btn btn-sm btn-success text-white flex-1 gap-1.5 font-bold"

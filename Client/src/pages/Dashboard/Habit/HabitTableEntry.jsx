@@ -38,6 +38,7 @@ import {
   Sparkles,
   Book,
   Search,
+  RefreshCw,
 } from "lucide-react";
 
 import FoodLoggingTab from "../../../components/Dashboard/Habit/FoodLogging/FoodLoggingTab.jsx";
@@ -88,6 +89,7 @@ function HabitTableEntry() {
   const [currentPage, setCurrentPage] = useState(1);
   const [editingItem, setEditingItem] = useState(null);
   const [totalPages, setTotalPages] = useState();
+  const [isSyncingIntake, setIsSyncingIntake] = useState(false);
   //Error Alert Variables
   const [showErrorAlert, setShowErrorAlert] = useState(false);
   const [alertErrorMessage, setAlertErrorMessage] = useState("");
@@ -411,6 +413,32 @@ function HabitTableEntry() {
     }
   };
 
+  const handleSyncAllIntake = async () => {
+    try {
+      setIsSyncingIntake(true);
+      setLoading(true);
+      const res = await axiosInstance.post("/v1/dashboard/habit/table-entry/sync-intake", {
+        startDate: fromDate || null,
+        endDate: toDate || null,
+      });
+
+      const syncedCount = res.data?.data?.syncedCount || 0;
+      setAlertSuccessMessage(`Successfully synced intake for ${syncedCount} ${syncedCount === 1 ? "date" : "dates"} with food logging!`);
+      setShowSuccessAlert(true);
+      setTimeout(() => setShowSuccessAlert(false), 4000);
+      await fetchHabits(currentPage);
+    } catch (err) {
+      console.error("Failed to sync intake with food logging", err);
+      const errorMessage = err.response?.data?.message || "Failed to sync intake with food logging!";
+      setAlertErrorMessage(errorMessage);
+      setShowErrorAlert(true);
+      setTimeout(() => setShowErrorAlert(false), 4000);
+    } finally {
+      setIsSyncingIntake(false);
+      setLoading(false);
+    }
+  };
+
   // Add Data Function
   const handleAdd = async (newItem) => {
     // Check if the date already exists
@@ -693,10 +721,19 @@ function HabitTableEntry() {
                   Read
                 </div>
               </th>
-              <th className="w-[80px] text-center border border-base-100">
-                <div className="flex items-center justify-center gap-1">
-                  <Utensils className="w-4 h-4" />
-                  Intake
+              <th className="w-[100px] text-center border border-base-100">
+                <div className="flex items-center justify-center gap-1 font-bold">
+                  <Utensils className="w-4 h-4 text-warning" />
+                  <span>Intake</span>
+                  <button
+                    type="button"
+                    onClick={handleSyncAllIntake}
+                    disabled={isSyncingIntake}
+                    className="p-1 hover:bg-base-200/80 rounded-full transition-all text-base-content/70 hover:text-primary active:scale-95 disabled:opacity-50 cursor-pointer flex items-center justify-center ml-0.5"
+                    title="Sync with Food Logging"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isSyncingIntake ? "animate-spin text-primary" : ""}`} />
+                  </button>
                 </div>
               </th>
               <th className="w-[80px] text-center border border-base-100">

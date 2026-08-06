@@ -1,4 +1,6 @@
 import HabitTracker from "../../models/Habit-models/habitTracker.model.js";
+import FoodLog from "../../models/Habit-models/foodLog.model.js";
+import FoodDatabase from "../../models/Habit-models/foodDatabase.model.js";
 import RegisteredUsers from "../../models/User-models/registeredUser.model.js";
 import asynchandler from "../../utils/asyncHandler.js";
 import { ApiError } from "../../utils/ApiError.js";
@@ -217,4 +219,95 @@ const updateHabitTableEntry = asynchandler(async (req, res, next) => {
   );
 });
 
-export { readHabitTableData, createHabitTableEntry, deleteHabitTableEntry, updateHabitTableEntry };
+const syncIntakeWithFoodLogs = asynchandler(async (req, res, next) => {
+  const userId = req.user._id;
+  const { startDate, endDate } = req.body || {};
+
+  const parseToYYYYMMDD = (raw) => {
+    if (!raw) return "";
+    const str = String(raw).trim();
+    if (str.includes("T")) return str.split("T")[0].trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
+    const d = new Date(str);
+    if (isNaN(d.getTime())) return "";
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
+  };
+
+  const cleanStart = startDate ? parseToYYYYMMDD(startDate) : null;
+  const cleanEnd = endDate ? parseToYYYYMMDD(endDate) : null;
+
+  // Find all food logs for this user
+  const allLogs = await FoodLog.find({ userId });
+
+  // Group food log calories by date
+  const dailyCaloriesMap = {};
+  allLogs.forEach((log) => {
+    const dKey = parseToYYYYMMDD(log.date);
+    if (dKey) {
+      if (cleanStart && dKey < cleanStart) return;
+      if (cleanEnd && dKey > cleanEnd) return;
+
+      const logCals = Number(log.calories) || 0;
+      dailyCaloriesMap[dKey] = (dailyCaloriesMap[dKey] || 0) + Math.round(logCals);
+    }
+  });
+
+  const filter = { userId };
+  if (cleanStart && cleanEnd) {
+    filter.date = { $gte: cleanStart, $lte: cleanEnd };
+  } else if (cleanStart) {
+    filter.date = { $gte: cleanStart };
+  } else if (cleanEnd) {
+    filter.date = { $lte: cleanEnd };
+  }
+
+  const existingHabitEntries = await HabitTracker.find(filter);
+  const updatedDatesSet = new Set();
+  let syncedCount = 0;
+
+  for (const entry of existingHabitEntries) {
+    const dKey = entry.date;
+    if (dailyCaloriesMap[dKey] !== undefined) {
+      entry.habits.intake = dailyCaloriesMap[dKey];
+      await entry.save();
+      syncedCount++;
+    }
+    updatedDatesSet.add(dKey);
+  }
+
+  for (const [dKey, foodCalIntake] of Object.entries(dailyCaloriesMap)) {
+    if (!updatedDatesSet.has(dKey)) {
+      await HabitTracker.create({
+        userId,
+        date: dKey,
+        habits: {
+          burned: 0,
+          water: 0,
+          sleep: 0,
+          read: 0,
+          intake: foodCalIntake,
+          selfcare: "0",
+          mood: "Neutral",
+          journal: "",
+        },
+        progress: 0,
+        status: "inconsistent",
+        score: 0,
+      });
+      syncedCount++;
+    }
+  }
+
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      { syncedCount, totalDatesSynced: Object.keys(dailyCaloriesMap).length },
+      "Intake values successfully synced with food logging data"
+    )
+  );
+});
+
+export { readHabitTableData, createHabitTableEntry, deleteHabitTableEntry, updateHabitTableEntry, syncIntakeWithFoodLogs };

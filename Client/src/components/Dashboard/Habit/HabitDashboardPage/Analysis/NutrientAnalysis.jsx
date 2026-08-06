@@ -24,6 +24,8 @@ import {
   Rows,
   LineChart,
   BarChart2,
+  Filter,
+  TrendingDown,
 } from "lucide-react";
 import NutrientGraphCard from "../Charts/NutrientGraphCard";
 import NutrientWikiModal from "../../FoodLogging/NutrientWikiModal";
@@ -94,7 +96,7 @@ function CategoryTagBar({ category, categoryNutrients, activeSelected, toggleGra
   };
 
   return (
-    <div className="flex items-center gap-1.5 flex-1 min-w-0 max-w-3xl">
+    <div className="flex items-center gap-1.5 flex-1 min-w-0 w-full">
       <button
         type="button"
         onClick={() => scroll("left")}
@@ -212,6 +214,17 @@ function NutrientAnalysis({
     return "with-graph";
   });
 
+  // Target Filter: 'all' (Show All Cards) or 'below-max' (Only Show Cards where Avg < Max Target)
+  const [targetFilter, setTargetFilter] = useState(() => {
+    try {
+      const saved = localStorage.getItem("nutrient_card_target_filter");
+      if (saved) return saved;
+    } catch (e) {
+      console.error("Error reading nutrient_card_target_filter:", e);
+    }
+    return "all";
+  });
+
   // Save selected graphs to localStorage
   useEffect(() => {
     try {
@@ -238,6 +251,15 @@ function NutrientAnalysis({
       console.error("Failed to save nutrient_card_display_mode", e);
     }
   }, [displayMode]);
+
+  // Save target filter preference
+  useEffect(() => {
+    try {
+      localStorage.setItem("nutrient_card_target_filter", targetFilter);
+    } catch (e) {
+      console.error("Failed to save nutrient_card_target_filter", e);
+    }
+  }, [targetFilter]);
 
   const getTodayISO = () => {
     const today = new Date();
@@ -532,6 +554,14 @@ function NutrientAnalysis({
     setSelectedGraphs((prev) => ({ ...prev, [category]: list }));
   };
 
+  const selectAllGraphsForAllCategories = () => {
+    const initial = {};
+    Object.entries(NUTRIENT_CATEGORIES_CONFIG).forEach(([cat, list]) => {
+      initial[cat] = list.map((n) => n.id);
+    });
+    setSelectedGraphs(initial);
+  };
+
   const deselectAllGraphs = (category) => {
     setSelectedGraphs((prev) => ({ ...prev, [category]: [] }));
   };
@@ -544,6 +574,24 @@ function NutrientAnalysis({
       {categoriesToRender.map((category) => {
         const categoryNutrients = NUTRIENT_CATEGORIES_CONFIG[category] || [];
         const activeSelected = selectedGraphs[category] || [];
+
+        // Filter cards by active selections and optional Avg < Max Target condition
+        const selectedCategoryNutrients = categoryNutrients.filter((n) => activeSelected.includes(n.id));
+
+        const displayedNutrients = selectedCategoryNutrients.filter((nutrient) => {
+          if (targetFilter !== "below-max") return true;
+          const targetInfo = TARGETS_CONFIG[nutrient.id] || { min: 0, max: 0 };
+          const maxTarget = targetInfo.max || 0;
+          if (maxTarget <= 0) return true;
+
+          const dailyValues = calculateNutrientDailyValues(nutrient.id);
+          const values = dailyValues.map((d) => d.value || 0);
+          const totalConsumed = values.reduce((sum, val) => sum + val, 0);
+          const loggedDaysCount = dailyValues.filter((d) => d.hasLog || (d.value || 0) > 0).length;
+          const avgValue = loggedDaysCount > 0 ? totalConsumed / loggedDaysCount : 0;
+
+          return avgValue < maxTarget;
+        });
 
         return (
           <section key={category} className="space-y-4">
@@ -559,13 +607,48 @@ function NutrientAnalysis({
                       {category} Cards
                     </h3>
                     <span className="text-xs text-base-content/60 font-medium">
-                      {activeSelected.length} of {categoryNutrients.length} cards visible
+                      {displayedNutrients.length} of {categoryNutrients.length} cards visible
+                      {targetFilter === "below-max" && " (Filtered: Avg < Max Target)"}
                     </span>
                   </div>
                 </div>
 
                 {/* View Mode & Layout Control Buttons */}
                 <div className="flex items-center gap-2 flex-wrap">
+                  {/* Target Filter (All vs Avg < Max Target) */}
+                  <div className="join bg-base-200/80 p-1 rounded-2xl border border-base-300/60 shadow-xs">
+                    <button
+                      type="button"
+                      className={`join-item btn btn-xs rounded-xl font-bold gap-1.5 transition-all ${
+                        targetFilter === "all"
+                          ? "btn-primary text-primary-content shadow-xs"
+                          : "btn-ghost text-base-content/60 hover:text-base-content"
+                      }`}
+                      onClick={() => setTargetFilter("all")}
+                      title="Show All Selected Cards"
+                    >
+                      <Filter size={13} />
+                      <span className="hidden sm:inline">All Cards</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      className={`join-item btn btn-xs rounded-xl font-bold gap-1.5 transition-all ${
+                        targetFilter === "below-max"
+                          ? "btn-primary text-primary-content shadow-xs"
+                          : "btn-ghost text-base-content/60 hover:text-base-content"
+                      }`}
+                      onClick={() => {
+                        setTargetFilter("below-max");
+                        selectAllGraphsForAllCategories();
+                      }}
+                      title="Show only cards where Average is less than Max Target"
+                    >
+                      <TrendingDown size={13} />
+                      <span className="hidden sm:inline">Avg &lt; Max Target</span>
+                    </button>
+                  </div>
+
                   {/* Layout Mode (Side by Side vs Full Width) */}
                   <div className="join bg-base-200/80 p-1 rounded-2xl border border-base-300/60 shadow-xs">
                     <button
@@ -631,7 +714,7 @@ function NutrientAnalysis({
               </div>
 
               {/* Selector Pills with Left/Right Scroll Arrows */}
-              <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center justify-between gap-3 w-full">
                 <span className="text-xs font-semibold text-base-content/50 uppercase tracking-wider shrink-0 hidden md:inline">
                   Filter Nutrients:
                 </span>
@@ -647,38 +730,7 @@ function NutrientAnalysis({
             </div>
 
             {/* Render Selected Nutrient Cards Grid */}
-            {activeSelected.length > 0 ? (
-              <div
-                className={
-                  cardLayout === "full-width"
-                    ? "grid grid-cols-1 gap-5"
-                    : "grid grid-cols-1 lg:grid-cols-2 gap-5"
-                }
-              >
-                {categoryNutrients
-                  .filter((n) => activeSelected.includes(n.id))
-                  .map((nutrient) => {
-                    const dailyValues = calculateNutrientDailyValues(nutrient.id);
-                    const targetInfo = TARGETS_CONFIG[nutrient.id] || { min: 0, max: 0 };
-                    const nutrientProps = {
-                      ...nutrient,
-                      minTarget: targetInfo.min || 0,
-                      maxTarget: targetInfo.max || 0,
-                    };
-
-                    return (
-                      <NutrientGraphCard
-                        key={nutrient.id}
-                        nutrient={nutrientProps}
-                        dailyData={dailyValues}
-                        totalDays={dateRangeList.length}
-                        showGraph={displayMode === "with-graph"}
-                        onOpenWiki={(nutr) => setSelectedWikiNutrient(nutr)}
-                      />
-                    );
-                  })}
-              </div>
-            ) : (
+            {activeSelected.length === 0 ? (
               <div className="bg-base-100 p-8 rounded-2xl border border-dashed border-base-300 text-center space-y-2">
                 <p className="text-sm font-semibold text-base-content/60">
                   No graphs selected for <span className="text-primary">{category}</span>.
@@ -689,6 +741,47 @@ function NutrientAnalysis({
                 >
                   Show All {category} Graphs
                 </button>
+              </div>
+            ) : displayedNutrients.length === 0 ? (
+              <div className="bg-base-100 p-8 rounded-2xl border border-dashed border-base-300 text-center space-y-2">
+                <p className="text-sm font-semibold text-base-content/60">
+                  No nutrient cards in <span className="text-primary">{category}</span> have a daily Average less than their Max Target.
+                </p>
+                <button
+                  className="btn btn-xs btn-ghost border border-base-300 rounded-xl px-4 font-semibold"
+                  onClick={() => setTargetFilter("all")}
+                >
+                  Show All Cards
+                </button>
+              </div>
+            ) : (
+              <div
+                className={
+                  cardLayout === "full-width"
+                    ? "grid grid-cols-1 gap-5"
+                    : "grid grid-cols-1 lg:grid-cols-2 gap-5"
+                }
+              >
+                {displayedNutrients.map((nutrient) => {
+                  const dailyValues = calculateNutrientDailyValues(nutrient.id);
+                  const targetInfo = TARGETS_CONFIG[nutrient.id] || { min: 0, max: 0 };
+                  const nutrientProps = {
+                    ...nutrient,
+                    minTarget: targetInfo.min || 0,
+                    maxTarget: targetInfo.max || 0,
+                  };
+
+                  return (
+                    <NutrientGraphCard
+                      key={nutrient.id}
+                      nutrient={nutrientProps}
+                      dailyData={dailyValues}
+                      totalDays={dateRangeList.length}
+                      showGraph={displayMode === "with-graph"}
+                      onOpenWiki={(nutr) => setSelectedWikiNutrient(nutr)}
+                    />
+                  );
+                })}
               </div>
             )}
           </section>

@@ -609,10 +609,10 @@ function FoodLoggingTab() {
               <div
                 tabIndex={0}
                 role="button"
-                className="input text-xs w-28 bg-base-100 flex items-center justify-between cursor-pointer"
+                className="input text-xs w-44 bg-base-100 flex items-center justify-between cursor-pointer px-3"
               >
-                <Calendar size={14} className="text-primary mr-1" />
-                <span className="font-medium">{formatDate(selectedDate) || "-- / --- / --"}</span>
+                <Calendar size={14} className="text-primary shrink-0 mr-1.5" />
+                <span className="font-medium whitespace-nowrap truncate">{formatDate(selectedDate) || "-- / --- / --"}</span>
               </div>
               <span>Select Date</span>
               <div className="dropdown-content z-[999] bg-base-100 rounded-box shadow-xl p-2 mt-1 border border-base-300">
