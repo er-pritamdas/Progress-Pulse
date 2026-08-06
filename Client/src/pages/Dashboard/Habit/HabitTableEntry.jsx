@@ -39,6 +39,7 @@ import {
   Book,
   Search,
   RefreshCw,
+  Filter,
 } from "lucide-react";
 
 import FoodLoggingTab from "../../../components/Dashboard/Habit/FoodLogging/FoodLoggingTab.jsx";
@@ -90,6 +91,17 @@ function HabitTableEntry() {
   const [editingItem, setEditingItem] = useState(null);
   const [totalPages, setTotalPages] = useState();
   const [isSyncingIntake, setIsSyncingIntake] = useState(false);
+  const [columnFilters, setColumnFilters] = useState({
+    burned: { mode: "all", value: "" },
+    water: { mode: "all", value: "" },
+    sleep: { mode: "all", value: "" },
+    read: { mode: "all", value: "" },
+    intake: { mode: "all", value: "" },
+    selfcare: [],
+    mood: [],
+    progress: [],
+  });
+
   //Error Alert Variables
   const [showErrorAlert, setShowErrorAlert] = useState(false);
   const [alertErrorMessage, setAlertErrorMessage] = useState("");
@@ -99,21 +111,25 @@ function HabitTableEntry() {
 
   // -------------------------------------------------------------------- Functions ---------------------------------------------------------------
 
-  const resetFilters = () => {
-    dispatch(resetHabitFilters());
-  };
-
   const getConsistencyLabel = (percentage) => {
     if (percentage <= 25) return "Inconsistent";
     if (percentage <= 50) return "Uncertain";
     if (percentage <= 75) return "Moderate";
     return "Consistent";
   };
+
   const getConsistencyColor = (percentage) => {
     if (percentage < 25) return "text-error";
     if (percentage < 50) return "text-warning";
     if (percentage < 75) return "text-info";
     return "text-success";
+  };
+
+  const getProgressColorClass = (percentage) => {
+    if (percentage >= 75) return "progress-success";
+    if (percentage >= 50) return "progress-info";
+    if (percentage >= 25) return "progress-warning";
+    return "progress-error";
   };
 
   const getScoreColor = (score) => {
@@ -125,11 +141,459 @@ function HabitTableEntry() {
   };
 
   const getColorClass = (field, value, settings) => {
-    if (!settings[field]) return "text-gray-500"; // fallback
+    if (!settings[field]) return "text-gray-500";
     const { min, max } = settings[field];
     if (value < min) return "text-warning";
     if (value > max) return "text-error";
     return "text-success";
+  };
+
+  const calculateProgress = (item) => {
+    if (!item) return 0;
+    const fields = [
+      "burned",
+      "water",
+      "sleep",
+      "read",
+      "intake",
+      "selfcare",
+      "mood",
+    ];
+
+    const filled = fields.filter((key) => {
+      const value = item[key];
+      if (key === "selfcare") {
+        const requiredLength = settings.selfcare ? settings.selfcare.length : 0;
+        const emptySelfcare = "_".repeat(requiredLength);
+        return value && value !== emptySelfcare;
+      }
+      return value && value.toString().trim() !== "0";
+    });
+
+    const progressPercentage = Math.round(
+      (filled.length / fields.length) * 100
+    );
+
+    item["score"] = filled.length;
+    item["progress"] = progressPercentage;
+    return progressPercentage;
+  };
+
+  const calculateScore = (item) => {
+    if (!item) return 0;
+    const fields = [
+      "burned",
+      "water",
+      "sleep",
+      "read",
+      "intake",
+      "selfcare",
+      "mood",
+    ];
+
+    const filled = fields.filter((key) => {
+      const value = item[key];
+      if (key === "selfcare") {
+        const requiredLength = settings.selfcare ? settings.selfcare.length : 0;
+        const emptySelfcare = "_".repeat(requiredLength);
+        return value && value !== emptySelfcare;
+      }
+      return value && value.toString().trim() !== "0";
+    });
+    const score = filled.length;
+    item["score"] = filled.length;
+    return score;
+  };
+
+  const resetFilters = () => {
+    dispatch(resetHabitFilters());
+    setColumnFilters({
+      burned: { mode: "all", value: "" },
+      water: { mode: "all", value: "" },
+      sleep: { mode: "all", value: "" },
+      read: { mode: "all", value: "" },
+      intake: { mode: "all", value: "" },
+      selfcare: [],
+      mood: [],
+      progress: [],
+    });
+  };
+
+  const isRowMatchingColumnFilter = (item, colKey) => {
+    if (colKey === "selfcare") {
+      const selectedSelfCare = columnFilters.selfcare || [];
+      if (selectedSelfCare.length === 0) return true;
+      const rawSelfCare = String(item.selfcare || "");
+      const allConfiguredHabits = settings.selfcare || [];
+
+      return selectedSelfCare.every((habit) => {
+        const index = allConfiguredHabits.indexOf(habit);
+        if (index !== -1) {
+          const expectedChar = habit[0].toUpperCase();
+          return rawSelfCare[index] === expectedChar;
+        }
+        return rawSelfCare.toUpperCase().includes(habit[0].toUpperCase());
+      });
+    }
+
+    if (colKey === "mood") {
+      const selectedMoods = columnFilters.mood || [];
+      if (selectedMoods.length === 0) return true;
+      return selectedMoods.includes(item.mood);
+    }
+
+    if (colKey === "progress") {
+      const selectedProgress = columnFilters.progress || [];
+      if (selectedProgress.length === 0) return true;
+      const progressPercent = calculateProgress(item);
+      const label = getConsistencyLabel(progressPercent);
+      return selectedProgress.includes(label);
+    }
+
+    const filter = columnFilters[colKey];
+    if (!filter || filter.mode === "all") return true;
+
+    const val = Number(item[colKey] || 0);
+    const colSettings = settings?.[colKey] || { min: 0, max: 0 };
+    const minVal = Number(colSettings.min || 0);
+    const maxVal = Number(colSettings.max || 0);
+
+    if (filter.mode === "below_min") {
+      return val < minVal;
+    }
+    if (filter.mode === "within_range") {
+      return val >= minVal && val <= maxVal;
+    }
+    if (filter.mode === "above_max") {
+      return val > maxVal;
+    }
+    if (filter.mode === "gt") {
+      const threshold = parseFloat(filter.value);
+      return isNaN(threshold) ? true : val > threshold;
+    }
+    if (filter.mode === "lt") {
+      const threshold = parseFloat(filter.value);
+      return isNaN(threshold) ? true : val < threshold;
+    }
+    return true;
+  };
+
+  const filteredData = data.filter((item) => {
+    return (
+      isRowMatchingColumnFilter(item, "burned") &&
+      isRowMatchingColumnFilter(item, "water") &&
+      isRowMatchingColumnFilter(item, "sleep") &&
+      isRowMatchingColumnFilter(item, "read") &&
+      isRowMatchingColumnFilter(item, "intake") &&
+      isRowMatchingColumnFilter(item, "selfcare") &&
+      isRowMatchingColumnFilter(item, "mood") &&
+      isRowMatchingColumnFilter(item, "progress")
+    );
+  });
+
+  const renderMultiSelectHeader = (colKey, label, IconComponent, optionsList) => {
+    const selectedOptions = columnFilters[colKey] || [];
+    const isFiltered = selectedOptions.length > 0;
+
+    const handleToggleOption = (option) => {
+      setColumnFilters((prev) => {
+        const current = prev[colKey] || [];
+        const updated = current.includes(option)
+          ? current.filter((item) => item !== option)
+          : [...current, option];
+        return { ...prev, [colKey]: updated };
+      });
+    };
+
+    const handleSelectAll = () => {
+      setColumnFilters((prev) => ({
+        ...prev,
+        [colKey]: [...optionsList],
+      }));
+    };
+
+    const handleClearAll = () => {
+      setColumnFilters((prev) => ({
+        ...prev,
+        [colKey]: [],
+      }));
+    };
+
+    return (
+      <th className="px-3 py-2.5 text-center border border-base-100 whitespace-nowrap min-w-[130px] relative">
+        <div className="flex items-center justify-center gap-1.5 font-bold whitespace-nowrap">
+          <IconComponent className="w-4 h-4 text-primary shrink-0" />
+          <span className="whitespace-nowrap">{label}</span>
+
+          <div className="dropdown dropdown-end">
+            <button
+              type="button"
+              tabIndex={0}
+              role="button"
+              className={`p-1 rounded-full transition-all flex items-center justify-center ml-0.5 cursor-pointer shrink-0 ${
+                isFiltered
+                  ? "bg-primary text-primary-content shadow-md scale-105"
+                  : "text-base-content/60 hover:text-primary hover:bg-base-200"
+              }`}
+              title={`Filter ${label}`}
+            >
+              <Filter className="w-3.5 h-3.5 shrink-0" />
+            </button>
+
+            <div
+              tabIndex={0}
+              className="dropdown-content z-[999] menu p-3 shadow-2xl bg-base-100 rounded-2xl w-56 text-xs border border-base-300 text-left font-normal mt-2"
+            >
+              <div className="flex items-center justify-between pb-2 mb-2 border-b border-base-200">
+                <span className="font-bold text-xs text-base-content flex items-center gap-1">
+                  <Filter className="w-3.5 h-3.5 text-primary" /> Filter {label}
+                </span>
+                {isFiltered && (
+                  <span className="badge badge-primary badge-xs">
+                    {selectedOptions.length} Selected
+                  </span>
+                )}
+              </div>
+
+              <div className="flex justify-between text-[11px] text-primary px-1 pb-2 mb-1 border-b border-base-200">
+                <button
+                  type="button"
+                  className="hover:underline cursor-pointer"
+                  onClick={handleSelectAll}
+                >
+                  Select All
+                </button>
+                <button
+                  type="button"
+                  className="hover:underline text-error cursor-pointer"
+                  onClick={handleClearAll}
+                >
+                  Clear All
+                </button>
+              </div>
+
+              <div className="space-y-1 max-h-48 overflow-y-auto pr-1">
+                {optionsList.map((option) => {
+                  const isChecked = selectedOptions.includes(option);
+                  return (
+                    <label
+                      key={option}
+                      className="flex items-center gap-2 cursor-pointer hover:bg-base-200 p-1.5 rounded-lg transition-colors"
+                    >
+                      <input
+                        type="checkbox"
+                        className="checkbox checkbox-xs checkbox-primary"
+                        checked={isChecked}
+                        onChange={() => handleToggleOption(option)}
+                      />
+                      <span className="truncate">{option}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+      </th>
+    );
+  };
+
+  const renderColumnHeader = (colKey, label, IconComponent, unit = "", extraAction = null) => {
+    const filter = columnFilters[colKey] || { mode: "all", value: "" };
+    const isFiltered = filter.mode !== "all";
+    const colSettings = settings?.[colKey] || { min: 0, max: 0 };
+
+    return (
+      <th className="px-3 py-2.5 text-center border border-base-100 whitespace-nowrap min-w-[125px] relative">
+        <div className="flex items-center justify-center gap-1.5 font-bold whitespace-nowrap">
+          <IconComponent className="w-4 h-4 text-primary shrink-0" />
+          <span className="whitespace-nowrap">{label}</span>
+          {extraAction}
+
+          {/* Column Filter Dropdown */}
+          <div className="dropdown dropdown-end">
+            <button
+              type="button"
+              tabIndex={0}
+              role="button"
+              className={`p-1 rounded-full transition-all flex items-center justify-center ml-0.5 cursor-pointer shrink-0 ${
+                isFiltered
+                  ? "bg-primary text-primary-content shadow-md scale-105"
+                  : "text-base-content/60 hover:text-primary hover:bg-base-200"
+              }`}
+              title={`Filter ${label}`}
+            >
+              <Filter className="w-3.5 h-3.5 shrink-0" />
+            </button>
+
+            <div
+              tabIndex={0}
+              className="dropdown-content z-[999] menu p-3 shadow-2xl bg-base-100 rounded-2xl w-60 text-xs border border-base-300 text-left font-normal mt-2"
+            >
+              <div className="flex items-center justify-between pb-2 mb-2 border-b border-base-200">
+                <span className="font-bold text-xs text-base-content flex items-center gap-1">
+                  <Filter className="w-3.5 h-3.5 text-primary" /> Filter {label}
+                </span>
+                <span className="text-[10px] bg-base-200 px-2 py-0.5 rounded-full text-base-content/70">
+                  Target: {colSettings.min} - {colSettings.max} {unit}
+                </span>
+              </div>
+
+              <div className="space-y-1">
+                {/* 1. All */}
+                <label className="flex items-center gap-2 cursor-pointer hover:bg-base-200 p-1.5 rounded-lg transition-colors">
+                  <input
+                    type="radio"
+                    name={`filter-${colKey}`}
+                    className="radio radio-xs radio-primary"
+                    checked={filter.mode === "all"}
+                    onChange={() =>
+                      setColumnFilters((prev) => ({
+                        ...prev,
+                        [colKey]: { ...prev[colKey], mode: "all" },
+                      }))
+                    }
+                  />
+                  <span>All Entries</span>
+                </label>
+
+                {/* 2. Below Min */}
+                <label className="flex items-center gap-2 cursor-pointer hover:bg-base-200 p-1.5 rounded-lg transition-colors">
+                  <input
+                    type="radio"
+                    name={`filter-${colKey}`}
+                    className="radio radio-xs radio-warning"
+                    checked={filter.mode === "below_min"}
+                    onChange={() =>
+                      setColumnFilters((prev) => ({
+                        ...prev,
+                        [colKey]: { ...prev[colKey], mode: "below_min" },
+                      }))
+                    }
+                  />
+                  <span>Below Min (&lt; {colSettings.min})</span>
+                </label>
+
+                {/* 3. Within Range */}
+                <label className="flex items-center gap-2 cursor-pointer hover:bg-base-200 p-1.5 rounded-lg transition-colors">
+                  <input
+                    type="radio"
+                    name={`filter-${colKey}`}
+                    className="radio radio-xs radio-success"
+                    checked={filter.mode === "within_range"}
+                    onChange={() =>
+                      setColumnFilters((prev) => ({
+                        ...prev,
+                        [colKey]: { ...prev[colKey], mode: "within_range" },
+                      }))
+                    }
+                  />
+                  <span>Within Range ({colSettings.min} - {colSettings.max})</span>
+                </label>
+
+                {/* 4. Above Max */}
+                <label className="flex items-center gap-2 cursor-pointer hover:bg-base-200 p-1.5 rounded-lg transition-colors">
+                  <input
+                    type="radio"
+                    name={`filter-${colKey}`}
+                    className="radio radio-xs radio-error"
+                    checked={filter.mode === "above_max"}
+                    onChange={() =>
+                      setColumnFilters((prev) => ({
+                        ...prev,
+                        [colKey]: { ...prev[colKey], mode: "above_max" },
+                      }))
+                    }
+                  />
+                  <span>Above Max (&gt; {colSettings.max})</span>
+                </label>
+
+                {/* 5. > Custom Value */}
+                <div className="p-1.5 rounded-lg hover:bg-base-200">
+                  <label className="flex items-center gap-2 cursor-pointer mb-1">
+                    <input
+                      type="radio"
+                      name={`filter-${colKey}`}
+                      className="radio radio-xs radio-primary"
+                      checked={filter.mode === "gt"}
+                      onChange={() =>
+                        setColumnFilters((prev) => ({
+                          ...prev,
+                          [colKey]: { ...prev[colKey], mode: "gt" },
+                        }))
+                      }
+                    />
+                    <span>&gt; Custom Value</span>
+                  </label>
+                  {filter.mode === "gt" && (
+                    <input
+                      type="number"
+                      placeholder={`Greater than... (${unit})`}
+                      className="input input-xs input-bordered w-full bg-base-100"
+                      value={filter.value}
+                      onChange={(e) =>
+                        setColumnFilters((prev) => ({
+                          ...prev,
+                          [colKey]: { ...prev[colKey], value: e.target.value },
+                        }))
+                      }
+                    />
+                  )}
+                </div>
+
+                {/* 6. < Custom Value */}
+                <div className="p-1.5 rounded-lg hover:bg-base-200">
+                  <label className="flex items-center gap-2 cursor-pointer mb-1">
+                    <input
+                      type="radio"
+                      name={`filter-${colKey}`}
+                      className="radio radio-xs radio-primary"
+                      checked={filter.mode === "lt"}
+                      onChange={() =>
+                        setColumnFilters((prev) => ({
+                          ...prev,
+                          [colKey]: { ...prev[colKey], mode: "lt" },
+                        }))
+                      }
+                    />
+                    <span>&lt; Custom Value</span>
+                  </label>
+                  {filter.mode === "lt" && (
+                    <input
+                      type="number"
+                      placeholder={`Less than... (${unit})`}
+                      className="input input-xs input-bordered w-full bg-base-100"
+                      value={filter.value}
+                      onChange={(e) =>
+                        setColumnFilters((prev) => ({
+                          ...prev,
+                          [colKey]: { ...prev[colKey], value: e.target.value },
+                        }))
+                      }
+                    />
+                  )}
+                </div>
+              </div>
+
+              {isFiltered && (
+                <button
+                  type="button"
+                  className="btn btn-xs btn-soft btn-error mt-2 w-full"
+                  onClick={() =>
+                    setColumnFilters((prev) => ({
+                      ...prev,
+                      [colKey]: { mode: "all", value: "" },
+                    }))
+                  }
+                >
+                  Reset Column Filter
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      </th>
+    );
   };
 
   const fetchHabits = async (page = currentPage) => {
@@ -185,85 +649,6 @@ function HabitTableEntry() {
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, [editingItem]);
-
-  // Progress Color function
-  const getProgressColorClass = (percentage) => {
-    if (percentage >= 75) return "progress-success"; // 75–100% → consistent → 🟢
-    if (percentage >= 50) return "progress-info"; // 50–74% → moderate → 🔵
-    if (percentage >= 25) return "progress-warning"; // 25–49% → uncertain → 🟠
-    return "progress-error"; // 00–24% → inconsistent → 🔴
-  };
-
-  // calculate Progress Function
-  const calculateProgress = (item) => {
-    if (!item) return 0;
-
-    const fields = [
-      "burned",
-      "water",
-      "sleep",
-      "read",
-      "intake",
-      "selfcare",
-      "mood",
-    ];
-
-    const filled = fields.filter((key) => {
-      const value = item[key];
-
-      // Special handling for selfcare
-      if (key === "selfcare") {
-        // console.log(settings.selfcare.length)
-        const requiredLength = settings.selfcare.length;
-        const emptySelfcare = "_".repeat(requiredLength);
-        return value && value !== emptySelfcare;
-      }
-
-      // Regular check for other fields
-      return value && value.toString().trim() !== "0";
-    });
-
-    const progressPercentage = Math.round(
-      (filled.length / fields.length) * 100
-    );
-
-    item["score"] = filled.length;
-    item["progress"] = progressPercentage;
-    return progressPercentage;
-  };
-
-  // Calculate Score
-  const calculateScore = (item) => {
-    if (!item) return 0;
-
-    const fields = [
-      "burned",
-      "water",
-      "sleep",
-      "read",
-      "intake",
-      "selfcare",
-      "mood",
-    ];
-
-    const filled = fields.filter((key) => {
-      const value = item[key];
-
-      // Special handling for selfcare
-      if (key === "selfcare") {
-        // console.log(settings.selfcare.length)
-        const requiredLength = settings.selfcare.length;
-        const emptySelfcare = "_".repeat(requiredLength);
-        return value && value !== emptySelfcare;
-      }
-
-      // Regular check for other fields
-      return value && value.toString().trim() !== "0";
-    });
-    const score = filled.length;
-    item["score"] = filled.length;
-    return score;
-  };
 
   // Delection Data Function
   const handleDeleteClick = (date) => {
@@ -691,81 +1076,42 @@ function HabitTableEntry() {
 
             {/* Heading Row */}
             <tr>
-              <th className="w-[115px] text-center border border-base-100">
-                <div className="flex items-center justify-center gap-1">
-                  <CalendarDays className="w-4 h-4" />
-                  Date
+              <th className="px-3 py-2.5 text-center border border-base-100 whitespace-nowrap min-w-[125px]">
+                <div className="flex items-center justify-center gap-1.5 font-bold whitespace-nowrap">
+                  <CalendarDays className="w-4 h-4 text-primary shrink-0" />
+                  <span className="whitespace-nowrap">Date</span>
                 </div>
               </th>
-              <th className="w-[80px] text-center border border-base-100">
-                <div className="flex items-center justify-center gap-1">
-                  <Flame className="w-4 h-4" />
-                  Burned
-                </div>
-              </th>
-              <th className="w-[80px] text-center border border-base-100">
-                <div className="flex items-center justify-center gap-1">
-                  <Droplet className="w-4 h-4" />
-                  Water
-                </div>
-              </th>
-              <th className="w-[80px] text-center border border-base-100">
-                <div className="flex items-center justify-center gap-1">
-                  <BedDouble className="w-4 h-4" />
-                  Sleep
-                </div>
-              </th>
-              <th className="w-[80px] text-center border border-base-100">
-                <div className="flex items-center justify-center gap-1">
-                  <BookOpen className="w-4 h-4" />
-                  Read
-                </div>
-              </th>
-              <th className="w-[100px] text-center border border-base-100">
-                <div className="flex items-center justify-center gap-1 font-bold">
-                  <Utensils className="w-4 h-4 text-warning" />
-                  <span>Intake</span>
-                  <button
-                    type="button"
-                    onClick={handleSyncAllIntake}
-                    disabled={isSyncingIntake}
-                    className="p-1 hover:bg-base-200/80 rounded-full transition-all text-base-content/70 hover:text-primary active:scale-95 disabled:opacity-50 cursor-pointer flex items-center justify-center ml-0.5"
-                    title="Sync with Food Logging"
-                  >
-                    <RefreshCw className={`w-3.5 h-3.5 ${isSyncingIntake ? "animate-spin text-primary" : ""}`} />
-                  </button>
-                </div>
-              </th>
-              <th className="w-[80px] text-center border border-base-100">
-                <div className="flex items-center justify-center gap-1">
-                  <Heart className="w-4 h-4" />
-                  Self Care
-                </div>
-              </th>
-              <th className="w-[80px]text-center border border-base-100">
-                <div className="flex items-center justify-center gap-1">
-                  <Smile className="w-4 h-4" />
-                  Mood
-                </div>
-              </th>
-              <th className="w-[80px] text-center border border-base-100">
-                <div className="flex items-center justify-center gap-1">
-                  <BarChart3 className="w-4 h-4" />
-                  Progress
+              {renderColumnHeader("burned", "Burned", Flame, "Kcal")}
+              {renderColumnHeader("water", "Water", Droplet, "Ltr")}
+              {renderColumnHeader("sleep", "Sleep", BedDouble, "Hrs")}
+              {renderColumnHeader("read", "Read", BookOpen, "Hrs")}
+              {renderColumnHeader("intake", "Intake", Utensils, "Kcal", (
+                <button
+                  type="button"
+                  onClick={handleSyncAllIntake}
+                  disabled={isSyncingIntake}
+                  className="p-1 hover:bg-base-200/80 rounded-full transition-all text-base-content/70 hover:text-primary active:scale-95 disabled:opacity-50 cursor-pointer flex items-center justify-center ml-0.5"
+                  title="Sync with Food Logging"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${isSyncingIntake ? "animate-spin text-primary" : ""}`} />
+                </button>
+              ))}
+              {renderMultiSelectHeader("selfcare", "Self Care", Heart, settings.selfcare || [])}
+              {renderMultiSelectHeader("mood", "Mood", Smile, settings.mood || [])}
+              {renderMultiSelectHeader("progress", "Progress", BarChart3, ["Inconsistent", "Uncertain", "Moderate", "Consistent"])}
+
+              <th className="px-3 py-2.5 text-center border border-base-100 whitespace-nowrap min-w-[95px]">
+                <div className="flex justify-center items-center gap-1.5 font-bold whitespace-nowrap">
+                  <Sparkles className="w-4 h-4 text-warning shrink-0" />
+                  <span className="whitespace-nowrap">Score</span>
                 </div>
               </th>
 
-              <th className="w-[80px] text-center border border-base-100">
-                <div className="flex justify-center items-center justify-center gap-1">
-                  <Sparkles className="w-4 h-4" />
-                  Score
-                </div>
-              </th>
-
-              <th className="w-[80px] text-center border border-base-100">
-                <div className="flex justify-center items-center justify-center gap-1">
-                  <MoreHorizontal className="w-4 h-4" />
-                  Actions
+              <th className="px-3 py-2.5 text-center border border-base-100 whitespace-nowrap min-w-[95px]">
+                <div className="flex justify-center items-center gap-1.5 font-bold whitespace-nowrap">
+                  <MoreHorizontal className="w-4 h-4 shrink-0" />
+                  <span className="whitespace-nowrap">Actions</span>
                 </div>
               </th>
             </tr>
@@ -773,7 +1119,7 @@ function HabitTableEntry() {
 
           {/* Table Body */}
           <tbody>
-            {data.length === 0 ? (
+            {filteredData.length === 0 ? (
               // Message Row for empty Data
               <tr>
                 <td
@@ -782,22 +1128,22 @@ function HabitTableEntry() {
                 >
                   <div className="flex flex-col justify-center items-center h-full space-y-4">
                     <div className="text-2xl font-semibold">
-                      No habit entries found
+                      No habit entries match the current filter
                     </div>
                     <div className="text-md">
-                      Start tracking your progress by adding your first entry.
+                      Try adjusting or resetting your column filters to see more entries.
                     </div>
                     <button
                       className="btn btn-soft btn-primary btn-sm px-6"
-                      onClick={handleAddEntryClick}
+                      onClick={resetFilters}
                     >
-                      + Add Entry
+                      Reset Filters
                     </button>
                   </div>
                 </td>
               </tr>
             ) : (
-              data.map((item) =>
+              filteredData.map((item) =>
                 editingItem?.date === item.date ? (
                   // ---------- Input Row --------
                   <tr key={item.date} className="text-center">
