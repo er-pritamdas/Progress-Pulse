@@ -64,16 +64,15 @@ function HabitTableEntry() {
     (state) => state.habit.filters
   );
 
-  // Format Date Function
+  // Format Date Function (DD-MMM-YYYY)
   const formatDate = (dateString) => {
     if (!dateString) return "";
     const date = new Date(dateString.includes("T") ? dateString : `${dateString}T00:00:00`);
     if (isNaN(date.getTime())) return dateString;
-    const weekday = date.toLocaleDateString("en-US", { weekday: "short" });
     const day = String(date.getDate()).padStart(2, "0");
     const month = date.toLocaleDateString("en-US", { month: "short" });
-    const year = String(date.getFullYear()).slice(2);
-    return `${weekday}, ${day}-${month}-${year}`;
+    const year = date.getFullYear();
+    return `${day}-${month}-${year}`;
   };
 
   // variables

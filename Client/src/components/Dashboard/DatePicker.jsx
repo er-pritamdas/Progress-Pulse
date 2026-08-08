@@ -1,48 +1,85 @@
-import React, { useState, useRef } from 'react';
+import React from "react";
+import dayjs from "dayjs";
+import { Calendar } from "lucide-react";
 
-function DatePicker() {
-  const [rawDate, setRawDate] = useState('');
-  const dateInputRef = useRef(null);
+/**
+ * Formats any valid date string or Date object into DD-MMM-YYYY format.
+ * Example: "2026-08-08" -> "08-Aug-2026"
+ */
+export const formatDateDDMMMYYYY = (dateStr) => {
+  if (!dateStr || dateStr === "-") return "-";
+  const dateObj = dayjs(dateStr);
+  if (!dateObj.isValid()) return dateStr;
+  return dateObj.format("DD-MMM-YYYY");
+};
 
-  // Format to: 09 Apr 2025
-  const formatDate = (inputDate) => {
-    if (!inputDate) return '';
-    const options = { day: '2-digit', month: 'short', year: 'numeric' };
-    return new Date(inputDate).toLocaleDateString('en-GB', options).replace(/ /g, ' ');
-  };
-
-  const handleTextInputClick = () => {
-    dateInputRef.current.showPicker(); // Native date picker trigger
-  };
+/**
+ * Reusable Cally Dropdown Calendar DatePicker Component.
+ * Consistent across whole application with DD-MMM-YYYY formatting.
+ */
+export const CallyDatePicker = ({
+  value,
+  onChange,
+  placeholder = "Select Date",
+  className = "",
+  size = "sm",
+  required = false
+}) => {
+  const displayVal = value ? formatDateDDMMMYYYY(value) : placeholder;
 
   return (
-    <div className="form-control w-full max-w-xs">
-      <label className="label">
-        <span className="label-text text-sm">Select Date</span>
-      </label>
-
-      <div className="relative">
-        {/* Styled visible text input */}
-        <input
-          type="text"
-          className="input input-sm input-bordered w-full pr-10 cursor-pointer text-sm"
-          onClick={handleTextInputClick}
-          value={formatDate(rawDate)}
-          readOnly
-        />
-        <span className="absolute right-3 top-1 pointer-events-none opacity-80 text-sm">📅</span>
-
-        {/* Hidden native date input */}
-        <input
-          type="date"
-          ref={dateInputRef}
-          className="absolute opacity-0 pointer-events-none w-0 h-0"
-          value={rawDate}
-          onChange={(e) => setRawDate(e.target.value)}
-        />
+    <div className={`dropdown dropdown-bottom ${className}`}>
+      <div
+        tabIndex={0}
+        role="button"
+        className={`input input-${size} input-bordered focus:outline-none focus:ring-0 focus:border-primary/40 w-full flex items-center justify-between cursor-pointer font-bold text-xs rounded-xl bg-base-100`}
+      >
+        <span className="truncate flex items-center gap-2">
+          <Calendar size={14} className="shrink-0 text-primary" />
+          <span className={value ? "text-base-content font-bold" : "text-base-content/40 font-normal"}>
+            {displayVal}
+          </span>
+        </span>
+        <span className="text-[10px] opacity-40">▼</span>
+      </div>
+      <div
+        tabIndex={0}
+        className="dropdown-content z-[99999] bg-base-100 rounded-2xl shadow-2xl p-2 border border-base-200 mt-1 animate-in fade-in zoom-in-95 duration-150"
+      >
+        <calendar-date
+          class="cally"
+          value={value || undefined}
+          onchange={(e) => {
+            if (e.target.value) {
+              onChange(e.target.value);
+              e.currentTarget.closest(".dropdown")?.removeAttribute("open");
+              document.activeElement?.blur();
+            }
+          }}
+        >
+          <svg
+            aria-label="Previous"
+            className="fill-current size-4"
+            slot="previous"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+          >
+            <path d="M15.75 19.5 8.25 12l7.5-7.5" />
+          </svg>
+          <svg
+            aria-label="Next"
+            className="fill-current size-4"
+            slot="next"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+          >
+            <path d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+          </svg>
+          <calendar-month></calendar-month>
+        </calendar-date>
       </div>
     </div>
   );
-}
+};
 
-export default DatePicker;
+export default CallyDatePicker;

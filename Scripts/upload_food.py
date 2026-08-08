@@ -41,70 +41,7 @@ COLLECTION_NAME = "fooddatabases"
 # PASTE YOUR RAW JSON HERE (Copy & Paste directly with "null" / "false")
 # ==============================================================================
 RAW_JSON_DATA = """
-[
-  {
-    "foodId": "",
-    "name": "Ghonto (Bengali Mixed Vegetable)",
-    "brand": "Generic",
-    "category": "Vegetables",
-    "subCategory": "Mixed Vegetable Curry",
-    "unitType": "100 g",
-    "servingSize": 100,
-    "source": "IFCT 2017 + USDA FoodData Central (Estimated Home-style Recipe)",
-    "notes": "Homemade Bengali ghonto prepared with pumpkin, potato, small quantity of black chana and dried white matar, panch phoron, onion, ginger, turmeric, cumin, coriander, red chilli powder and very little mustard oil. Home-style low-oil preparation.",
 
-    "calories": 93,
-    "protein": 3.40,
-    "carbohydrates": 15.80,
-    "netCarbs": 12.40,
-    "fat": 2.20,
-    "fiber": 3.40,
-    "sugar": 3.80,
-    "addedSugar": 0.00,
-
-    "vitaminA": "265.00 mcg",
-    "vitaminB1": "0.11 mg",
-    "vitaminB2": "0.05 mg",
-    "vitaminB3": "1.10 mg",
-    "vitaminB5": "0.32 mg",
-    "vitaminB6": "0.20 mg",
-    "vitaminB7": "N/A",
-    "vitaminB9": "36.00 mcg",
-    "vitaminB12": "0.00 mcg",
-    "vitaminC": "10.20 mg",
-    "vitaminD": "0.00 mcg",
-    "vitaminE": "0.86 mg",
-    "vitaminK": "8.90 mcg",
-
-    "iron": "1.18 mg",
-    "zinc": "0.62 mg",
-    "copper": "0.18 mg",
-    "manganese": "0.36 mg",
-    "selenium": "1.90 mcg",
-    "iodine": "N/A",
-
-    "saturatedFat": "0.26 g",
-    "monounsaturatedFat": "0.88 g",
-    "polyunsaturatedFat": "0.90 g",
-    "omega3": "0.10 g",
-    "omega6": "0.80 g",
-    "transFat": "0.00 g",
-
-    "cholesterol": "0.00 mg",
-    "glycemicIndex": "42",
-    "glycemicLoad": "5",
-    "water": "75.90 g",
-
-    "calcium": "42.00 mg",
-    "magnesium": "33.00 mg",
-    "phosphorus": "72.00 mg",
-    "potassium": "348.00 mg",
-    "sodium": "121.00 mg",
-
-    "userId": null,
-    "isCustom": false
-  }
-]
 """
 
 def sync_to_csv(item):

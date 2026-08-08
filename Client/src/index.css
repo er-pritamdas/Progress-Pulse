@@ -80,3 +80,41 @@ html {
 .animate-pulse-slow {
   animation: pulse 8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
+
+/* -------------------------------------------------------------------------- */
+/* Global Form Controls Focus Style - Remove heavy outline/ring across app    */
+/* -------------------------------------------------------------------------- */
+input:focus,
+input:focus-visible,
+select:focus,
+select:focus-visible,
+textarea:focus,
+textarea:focus-visible,
+.input:focus,
+.input:focus-within,
+.input:focus-visible,
+.select:focus,
+.select:focus-visible,
+.textarea:focus,
+.textarea:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+  outline-offset: 0 !important;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Global Hide Number Input Spinners/Arrows Site-Wide                         */
+/* -------------------------------------------------------------------------- */
+/* Chrome, Safari, Edge, Opera */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Firefox */
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+
