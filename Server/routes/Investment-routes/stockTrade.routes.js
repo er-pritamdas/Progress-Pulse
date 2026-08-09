@@ -6,12 +6,22 @@ import {
   updateStockTrade,
   deleteStockTrade,
 } from "../../controllers/Investment-controllers/stockTrade.controller.js";
+import {
+  getAllMutualFunds,
+  createMutualFund,
+  updateMutualFund,
+  deleteMutualFund,
+  addSipTransaction,
+  updateSipTransaction,
+  deleteSipTransaction,
+} from "../../controllers/Investment-controllers/mutualFund.controller.js";
 
 const router = Router();
 
 // Apply auth verification to all routes
 router.use(verifyToken);
 
+// Stock routes
 router
   .route("/stocks")
   .get(getAllStockTrades)
@@ -21,5 +31,25 @@ router
   .route("/stocks/:id")
   .put(updateStockTrade)
   .delete(deleteStockTrade);
+
+// Mutual Fund routes
+router
+  .route("/mf")
+  .get(getAllMutualFunds)
+  .post(createMutualFund);
+
+router
+  .route("/mf/:id")
+  .put(updateMutualFund)
+  .delete(deleteMutualFund);
+
+router
+  .route("/mf/:id/transactions")
+  .post(addSipTransaction);
+
+router
+  .route("/mf/:id/transactions/:txnId")
+  .put(updateSipTransaction)
+  .delete(deleteSipTransaction);
 
 export default router;

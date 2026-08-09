@@ -117,4 +117,29 @@ input[type="number"] {
   -moz-appearance: textfield;
 }
 
+/* -------------------------------------------------------------------------- */
+/* Custom Ultra-Thin Scrollbar Utility                                       */
+/* -------------------------------------------------------------------------- */
+.custom-scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(156, 163, 175, 0.4) transparent;
+}
+
+.custom-scrollbar-thin::-webkit-scrollbar {
+  width: 1.5px;
+  height: 1.5px;
+}
+
+.custom-scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar-thin::-webkit-scrollbar-thumb {
+  background: rgba(156, 163, 175, 0.4);
+  border-radius: 9999px;
+}
+
+.custom-scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: rgba(156, 163, 175, 0.85);
+}
 
