@@ -22,6 +22,8 @@ import {
   Check,
   Lock,
   Calculator,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 
 export default function AddStockTradeModal({
@@ -69,6 +71,40 @@ export default function AddStockTradeModal({
 
   // Form Validation Message
   const [errorMsg, setErrorMsg] = useState("");
+
+  // Right Popup Carousel State & Ref
+  const [activeRightSlide, setActiveRightSlide] = useState(0);
+  const rightScrollRef = React.useRef(null);
+
+  const scrollToSlide = (slideIndex) => {
+    setActiveRightSlide(slideIndex);
+    if (rightScrollRef.current) {
+      const slideWidth = rightScrollRef.current.clientWidth;
+      rightScrollRef.current.scrollTo({
+        left: slideIndex * slideWidth,
+        behavior: "smooth",
+      });
+    }
+  };
+
+  const handleRightScroll = (e) => {
+    const slideWidth = e.target.clientWidth;
+    if (slideWidth > 0) {
+      const currentSlide = Math.round(e.target.scrollLeft / slideWidth);
+      if (currentSlide !== activeRightSlide) {
+        setActiveRightSlide(currentSlide);
+      }
+    }
+  };
+
+  // Auto-scroll right popup when step changes (Step 2 Sell Details -> Slide 1 Realized PnL)
+  useEffect(() => {
+    if (step === 2) {
+      scrollToSlide(1);
+    } else if (step === 1) {
+      scrollToSlide(0);
+    }
+  }, [step]);
 
   // Pre-fill state when in Edit Mode
   useEffect(() => {
@@ -939,151 +975,152 @@ export default function AddStockTradeModal({
         </form>
 
         {/* =================================================================== */}
-        {/* POPUP 2 (RIGHT): Live Trade Summary & Position PnL (Section 4)      */}
+        {/* POPUP 2 (RIGHT): Horizontally Scrollable Live Summary & PnL         */}
         {/* =================================================================== */}
         <div className="bg-base-100 border border-base-300 rounded-3xl shadow-2xl w-full lg:w-72 h-[650px] max-h-[94vh] flex flex-col overflow-hidden shrink-0">
-          {/* Popup 2 Header */}
-          <div className="px-5 py-4 border-b border-base-200 bg-base-200/50 shrink-0 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-primary" />
-              <div>
-                <h3 className="font-extrabold text-sm tracking-tight text-base-content">
-                  Live Trade Summary
+          {/* Popup 2 Header with Navigation Arrows & Page Indicator */}
+          <div className="px-4 py-3 border-b border-base-200 bg-base-200/50 shrink-0 flex items-center justify-between">
+            <div className="flex items-center gap-2 min-w-0">
+              {activeRightSlide === 0 ? (
+                <Sparkles className="w-5 h-5 text-primary shrink-0" />
+              ) : (
+                <TrendingUp className={`w-5 h-5 shrink-0 ${gainRs >= 0 ? "text-success" : "text-error"}`} />
+              )}
+              <div className="min-w-0">
+                <h3 className="font-extrabold text-xs tracking-tight text-base-content truncate">
+                  {activeRightSlide === 0 ? "Live Trade Summary" : "Realized PnL Summary"}
                 </h3>
-                <p className="text-[10px] text-base-content/60">
-                  Section 4 • Live Real-time Preview
+                <p className="text-[9px] text-base-content/60">
+                  Slide {activeRightSlide + 1} of 2 • Horizontal Scroll
                 </p>
               </div>
             </div>
-            <span className="badge badge-xs badge-primary font-bold">
-              Real-time
-            </span>
+            {/* Arrows & Navigation */}
+            <div className="flex items-center gap-1 shrink-0">
+              <button
+                type="button"
+                onClick={() => scrollToSlide(0)}
+                className={`btn btn-circle btn-xs ${activeRightSlide === 0 ? "btn-primary text-primary-content" : "btn-ghost text-base-content/60"}`}
+                title="Live Trade Summary (Slide 1)"
+              >
+                <ChevronLeft size={14} />
+              </button>
+              <button
+                type="button"
+                onClick={() => scrollToSlide(1)}
+                className={`btn btn-circle btn-xs ${activeRightSlide === 1 ? "btn-secondary text-secondary-content" : "btn-ghost text-base-content/60"}`}
+                title="Realized PnL Summary (Slide 2)"
+              >
+                <ChevronRight size={14} />
+              </button>
+            </div>
           </div>
 
-          {/* Popup 2 Body: Live Cards */}
-          <div className="p-5 overflow-y-auto scroll-hidden overflow-x-hidden flex-1 space-y-4 text-xs">
-            {/* Stock Symbol & Basic Metadata Card */}
-            <div className="bg-base-200/60 p-3.5 rounded-2xl border border-base-200 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="bg-primary/10 text-primary px-2.5 py-0.5 rounded-lg font-black text-sm tracking-wide uppercase">
-                  {name || "STOCK SYMBOL"}
-                </span>
-                <span className="badge badge-outline badge-xs font-bold">
-                  {term}
-                </span>
+          {/* Horizontally Scrollable Body Container */}
+          <div
+            ref={rightScrollRef}
+            onScroll={handleRightScroll}
+            className="flex-1 flex overflow-x-auto snap-x snap-mandatory scrollbar-thin scrollbar-thumb-base-300 scrollbar-track-transparent scroll-smooth"
+          >
+            {/* SLIDE 1: Live Trade Summary */}
+            <div className="w-full shrink-0 snap-start p-4 overflow-y-auto space-y-3 text-xs">
+              {/* Stock Symbol & Basic Metadata Card */}
+              <div className="bg-base-200/60 p-3.5 rounded-2xl border border-base-200 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="bg-primary/10 text-primary px-2.5 py-0.5 rounded-lg font-black text-sm tracking-wide uppercase">
+                    {name || "STOCK SYMBOL"}
+                  </span>
+                  <span className="badge badge-outline badge-xs font-bold">
+                    {term}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-[11px] text-base-content/70">
+                  <span>Broker: {platform}</span>
+                  <span>•</span>
+                  <span>Exchange: {exchange}</span>
+                  <span>•</span>
+                  <span>{cap} Cap</span>
+                </div>
               </div>
-              <div className="flex items-center justify-between text-[11px] text-base-content/70">
-                <span>Broker: {platform}</span>
-                <span>•</span>
-                <span>Exchange: {exchange}</span>
-                <span>•</span>
-                <span>{cap} Cap</span>
-              </div>
-            </div>
 
-            {/* Buy Position Summary */}
-            <div className="bg-base-200/60 p-3.5 rounded-2xl border border-base-200 space-y-1.5">
-              <div className="text-[10px] font-extrabold uppercase text-primary tracking-wider flex items-center justify-between">
-                <span>Buy Details</span>
-                <span>{formatDateDDMMMYYYY(bDate)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-base-content/60">Share Price:</span>
-                <span>{formatCurrency(numBShare)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-base-content/60">Quantity:</span>
-                <span className="font-bold">{numBQty}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-base-content/60">Total Buy Charges:</span>
-                <span className="text-warning font-semibold">
-                  {formatCurrency(bBkgPdc)}
-                </span>
-              </div>
-              <div className="flex justify-between pt-1 border-t border-base-200 font-extrabold text-xs">
-                <span>Final Buy Cost:</span>
-                <span className="text-primary">{formatCurrency(bFStock)}</span>
-              </div>
-            </div>
-
-            {/* Sell Position Summary (if sold) */}
-            {isSold && (
+              {/* Buy Position Summary */}
               <div className="bg-base-200/60 p-3.5 rounded-2xl border border-base-200 space-y-1.5">
-                <div className="text-[10px] font-extrabold uppercase text-secondary tracking-wider flex items-center justify-between">
-                  <span>Sell Details</span>
-                  <span>{formatDateDDMMMYYYY(sDate)}</span>
+                <div className="text-[10px] font-extrabold uppercase text-primary tracking-wider flex items-center justify-between">
+                  <span>Buy Details</span>
+                  <span>{formatDateDDMMMYYYY(bDate)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-base-content/60">Sell Share Price:</span>
-                  <span>{formatCurrency(numSShare)}</span>
+                  <span className="text-base-content/60">Share Price:</span>
+                  <span>{formatCurrency(numBShare)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-base-content/60">Sell Quantity:</span>
-                  <span className="font-bold">{numSQty}</span>
+                  <span className="text-base-content/60">Quantity:</span>
+                  <span className="font-bold">{numBQty}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-base-content/60">Sell Charges + DP:</span>
+                  <span className="text-base-content/60">Total Buy Charges:</span>
                   <span className="text-warning font-semibold">
-                    {formatCurrency(sBkgPdc + numDp)}
+                    {formatCurrency(bBkgPdc)}
                   </span>
                 </div>
                 <div className="flex justify-between pt-1 border-t border-base-200 font-extrabold text-xs">
-                  <span>Net Realization:</span>
-                  <span className="text-secondary">{formatCurrency(sFStock)}</span>
+                  <span>Final Buy Cost:</span>
+                  <span className="text-primary">{formatCurrency(bFStock)}</span>
                 </div>
               </div>
-            )}
 
-            {/* Quantity Left & Holding Period */}
-            <div className="bg-base-200/60 p-3.5 rounded-2xl border border-base-200 space-y-2">
-              <div className="flex justify-between items-center text-xs">
-                <span className="text-base-content/70">Quantity Remaining:</span>
-                <span className="font-extrabold text-primary">
-                  {qLeft} Shares
-                </span>
-              </div>
-              <div className="flex justify-between items-center text-xs">
-                <span className="text-base-content/70">Holding Duration:</span>
-                <div className="text-right">
-                  <span className="font-bold font-mono">{holdingDays} Days</span>
-                  {getHoldingTermLabel(holdingDays) && (
-                    <span className="block text-[9px] font-extrabold text-primary">
-                      {getHoldingTermLabel(holdingDays)}
+              {/* Sell Position Summary (if sold) */}
+              {isSold && (
+                <div className="bg-base-200/60 p-3.5 rounded-2xl border border-base-200 space-y-1.5">
+                  <div className="text-[10px] font-extrabold uppercase text-secondary tracking-wider flex items-center justify-between">
+                    <span>Sell Details</span>
+                    <span>{formatDateDDMMMYYYY(sDate)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-base-content/60">Sell Share Price:</span>
+                    <span>{formatCurrency(numSShare)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-base-content/60">Sell Quantity:</span>
+                    <span className="font-bold">{numSQty}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-base-content/60">Sell Charges + DP:</span>
+                    <span className="text-warning font-semibold">
+                      {formatCurrency(sBkgPdc + numDp)}
                     </span>
-                  )}
+                  </div>
+                  <div className="flex justify-between pt-1 border-t border-base-200 font-extrabold text-xs">
+                    <span>Net Realization:</span>
+                    <span className="text-secondary">{formatCurrency(sFStock)}</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Quantity Left & Holding Period */}
+              <div className="bg-base-200/60 p-3.5 rounded-2xl border border-base-200 space-y-2">
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-base-content/70">Quantity Remaining:</span>
+                  <span className="font-extrabold text-primary">
+                    {qLeft} Shares
+                  </span>
+                </div>
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-base-content/70">Holding Duration:</span>
+                  <div className="text-right">
+                    <span className="font-bold font-mono">{holdingDays} Days</span>
+                    {getHoldingTermLabel(holdingDays) && (
+                      <span className="block text-[9px] font-extrabold text-primary">
+                        {getHoldingTermLabel(holdingDays)}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
 
-          </div>
-        </div>
-
-        {/* =================================================================== */}
-        {/* POPUP 3 (FAR RIGHT): Realized PnL Performance (Only when Sold)     */}
-        {/* =================================================================== */}
-        {isSold && (
-          <div className="bg-base-100 border border-base-300 rounded-3xl shadow-2xl w-full lg:w-72 h-[650px] max-h-[94vh] flex flex-col overflow-hidden shrink-0 animate-in fade-in slide-in-from-left-4 duration-300">
-            {/* Popup 3 Header */}
-            <div className="px-5 py-4 border-b border-base-200 bg-base-200/50 shrink-0 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <TrendingUp className={`w-5 h-5 ${gainRs >= 0 ? "text-success" : "text-error"}`} />
-                <div>
-                  <h3 className="font-extrabold text-sm tracking-tight text-base-content">
-                    Realized PnL Summary
-                  </h3>
-                  <p className="text-[10px] text-base-content/60">
-                    Section 4 • Live Realized PnL
-                  </p>
-                </div>
-              </div>
-              <span className={`badge badge-xs font-bold ${gainRs >= 0 ? "badge-success" : "badge-error"}`}>
-                {gainRs >= 0 ? "PROFIT" : "LOSS"}
-              </span>
-            </div>
-
-            {/* Popup 3 Body */}
-            <div className="p-5 overflow-y-auto scroll-hidden overflow-x-hidden flex-1 space-y-4 text-xs">
+            {/* SLIDE 2: Realized PnL Summary */}
+            <div className="w-full shrink-0 snap-start p-4 overflow-y-auto space-y-3.5 text-xs">
               {/* Highlight PnL Card */}
               <div
                 className={`p-4 rounded-2xl border flex flex-col gap-1 ${
@@ -1132,11 +1169,11 @@ export default function AddStockTradeModal({
                 </div>
               </div>
 
-              {/* Holding Info Pill with Classification Term */}
+              {/* Holding Info Pill */}
               <div className="p-3.5 bg-base-200/40 rounded-2xl border border-base-300 text-center space-y-1.5 overflow-hidden">
                 <div className="text-[9px] uppercase font-extrabold text-base-content/60">Holding Duration & Term</div>
                 <div className="text-[11px] font-black text-base-content whitespace-nowrap truncate">
-                  {holdingDays} Days ({formatDateDDMMMYYYY(bDate)} → {formatDateDDMMMYYYY(sDate)})
+                  {holdingDays} Days ({formatDateDDMMMYYYY(bDate)} → {isSold && sDate && sDate !== "-" ? formatDateDDMMMYYYY(sDate) : "Open"})
                 </div>
                 {getHoldingTermLabel(holdingDays) && (
                   <div className="pt-0.5">
@@ -1148,7 +1185,9 @@ export default function AddStockTradeModal({
               </div>
             </div>
           </div>
-        )}
+        </div>
+
+
 
       </div>
     </div>
