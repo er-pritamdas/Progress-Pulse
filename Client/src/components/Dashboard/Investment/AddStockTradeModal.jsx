@@ -35,7 +35,7 @@ export default function AddStockTradeModal({
   // ----------------------------------------------------------------------
   // Form State
   // ----------------------------------------------------------------------
-  // Wizard Active Step (1: Basic Info, 2: Buy Details, 3: Sell Details)
+  // Wizard Active Step (1: Buy Details, 2: Sell Details)
   const [step, setStep] = useState(1);
 
   // Section 1: Basic Stock Info (Mandatory)
@@ -281,23 +281,15 @@ export default function AddStockTradeModal({
 
     if (targetStep === 2) {
       if (!isStep1Complete) {
-        setErrorMsg("Please enter Stock Name in Section 1 to proceed.");
-        return;
-      }
-      setStep(2);
-    } else if (targetStep === 3) {
-      if (!isStep1Complete) {
-        setErrorMsg("Please enter Stock Name in Section 1 first.");
-        setStep(1);
+        setErrorMsg("Please enter Stock Name in Basic Info panel to proceed.");
         return;
       }
       if (!isStep2Complete) {
         setErrorMsg("Please enter valid Buy Share Price and Share Qty to proceed to Sell Details.");
-        setStep(2);
         return;
       }
       setIsSold(true);
-      setStep(3);
+      setStep(2);
     } else {
       setStep(targetStep);
     }
@@ -311,26 +303,25 @@ export default function AddStockTradeModal({
     setErrorMsg("");
 
     if (!isStep1Complete) {
-      setErrorMsg("Please enter Stock Name.");
-      setStep(1);
+      setErrorMsg("Please enter Stock Name in the Basic Info panel.");
       return;
     }
 
     if (!isStep2Complete) {
-      setErrorMsg("Please complete Section 2 Buy Details.");
-      setStep(2);
+      setErrorMsg("Please complete Buy Details.");
+      setStep(1);
       return;
     }
 
     if (isSold) {
       if (!sShare || numSShare <= 0) {
         setErrorMsg("Please enter a valid Sell Share Price.");
-        setStep(3);
+        setStep(2);
         return;
       }
       if (!sQty || numSQty <= 0 || numSQty > numBQty) {
         setErrorMsg("Sell Quantity must be greater than 0 and <= Buy Quantity.");
-        setStep(3);
+        setStep(2);
         return;
       }
     }
@@ -383,7 +374,128 @@ export default function AddStockTradeModal({
       <div className="flex flex-col lg:flex-row items-stretch justify-center gap-4 w-full max-w-[1440px] mx-auto my-auto">
         
         {/* =================================================================== */}
-        {/* POPUP 1 (LEFT): Step-by-Step Entry Wizard (Fixed Dimensions)        */}
+        {/* LEFT PANEL: Basic Stock Info (Always Visible)                       */}
+        {/* =================================================================== */}
+        <div className="bg-base-100 border border-base-300 rounded-3xl shadow-2xl w-full lg:w-72 flex flex-col overflow-hidden shrink-0">
+          {/* Left Panel Header */}
+          <div className="px-5 py-4 border-b border-base-200 bg-base-200/50 shrink-0 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Tag className="w-5 h-5 text-primary" />
+              <div>
+                <h3 className="font-extrabold text-sm tracking-tight text-base-content">
+                  Basic Stock Info
+                </h3>
+                <p className="text-[10px] text-base-content/60">
+                  Stock Metadata • Required
+                </p>
+              </div>
+            </div>
+            <span className="badge badge-error badge-xs font-bold">
+              Mandatory
+            </span>
+          </div>
+
+          {/* Left Panel Body */}
+          <div className="p-5 overflow-y-auto scroll-hidden overflow-x-hidden flex-1 space-y-3 text-xs">
+            {/* Stock Name */}
+            <div className="space-y-1">
+              <label className="label-text text-xs font-bold text-base-content/80">
+                Stock Symbol / Name <span className="text-error">*</span>
+              </label>
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="e.g. RELIANCE, INFY"
+                  className="input input-sm input-bordered focus:outline-none focus:ring-0 focus:border-primary/40 w-full rounded-xl font-bold text-xs uppercase pl-9"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  autoFocus
+                />
+                <Tag
+                  size={14}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-base-content/40"
+                />
+              </div>
+            </div>
+
+            {/* Platform */}
+            <div className="space-y-1">
+              <label className="label-text text-xs font-bold text-base-content/80">
+                Platform / Broker <span className="text-error">*</span>
+              </label>
+              <select
+                className="select select-sm select-bordered focus:outline-none focus:ring-0 focus:border-primary/40 w-full rounded-xl font-semibold text-xs"
+                value={platform}
+                onChange={(e) => setPlatform(e.target.value)}
+              >
+                <option value="Zerodha">Zerodha</option>
+                <option value="Groww">Groww</option>
+                <option value="AngelOne">AngelOne</option>
+                <option value="Upstox">Upstox</option>
+                <option value="ICICI Direct">ICICI Direct</option>
+                <option value="HDFC Securities">HDFC Securities</option>
+                <option value="Kotak Neo">Kotak Neo</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+
+            {/* Market Cap */}
+            <div className="space-y-1">
+              <label className="label-text text-xs font-bold text-base-content/80">
+                Market Cap <span className="text-error">*</span>
+              </label>
+              <select
+                className="select select-sm select-bordered focus:outline-none focus:ring-0 focus:border-primary/40 w-full rounded-xl font-semibold text-xs"
+                value={cap}
+                onChange={(e) => setCap(e.target.value)}
+              >
+                <option value="Large">Large Cap</option>
+                <option value="Mid">Mid Cap</option>
+                <option value="Small">Small Cap</option>
+                <option value="Micro">Micro Cap</option>
+              </select>
+            </div>
+
+            {/* Exchange */}
+            <div className="space-y-1">
+              <label className="label-text text-xs font-bold text-base-content/80">
+                Exchange <span className="text-error">*</span>
+              </label>
+              <select
+                className="select select-sm select-bordered focus:outline-none focus:ring-0 focus:border-primary/40 w-full rounded-xl font-semibold text-xs"
+                value={exchange}
+                onChange={(e) => setExchange(e.target.value)}
+              >
+                <option value="NSE">NSE</option>
+                <option value="BSE">BSE</option>
+                <option value="MCX">MCX</option>
+              </select>
+            </div>
+
+            {/* Completion Status Indicator */}
+            <div className={`p-3 rounded-xl border text-center space-y-1 mt-2 ${
+              isStep1Complete
+                ? "bg-success/10 border-success/30"
+                : "bg-warning/10 border-warning/30"
+            }`}>
+              <div className="flex items-center justify-center gap-1.5">
+                {isStep1Complete ? (
+                  <CheckCircle2 size={14} className="text-success" />
+                ) : (
+                  <AlertCircle size={14} className="text-warning" />
+                )}
+                <span className={`text-xs font-bold ${
+                  isStep1Complete ? "text-success" : "text-warning"
+                }`}>
+                  {isStep1Complete ? "Basic Info Complete" : "Stock Name Required"}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* =================================================================== */}
+        {/* CENTER POPUP: Step-by-Step Entry Wizard (Fixed Dimensions)          */}
         {/* =================================================================== */}
         <form
           onSubmit={handleSubmit}
@@ -402,7 +514,7 @@ export default function AddStockTradeModal({
                       ? `Edit Stock Trade — ${initialData.name}`
                       : "Add Stock Trade Entry"}
                     <span className="badge badge-primary badge-xs font-semibold">
-                      Step {step} of 3
+                      Step {step} of 2
                     </span>
                   </h2>
                   <p className="text-xs text-base-content/70">
@@ -421,55 +533,31 @@ export default function AddStockTradeModal({
             </div>
 
             {/* Stepper Wizard Bar */}
-            <div className="grid grid-cols-3 gap-2">
-              {/* Step 1 Pill */}
+            <div className="grid grid-cols-2 gap-2">
+              {/* Step 1 Pill: Buy Details */}
               <button
                 type="button"
                 onClick={() => handleGoToStep(1)}
                 className={`p-2 rounded-xl flex items-center gap-2 text-xs font-bold transition-all cursor-pointer ${
                   step === 1
                     ? "bg-primary text-primary-content shadow-md shadow-primary/20"
-                    : isStep1Complete
+                    : isStep2Complete
                     ? "bg-success/15 text-success border border-success/30"
                     : "bg-base-200 text-base-content/60"
                 }`}
               >
                 <span className="w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-black bg-current/20 shrink-0">
-                  {isStep1Complete && step !== 1 ? <Check size={11} /> : "1"}
+                  {isStep2Complete && step !== 1 ? <Check size={11} /> : "1"}
                 </span>
-                <span className="truncate">1. Basic Info</span>
+                <span className="truncate">1. Buy Details</span>
               </button>
 
-              {/* Step 2 Pill */}
+              {/* Step 2 Pill: Sell Details */}
               <button
                 type="button"
                 onClick={() => handleGoToStep(2)}
                 className={`p-2 rounded-xl flex items-center gap-2 text-xs font-bold transition-all ${
                   step === 2
-                    ? "bg-primary text-primary-content shadow-md shadow-primary/20"
-                    : isStep2Complete
-                    ? "bg-success/15 text-success border border-success/30 cursor-pointer"
-                    : "bg-base-200 text-base-content/60 opacity-60 cursor-not-allowed"
-                }`}
-              >
-                <span className="w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-black bg-current/20 shrink-0">
-                  {!isStep1Complete ? (
-                    <Lock size={10} />
-                  ) : isStep2Complete && step !== 2 ? (
-                    <Check size={11} />
-                  ) : (
-                    "2"
-                  )}
-                </span>
-                <span className="truncate">2. Buy Details</span>
-              </button>
-
-              {/* Step 3 Pill */}
-              <button
-                type="button"
-                onClick={() => handleGoToStep(3)}
-                className={`p-2 rounded-xl flex items-center gap-2 text-xs font-bold transition-all ${
-                  step === 3
                     ? "bg-secondary text-secondary-content shadow-md shadow-secondary/20"
                     : isSold
                     ? "bg-secondary/15 text-secondary border border-secondary/30 cursor-pointer"
@@ -477,9 +565,9 @@ export default function AddStockTradeModal({
                 }`}
               >
                 <span className="w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-black bg-current/20 shrink-0">
-                  {!isStep2Complete ? <Lock size={10} /> : "3"}
+                  {!isStep2Complete ? <Lock size={10} /> : "2"}
                 </span>
-                <span className="truncate">3. Sell Details</span>
+                <span className="truncate">2. Sell Details</span>
               </button>
             </div>
           </div>
@@ -494,110 +582,15 @@ export default function AddStockTradeModal({
 
           {/* Popup 1 Active Step Form Body */}
           <div className="p-5 overflow-y-auto scroll-hidden overflow-x-hidden flex-1 flex flex-col text-xs">
-            {/* STEP 1: Section 1 Basic Stock Info */}
+            {/* STEP 1: Buy Details — Horizontal Layout */}
             {step === 1 && (
-              <div className="space-y-4 animate-in fade-in duration-200">
+              <div className="h-full flex flex-col justify-between animate-in fade-in duration-200">
                 <div className="flex items-center justify-between pb-2 border-b border-base-200">
                   <span className="font-extrabold text-xs text-primary flex items-center gap-1.5 uppercase tracking-wide">
                     <span className="w-4 h-4 rounded-full bg-primary text-primary-content flex items-center justify-center text-[10px]">
                       1
                     </span>
-                    Section 1: Basic Stock Details
-                  </span>
-                  <span className="badge badge-error badge-xs font-bold">
-                    Mandatory
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  {/* Stock Name */}
-                  <div className="space-y-1 sm:col-span-3">
-                    <label className="label-text text-xs font-bold text-base-content/80">
-                      Stock Symbol / Name <span className="text-error">*</span>
-                    </label>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        placeholder="e.g. RELIANCE, TATASTEEL, INFY"
-                        className="input input-sm input-bordered focus:outline-none focus:ring-0 focus:border-primary/40 w-full rounded-xl font-bold text-xs uppercase pl-9"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        autoFocus
-                        required
-                      />
-                      <Tag
-                        size={14}
-                        className="absolute left-3 top-1/2 -translate-y-1/2 text-base-content/40"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Platform */}
-                  <div className="space-y-1">
-                    <label className="label-text text-xs font-bold text-base-content/80">
-                      Platform / Broker <span className="text-error">*</span>
-                    </label>
-                    <select
-                      className="select select-sm select-bordered focus:outline-none focus:ring-0 focus:border-primary/40 w-full rounded-xl font-semibold text-xs"
-                      value={platform}
-                      onChange={(e) => setPlatform(e.target.value)}
-                    >
-                      <option value="Zerodha">Zerodha</option>
-                      <option value="Groww">Groww</option>
-                      <option value="AngelOne">AngelOne</option>
-                      <option value="Upstox">Upstox</option>
-                      <option value="ICICI Direct">ICICI Direct</option>
-                      <option value="HDFC Securities">HDFC Securities</option>
-                      <option value="Kotak Neo">Kotak Neo</option>
-                      <option value="Other">Other</option>
-                    </select>
-                  </div>
-
-                  {/* Market Cap */}
-                  <div className="space-y-1">
-                    <label className="label-text text-xs font-bold text-base-content/80">
-                      Market Cap <span className="text-error">*</span>
-                    </label>
-                    <select
-                      className="select select-sm select-bordered focus:outline-none focus:ring-0 focus:border-primary/40 w-full rounded-xl font-semibold text-xs"
-                      value={cap}
-                      onChange={(e) => setCap(e.target.value)}
-                    >
-                      <option value="Large">Large Cap</option>
-                      <option value="Mid">Mid Cap</option>
-                      <option value="Small">Small Cap</option>
-                      <option value="Micro">Micro Cap</option>
-                    </select>
-                  </div>
-
-                  {/* Exchange */}
-                  <div className="space-y-1">
-                    <label className="label-text text-xs font-bold text-base-content/80">
-                      Exchange <span className="text-error">*</span>
-                    </label>
-                    <select
-                      className="select select-sm select-bordered focus:outline-none focus:ring-0 focus:border-primary/40 w-full rounded-xl font-semibold text-xs"
-                      value={exchange}
-                      onChange={(e) => setExchange(e.target.value)}
-                    >
-                      <option value="NSE">NSE</option>
-                      <option value="BSE">BSE</option>
-                      <option value="MCX">MCX</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* STEP 2: Section 2 Buy Details — Horizontal Layout */}
-            {step === 2 && (
-              <div className="h-full flex flex-col justify-between animate-in fade-in duration-200">
-                <div className="flex items-center justify-between pb-2 border-b border-base-200">
-                  <span className="font-extrabold text-xs text-primary flex items-center gap-1.5 uppercase tracking-wide">
-                    <span className="w-4 h-4 rounded-full bg-primary text-primary-content flex items-center justify-center text-[10px]">
-                      2
-                    </span>
-                    Section 2: Buy Details ({name || "Stock"})
+                    Section 1: Buy Details ({name || "Stock"})
                   </span>
                   <span className="badge badge-error badge-xs font-bold">
                     Mandatory
@@ -709,16 +702,16 @@ export default function AddStockTradeModal({
               </div>
             )}
 
-            {/* STEP 3: Section 3 Sell Details with Operators Between Boxes */}
-            {step === 3 && (
+            {/* STEP 2: Sell Details with Operators Between Boxes */}
+            {step === 2 && (
               <div className="h-full flex flex-col justify-between animate-in fade-in duration-200">
                 <div className="flex items-center justify-between pb-1.5 border-b border-base-200">
                   <div className="flex items-center gap-2">
                     <span className="w-4 h-4 rounded-full bg-secondary text-secondary-content flex items-center justify-center text-[10px] font-bold">
-                      3
+                      2
                     </span>
                     <span className="font-extrabold text-xs text-secondary uppercase tracking-wide">
-                      Section 3: Sell Details ({name || "Stock"})
+                      Section 2: Sell Details ({name || "Stock"})
                     </span>
                   </div>
 
@@ -912,17 +905,6 @@ export default function AddStockTradeModal({
 
             <div className="flex items-center gap-2">
               {step === 1 && (
-                <button
-                  type="button"
-                  onClick={() => handleGoToStep(2)}
-                  className="btn btn-xs btn-primary rounded-lg gap-1 font-extrabold px-4 shadow-sm cursor-pointer"
-                >
-                  <span>Next: Buy Details</span>
-                  <ArrowRight size={13} />
-                </button>
-              )}
-
-              {step === 2 && (
                 <>
                   {!isSold && (
                     <button
@@ -935,7 +917,7 @@ export default function AddStockTradeModal({
                   )}
                   <button
                     type="button"
-                    onClick={() => handleGoToStep(3)}
+                    onClick={() => handleGoToStep(2)}
                     className="btn btn-xs btn-primary rounded-lg gap-1 font-extrabold px-4 shadow-sm cursor-pointer"
                   >
                     <span>Next: Sell Details</span>
@@ -944,7 +926,7 @@ export default function AddStockTradeModal({
                 </>
               )}
 
-              {step === 3 && (
+              {step === 2 && (
                 <button
                   type="submit"
                   className="btn btn-xs btn-primary rounded-lg px-5 font-extrabold shadow-sm hover:scale-[1.02] active:scale-95 transition-all cursor-pointer"

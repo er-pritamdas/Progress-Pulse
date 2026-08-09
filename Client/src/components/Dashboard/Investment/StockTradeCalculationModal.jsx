@@ -255,60 +255,106 @@ export default function StockTradeCalculationModal({ isOpen, onClose, trade }) {
               <span className="badge badge-primary badge-xs font-bold">2/5</span>
             </div>
 
-            {/* Horizontal Formula with Symbols */}
-            <div className="flex items-center gap-2.5 my-2">
-              {/* Step A: Raw Buy Cost */}
-              <div className="flex-1 bg-base-200/40 rounded-2xl border border-base-300 p-3">
-                <div className="text-[9px] font-extrabold uppercase text-primary mb-1">Buy Revenue</div>
-                <div className="text-xs font-bold text-base-content">
-                  {formatCurrency(numBShare)} × {numBQty} qty
-                </div>
-                <div className="text-xs font-black text-base-content pt-1 border-t border-base-300/60 mt-1">
-                  = {formatCurrency(rawBStock)}
-                </div>
+            {/* ── VISUAL MATH FORMULA ── */}
+            <div className="flex items-center gap-1 my-2 overflow-x-auto">
+
+              {/* ┌─────────────────────────────────────────────────────────────┐ */}
+              {/* │  FORMULA BLOCK: Final Buy Price / Share                     │ */}
+              {/* │  bFShare  =  bShare  +  ( BKG + PDC ) ÷ TT                 │ */}
+              {/* └─────────────────────────────────────────────────────────────┘ */}
+
+              {/* Result Label */}
+              <div className="bg-success/10 border-2 border-success/30 rounded-xl px-3 py-1.5 text-center shrink-0">
+                <div className="text-[8px] text-base-content/70 font-bold uppercase leading-tight">Final Buy<br/>Price/Share</div>
+                <div className="text-sm font-black text-success mt-0.5">{formatCurrency(bFShare)}</div>
               </div>
 
-              {/* Symbol + */}
-              <span className="text-lg font-black text-base-content shrink-0">+</span>
+              {/* = */}
+              <span className="text-2xl font-black text-base-content/70 shrink-0 mx-1">=</span>
 
-              {/* Step B: Buy Charges */}
-              <div className="flex-1 bg-base-200/40 rounded-2xl border border-base-300 p-3 space-y-1">
-                <div className="text-[9px] font-extrabold uppercase text-warning">Buy Charges Breakdown</div>
-                <div className="flex justify-between items-center text-[10px] text-base-content/80 font-medium">
-                  <span>BKG: {formatCurrency(numBBkg)}</span>
-                  <span>•</span>
-                  <span>PDC: {formatCurrency(numBPdc)}</span>
-                </div>
-                <div className="flex justify-between items-center text-[10px] text-warning font-bold border-t border-base-300/60 pt-1">
-                  <span>Total: {formatCurrency(bBkgPdc)}</span>
-                  <span>÷ {effectiveBtDivisor} TT</span>
-                </div>
-                <div className="text-xs font-black text-warning">
-                  = {formatCurrency(bBkgPdc / effectiveBtDivisor)} / share
-                </div>
+              {/* Buy Share Price */}
+              <div className="bg-primary/10 border border-primary/30 rounded-xl px-3 py-2 text-center shrink-0">
+                <div className="text-[8px] text-primary/70 font-bold uppercase">Share Price</div>
+                <div className="text-sm font-black text-primary">{formatCurrency(numBShare)}</div>
               </div>
 
-              {/* Symbol = */}
-              <span className="text-lg font-black text-base-content shrink-0">=</span>
+              {/* + */}
+              <span className="text-2xl font-black text-success shrink-0 mx-1">+</span>
 
-              {/* Final Buy Share Price */}
-              <div className="bg-success/10 border-2 border-success/30 rounded-2xl px-4 py-2 text-center shrink-0">
-                <div className="text-[8px] text-base-content font-bold uppercase">Final Buy Price / Share</div>
-                <div className="text-sm font-black text-success">{formatCurrency(bFShare)}</div>
-              </div>
+              {/* ── BIG FRACTION:  (BKG + PDC) / TT ── */}
+              <div className="flex items-center shrink-0">
+                {/* Big Left Bracket */}
+                <span className="text-3xl font-extralight text-base-content/40 leading-none select-none" style={{fontFamily: 'serif'}}>[</span>
 
-              {/* Symbol × */}
-              <span className="text-lg font-black text-base-content shrink-0">×</span>
-
-              {/* Total Buy Stock Cost Card */}
-              <div className="p-3.5 rounded-2xl border-2 border-base-300 bg-base-200/30 shrink-0 min-w-[210px] flex items-center justify-between">
-                <div>
-                  <div className="text-[9px] uppercase tracking-wider font-extrabold text-base-content">Total Buy Stock Cost</div>
-                  <div className="text-[10px] font-bold text-base-content/80 mt-0.5">
-                    {formatCurrency(bFShare)} × {numBQty} shares
+                {/* Fraction Stack */}
+                <div className="flex flex-col items-center mx-1">
+                  {/* Numerator: BKG + PDC */}
+                  <div className="flex items-center gap-1 px-2 py-0.5">
+                    <div className="text-center">
+                      <div className="text-[7px] text-warning/70 font-bold uppercase">BKG</div>
+                      <div className="text-[11px] font-black text-warning">{formatCurrency(numBBkg)}</div>
+                    </div>
+                    <span className="text-base font-black text-success/80">+</span>
+                    <div className="text-center">
+                      <div className="text-[7px] text-warning/70 font-bold uppercase">PDC</div>
+                      <div className="text-[11px] font-black text-warning">{formatCurrency(numBPdc)}</div>
+                    </div>
+                  </div>
+                  {/* Division Line */}
+                  <div className="w-full h-[2px] bg-base-content/50 rounded-full my-0.5"></div>
+                  {/* Denominator: TT */}
+                  <div className="text-center px-2 py-0.5">
+                    <div className="text-[7px] text-info/70 font-bold uppercase">TT (Turnover)</div>
+                    <div className="text-[11px] font-black text-info">{effectiveBtDivisor}</div>
                   </div>
                 </div>
-                <span className="text-base font-black tracking-tight text-primary ml-2">{formatCurrency(bFStock)}</span>
+
+                {/* Big Right Bracket */}
+                <span className="text-3xl font-extralight text-base-content/40 leading-none select-none" style={{fontFamily: 'serif'}}>]</span>
+              </div>
+
+              {/* Intermediate Result */}
+              <div className="bg-warning/10 border border-warning/20 rounded-lg px-2 py-1 text-center shrink-0">
+                <div className="text-[7px] text-warning/70 font-bold uppercase">Charges/Share</div>
+                <div className="text-[11px] font-black text-warning">{formatCurrency(bBkgPdc / effectiveBtDivisor)}</div>
+              </div>
+
+              {/* Separator: vertical dots */}
+              <span className="text-xl text-base-content/30 shrink-0 mx-1">⟹</span>
+
+              {/* ┌─────────────────────────────────────────────────────────────┐ */}
+              {/* │  FORMULA BLOCK: Total Buy Stock Cost                        │ */}
+              {/* │  bFStock  =  bFShare  ×  bQty                              │ */}
+              {/* └─────────────────────────────────────────────────────────────┘ */}
+
+              {/* Big Left Bracket */}
+              <span className="text-5xl font-extralight text-base-content/40 leading-none select-none" style={{fontFamily: 'serif'}}>[</span>
+
+              {/* Final Share Price (compact repeat) */}
+              <div className="text-center shrink-0 px-1">
+                <div className="text-[7px] text-success/70 font-bold uppercase">Final Price</div>
+                <div className="text-xs font-black text-success">{formatCurrency(bFShare)}</div>
+              </div>
+
+              {/* × */}
+              <span className="text-xl font-black text-base-content/70 shrink-0">×</span>
+
+              {/* Quantity */}
+              <div className="text-center shrink-0 px-1">
+                <div className="text-[7px] text-primary/70 font-bold uppercase">Qty</div>
+                <div className="text-xs font-black text-primary">{numBQty}</div>
+              </div>
+
+              {/* Big Right Bracket */}
+              <span className="text-5xl font-extralight text-base-content/40 leading-none select-none" style={{fontFamily: 'serif'}}>]</span>
+
+              {/* = */}
+              <span className="text-2xl font-black text-base-content/70 shrink-0 mx-1">=</span>
+
+              {/* TOTAL BUY STOCK COST — Final Answer */}
+              <div className="bg-gradient-to-br from-primary/15 to-primary/5 border-2 border-primary/40 rounded-xl px-4 py-2 text-center shrink-0 shadow-md">
+                <div className="text-[8px] text-primary/80 font-bold uppercase tracking-wider">Total Buy Cost</div>
+                <div className="text-base font-black text-primary tracking-tight">{formatCurrency(bFStock)}</div>
               </div>
             </div>
           </div>
@@ -328,63 +374,134 @@ export default function StockTradeCalculationModal({ isOpen, onClose, trade }) {
               <span className="badge badge-secondary badge-xs font-bold">3/5</span>
             </div>
 
-            {/* Horizontal Formula with Symbols */}
+            {/* ── VISUAL MATH FORMULA ── */}
             {isSold ? (
-              <div className="flex items-center gap-2.5 my-2">
-                {/* Step A: Gross Revenue */}
-                <div className="flex-1 bg-base-200/40 rounded-2xl border border-base-300 p-3">
-                  <div className="text-[9px] font-extrabold uppercase text-secondary mb-1">Sell Revenue</div>
-                  <div className="text-xs font-bold text-base-content">
-                    {formatCurrency(numSShare)} × {numSQty} qty
-                  </div>
-                  <div className="text-xs font-black text-base-content pt-1 border-t border-base-300/60 mt-1">
-                    = {formatCurrency(rawSStock)}
-                  </div>
+              <div className="flex items-center gap-1 my-2 overflow-x-auto">
+
+                {/* ┌─────────────────────────────────────────────────────────────┐ */}
+                {/* │  FORMULA BLOCK: Final Sell Price / Share                    │ */}
+                {/* │  sFShare  =  sShare  −  [ (BKG + PDC) ÷ TT  +  DP ÷ Qty ]  │ */}
+                {/* └─────────────────────────────────────────────────────────────┘ */}
+
+                {/* Result Label */}
+                <div className="bg-success/10 border-2 border-success/30 rounded-xl px-3 py-1.5 text-center shrink-0">
+                  <div className="text-[8px] text-base-content/70 font-bold uppercase leading-tight">Final Sell<br/>Price/Share</div>
+                  <div className="text-sm font-black text-success mt-0.5">{formatCurrency(sFShare)}</div>
                 </div>
 
-                {/* Symbol − */}
-                <span className="text-lg font-black text-base-content shrink-0">−</span>
+                {/* = */}
+                <span className="text-2xl font-black text-base-content/70 shrink-0 mx-1">=</span>
 
-                {/* Step B: Sell Deductions */}
-                <div className="flex-1 bg-base-200/40 rounded-2xl border border-base-300 p-3 space-y-1">
-                  <div className="text-[9px] font-extrabold uppercase text-warning">Sell Deductions Breakdown</div>
-                  <div className="flex justify-between items-center text-[10px] text-base-content/80 font-medium">
-                    <span>BKG: {formatCurrency(numSBkg)}</span>
-                    <span>•</span>
-                    <span>PDC: {formatCurrency(numSPdc)}</span>
-                    <span>•</span>
-                    <span>DP: {formatCurrency(numDp)}</span>
-                  </div>
-                  <div className="flex justify-between items-center text-[10px] text-warning font-bold border-t border-base-300/60 pt-1">
-                    <span>Total: {formatCurrency(sBkgPdc + numDp)}</span>
-                    <span>÷ {effectiveStDivisor} TT</span>
-                  </div>
-                  <div className="text-xs font-black text-warning">
-                    = {formatCurrency(sellChargesDivTt + dpPerShare)} / share
-                  </div>
+                {/* Sell Share Price */}
+                <div className="bg-secondary/10 border border-secondary/30 rounded-xl px-3 py-2 text-center shrink-0">
+                  <div className="text-[8px] text-secondary/70 font-bold uppercase">Share Price</div>
+                  <div className="text-sm font-black text-secondary">{formatCurrency(numSShare)}</div>
                 </div>
 
-                {/* Symbol = */}
-                <span className="text-lg font-black text-base-content shrink-0">=</span>
+                {/* − */}
+                <span className="text-2xl font-black text-error shrink-0 mx-1">−</span>
 
-                {/* Final Sell Share Price */}
-                <div className="bg-success/10 border-2 border-success/30 rounded-2xl px-4 py-2 text-center shrink-0">
-                  <div className="text-[8px] text-base-content font-bold uppercase">Final Sell Price / Share</div>
-                  <div className="text-sm font-black text-success">{formatCurrency(sFShare)}</div>
-                </div>
+                {/* ── BIG BRACKET: [ (BKG + PDC) / TT  +  DP / Qty ] ── */}
+                <div className="flex items-center shrink-0">
+                  {/* Big Left Bracket */}
+                  <span className="text-5xl font-extralight text-base-content/40 leading-none select-none" style={{fontFamily: 'serif'}}>[</span>
 
-                {/* Symbol × */}
-                <span className="text-lg font-black text-base-content shrink-0">×</span>
-
-                {/* Net Sell Realization Card */}
-                <div className="p-3.5 rounded-2xl border-2 border-base-300 bg-base-200/30 shrink-0 min-w-[210px] flex items-center justify-between">
-                  <div>
-                    <div className="text-[9px] uppercase tracking-wider font-extrabold text-base-content">Net Sell Realization</div>
-                    <div className="text-[10px] font-bold text-base-content/80 mt-0.5">
-                      {formatCurrency(sFShare)} × {numSQty} shares
+                  {/* Fraction 1: (BKG + PDC) / TT */}
+                  <div className="flex items-center mx-0.5">
+                    <span className="text-3xl font-extralight text-base-content/30 leading-none select-none" style={{fontFamily: 'serif'}}>(</span>
+                    <div className="flex flex-col items-center mx-0.5">
+                      {/* Numerator: BKG + PDC */}
+                      <div className="flex items-center gap-1 px-1.5 py-0.5">
+                        <div className="text-center">
+                          <div className="text-[7px] text-warning/70 font-bold uppercase">BKG</div>
+                          <div className="text-[11px] font-black text-warning">{formatCurrency(numSBkg)}</div>
+                        </div>
+                        <span className="text-sm font-black text-success/80">+</span>
+                        <div className="text-center">
+                          <div className="text-[7px] text-warning/70 font-bold uppercase">PDC</div>
+                          <div className="text-[11px] font-black text-warning">{formatCurrency(numSPdc)}</div>
+                        </div>
+                      </div>
+                      {/* Division Line */}
+                      <div className="w-full h-[2px] bg-base-content/50 rounded-full my-0.5"></div>
+                      {/* Denominator: TT */}
+                      <div className="text-center px-1.5 py-0.5">
+                        <div className="text-[7px] text-info/70 font-bold uppercase">TT</div>
+                        <div className="text-[11px] font-black text-info">{effectiveStDivisor}</div>
+                      </div>
                     </div>
+                    <span className="text-3xl font-extralight text-base-content/30 leading-none select-none" style={{fontFamily: 'serif'}}>)</span>
                   </div>
-                  <span className="text-base font-black tracking-tight text-secondary ml-2">{formatCurrency(sFStock)}</span>
+
+                  {/* + */}
+                  <span className="text-base font-black text-success/80 shrink-0 mx-1">+</span>
+
+                  {/* Fraction 2: DP / Qty */}
+                  <div className="flex items-center mx-0.5">
+                    <span className="text-3xl font-extralight text-base-content/30 leading-none select-none" style={{fontFamily: 'serif'}}>(</span>
+                    <div className="flex flex-col items-center mx-0.5">
+                      {/* Numerator: DP */}
+                      <div className="px-2 py-0.5 text-center">
+                        <div className="text-[7px] text-error/70 font-bold uppercase">DP Charges</div>
+                        <div className="text-[11px] font-black text-error">{formatCurrency(numDp)}</div>
+                      </div>
+                      {/* Division Line */}
+                      <div className="w-full h-[2px] bg-base-content/50 rounded-full my-0.5"></div>
+                      {/* Denominator: Qty */}
+                      <div className="text-center px-2 py-0.5">
+                        <div className="text-[7px] text-info/70 font-bold uppercase">Qty</div>
+                        <div className="text-[11px] font-black text-info">{numSQty}</div>
+                      </div>
+                    </div>
+                    <span className="text-3xl font-extralight text-base-content/30 leading-none select-none" style={{fontFamily: 'serif'}}>)</span>
+                  </div>
+
+                  {/* Big Right Bracket */}
+                  <span className="text-5xl font-extralight text-base-content/40 leading-none select-none" style={{fontFamily: 'serif'}}>]</span>
+                </div>
+
+                {/* Intermediate Result */}
+                <div className="bg-warning/10 border border-warning/20 rounded-lg px-2 py-1 text-center shrink-0">
+                  <div className="text-[7px] text-warning/70 font-bold uppercase">Deduction/Share</div>
+                  <div className="text-[11px] font-black text-warning">{formatCurrency(sellChargesDivTt + dpPerShare)}</div>
+                </div>
+
+                {/* Separator */}
+                <span className="text-xl text-base-content/30 shrink-0 mx-1">⟹</span>
+
+                {/* ┌─────────────────────────────────────────────────────────────┐ */}
+                {/* │  FORMULA BLOCK: Net Sell Realization                        │ */}
+                {/* │  sFStock  =  sFShare  ×  sQty                              │ */}
+                {/* └─────────────────────────────────────────────────────────────┘ */}
+
+                {/* Big Left Bracket */}
+                <span className="text-5xl font-extralight text-base-content/40 leading-none select-none" style={{fontFamily: 'serif'}}>[</span>
+
+                {/* Final Share Price (compact repeat) */}
+                <div className="text-center shrink-0 px-1">
+                  <div className="text-[7px] text-success/70 font-bold uppercase">Final Price</div>
+                  <div className="text-xs font-black text-success">{formatCurrency(sFShare)}</div>
+                </div>
+
+                {/* × */}
+                <span className="text-xl font-black text-base-content/70 shrink-0">×</span>
+
+                {/* Quantity */}
+                <div className="text-center shrink-0 px-1">
+                  <div className="text-[7px] text-secondary/70 font-bold uppercase">Qty</div>
+                  <div className="text-xs font-black text-secondary">{numSQty}</div>
+                </div>
+
+                {/* Big Right Bracket */}
+                <span className="text-5xl font-extralight text-base-content/40 leading-none select-none" style={{fontFamily: 'serif'}}>]</span>
+
+                {/* = */}
+                <span className="text-2xl font-black text-base-content/70 shrink-0 mx-1">=</span>
+
+                {/* NET SELL REALIZATION — Final Answer */}
+                <div className="bg-gradient-to-br from-secondary/15 to-secondary/5 border-2 border-secondary/40 rounded-xl px-4 py-2 text-center shrink-0 shadow-md">
+                  <div className="text-[8px] text-secondary/80 font-bold uppercase tracking-wider">Net Sell Realization</div>
+                  <div className="text-base font-black text-secondary tracking-tight">{formatCurrency(sFStock)}</div>
                 </div>
               </div>
             ) : (
