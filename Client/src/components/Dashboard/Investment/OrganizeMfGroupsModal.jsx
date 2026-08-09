@@ -244,10 +244,10 @@ const OrganizeMfGroupsModal = ({ isOpen, onClose, funds = [], groups = [], onSav
                   key={group.id}
                   onDragOver={handleDragOver}
                   onDrop={(e) => handleDropGroup(e, group.id)}
-                  className="bg-base-200/40 rounded-2xl border border-base-200 p-4 space-y-3 transition-all hover:border-secondary/30"
+                  className="bg-base-200/80 rounded-2xl border border-base-300/80 p-4 space-y-3 shadow-xs transition-all"
                 >
                   {/* Group Header */}
-                  <div className="flex items-center justify-between gap-2 pb-2 border-b border-base-200/80">
+                  <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-base-300/70">
                     <div className="flex items-center gap-2 flex-1 min-w-0">
                       {editingGroupId === group.id ? (
                         <div className="flex items-center gap-1 flex-1 max-w-xs">
@@ -268,7 +268,7 @@ const OrganizeMfGroupsModal = ({ isOpen, onClose, funds = [], groups = [], onSav
                         </div>
                       ) : (
                         <>
-                          <h3 className="font-bold text-xs text-base-content tracking-tight truncate">
+                          <h3 className="font-extrabold text-xs text-base-content tracking-tight truncate">
                             {group.name}
                           </h3>
                           <span className="px-2 py-0.5 rounded-full bg-secondary/15 text-secondary text-[10px] font-bold border border-secondary/20">
