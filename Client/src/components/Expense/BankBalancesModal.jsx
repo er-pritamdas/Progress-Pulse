@@ -110,21 +110,21 @@ const BankBalancesModal = ({ isOpen, onClose }) => {
           <div className="p-3.5 rounded-2xl bg-base-100 border border-base-200 shadow-2xs">
             <span className="text-[10px] font-bold text-base-content/50 uppercase block tracking-wider mb-1">Total Net Assets</span>
             <span className={`text-xl font-extrabold font-mono ${netAssets < 0 ? 'text-error' : 'text-emerald-600 dark:text-emerald-400'}`}>
-              {netAssets < 0 ? `-₹${Math.abs(netAssets).toLocaleString()}` : `₹${netAssets.toLocaleString()}`}
+              {netAssets < 0 ? `-₹${Math.abs(netAssets).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : `₹${netAssets.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
             </span>
           </div>
 
           <div className="p-3.5 rounded-2xl bg-base-100 border border-base-200 shadow-2xs">
             <span className="text-[10px] font-bold text-base-content/50 uppercase block tracking-wider mb-1">Bank Balances</span>
             <span className="text-xl font-extrabold font-mono text-primary">
-              ₹{totalBankBalance.toLocaleString()}
+              ₹{totalBankBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
           </div>
 
           <div className="p-3.5 rounded-2xl bg-base-100 border border-base-200 shadow-2xs">
             <span className="text-[10px] font-bold text-base-content/50 uppercase block tracking-wider mb-1">Card Liabilities</span>
             <span className="text-xl font-extrabold font-mono text-error">
-              -₹{totalCardSpent.toLocaleString()}
+              -₹{totalCardSpent.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
           </div>
         </div>
@@ -211,7 +211,7 @@ const BankBalancesModal = ({ isOpen, onClose }) => {
                       {isCard ? "Card Balance / Due" : "Current Balance"}
                     </span>
                     <span className={`text-xl font-extrabold font-mono tracking-tight ${isExcluded ? 'line-through opacity-60' : (isErrorColor ? 'text-error' : '')}`}>
-                      {isCard ? `-₹${Math.abs(rawAmt).toLocaleString()}` : (rawAmt < 0 ? `-₹${Math.abs(rawAmt).toLocaleString()}` : `₹${rawAmt.toLocaleString()}`)}
+                      {isCard ? `-₹${Math.abs(rawAmt).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : (rawAmt < 0 ? `-₹${Math.abs(rawAmt).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : `₹${rawAmt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`)}
                     </span>
                   </div>
 
@@ -219,7 +219,7 @@ const BankBalancesModal = ({ isOpen, onClose }) => {
                     <div className="text-right">
                       <span className="text-[10px] opacity-70 font-semibold block uppercase">Credit Limit</span>
                       <span className="text-xs font-bold font-mono opacity-80">
-                        ₹{source.limit.toLocaleString()}
+                        ₹{source.limit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </span>
                     </div>
                   )}

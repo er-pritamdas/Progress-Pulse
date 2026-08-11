@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import dayjs from "dayjs";
-import { addTransaction, updateTransaction, deleteTransaction } from "../../services/redux/slice/ExpenseSlice";
+import { addTransaction, updateTransaction, deleteTransaction, setMonth } from "../../services/redux/slice/ExpenseSlice";
 import { getSourceTagStyle, getCategoryTagStyle } from "../../utils/expenseTheme";
-import { Trash2, Save, X, Edit2, Plus, Handshake, AlertTriangle, Wallet, Tag, Folder, TrendingUp, TrendingDown, ArrowUp, ArrowDown, Calendar, ArrowRightLeft, Sparkles, ChevronDown, Filter, Search } from "lucide-react";
+import { Trash2, Save, X, Edit2, Plus, Handshake, AlertTriangle, Wallet, Tag, Folder, TrendingUp, TrendingDown, ArrowUp, ArrowDown, Calendar, ArrowRightLeft, Sparkles, ChevronDown, ChevronLeft, ChevronRight, Filter, Search } from "lucide-react";
 import AddTransactionModal from "./AddTransactionModal";
 
 // Helper Component for DaisyUI Dropdown
@@ -148,10 +148,20 @@ const ExpenseTable = ({
     externalRowLimit,
     externalSetRowLimit,
     externalIsAddModalOpen,
-    externalSetIsAddModalOpen
+    externalSetIsAddModalOpen,
+    onOpenHeatmap
 }) => {
     const dispatch = useDispatch();
     const { transactions, categories, sources, loading, currentMonth } = useSelector((state) => state.expense);
+
+    const headerRef = useRef(null);
+    const bodyRef = useRef(null);
+
+    const handleBodyScroll = (e) => {
+        if (headerRef.current) {
+            headerRef.current.scrollLeft = e.target.scrollLeft;
+        }
+    };
 
     // Fallback internal states
     const [internalSortOrder, setInternalSortOrder] = useState(() => {
@@ -390,7 +400,7 @@ const ExpenseTable = ({
                 ))
                 .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
             const rem = subBudget - subUsed;
-            const formattedRem = rem >= 0 ? `₹${rem.toLocaleString()}` : `-₹${Math.abs(rem).toLocaleString()}`;
+            const formattedRem = rem >= 0 ? `₹${rem.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : `-₹${Math.abs(rem).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
             return {
                 value: sub._id,
                 label: `${sub.name} (${formattedRem} Left)`,
@@ -412,7 +422,7 @@ const ExpenseTable = ({
             const tagStyle = getSourceTagStyle(s, sources);
             return {
                 value: s._id,
-                label: `${s.name} (₹${amt.toLocaleString()})`,
+                label: `${s.name} (₹${amt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })})`,
                 key: s._id,
                 tagStyle,
                 sourceObj: s
@@ -425,7 +435,7 @@ const ExpenseTable = ({
         const tagStyle = getSourceTagStyle(s, sources);
         return {
             value: s._id,
-            label: `${s.name} (₹${amt.toLocaleString()})`,
+            label: `${s.name} (₹${amt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })})`,
             key: s._id,
             tagStyle,
             sourceObj: s
@@ -453,7 +463,7 @@ const ExpenseTable = ({
                 .filter(t => t.type !== 'Credit' && t.type !== 'Transfer' && (t.categoryId?._id === c._id || t.categoryId === c._id))
                 .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
             const rem = catBudget - catUsed;
-            const formattedRem = rem >= 0 ? `₹${rem.toLocaleString()}` : `-₹${Math.abs(rem).toLocaleString()}`;
+            const formattedRem = rem >= 0 ? `₹${rem.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : `-₹${Math.abs(rem).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
             const tagStyle = getCategoryTagStyle(c, currentMonthCategories);
             return {
                 value: c._id,
@@ -470,7 +480,7 @@ const ExpenseTable = ({
             const tagStyle = getSourceTagStyle(s, sources);
             return {
                 value: `bank_${s._id}`,
-                label: `↔ Transfer to: ${s.name} (₹${amt.toLocaleString()})`,
+                label: `↔ Transfer to: ${s.name} (₹${amt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })})`,
                 key: `bank_${s._id}`,
                 isBank: true,
                 sourceObj: s,
@@ -638,14 +648,81 @@ const ExpenseTable = ({
     return (
         <div className="w-full bg-base-100 rounded-2xl shadow-lg border border-base-200 flex flex-col min-h-[500px]">
 
-            {/* Sticky Header Section: Table Column Headers with Interactive Filter Dropdowns */}
-            <div className="sticky top-0 z-30 bg-base-100 rounded-t-2xl shadow-sm backdrop-blur-md">
+            {/* Unified Sticky Glass Header Section: Month Selector Banner + Table Column Headers */}
+            <div className="sticky top-[-17px] -mt-5 pt-5 z-30 bg-base-100/90 dark:bg-base-900/90 backdrop-blur-2xl border-b border-base-200/80 shadow-md rounded-t-2xl overflow-hidden transition-all">
                 
-                {/* Table Header Row with Column Filter Dropdowns */}
-                <div className="grid grid-cols-12 gap-4 px-6 py-3.5 bg-base-200/90 border-b border-base-200 text-xs font-extrabold text-base-content/70 uppercase tracking-widest items-center">
+                {/* Upper Header: Current Period Banner & Navigation Controls */}
+                <div className="p-4 flex flex-col sm:flex-row items-center justify-between gap-3 border-b border-base-200/50 bg-base-100/40 dark:bg-base-900/40">
+                    {/* Period Header & Title */}
+                    <div className="flex items-center gap-3">
+                        <div className="p-2.5 rounded-xl bg-primary/10 text-primary">
+                            <Calendar size={20} />
+                        </div>
+                        <div>
+                            <h3 className="text-xs font-bold text-base-content/50 uppercase tracking-widest">
+                                Current Period
+                            </h3>
+                            <span className="text-xl font-extrabold text-base-content font-sans tracking-wide">
+                                {dayjs(currentMonth).format("MMMM YYYY")}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-3 flex-wrap">
+                        {/* Month Navigation */}
+                        <div className="flex items-center gap-2 bg-base-100 p-1.5 rounded-xl border border-base-200 shadow-2xs">
+                            <button
+                                onClick={() => dispatch(setMonth(dayjs(currentMonth).subtract(1, 'month').format("YYYY-MM")))}
+                                className="btn btn-xs btn-ghost btn-square font-bold"
+                                title="Previous Month"
+                            >
+                                <ChevronLeft size={16} />
+                            </button>
+
+                            <span className="text-xs font-extrabold font-mono px-3 text-primary">
+                                {dayjs(currentMonth).format("MMM YYYY")}
+                            </span>
+
+                            <button
+                                onClick={() => dispatch(setMonth(dayjs(currentMonth).add(1, 'month').format("YYYY-MM")))}
+                                className="btn btn-xs btn-ghost btn-square font-bold"
+                                title="Next Month"
+                            >
+                                <ChevronRight size={16} />
+                            </button>
+                        </div>
+
+                        {/* Heatmap Trigger Button (Icon only) */}
+                        {onOpenHeatmap && (
+                            <button
+                                onClick={onOpenHeatmap}
+                                className="btn btn-outline btn-primary btn-sm btn-square rounded-xl shadow-xs"
+                                title="View Daily Spending Heatmap"
+                            >
+                                <Calendar size={18} />
+                            </button>
+                        )}
+
+                        {/* Primary Action Button: Add Transaction Modal (Icon only) */}
+                        <button
+                            onClick={() => {
+                                if (setIsAddModalOpen) setIsAddModalOpen(true);
+                                else setInternalIsAddModalOpen(true);
+                            }}
+                            className="btn btn-outline btn-primary btn-sm btn-square rounded-xl shadow-xs"
+                            title="Add Transaction (Modal)"
+                        >
+                            <Sparkles size={18} />
+                        </button>
+                    </div>
+                </div>
+
+                {/* Lower Header: Table Column Headers with Interactive Filter Dropdowns */}
+                <div ref={headerRef} className="overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+                    <div className="flex items-center gap-3 px-6 py-3.5 bg-base-200/60 backdrop-blur-md text-xs font-extrabold text-base-content/80 uppercase tracking-widest min-w-[980px]">
                     
                     {/* 1. Date Header + Dropdown & Sort Order Toggle */}
-                    <div className="col-span-2 flex items-center gap-1 relative">
+                    <div className="w-[160px] shrink-0 flex items-center gap-1 relative whitespace-nowrap">
                         <span>Date</span>
 
                         {/* Sort Order Toggle Icon */}
@@ -687,7 +764,7 @@ const ExpenseTable = ({
                     </div>
 
                     {/* 2. Description Header + Dropdown */}
-                    <div className="col-span-2 flex items-center gap-1.5 relative">
+                    <div className="flex-1 min-w-[150px] flex items-center gap-1.5 relative whitespace-nowrap">
                         <span>Description</span>
                         <div className="dropdown dropdown-bottom">
                             <button
@@ -722,7 +799,7 @@ const ExpenseTable = ({
                     </div>
 
                     {/* 3. From (Account) Header + Dropdown */}
-                    <div className="col-span-2 flex items-center gap-1.5 relative">
+                    <div className="w-[135px] shrink-0 flex items-center gap-1.5 relative whitespace-nowrap">
                         <span className="text-blue-600 dark:text-blue-400">From</span>
                         <div className="dropdown dropdown-bottom">
                             <button
@@ -751,7 +828,7 @@ const ExpenseTable = ({
                     </div>
 
                     {/* 4. Category / To Header + Dropdown */}
-                    <div className="col-span-2 flex items-center gap-1.5 relative">
+                    <div className="w-[145px] shrink-0 flex items-center gap-1.5 relative whitespace-nowrap">
                         <span className="text-purple-600 dark:text-purple-400">Category / To</span>
                         <div className="dropdown dropdown-bottom">
                             <button
@@ -780,7 +857,7 @@ const ExpenseTable = ({
                     </div>
 
                     {/* 5. Sub Category Header + Dropdown */}
-                    <div className="col-span-2 flex items-center gap-1.5 relative">
+                    <div className="w-[145px] shrink-0 flex items-center gap-1.5 relative whitespace-nowrap">
                         <span className="text-amber-600 dark:text-amber-400">Sub Category</span>
                         <div className="dropdown dropdown-bottom">
                             <button
@@ -812,7 +889,7 @@ const ExpenseTable = ({
                     </div>
 
                     {/* 6. Amount & Sort Controls Header */}
-                    <div className="col-span-1 text-right flex items-center justify-end gap-1">
+                    <div className="w-[130px] shrink-0 text-right flex items-center justify-end gap-1 whitespace-nowrap">
                         <span>Amount</span>
                         <button
                             onClick={() => handleSortChange(sortOrder === "newest" ? "oldest" : "newest")}
@@ -824,7 +901,7 @@ const ExpenseTable = ({
                     </div>
 
                     {/* 7. Action Header & Reset All */}
-                    <div className="col-span-1 text-center flex items-center justify-center gap-1">
+                    <div className="w-[60px] shrink-0 text-center flex items-center justify-center gap-1">
                         <span>Action</span>
                         {hasActiveFilters && (
                             <button
@@ -836,12 +913,12 @@ const ExpenseTable = ({
                             </button>
                         )}
                     </div>
-
                 </div>
             </div>
+        </div>
 
-            {/* Scrollable Content */}
-            <div className="flex-1 pb-40">
+        {/* Scrollable Content */}
+        <div ref={bodyRef} onScroll={handleBodyScroll} className="flex-1 pb-40 overflow-x-auto">
                 {(() => {
                     const renderInlineAddRow = () => (
                         <div className={`transition-all duration-300 ${isAdding ? 'bg-base-200/30 py-4 px-4 border-b border-primary/20 z-20 relative' : 'p-2 border-b border-base-200/50 flex justify-center'}`}>
@@ -853,10 +930,10 @@ const ExpenseTable = ({
                                             handleAdd();
                                         }
                                     }}
-                                    className="grid grid-cols-12 gap-2 items-center animate-in fade-in slide-in-from-top-2 w-full"
+                                    className="flex items-center gap-3 animate-in fade-in slide-in-from-top-2 w-full min-w-[980px]"
                                 >
                                     {/* Date & Reimbursable Toggle */}
-                                    <div className="col-span-2 flex items-center gap-1">
+                                    <div className="w-[160px] shrink-0 flex items-center gap-1.5">
                                         <button
                                             onClick={() => setNewData({ ...newData, isReimbursable: !newData.isReimbursable })}
                                             className={`btn btn-xs btn-square ${newData.isReimbursable ? 'btn-warning' : 'btn-ghost opacity-40 hover:opacity-100'}`}
@@ -872,10 +949,10 @@ const ExpenseTable = ({
                                             className="w-full"
                                         />
                                     </div>
-                                    <input placeholder="Desc" value={newData.description} onChange={e => setNewData({ ...newData, description: e.target.value })} className="col-span-2 input input-sm input-bordered focus:input-primary w-full text-xs" autoFocus />
+                                    <input placeholder="Desc" value={newData.description} onChange={e => setNewData({ ...newData, description: e.target.value })} className="flex-1 min-w-[150px] input input-sm input-bordered focus:input-primary text-xs" autoFocus />
 
                                     {/* From / Action */}
-                                    <div className="col-span-2">
+                                    <div className="w-[135px] shrink-0">
                                         <DaisySelect
                                             options={sourceOptions}
                                             value={newData.isAddMoney ? "add_money" : (newData.isManualDebit ? "debit_money" : newData.sourceId)}
@@ -893,7 +970,7 @@ const ExpenseTable = ({
                                     </div>
 
                                     {/* Target / Category */}
-                                    <div className="col-span-2">
+                                    <div className="w-[145px] shrink-0">
                                         {newData.isAddMoney ? (
                                             <DaisySelect
                                                 options={targetOptions}
@@ -942,7 +1019,7 @@ const ExpenseTable = ({
                                     </div>
 
                                     {/* Sub Cat */}
-                                    <div className="col-span-2">
+                                    <div className="w-[145px] shrink-0">
                                         <DaisySelect
                                             options={(newData.isAddMoney || newData.isManualDebit || newData.isTransfer) ? [] : getSubCatOptions(newData.categoryId)}
                                             value={newData.subCategoryId}
@@ -953,10 +1030,10 @@ const ExpenseTable = ({
                                     </div>
 
                                     {/* Amount */}
-                                    <input type="number" placeholder="0.00" value={newData.amount} onChange={e => setNewData({ ...newData, amount: e.target.value })} className="col-span-1 input input-sm input-bordered focus:input-primary w-full text-xs text-right" />
+                                    <input type="number" placeholder="0.00" value={newData.amount} onChange={e => setNewData({ ...newData, amount: e.target.value })} className="w-[130px] shrink-0 input input-sm input-bordered focus:input-primary text-xs text-right whitespace-nowrap" />
 
                                     {/* Actions */}
-                                    <div className="col-span-1 flex items-center justify-center gap-1">
+                                    <div className="w-[60px] shrink-0 flex items-center justify-center gap-1">
                                         <button onClick={handleAdd} className="btn btn-sm btn-square btn-primary text-white" title="Save"><Save size={14} /></button>
                                         <button onClick={() => setIsAdding(false)} className="btn btn-sm btn-square btn-ghost text-error" title="Cancel"><X size={14} /></button>
                                     </div>
@@ -996,11 +1073,11 @@ const ExpenseTable = ({
 
                             {/* Rows */}
                             {filteredTransactions.map(t => (
-                                <div key={t._id} className="grid grid-cols-12 gap-4 px-6 py-3 border-b border-base-200 hover:bg-base-200/50 transition-colors group items-center text-sm relative">
+                                <div key={t._id} className="flex items-center gap-3 px-6 py-2.5 border-b border-base-200 hover:bg-base-200/50 transition-colors group text-xs font-medium relative min-w-[980px]">
                                     {editingId === t._id ? (
                                         // Edit Mode (Inline Inputs)
                                         <>
-                                            <div className="col-span-2 flex items-center gap-1">
+                                            <div className="w-[160px] shrink-0 flex items-center gap-1.5">
                                                 <button
                                                     onClick={() => setEditData({ ...editData, isReimbursable: !editData.isReimbursable })}
                                                     className={`btn btn-xs btn-square ${editData.isReimbursable ? 'btn-warning' : 'btn-ghost opacity-40 hover:opacity-100'}`}
@@ -1016,9 +1093,9 @@ const ExpenseTable = ({
                                                     className="w-full"
                                                 />
                                             </div>
-                                            <input value={editData.description} onChange={e => setEditData({ ...editData, description: e.target.value })} className="col-span-2 input input-xs input-bordered" />
+                                            <input value={editData.description} onChange={e => setEditData({ ...editData, description: e.target.value })} className="flex-1 min-w-[150px] input input-xs input-bordered" />
 
-                                            <div className="col-span-2">
+                                            <div className="w-[135px] shrink-0">
                                                 <DaisySelect
                                                     options={editSourceOptions}
                                                     value={editData.sourceId}
@@ -1027,7 +1104,7 @@ const ExpenseTable = ({
                                                 />
                                             </div>
 
-                                            <div className="col-span-2">
+                                            <div className="w-[145px] shrink-0">
                                                 <DaisySelect
                                                     options={categoryOptions}
                                                     value={editData.isTransfer ? `bank_${editData.targetSourceId}` : editData.categoryId}
@@ -1057,7 +1134,7 @@ const ExpenseTable = ({
                                                 />
                                             </div>
 
-                                            <div className="col-span-2">
+                                            <div className="w-[145px] shrink-0">
                                                 <DaisySelect
                                                     options={editData.isTransfer ? [] : getSubCatOptions(editData.categoryId)}
                                                     value={editData.subCategoryId}
@@ -1067,9 +1144,9 @@ const ExpenseTable = ({
                                                 />
                                             </div>
 
-                                            <input type="number" value={editData.amount} onChange={e => setEditData({ ...editData, amount: e.target.value })} className="col-span-1 input input-sm input-bordered w-full text-right" />
+                                            <input type="number" value={editData.amount} onChange={e => setEditData({ ...editData, amount: e.target.value })} className="w-[130px] shrink-0 input input-sm input-bordered text-right whitespace-nowrap" />
 
-                                            <div className="col-span-1 flex items-center justify-center gap-1">
+                                            <div className="w-[60px] shrink-0 flex items-center justify-center gap-1">
                                                 <button onClick={saveEdit} className="btn btn-xs btn-square btn-success text-white"><Save size={12} /></button>
                                                 <button onClick={() => setEditingId(null)} className="btn btn-xs btn-square btn-ghost text-error"><X size={12} /></button>
                                             </div>
@@ -1077,22 +1154,20 @@ const ExpenseTable = ({
                                     ) : (
                                         // View Mode
                                         <>
-                                            <div className="col-span-2 text-base-content/60 font-medium text-xs">{dayjs(t.date).format("ddd, MMM DD, YYYY")}</div>
-                                            <div className="col-span-2">
-                                                <div className="flex flex-col">
-                                                    <div className="flex items-center gap-1">
-                                                        {t.isReimbursable && <Handshake size={12} className="text-warning" title="Reimbursable: Need to collect money" />}
-                                                        <span className="font-bold text-base-content/80 truncate text-xs" title={t.description}>{t.description}</span>
-                                                    </div>
+                                            <div className="w-[160px] shrink-0 text-base-content/60 font-medium text-[11px] whitespace-nowrap">{dayjs(t.date).format("ddd, MMM DD, YYYY")}</div>
+                                            <div className="flex-1 min-w-[150px] truncate">
+                                                <div className="flex items-center gap-1">
+                                                    {t.isReimbursable && <Handshake size={12} className="text-warning shrink-0" title="Reimbursable: Need to collect money" />}
+                                                    <span className="font-bold text-base-content/80 truncate text-xs" title={t.description}>{t.description}</span>
                                                 </div>
                                             </div>
-                                            <div className="col-span-2">
+                                            <div className="w-[135px] shrink-0 truncate">
                                                 {renderSourceTag(t)}
                                             </div>
-                                            <div className="col-span-2">
+                                            <div className="w-[145px] shrink-0 truncate">
                                                 {renderCategoryTag(t)}
                                             </div>
-                                            <div className="col-span-2">
+                                            <div className="w-[145px] shrink-0 truncate">
                                                 {(() => {
                                                     const catId = t.categoryId?._id || t.categoryId;
                                                     const subId = t.subCategoryId?._id || t.subCategoryId;
@@ -1100,22 +1175,22 @@ const ExpenseTable = ({
                                                     const sub = cat?.subCategories?.find(s => s._id === subId);
                                                     if (!sub?.name) return <span className="text-base-content/40 text-xs">—</span>;
                                                     return (
-                                                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 truncate max-w-full" title={sub.name}>
+                                                        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-medium bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 truncate max-w-full" title={sub.name}>
                                                             <Folder size={11} className="shrink-0 text-amber-500" />
                                                             <span className="truncate">{sub.name}</span>
                                                         </span>
                                                     );
                                                 })()}
                                             </div>
-                                            <div className={`col-span-1 text-right font-bold font-mono tracking-tight ${
+                                            <div className={`w-[130px] shrink-0 text-right font-bold font-mono tracking-tight text-xs whitespace-nowrap ${
                                                 t.type === 'Transfer'
                                                     ? 'text-amber-500 dark:text-amber-400'
                                                     : (t.type === 'Credit' ? 'text-success' : 'text-error')
                                             }`}>
-                                                {t.type === 'Transfer' ? '' : (t.type === 'Credit' ? '+' : '-')}₹{Number(t.amount || 0).toLocaleString()}
+                                                {t.type === 'Transfer' ? '' : (t.type === 'Credit' ? '+' : '-')}₹{Number(t.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                             </div>
 
-                                            <div className="col-span-1 flex items-center justify-center gap-1 opacity-80 hover:opacity-100 transition-opacity">
+                                            <div className="w-[60px] shrink-0 flex items-center justify-center gap-1 opacity-80 hover:opacity-100 transition-opacity">
                                                 <button onClick={() => startEdit(t)} className="btn btn-xs btn-ghost btn-square text-info hover:bg-info/10" title="Edit Transaction"><Edit2 size={14} /></button>
                                                 <button onClick={() => handleDelete(t._id)} className="btn btn-xs btn-ghost btn-square text-error hover:bg-error/10" title="Delete Transaction"><Trash2 size={14} /></button>
                                             </div>

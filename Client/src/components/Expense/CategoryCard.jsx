@@ -123,7 +123,7 @@ const CategoryCard = ({ category }) => {
     const totalBudget = subCategoryStats.reduce((sum, s) => sum + s.budget, 0);
     const totalUsed = subCategoryStats.reduce((sum, s) => sum + s.used, 0);
     const totalRemaining = totalBudget - totalUsed;
-    const totalPercentage = totalBudget > 0 ? Number(((totalUsed / totalBudget) * 100).toFixed(0)) : 0;
+    const totalPercentage = totalBudget > 0 ? Number(((totalUsed / totalBudget) * 100).toFixed(2)) : 0;
 
     // Handlers
     const handleUpdateCategoryName = () => {
@@ -245,22 +245,22 @@ const CategoryCard = ({ category }) => {
                     </div>
                 </div>
 
-                {/* 2. Subcategories Table Section */}
-                <div className="flex-1 overflow-x-auto w-full">
-                    <table className="table table-sm w-full border-collapse">
+                {/* 2. Subcategories Table Section (No scrollbars, compact table-xs size) */}
+                <div className="flex-1 overflow-x-auto w-full scrollbar-none [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+                    <table className="table table-xs w-full border-collapse">
                         <thead>
-                            <tr className="bg-base-200/60 text-base-content/70 text-xs uppercase tracking-wider border-b border-base-200">
-                                <th className="py-2.5 px-2 text-center w-8"></th>
-                                <th className="py-2.5 px-4 text-left font-bold">Subcategory</th>
-                                <th className="py-2.5 px-4 text-right font-bold">Budget Allotted</th>
-                                <th className="py-2.5 px-4 text-right font-bold">Used</th>
-                                <th className="py-2.5 px-4 text-right font-bold">Remaining</th>
-                                <th className="py-2.5 px-4 text-center font-bold">% Used</th>
+                            <tr className="bg-base-200/60 text-base-content/70 text-[10px] uppercase tracking-wider border-b border-base-200">
+                                <th className="py-1.5 px-1 text-center w-6"></th>
+                                <th className="py-1.5 px-2 text-left font-bold">Subcategory</th>
+                                <th className="py-1.5 px-2 text-right font-bold whitespace-nowrap">Budget Allotted</th>
+                                <th className="py-1.5 px-2 text-right font-bold whitespace-nowrap">Used</th>
+                                <th className="py-1.5 px-2 text-right font-bold whitespace-nowrap">Remaining</th>
+                                <th className="py-1.5 px-2 text-center font-bold whitespace-nowrap">% Used</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-base-200/50">
                             {subCategoryStats.map((sub, idx) => {
-                                const pct = sub.budget > 0 ? Number(((sub.used / sub.budget) * 100).toFixed(0)) : 0;
+                                const pct = sub.budget > 0 ? Number(((sub.used / sub.budget) * 100).toFixed(2)) : 0;
 
                                 return (
                                     <tr
@@ -296,39 +296,39 @@ const CategoryCard = ({ category }) => {
                                         className={`hover:bg-base-200/40 transition-colors group/row ${draggedSubIndex === idx ? 'opacity-40 bg-primary/5' : ''}`}
                                     >
                                         {/* Drag Handle */}
-                                        <td className="py-3 px-2 text-center text-base-content/30 hover:text-primary cursor-grab active:cursor-grabbing w-8 select-none">
-                                            <GripVertical size={16} />
+                                        <td className="py-1.5 px-1 text-center text-base-content/30 hover:text-primary cursor-grab active:cursor-grabbing w-6 select-none">
+                                            <GripVertical size={14} />
                                         </td>
 
                                         {/* Subcategory Name & Actions */}
-                                        <td className="py-3 px-4 text-left font-semibold text-sm relative">
+                                        <td className="py-1.5 px-2 text-left font-semibold text-xs relative">
                                             {editingSubId === sub._id ? (
-                                                <div className="flex items-center gap-2">
+                                                <div className="flex items-center gap-1.5">
                                                     <input
                                                         value={tempSubName}
                                                         onChange={(e) => setTempSubName(e.target.value)}
-                                                        className="input input-xs input-bordered w-full"
+                                                        className="input input-xs input-bordered w-full text-xs"
                                                         placeholder="Name"
                                                     />
                                                     <button onClick={() => handleSaveSubEdit(sub._id)} className="btn btn-xs btn-square btn-success">
-                                                        <Save size={12} />
+                                                        <Save size={11} />
                                                     </button>
                                                     <button onClick={() => setEditingSubId(null)} className="btn btn-xs btn-square btn-ghost">
-                                                        <X size={12} />
+                                                        <X size={11} />
                                                     </button>
                                                 </div>
                                             ) : (
-                                                <div className="flex items-center justify-between gap-2">
-                                                    <span className="truncate max-w-[160px]" title={sub.name}>{sub.name}</span>
+                                                <div className="flex items-center justify-between gap-1.5">
+                                                    <span className="truncate max-w-[130px] text-xs font-semibold" title={sub.name}>{sub.name}</span>
 
-                                                    {/* Static Row Actions (No Column Shifting) */}
+                                                    {/* Static Row Actions */}
                                                     <div className="flex items-center gap-0.5 shrink-0 opacity-60 group-hover/row:opacity-100 transition-opacity">
                                                         <button
                                                             onClick={() => { setHistorySubId(sub._id); setShowHistoryModal(true); }}
-                                                            className="btn btn-xs btn-ghost btn-square text-info"
+                                                            className="btn btn-xs btn-ghost btn-square p-0.5 w-5 h-5 min-h-0 text-info"
                                                             title="View History"
                                                         >
-                                                            <Info size={13} />
+                                                            <Info size={12} />
                                                         </button>
                                                         <button
                                                             onClick={() => {
@@ -336,17 +336,17 @@ const CategoryCard = ({ category }) => {
                                                                 setTempSubName(sub.name);
                                                                 setTempSubBudget(sub.budget);
                                                             }}
-                                                            className="btn btn-xs btn-ghost btn-square text-warning"
+                                                            className="btn btn-xs btn-ghost btn-square p-0.5 w-5 h-5 min-h-0 text-warning"
                                                             title="Edit"
                                                         >
-                                                            <Edit2 size={13} />
+                                                            <Edit2 size={12} />
                                                         </button>
                                                         <button
                                                             onClick={() => dispatch(deleteSubCategory({ categoryId: category._id, subId: sub._id }))}
-                                                            className="btn btn-xs btn-ghost btn-square text-error"
+                                                            className="btn btn-xs btn-ghost btn-square p-0.5 w-5 h-5 min-h-0 text-error"
                                                             title="Delete"
                                                         >
-                                                            <Trash2 size={13} />
+                                                            <Trash2 size={12} />
                                                         </button>
                                                     </div>
                                                 </div>
@@ -354,13 +354,13 @@ const CategoryCard = ({ category }) => {
                                         </td>
 
                                         {/* Budget Allotted */}
-                                        <td className="py-3 px-4 text-right font-mono font-medium text-sm">
+                                        <td className="py-1.5 px-2 text-right font-mono font-medium text-xs whitespace-nowrap">
                                             {editingSubId === sub._id ? (
                                                 <input
                                                     type="number"
                                                     value={tempSubBudget}
                                                     onChange={(e) => setTempSubBudget(e.target.value)}
-                                                    className="input input-xs input-bordered w-20 text-right"
+                                                    className="input input-xs input-bordered w-16 text-right font-mono text-xs"
                                                 />
                                             ) : (
                                                 `₹${sub.budget.toLocaleString()}`
@@ -368,26 +368,26 @@ const CategoryCard = ({ category }) => {
                                         </td>
 
                                         {/* Used */}
-                                        <td className="py-3 px-4 text-right font-mono font-bold text-sm text-rose-500 dark:text-rose-400">
+                                        <td className="py-1.5 px-2 text-right font-mono font-bold text-xs text-rose-500 dark:text-rose-400 whitespace-nowrap">
                                             ₹{sub.used.toLocaleString()}
                                         </td>
 
                                         {/* Remaining */}
-                                        <td className={`py-3 px-4 text-right font-mono font-bold text-sm ${sub.remaining < 0 ? 'text-error' : 'text-success'}`}>
+                                        <td className={`py-1.5 px-2 text-right font-mono font-bold text-xs whitespace-nowrap ${sub.remaining < 0 ? 'text-error' : 'text-success'}`}>
                                             {sub.remaining >= 0 ? `+₹${sub.remaining.toLocaleString()}` : `-₹${Math.abs(sub.remaining).toLocaleString()}`}
                                         </td>
 
                                         {/* Percentage Used */}
-                                        <td className="py-3 px-4 text-center min-w-[120px]">
+                                        <td className="py-1.5 px-2 text-center min-w-[90px] whitespace-nowrap">
                                             {(() => {
                                                 const pctColor = getUsedPercentageColor(pct);
                                                 return (
-                                                    <div className="flex flex-col items-center gap-1">
-                                                        <span className={`font-mono text-xs ${pctColor.text}`}>
-                                                            {pct}%
+                                                    <div className="flex flex-col items-center gap-0.5">
+                                                        <span className={`font-mono text-[10px] font-semibold ${pctColor.text}`}>
+                                                            {pct.toFixed(2)}%
                                                         </span>
                                                         <progress
-                                                            className={`progress w-16 h-1.5 ${pctColor.progress}`}
+                                                            className={`progress w-12 h-1 ${pctColor.progress}`}
                                                             value={pct}
                                                             max="100"
                                                         ></progress>
@@ -401,7 +401,7 @@ const CategoryCard = ({ category }) => {
 
                             {subCategoryStats.length === 0 && !isAddingSub && (
                                 <tr>
-                                    <td colSpan="6" className="text-center py-6 border-b border-base-200 opacity-40 text-xs font-medium">
+                                    <td colSpan="6" className="text-center py-4 border-b border-base-200 opacity-40 text-[11px] font-medium">
                                         No Sub-Categories added yet. Click "+ Add Subcategory" below.
                                     </td>
                                 </tr>
@@ -411,8 +411,8 @@ const CategoryCard = ({ category }) => {
 
                     {/* Inline Add Subcategory Builder */}
                     {isAddingSub ? (
-                        <div className="p-3 border-t border-primary/30 bg-primary/5 space-y-2 animate-in fade-in duration-150">
-                            <div className="flex flex-col sm:flex-row gap-2">
+                        <div className="p-2 border-t border-primary/30 bg-primary/5 space-y-2 animate-in fade-in duration-150">
+                            <div className="flex flex-col sm:flex-row gap-1.5">
                                 <input
                                     className="input input-xs input-bordered w-full sm:w-1/2 text-xs"
                                     placeholder="Subcategory Name (e.g. Electricity Bill)"
@@ -428,18 +428,18 @@ const CategoryCard = ({ category }) => {
                                     onChange={(e) => setNewSubBudget(e.target.value)}
                                 />
                             </div>
-                            <div className="flex justify-end gap-2">
+                            <div className="flex justify-end gap-1.5">
                                 <button onClick={() => setIsAddingSub(false)} className="btn btn-xs btn-ghost">Cancel</button>
-                                <button onClick={handleAddSubCategory} className="btn btn-xs btn-primary px-4">Save Subcategory</button>
+                                <button onClick={handleAddSubCategory} className="btn btn-xs btn-primary px-3">Save Subcategory</button>
                             </div>
                         </div>
                     ) : (
-                        <div className="p-2 border-t border-base-200">
+                        <div className="p-1.5 border-t border-base-200">
                             <button
                                 onClick={() => setIsAddingSub(true)}
-                                className="btn btn-xs btn-ghost btn-block border-dashed border-base-300 text-base-content/60 hover:bg-base-200 hover:text-primary transition-all h-8 text-xs font-medium"
+                                className="btn btn-xs btn-ghost btn-block border-dashed border-base-300 text-base-content/60 hover:bg-base-200 hover:text-primary transition-all h-7 text-xs font-medium"
                             >
-                                <Plus size={14} className="mr-1" /> Add Subcategory
+                                <Plus size={13} className="mr-1" /> Add Subcategory
                             </button>
                         </div>
                     )}
@@ -463,7 +463,7 @@ const CategoryCard = ({ category }) => {
                     <div className="flex flex-col items-end">
                         <span className="opacity-50 text-[10px] uppercase font-bold">Overall Progress</span>
                         <span className={`font-mono text-sm ${getUsedPercentageColor(totalPercentage).text}`}>
-                            {totalPercentage}%
+                            {totalPercentage.toFixed(2)}%
                         </span>
                     </div>
                 </div>

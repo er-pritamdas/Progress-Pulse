@@ -215,7 +215,7 @@ const ExpTableEntry = () => {
                           {source.name}
                         </span>
                         <span className={`font-mono font-extrabold text-xs shrink-0 text-right ${isExcluded ? 'text-base-content/40' : (isErrorColor ? 'text-error' : 'text-success')}`}>
-                          {isCard ? `-₹${Math.abs(rawAmt).toLocaleString()}` : (rawAmt < 0 ? `-₹${Math.abs(rawAmt).toLocaleString()}` : `₹${rawAmt.toLocaleString()}`)}
+                          {isCard ? `-₹${Math.abs(rawAmt).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : (rawAmt < 0 ? `-₹${Math.abs(rawAmt).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : `₹${rawAmt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`)}
                         </span>
                       </div>
                     );
@@ -241,7 +241,7 @@ const ExpTableEntry = () => {
               <div className="pt-2 border-t border-base-300/40 flex justify-between items-center text-xs font-bold">
                 <span className="text-[10px] uppercase font-extrabold text-base-content/60 tracking-wider">Total Net Balance</span>
                 <span className={`font-mono text-xs font-extrabold ${totalNetBalance < 0 ? 'text-error' : 'text-success'}`}>
-                  {totalNetBalance < 0 ? `-₹${Math.abs(totalNetBalance).toLocaleString()}` : `₹${totalNetBalance.toLocaleString()}`}
+                  {totalNetBalance < 0 ? `-₹${Math.abs(totalNetBalance).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : `₹${totalNetBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                 </span>
               </div>
             </div>
@@ -273,7 +273,7 @@ const ExpTableEntry = () => {
                 </button>
               </div>
               <div className="text-3xl font-bold text-error font-mono tracking-tighter">
-                {showDebit ? `₹${totalDebited.toLocaleString()}` : "••••••••"}
+                {showDebit ? `₹${totalDebited.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "••••••••"}
               </div>
               <div className="flex items-center justify-between mt-2">
                 <div className="flex items-center gap-2">
@@ -312,7 +312,7 @@ const ExpTableEntry = () => {
                 </button>
               </div>
               <div className="text-3xl font-bold text-success font-mono tracking-tighter">
-                {showCredit ? `₹${totalCredited.toLocaleString()}` : "••••••••"}
+                {showCredit ? `₹${totalCredited.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "••••••••"}
               </div>
               <div className="flex items-center justify-between mt-2">
                 <div className="flex items-center gap-2">
@@ -329,69 +329,6 @@ const ExpTableEntry = () => {
 
         {/* Main Table Area (Right) */}
         <div className="flex-1 flex flex-col gap-6">
-
-          {/* Month Selector Banner & Add Transaction Modal Button (Top of Table) */}
-          <div className="card bg-gradient-to-br from-base-100 to-base-200 shadow-md border border-base-200/50 p-4 flex flex-col sm:flex-row items-center justify-between gap-3">
-            
-            {/* Period Header & Title */}
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-xl bg-primary/10 text-primary">
-                <Calendar size={20} />
-              </div>
-              <div>
-                <h3 className="text-xs font-bold text-base-content/50 uppercase tracking-widest">
-                  Current Period
-                </h3>
-                <span className="text-xl font-extrabold text-base-content font-sans tracking-wide">
-                  {dayjs(currentMonth).format("MMMM YYYY")}
-                </span>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3 flex-wrap">
-              {/* Month Navigation */}
-              <div className="flex items-center gap-2 bg-base-100 p-1.5 rounded-xl border border-base-200 shadow-2xs">
-                <button
-                  onClick={() => dispatch(setMonth(dayjs(currentMonth).subtract(1, 'month').format("YYYY-MM")))}
-                  className="btn btn-xs btn-ghost btn-square font-bold"
-                  title="Previous Month"
-                >
-                  <ChevronLeft size={16} />
-                </button>
-
-                <span className="text-xs font-extrabold font-mono px-3 text-primary">
-                  {dayjs(currentMonth).format("MMM YYYY")}
-                </span>
-
-                <button
-                  onClick={() => dispatch(setMonth(dayjs(currentMonth).add(1, 'month').format("YYYY-MM")))}
-                  className="btn btn-xs btn-ghost btn-square font-bold"
-                  title="Next Month"
-                >
-                  <ChevronRight size={16} />
-                </button>
-              </div>
-
-              {/* Heatmap Trigger Button (Icon only) */}
-              <button
-                onClick={() => setShowHeatmapModal(true)}
-                className="btn btn-outline btn-primary btn-sm btn-square rounded-xl shadow-xs"
-                title="View Daily Spending Heatmap"
-              >
-                <Calendar size={18} />
-              </button>
-
-              {/* Primary Action Button: Add Transaction Modal (Icon only) */}
-              <button
-                onClick={() => setIsAddModalOpen(true)}
-                className="btn btn-outline btn-primary btn-sm btn-square rounded-xl shadow-xs"
-                title="Add Transaction (Modal)"
-              >
-                <Sparkles size={18} />
-              </button>
-            </div>
-          </div>
-
           <ExpenseTable
             externalFilters={filters}
             externalSetFilters={setFilters}
@@ -401,6 +338,7 @@ const ExpTableEntry = () => {
             externalSetRowLimit={setRowLimit}
             externalIsAddModalOpen={isAddModalOpen}
             externalSetIsAddModalOpen={setIsAddModalOpen}
+            onOpenHeatmap={() => setShowHeatmapModal(true)}
           />
         </div>
 
@@ -518,7 +456,7 @@ const HeatmapModal = ({ transactions, currentMonth, onClose }) => {
                   className={`aspect-square rounded-xl flex flex-col items-center justify-center p-1 transition-all cursor-default relative group ${
                     isToday ? 'ring-2 ring-primary ring-offset-2 ring-offset-base-100 z-10 font-black shadow-md border-2 border-primary scale-105' : ''
                   } ${bgClass}`}
-                  title={(isToday ? 'Today - ' : '') + `Spending: ₹${amount.toLocaleString()}`}
+                  title={(isToday ? 'Today - ' : '') + `Spending: ₹${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                 >
                   <span className={`text-xs ${amount > 0 || isToday ? 'opacity-100 font-bold' : 'opacity-80'}`}>{date.date()}</span>
                   {amount > 0 && (
@@ -671,7 +609,7 @@ const TransactionListModal = ({ type, transactions, currentMonth, onClose }) => 
 
           <div className="flex items-center gap-3">
             <span className={`px-3 py-1 rounded-xl text-sm font-extrabold font-mono border ${bgBadge}`}>
-              Total: ₹{totalSum.toLocaleString()}
+              Total: ₹{totalSum.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
             <button onClick={onClose} className="btn btn-sm btn-ghost btn-circle rounded-full">
               <X size={18} />
@@ -936,7 +874,7 @@ const TransactionListModal = ({ type, transactions, currentMonth, onClose }) => 
                         </td>
                         <td className="py-3 px-4 text-right font-mono font-extrabold whitespace-nowrap">
                           <span className={isTrf ? "text-amber-500 dark:text-amber-400" : (isDebit ? "text-error" : "text-success")}>
-                            {isTrf ? "" : (isDebit ? "-" : "+")}₹{Number(t.amount || 0).toLocaleString()}
+                            {isTrf ? "" : (isDebit ? "-" : "+")}₹{Number(t.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </span>
                         </td>
                       </tr>
@@ -955,7 +893,7 @@ const TransactionListModal = ({ type, transactions, currentMonth, onClose }) => 
         {/* Footer Summary */}
         <div className="p-4 border-t border-base-200 bg-base-200/50 flex justify-between items-center text-xs">
           <span className="font-semibold text-base-content/70">
-            Showing <strong className="font-mono">{filteredTransactions.length}</strong> transactions | Total {isDebit ? 'Debited' : 'Credited'}: <strong className={`font-mono font-bold ${accentColor}`}>₹{totalSum.toLocaleString()}</strong>
+            Showing <strong className="font-mono">{filteredTransactions.length}</strong> transactions | Total {isDebit ? 'Debited' : 'Credited'}: <strong className={`font-mono font-bold ${accentColor}`}>₹{totalSum.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
           </span>
           <button onClick={onClose} className="btn btn-sm btn-primary rounded-xl font-bold px-5">
             Close

@@ -38,46 +38,44 @@ export default function ThemedBreadcrumbs() {
     : null;
 
   return (
-    <div className="flex items-center justify-between gap-3 mb-4 relative z-10">
-      {/* DaisyUI Breadcrumb navigation bar */}
-      <div className="breadcrumbs text-sm px-4 py-2.5 bg-base-200 text-base-content rounded-box shadow-sm flex-1 min-w-0">
-        <ul className="flex items-center gap-2">
-          <li>
-            <Link to="/dashboard" className="hover:text-primary transition-colors flex items-center gap-1 font-medium">
-              <Home className="w-4 h-4" />
-              Home
-            </Link>
-          </li>
-
-          {mainCategory && (
+    <>
+      <div className="flex items-center justify-between gap-3 mb-4 relative z-10">
+        {/* DaisyUI Breadcrumb navigation bar */}
+        <div className="breadcrumbs text-sm px-4 py-2.5 bg-base-200 text-base-content rounded-box shadow-sm flex-1 min-w-0">
+          <ul className="flex items-center gap-2">
             <li>
-              <Link
-                to={`/dashboard/${mainCategoryRaw}`}
-                className="hover:text-primary transition-colors flex items-center gap-1 font-medium"
-              >
-                {mainCategoryIcon[mainCategory] || <BookOpen className="w-4 h-4" />}
-                {mainCategory}
+              <Link to="/dashboard" className="hover:text-primary transition-colors flex items-center gap-1 font-medium">
+                <Home className="w-4 h-4" />
+                Home
               </Link>
             </li>
-          )}
 
-          {subCategory && (
-            <li>
-              <span className="text-primary font-bold flex items-center gap-1">
-                {subCategoryIcon[subCategory] || <Navigation className="w-4 h-4" />}
-                {subCategory}
-              </span>
-            </li>
-          )}
-        </ul>
+            {mainCategory && (
+              <li>
+                <Link
+                  to={`/dashboard/${mainCategoryRaw}`}
+                  className="hover:text-primary transition-colors flex items-center gap-1 font-medium"
+                >
+                  {mainCategoryIcon[mainCategory] || <BookOpen className="w-4 h-4" />}
+                  {mainCategory}
+                </Link>
+              </li>
+            )}
+
+            {subCategory && (
+              <li>
+                <span className="text-primary font-bold flex items-center gap-1">
+                  {subCategoryIcon[subCategory] || <Navigation className="w-4 h-4" />}
+                  {subCategory}
+                </span>
+              </li>
+            )}
+          </ul>
+        </div>
       </div>
 
-      {/* Extreme Right Action: Quick Calculator for Expense Pages */}
-      {isExpensePage && (
-        <div className="shrink-0 relative z-40">
-          <QuickCalculator />
-        </div>
-      )}
-    </div>
+      {/* Floating Action Quick Calculator for Expense Pages */}
+      {isExpensePage && <QuickCalculator />}
+    </>
   );
 }

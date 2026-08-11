@@ -273,7 +273,7 @@ const HeaderSection = () => {
                                     className={`progress w-full h-1.5 mt-0.5 ${isOverBudget ? 'progress-error' : 'progress-info'}`}
                                     value={allocatedPct}
                                     max="100"
-                                    title={`Allocated ${allocatedPct.toFixed(0)}% of Salary`}
+                                    title={`Allocated ${allocatedPct.toFixed(2)}% of Salary`}
                                 ></progress>
                             </div>
                             <Banknote className="absolute -bottom-4 -right-4 w-24 h-24 text-base-content/5 rotate-12 -z-0" />
@@ -297,10 +297,10 @@ const HeaderSection = () => {
                             <div className="stat-desc flex flex-col items-center gap-1 w-full max-w-[170px] relative z-10 mt-2">
                                 <div className="flex justify-between w-full text-[11px] font-medium">
                                     <span className="text-base-content/70">
-                                        {showBalance ? `${spentPctSalary.toFixed(0)}% Salary` : "••% Salary"}
+                                        {showBalance ? `${spentPctSalary.toFixed(2)}% Salary` : "••% Salary"}
                                     </span>
                                     <span className="text-warning font-semibold">
-                                        {showBalance ? `${spentPctBudget.toFixed(0)}% Budget` : "••% Budget"}
+                                        {showBalance ? `${spentPctBudget.toFixed(2)}% Budget` : "••% Budget"}
                                     </span>
                                 </div>
                                 <progress

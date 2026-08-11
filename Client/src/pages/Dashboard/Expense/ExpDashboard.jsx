@@ -246,7 +246,7 @@ const ExpDashboard = () => {
         .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
 
       const left = Math.max(0, allotted - used);
-      const percentage = allotted > 0 ? Math.round((used / allotted) * 100) : 0;
+      const percentage = allotted > 0 ? Number(((used / allotted) * 100).toFixed(2)) : 0;
 
       return {
         monthLabel,
@@ -264,7 +264,7 @@ const ExpDashboard = () => {
     const totalAllotted = monthlyPlotData.reduce((sum, d) => sum + d.allotted, 0);
     const totalUsed = monthlyPlotData.reduce((sum, d) => sum + d.used, 0);
     const totalLeft = monthlyPlotData.reduce((sum, d) => sum + d.left, 0);
-    const overallPct = totalAllotted > 0 ? Math.round((totalUsed / totalAllotted) * 100) : 0;
+    const overallPct = totalAllotted > 0 ? Number(((totalUsed / totalAllotted) * 100).toFixed(2)) : 0;
     return { totalAllotted, totalUsed, totalLeft, overallPct };
   }, [monthlyPlotData]);
 
@@ -400,7 +400,7 @@ const ExpDashboard = () => {
           .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
 
         const subRemaining = Math.max(0, subAllotted - subUsed);
-        const subPct = subAllotted > 0 ? Math.round((subUsed / subAllotted) * 100) : (subUsed > 0 ? 100 : 0);
+        const subPct = subAllotted > 0 ? Number(((subUsed / subAllotted) * 100).toFixed(2)) : (subUsed > 0 ? 100 : 0);
 
         monthTotalAllotted += subAllotted;
         monthTotalUsed += subUsed;
@@ -415,7 +415,7 @@ const ExpDashboard = () => {
       });
 
       const monthRemaining = Math.max(0, monthTotalAllotted - monthTotalUsed);
-      const monthPct = monthTotalAllotted > 0 ? Math.round((monthTotalUsed / monthTotalAllotted) * 100) : (monthTotalUsed > 0 ? 100 : 0);
+      const monthPct = monthTotalAllotted > 0 ? Number(((monthTotalUsed / monthTotalAllotted) * 100).toFixed(2)) : (monthTotalUsed > 0 ? 100 : 0);
 
       return {
         monthLabel,
@@ -438,7 +438,7 @@ const ExpDashboard = () => {
       used += row.totalUsed;
     });
     const remaining = Math.max(0, allotted - used);
-    const overallPct = allotted > 0 ? Math.round((used / allotted) * 100) : (used > 0 ? 100 : 0);
+    const overallPct = allotted > 0 ? Number(((used / allotted) * 100).toFixed(2)) : (used > 0 ? 100 : 0);
     return { allotted, used, remaining, overallPct };
   }, [subCatMonthlyTableData]);
 
@@ -456,7 +456,7 @@ const ExpDashboard = () => {
         allotted: d.allotted,
         used: d.used,
         remaining: d.left,
-        percentage: d.allotted > 0 ? Math.round((d.used / d.allotted) * 100) : 0
+        percentage: d.allotted > 0 ? Number(((d.used / d.allotted) * 100).toFixed(2)) : 0
       }));
     }
     return monthlyPlotData.map((d) => ({
@@ -473,7 +473,7 @@ const ExpDashboard = () => {
     const totalAllotted = tableRows.reduce((sum, r) => sum + r.allotted, 0);
     const totalUsed = tableRows.reduce((sum, r) => sum + r.used, 0);
     const totalRemaining = tableRows.reduce((sum, r) => sum + r.remaining, 0);
-    const overallPct = totalAllotted > 0 ? Math.round((totalUsed / totalAllotted) * 100) : 0;
+    const overallPct = totalAllotted > 0 ? Number(((totalUsed / totalAllotted) * 100).toFixed(2)) : 0;
     return { totalAllotted, totalUsed, totalRemaining, overallPct };
   }, [tableRows]);
 
@@ -794,7 +794,7 @@ const ExpDashboard = () => {
         <div className="card bg-base-100 shadow-md border border-base-200 p-5">
           <span className="text-xs font-bold uppercase tracking-wider text-base-content/50">Utilized Rate</span>
           <span className={`text-2xl font-black font-mono mt-1 block ${rangeTotals.overallPct > 100 ? 'text-error' : 'text-info'}`}>
-            {rangeTotals.overallPct}%
+            {Number(rangeTotals.overallPct || 0).toFixed(2)}%
           </span>
           <div className="w-full bg-base-200 h-2 rounded-full mt-2 overflow-hidden">
             <div
@@ -945,22 +945,22 @@ const ExpDashboard = () => {
                         const pctStyle = getUsedPercentageStyle(d.percentage);
                         return (
                           <tr key={d.rawMonth} className="hover:bg-base-200/50 transition-colors">
-                            <td className="py-3 px-4 font-bold text-sm text-base-content">
+                            <td className="py-3 px-4 font-bold text-sm text-base-content whitespace-nowrap">
                               {d.monthLabel}
                             </td>
-                            <td className="py-3 px-4 text-right font-mono font-bold text-primary">
+                            <td className="py-3 px-4 text-right font-mono font-bold text-primary whitespace-nowrap">
                               ₹{d.allotted.toLocaleString()}
                             </td>
-                            <td className="py-3 px-4 text-right font-mono font-bold text-rose-500">
+                            <td className="py-3 px-4 text-right font-mono font-bold text-rose-500 whitespace-nowrap">
                               ₹{d.used.toLocaleString()}
                             </td>
-                            <td className="py-3 px-4 text-right font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                            <td className="py-3 px-4 text-right font-mono font-bold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
                               ₹{d.left.toLocaleString()}
                             </td>
                             <td className="py-3 px-4 text-center">
                               <div className="flex items-center justify-center gap-2">
-                                <span className={`font-mono font-extrabold text-xs w-12 text-right ${pctStyle.text}`}>
-                                  {d.percentage}%
+                                <span className={`font-mono font-extrabold text-xs w-14 text-right ${pctStyle.text}`}>
+                                  {Number(d.percentage || 0).toFixed(2)}%
                                 </span>
                                 <div className="w-24 bg-base-200 h-2 rounded-full overflow-hidden hidden sm:block">
                                   <div
@@ -993,7 +993,7 @@ const ExpDashboard = () => {
                             const footerStyle = getUsedPercentageStyle(rangeTotals.overallPct);
                             return (
                               <span className={`badge badge-sm font-extrabold px-2.5 py-1.5 shadow-xs ${footerStyle.badgeBg}`}>
-                                {rangeTotals.overallPct}% Overall
+                                {Number(rangeTotals.overallPct || 0).toFixed(2)}% Overall
                               </span>
                             );
                           })()}
@@ -1228,8 +1228,8 @@ const ExpDashboard = () => {
                                   const mPctStyle = getUsedPercentageStyle(mRow.overallPct);
                                   return (
                                     <div className="flex items-center justify-center gap-2">
-                                      <span className={`font-mono font-extrabold text-xs w-12 text-right ${mPctStyle.text}`}>
-                                        {mRow.overallPct}%
+                                      <span className={`font-mono font-extrabold text-xs w-14 text-right ${mPctStyle.text}`}>
+                                        {Number(mRow.overallPct || 0).toFixed(2)}%
                                       </span>
                                       <div className="w-20 bg-base-200 h-2 rounded-full overflow-hidden hidden sm:block">
                                         <div
@@ -1258,23 +1258,23 @@ const ExpDashboard = () => {
                                       <div className="flex items-center gap-2">
                                         <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: color }}></span>
                                         <span className="font-semibold text-base-content/90">
-                                          {sub.subName}
+                          {sub.subName}
                                         </span>
                                       </div>
                                     </td>
-                                    <td className="py-2.5 px-4 text-right font-mono text-base-content/80">
+                                    <td className="py-2.5 px-4 text-right font-mono text-base-content/80 whitespace-nowrap">
                                       ₹{sub.allotted.toLocaleString()}
                                     </td>
-                                    <td className="py-2.5 px-4 text-right font-mono font-bold text-rose-500">
+                                    <td className="py-2.5 px-4 text-right font-mono font-bold text-rose-500 whitespace-nowrap">
                                       ₹{sub.used.toLocaleString()}
                                     </td>
-                                    <td className="py-2.5 px-4 text-right font-mono text-emerald-600 dark:text-emerald-400">
+                                    <td className="py-2.5 px-4 text-right font-mono text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
                                       ₹{sub.remaining.toLocaleString()}
                                     </td>
                                     <td className="py-2.5 px-4 text-center">
                                       <div className="flex items-center justify-center gap-2">
-                                        <span className={`font-mono font-bold text-xs w-12 text-right ${subPctStyle.text}`}>
-                                          {sub.pct}%
+                                        <span className={`font-mono font-bold text-xs w-14 text-right ${subPctStyle.text}`}>
+                                          {Number(sub.pct || 0).toFixed(2)}%
                                         </span>
                                         <div className="w-16 bg-base-300/60 h-1.5 rounded-full overflow-hidden hidden sm:block">
                                           <div
@@ -1310,7 +1310,7 @@ const ExpDashboard = () => {
                             const subFooterStyle = getUsedPercentageStyle(subCatRangeTotals.overallPct);
                             return (
                               <span className={`badge badge-sm font-extrabold px-2.5 py-1.5 shadow-xs ${subFooterStyle.badgeBg}`}>
-                                {subCatRangeTotals.overallPct}% Overall
+                                {Number(subCatRangeTotals.overallPct || 0).toFixed(2)}% Overall
                               </span>
                             );
                           })()}

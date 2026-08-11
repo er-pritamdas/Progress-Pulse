@@ -5,6 +5,7 @@ const QuickCalculator = () => {
   const [display, setDisplay] = useState("0");
   const [expression, setExpression] = useState("");
   const [isOpen, setIsOpen] = useState(false);
+  const [mainBounds, setMainBounds] = useState({ right: 24, bottom: 24 });
   const dropdownRef = useRef(null);
 
   // Close dropdown on outside click
@@ -19,6 +20,55 @@ const QuickCalculator = () => {
     }
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isOpen]);
+
+  // Main window context positioning (Left of scrollbar)
+  useEffect(() => {
+    const getScrollContainer = (element) => {
+      let parent = element?.parentElement;
+      while (parent && parent !== document.body && parent !== document.documentElement) {
+        const style = window.getComputedStyle(parent);
+        if (["auto", "scroll"].includes(style.overflowY)) {
+          return parent;
+        }
+        parent = parent.parentElement;
+      }
+      return window;
+    };
+
+    const container = getScrollContainer(dropdownRef.current);
+
+    const updatePosition = () => {
+      if (container && container !== window) {
+        const containerRect = container.getBoundingClientRect();
+        // Inner right edge of main container (excluding vertical scrollbar)
+        const innerRight = containerRect.left + container.clientWidth;
+        // Distance from window right edge to left side of scrollbar + 16px padding
+        const rightOffset = Math.max(16, window.innerWidth - innerRight + 16);
+        const bottomOffset = Math.max(24, window.innerHeight - containerRect.bottom + 24);
+        setMainBounds({ right: rightOffset, bottom: bottomOffset });
+      }
+    };
+
+    updatePosition();
+
+    if (container === window) {
+      window.addEventListener("scroll", updatePosition, { passive: true });
+    } else {
+      container.addEventListener("scroll", updatePosition, { passive: true });
+      window.addEventListener("scroll", updatePosition, { passive: true });
+    }
+    window.addEventListener("resize", updatePosition, { passive: true });
+
+    return () => {
+      if (container === window) {
+        window.removeEventListener("scroll", updatePosition);
+      } else {
+        container.removeEventListener("scroll", updatePosition);
+        window.removeEventListener("scroll", updatePosition);
+      }
+      window.removeEventListener("resize", updatePosition);
+    };
+  }, []);
 
   const handleDigit = (digit) => {
     if (display === "0" || display === "Error") {
@@ -123,25 +173,29 @@ const QuickCalculator = () => {
   }, [isOpen, display]);
 
   return (
-    <div ref={dropdownRef} className="relative">
-      {/* Trigger Button in Sub-Header */}
+    <div
+      ref={dropdownRef}
+      style={{
+        right: `${mainBounds.right}px`,
+        bottom: `${mainBounds.bottom}px`,
+      }}
+      className="fixed z-[99999] transition-all duration-300 animate-in fade-in zoom-in-90"
+    >
+      {/* Floating Action Button: Symbol of Calculator only */}
       <button
+        type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className={`btn btn-xs sm:btn-sm gap-1.5 rounded-xl border font-bold transition-all shadow-xs ${
-          isOpen
-            ? "btn-primary shadow-md scale-105"
-            : "btn-outline border-base-300 hover:border-primary text-base-content/80 hover:text-primary"
+        className={`btn btn-primary btn-circle shadow-2xl border-2 border-primary-content/20 hover:scale-110 active:scale-95 transition-all duration-200 ${
+          isOpen ? "ring-4 ring-primary/40 scale-110" : ""
         }`}
         title="Quick Calculator (+ - × ÷)"
       >
-        <Calculator size={16} className="text-primary" />
-        <span className="text-xs font-bold hidden sm:inline">Calculator</span>
+        <Calculator size={22} />
       </button>
 
       {/* Professional Popover Window */}
       {isOpen && (
-        <div className="absolute right-0 top-10 z-[999999] w-80 bg-base-100 rounded-3xl shadow-2xl border-2 border-base-300 p-4.5 animate-in fade-in zoom-in-95 duration-150">
-          
+        <div className="absolute right-0 bottom-full mb-3 z-[999999] w-80 max-h-[85vh] overflow-y-auto bg-base-100 rounded-3xl shadow-2xl border-2 border-base-300 p-4.5 animate-in fade-in zoom-in-95 duration-150">
           {/* Header */}
           <div className="flex justify-between items-center mb-3 pb-2 border-b border-base-200">
             <div className="flex items-center gap-2">
@@ -153,6 +207,7 @@ const QuickCalculator = () => {
               </span>
             </div>
             <button
+              type="button"
               onClick={() => setIsOpen(false)}
               className="btn btn-xs btn-ghost btn-circle rounded-full opacity-60 hover:opacity-100"
             >

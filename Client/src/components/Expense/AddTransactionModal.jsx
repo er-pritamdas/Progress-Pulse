@@ -232,7 +232,7 @@ const AddTransactionModal = ({ isOpen, onClose }) => {
                       <span className={`w-2 h-2 rounded-full shrink-0 ${style.swatch}`}></span>
                       <span className="font-bold text-[11px] truncate max-w-[100px]">{s.name}</span>
                       <span className="text-[10px] opacity-70 font-mono font-semibold">
-                        (₹{amt.toLocaleString()})
+                        (₹{amt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
                       </span>
                       {isSelected && <CheckCircle2 size={13} className="shrink-0 text-primary" />}
                     </button>
@@ -266,7 +266,7 @@ const AddTransactionModal = ({ isOpen, onClose }) => {
                         <ArrowRightLeft size={12} className="shrink-0 text-amber-500" />
                         <span className="font-bold text-[11px] truncate max-w-[100px]">{s.name}</span>
                         <span className="text-[10px] opacity-70 font-mono font-semibold">
-                          (₹{(s.balance || 0).toLocaleString()})
+                          (₹{(s.balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
                         </span>
                         {isSelected && <CheckCircle2 size={13} className="shrink-0 text-amber-500" />}
                       </button>
@@ -291,7 +291,7 @@ const AddTransactionModal = ({ isOpen, onClose }) => {
                       .filter(t => t.type !== 'Credit' && t.type !== 'Transfer' && (String(t.categoryId?._id || t.categoryId) === String(c._id)))
                       .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
                     const rem = catBudget - catUsed;
-                    const formattedRem = rem >= 0 ? `₹${rem.toLocaleString()}` : `-₹${Math.abs(rem).toLocaleString()}`;
+                    const formattedRem = rem >= 0 ? `₹${rem.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : `-₹${Math.abs(rem).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
                     return (
                       <button
@@ -335,7 +335,7 @@ const AddTransactionModal = ({ isOpen, onClose }) => {
                       ))
                       .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
                     const rem = subBudget - subUsed;
-                    const formattedRem = rem >= 0 ? `₹${rem.toLocaleString()}` : `-₹${Math.abs(rem).toLocaleString()}`;
+                    const formattedRem = rem >= 0 ? `₹${rem.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : `-₹${Math.abs(rem).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
                     return (
                       <button
