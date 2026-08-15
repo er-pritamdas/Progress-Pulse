@@ -66,6 +66,27 @@ const ExpTableEntry = () => {
   const totalDebited = debitTransactions.reduce((sum, t) => sum + t.amount, 0);
   const totalCredited = creditTransactions.reduce((sum, t) => sum + t.amount, 0);
 
+  // Privacy Mode State (Sync with ExpenseTable Eye icon in Current Period)
+  const [hideNumbers, setHideNumbers] = useState(() => {
+    try {
+      const saved = localStorage.getItem("expense_hide_numbers");
+      return saved ? JSON.parse(saved) : false;
+    } catch (e) {
+      return false;
+    }
+  });
+
+  useEffect(() => {
+    const handleHideSync = () => {
+      try {
+        const saved = localStorage.getItem("expense_hide_numbers");
+        setHideNumbers(saved ? JSON.parse(saved) : false);
+      } catch (e) {}
+    };
+    window.addEventListener("expense_hide_numbers_updated", handleHideSync);
+    return () => window.removeEventListener("expense_hide_numbers_updated", handleHideSync);
+  }, []);
+
   // Excluded Sources State (persisted in localStorage and synced across components)
   const [excludedSourceIds, setExcludedSourceIds] = useState(() => {
     try {
@@ -99,14 +120,32 @@ const ExpTableEntry = () => {
     } catch (e) {}
   };
 
-  const sortedSources = useMemo(() => {
-    const sourceTotals = sources.map(source => {
-      const spent = transactions
-        .filter(t => t.type === 'Debit' && (t.sourceId?._id === source._id || t.sourceId === source._id))
-        .reduce((sum, t) => sum + t.amount, 0);
-      return { ...source, spent };
-    });
+  const getCardDueAmount = (source, txList = []) => {
+    if (!source || source.type !== 'Card') return 0;
+    const cardDebits = txList
+      .filter(t => t.type === 'Debit' && String(t.sourceId?._id || t.sourceId) === String(source._id))
+      .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
 
+    const cardCredits = txList
+      .filter(t => (t.type === 'Credit' || t.type === 'Transfer') && (
+        String(t.targetSourceId?._id || t.targetSourceId) === String(source._id) ||
+        String(t.sourceId?._id || t.sourceId) === String(source._id)
+      ))
+      .reduce((sum, t) => {
+        if (t.type === 'Credit' && String(t.sourceId?._id || t.sourceId) === String(source._id)) {
+          return sum + (Number(t.amount) || 0);
+        }
+        if (t.type === 'Transfer' && String(t.targetSourceId?._id || t.targetSourceId) === String(source._id)) {
+          return sum + (Number(t.amount) || 0);
+        }
+        return sum;
+      }, 0);
+
+    const due = cardDebits - cardCredits;
+    return due > 0 ? due : 0;
+  };
+
+  const sortedSources = useMemo(() => {
     return [...sources].sort((a, b) => {
       const isABank = a.type === 'Bank';
       const isBBank = b.type === 'Bank';
@@ -116,10 +155,7 @@ const ExpTableEntry = () => {
 
       const getAmt = (s) => {
         if (s.type === 'Card') {
-          const cardSpent = transactions
-            .filter(t => t.type === 'Debit' && String(t.sourceId?._id || t.sourceId) === String(s._id))
-            .reduce((sum, t) => sum + (t.amount || 0), 0);
-          return cardSpent || s.balance || 0;
+          return getCardDueAmount(s, transactions);
         }
         return s.balance || 0;
       };
@@ -134,12 +170,7 @@ const ExpTableEntry = () => {
 
   const totalCardSpent = sources
     .filter(s => s.type === 'Card' && !excludedSourceIds.includes(String(s._id)))
-    .reduce((sum, source) => {
-      const cardSpent = transactions
-        .filter(t => t.type === 'Debit' && String(t.sourceId?._id || t.sourceId) === String(source._id))
-        .reduce((s, t) => s + (t.amount || 0), 0);
-      return sum + (cardSpent || source.balance || 0);
-    }, 0);
+    .reduce((sum, source) => sum + getCardDueAmount(source, transactions), 0);
 
   const totalNetBalance = totalBankBalance - totalCardSpent;
 
@@ -190,9 +221,7 @@ const ExpTableEntry = () => {
                 >
                   {sortedSources.map((source) => {
                     const isCard = source.type === 'Card';
-                    const cardSpent = isCard
-                      ? (transactions.filter(t => t.type === 'Debit' && String(t.sourceId?._id || t.sourceId) === String(source._id)).reduce((sum, t) => sum + (t.amount || 0), 0) || source.balance || 0)
-                      : 0;
+                    const cardSpent = isCard ? getCardDueAmount(source, transactions) : 0;
                     const rawAmt = isCard ? cardSpent : (source.balance || 0);
                     const isNegativeBank = !isCard && rawAmt < 0;
                     const isErrorColor = isCard || isNegativeBank;
@@ -215,7 +244,7 @@ const ExpTableEntry = () => {
                           {source.name}
                         </span>
                         <span className={`font-mono font-extrabold text-xs shrink-0 text-right ${isExcluded ? 'text-base-content/40' : (isErrorColor ? 'text-error' : 'text-success')}`}>
-                          {isCard ? `-₹${Math.abs(rawAmt).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : (rawAmt < 0 ? `-₹${Math.abs(rawAmt).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : `₹${rawAmt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`)}
+                          {hideNumbers ? "••••••••" : (isCard ? `-₹${Math.abs(rawAmt).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : (rawAmt < 0 ? `-₹${Math.abs(rawAmt).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : `₹${rawAmt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`))}
                         </span>
                       </div>
                     );
@@ -241,7 +270,7 @@ const ExpTableEntry = () => {
               <div className="pt-2 border-t border-base-300/40 flex justify-between items-center text-xs font-bold">
                 <span className="text-[10px] uppercase font-extrabold text-base-content/60 tracking-wider">Total Net Balance</span>
                 <span className={`font-mono text-xs font-extrabold ${totalNetBalance < 0 ? 'text-error' : 'text-success'}`}>
-                  {totalNetBalance < 0 ? `-₹${Math.abs(totalNetBalance).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : `₹${totalNetBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                  {hideNumbers ? "••••••••" : (totalNetBalance < 0 ? `-₹${Math.abs(totalNetBalance).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : `₹${totalNetBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`)}
                 </span>
               </div>
             </div>
@@ -273,7 +302,7 @@ const ExpTableEntry = () => {
                 </button>
               </div>
               <div className="text-3xl font-bold text-error font-mono tracking-tighter">
-                {showDebit ? `₹${totalDebited.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "••••••••"}
+                {hideNumbers || !showDebit ? "••••••••" : `₹${totalDebited.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
               </div>
               <div className="flex items-center justify-between mt-2">
                 <div className="flex items-center gap-2">
@@ -312,7 +341,7 @@ const ExpTableEntry = () => {
                 </button>
               </div>
               <div className="text-3xl font-bold text-success font-mono tracking-tighter">
-                {showCredit ? `₹${totalCredited.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "••••••••"}
+                {hideNumbers || !showCredit ? "••••••••" : `₹${totalCredited.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
               </div>
               <div className="flex items-center justify-between mt-2">
                 <div className="flex items-center gap-2">
@@ -689,7 +718,7 @@ const TransactionListModal = ({ type, transactions, currentMonth, onClose }) => 
           {filteredTransactions.length > 0 ? (
             <div className="overflow-x-auto rounded-2xl border border-base-200 shadow-2xs">
               <table className="table table-sm w-full text-xs">
-                <thead className="bg-base-200/70 text-base-content font-bold uppercase tracking-wider text-[11px]">
+                <thead className="sticky top-0 z-20 bg-base-200/90 backdrop-blur-md text-base-content font-bold uppercase tracking-wider text-[11px] shadow-xs">
                   <tr>
                     {/* Date Column Header with Filter */}
                     <th className="py-3 px-4">
@@ -847,22 +876,41 @@ const TransactionListModal = ({ type, transactions, currentMonth, onClose }) => 
                           {t.description || <span className="opacity-40 italic">No description</span>}
                         </td>
                         <td className="py-3 px-4">
-                          {isTrf ? (() => {
-                            const trgStyle = getSourceTagStyle(targetObj || targetName, sources);
+                          {(() => {
+                            if (isTrf) {
+                              const trgStyle = getSourceTagStyle(targetObj || targetName, sources);
+                              return (
+                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold ${trgStyle.bg} ${trgStyle.text} border ${trgStyle.border}`}>
+                                  <ArrowRightLeft size={12} />
+                                  Transfer To {targetName}
+                                </span>
+                              );
+                            }
+                            if (catObj?.name || t.categoryName) {
+                              return (
+                                <span
+                                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold ${catTagStyle.bg} ${catTagStyle.text} border ${catTagStyle.border}`}
+                                >
+                                  <Folder size={12} />
+                                  {catObj?.name || t.categoryName}
+                                </span>
+                              );
+                            }
+                            if (t.type === 'Credit') {
+                              return (
+                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                                  <TrendingUp size={12} />
+                                  Credited
+                                </span>
+                              );
+                            }
                             return (
-                              <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold ${trgStyle.bg} ${trgStyle.text} border ${trgStyle.border}`}>
-                                <ArrowRightLeft size={12} />
-                                To: {targetName}
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
+                                <TrendingDown size={12} />
+                                Debited
                               </span>
                             );
-                          })() : (
-                            <span
-                              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold ${catTagStyle.bg} ${catTagStyle.text} border ${catTagStyle.border}`}
-                            >
-                              <Folder size={12} />
-                              {catObj?.name || t.categoryName || "Uncategorized"}
-                            </span>
-                          )}
+                          })()}
                         </td>
                         <td className="py-3 px-4">
                           <span

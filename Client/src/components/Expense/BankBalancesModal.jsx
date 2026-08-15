@@ -51,6 +51,31 @@ const BankBalancesModal = ({ isOpen, onClose }) => {
     } catch (e) {}
   };
 
+  const getCardDueAmount = (source, txList = []) => {
+    if (!source || source.type !== 'Card') return 0;
+    const cardDebits = txList
+      .filter(t => t.type === 'Debit' && String(t.sourceId?._id || t.sourceId) === String(source._id))
+      .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+
+    const cardCredits = txList
+      .filter(t => (t.type === 'Credit' || t.type === 'Transfer') && (
+        String(t.targetSourceId?._id || t.targetSourceId) === String(source._id) ||
+        String(t.sourceId?._id || t.sourceId) === String(source._id)
+      ))
+      .reduce((sum, t) => {
+        if (t.type === 'Credit' && String(t.sourceId?._id || t.sourceId) === String(source._id)) {
+          return sum + (Number(t.amount) || 0);
+        }
+        if (t.type === 'Transfer' && String(t.targetSourceId?._id || t.targetSourceId) === String(source._id)) {
+          return sum + (Number(t.amount) || 0);
+        }
+        return sum;
+      }, 0);
+
+    const due = cardDebits - cardCredits;
+    return due > 0 ? due : 0;
+  };
+
   if (!isOpen) return null;
 
   // Calculate totals excluding disabled sources
@@ -62,12 +87,7 @@ const BankBalancesModal = ({ isOpen, onClose }) => {
   const totalWalletBalance = walletSources.reduce((sum, s) => sum + (s.balance || 0), 0);
   const totalAssets = totalBankBalance + totalWalletBalance;
 
-  const totalCardSpent = cardSources.reduce((sum, source) => {
-    const cardSpent = transactions
-      .filter((t) => t.type === "Debit" && String(t.sourceId?._id || t.sourceId) === String(source._id))
-      .reduce((s, t) => s + (t.amount || 0), 0);
-    return sum + (cardSpent || source.balance || 0);
-  }, 0);
+  const totalCardSpent = cardSources.reduce((sum, source) => sum + getCardDueAmount(source, transactions), 0);
 
   const filteredSources = sources.filter((s) => {
     const matchesName = s.name.toLowerCase().includes(searchQuery.toLowerCase());
@@ -169,13 +189,7 @@ const BankBalancesModal = ({ isOpen, onClose }) => {
             const isWallet = source.type === "Wallet";
             const isExcluded = excludedSourceIds.includes(String(source._id));
 
-            let cardSpent = 0;
-            if (isCard) {
-              cardSpent = transactions
-                .filter((t) => t.type === "Debit" && String(t.sourceId?._id || t.sourceId) === String(source._id))
-                .reduce((s, t) => s + (t.amount || 0), 0) || source.balance || 0;
-            }
-
+            let cardSpent = isCard ? getCardDueAmount(source, transactions) : 0;
             const rawAmt = isCard ? cardSpent : (source.balance || 0);
             const isNegativeBank = !isCard && rawAmt < 0;
             const isErrorColor = isCard || isNegativeBank;

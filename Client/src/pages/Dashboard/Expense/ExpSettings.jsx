@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { fetchDashboardData, createSource, updateSource, deleteSource, updateSalary } from '../../../services/redux/slice/ExpenseSlice';
 import { TitleChanger } from '../../../utils/TitleChanger';
 import { COLOR_OPTIONS, getSourceTagStyle, getCategoryTagStyle } from '../../../utils/expenseTheme';
-import { Plus, Info, Trash2, Wallet, Building2, CreditCard, X, ShieldAlert, Pencil, Banknote, Check, Palette, Search, ArrowDown, ArrowUp, ArrowRightLeft, Folder, Filter } from 'lucide-react';
+import { Plus, Info, Trash2, Wallet, Building2, CreditCard, X, ShieldAlert, Pencil, Banknote, Check, Palette, Search, ArrowDown, ArrowUp, ArrowRightLeft, Folder, Filter, TrendingUp, TrendingDown } from 'lucide-react';
 import { message } from 'antd';
 import dayjs from 'dayjs';
 
@@ -34,7 +34,7 @@ function ExpSettings() {
     const [showHistoryModal, setShowHistoryModal] = useState(false);
     const [historySearchTerm, setHistorySearchTerm] = useState("");
     const [historySortOrder, setHistorySortOrder] = useState(() => localStorage.getItem("expense_sort_order") || "newest");
-    const [historyLimitCount, setHistoryLimitCount] = useState("all");
+    const [historyLimitCount, setHistoryLimitCount] = useState("10");
     const [historyColFilters, setHistoryColFilters] = useState({
         date: "",
         description: "",
@@ -42,7 +42,7 @@ function ExpSettings() {
     });
 
     const currentMonthCategories = useMemo(() => {
-        const raw = (categories || []).filter(c => !c.month || c.month === currentMonth);
+        const raw = categories || [];
         const seen = new Set();
         return raw.filter(c => {
             if (!c.name) return false;
@@ -51,21 +51,37 @@ function ExpSettings() {
             seen.add(key);
             return true;
         });
-    }, [categories, currentMonth]);
+    }, [categories]);
 
     useEffect(() => {
-        dispatch(fetchDashboardData(currentMonth));
-    }, [dispatch, currentMonth]);
+        dispatch(fetchDashboardData('all'));
+    }, [dispatch]);
 
     useEffect(() => {
         setSalaryInput(salary || 0);
     }, [salary]);
 
-    // Calculate totals for each source
+    // Calculate all-time totals for each payment source (including Credit Cards)
     const sourceTotals = sources.map(source => {
-        const spent = transactions
-            .filter(t => t.type !== 'Credit' && (t.sourceId?._id === source._id || t.sourceId === source._id))
-            .reduce((sum, t) => sum + t.amount, 0);
+        const isCard = source.type === 'Card';
+
+        const cardDebits = transactions
+            .filter(t => t.type === 'Debit' && (t.sourceId?._id === source._id || t.sourceId === source._id))
+            .reduce((sum, t) => sum + (t.amount || 0), 0);
+
+        const cardCredits = transactions
+            .filter(t => (t.type === 'Credit' || t.type === 'Transfer') && (
+                t.targetSourceId?._id === source._id || t.targetSourceId === source._id ||
+                t.sourceId?._id === source._id || t.sourceId === source._id
+            ))
+            .reduce((sum, t) => {
+                if (t.type === 'Credit' && (t.sourceId?._id === source._id || t.sourceId === source._id)) return sum + (t.amount || 0);
+                if (t.type === 'Transfer' && (t.targetSourceId?._id === source._id || t.targetSourceId === source._id)) return sum + (t.amount || 0);
+                return sum;
+            }, 0);
+
+        const dueAmount = cardDebits - cardCredits;
+        const spent = isCard ? (dueAmount > 0 ? dueAmount : 0) : cardDebits;
         return { ...source, spent };
     });
 
@@ -675,7 +691,7 @@ function ExpSettings() {
                                 {filteredList.length > 0 ? (
                                     <div className="overflow-x-auto rounded-2xl border border-base-200 shadow-2xs">
                                         <table className="table table-sm w-full text-xs">
-                                            <thead className="bg-base-200/70 text-base-content font-bold uppercase tracking-wider text-[11px]">
+                                            <thead className="sticky top-0 z-20 bg-base-200/90 backdrop-blur-md text-base-content font-bold uppercase tracking-wider text-[11px] shadow-xs">
                                                 <tr>
                                                     {/* Date Header Filter */}
                                                     <th className="py-3 px-4">
@@ -799,17 +815,49 @@ function ExpSettings() {
                                                                 {t.description || <span className="opacity-40 italic">No description</span>}
                                                             </td>
                                                             <td className="py-3 px-4">
-                                                                {isTransfer ? (
-                                                                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-amber-500/10 text-amber-500 border border-amber-500/20">
-                                                                        <ArrowRightLeft size={12} />
-                                                                        Transfer
-                                                                    </span>
-                                                                ) : (
-                                                                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold ${catTagStyle.bg} ${catTagStyle.text} border ${catTagStyle.border}`}>
-                                                                        <Folder size={12} />
-                                                                        {catObj?.name || t.categoryName || "Uncategorized"}
-                                                                    </span>
-                                                                )}
+                                                                {(() => {
+                                                                    if (isTransfer) {
+                                                                        const isFromThisBank = String(t.sourceId?._id || t.sourceId) === String(targetSource?._id);
+                                                                        const targetObj = sources.find(s => String(s._id) === String(t.targetSourceId?._id || t.targetSourceId));
+                                                                        const targetName = targetObj?.name || t.targetSourceName || "Bank";
+                                                                        const sourceObj = sources.find(s => String(s._id) === String(t.sourceId?._id || t.sourceId));
+                                                                        const sourceName = sourceObj?.name || t.sourceName || "Bank";
+                                                                        const transferLabel = isFromThisBank ? `Transfer To ${targetName}` : `Transfer From ${sourceName}`;
+
+                                                                        return (
+                                                                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                                                                                <ArrowRightLeft size={12} />
+                                                                                {transferLabel}
+                                                                            </span>
+                                                                        );
+                                                                    }
+
+                                                                    const hasCategory = Boolean(catObj?.name || t.categoryName);
+                                                                    if (hasCategory) {
+                                                                        return (
+                                                                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold ${catTagStyle.bg} ${catTagStyle.text} border ${catTagStyle.border}`}>
+                                                                                <Folder size={12} />
+                                                                                {catObj?.name || t.categoryName}
+                                                                            </span>
+                                                                        );
+                                                                    }
+
+                                                                    if (isCredit) {
+                                                                        return (
+                                                                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                                                                                <TrendingUp size={12} />
+                                                                                Credited
+                                                                            </span>
+                                                                        );
+                                                                    }
+
+                                                                    return (
+                                                                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
+                                                                            <TrendingDown size={12} />
+                                                                            Debited
+                                                                        </span>
+                                                                    );
+                                                                })()}
                                                             </td>
                                                             <td className="py-3 px-4 text-right font-mono font-extrabold whitespace-nowrap">
                                                                 <span className={isTransfer ? "text-amber-500" : (isCredit ? "text-success" : "text-error")}>

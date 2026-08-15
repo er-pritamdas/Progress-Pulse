@@ -311,11 +311,12 @@ function NutrientAnalysis({
       const mm = String(curr.getMonth() + 1).padStart(2, "0");
       const dd = String(curr.getDate()).padStart(2, "0");
       const isoDate = `${yyyy}-${mm}-${dd}`;
-      const formattedDate = curr.toLocaleDateString("en-GB", {
+      const formattedDate = dd;
+      const fullDateStr = curr.toLocaleDateString("en-GB", {
         day: "numeric",
         month: "short",
       });
-      dates.push({ date: isoDate, formattedDate });
+      dates.push({ date: isoDate, formattedDate, fullDateStr });
       curr.setDate(curr.getDate() + 1);
     }
     return dates;

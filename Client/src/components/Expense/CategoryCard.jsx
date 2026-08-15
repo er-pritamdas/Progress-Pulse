@@ -622,7 +622,7 @@ const CategoryCard = ({ category }) => {
                                 {filteredList.length > 0 ? (
                                     <div className="overflow-x-auto rounded-2xl border border-base-200 shadow-2xs">
                                         <table className="table table-sm w-full text-xs">
-                                            <thead className="bg-base-200/70 text-base-content font-bold uppercase tracking-wider text-[11px]">
+                                            <thead className="sticky top-0 z-20 bg-base-200/90 backdrop-blur-md text-base-content font-bold uppercase tracking-wider text-[11px] shadow-xs">
                                                 <tr>
                                                     {/* Date Header Filter */}
                                                     <th className="py-3 px-4">
@@ -943,7 +943,7 @@ const CategoryCard = ({ category }) => {
                                 {filteredList.length > 0 ? (
                                     <div className="overflow-x-auto rounded-2xl border border-base-200 shadow-2xs">
                                         <table className="table table-sm w-full text-xs">
-                                            <thead className="bg-base-200/70 text-base-content font-bold uppercase tracking-wider text-[11px]">
+                                            <thead className="sticky top-0 z-20 bg-base-200/90 backdrop-blur-md text-base-content font-bold uppercase tracking-wider text-[11px] shadow-xs">
                                                 <tr>
                                                     {/* Date Header Filter */}
                                                     <th className="py-3 px-4">

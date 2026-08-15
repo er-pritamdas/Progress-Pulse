@@ -13,7 +13,7 @@ import {
   Folder,
   Tag,
   CheckCircle2,
-  Sparkles
+  PlusCircle
 } from "lucide-react";
 import { message } from "antd";
 
@@ -126,7 +126,7 @@ const AddTransactionModal = ({ isOpen, onClose }) => {
         <div className="px-5 py-3 border-b border-base-200 flex justify-between items-center bg-base-200/50">
           <div className="flex items-center gap-2.5">
             <div className="p-2 rounded-xl bg-primary/15 text-primary">
-              <Sparkles size={18} />
+              <PlusCircle size={18} />
             </div>
             <div>
               <h3 className="font-extrabold text-base flex items-center gap-2 leading-tight">

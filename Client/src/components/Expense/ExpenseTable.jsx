@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import dayjs from "dayjs";
-import { addTransaction, updateTransaction, deleteTransaction, setMonth } from "../../services/redux/slice/ExpenseSlice";
+import { addTransaction, updateTransaction, deleteTransaction, setMonth, performUndo, performRedo } from "../../services/redux/slice/ExpenseSlice";
 import { getSourceTagStyle, getCategoryTagStyle } from "../../utils/expenseTheme";
-import { Trash2, Save, X, Edit2, Plus, Handshake, AlertTriangle, Wallet, Tag, Folder, TrendingUp, TrendingDown, ArrowUp, ArrowDown, Calendar, ArrowRightLeft, Sparkles, ChevronDown, ChevronLeft, ChevronRight, Filter, Search } from "lucide-react";
+import { Trash2, Save, X, Edit2, Plus, PlusCircle, Handshake, AlertTriangle, Wallet, Tag, Folder, TrendingUp, TrendingDown, ArrowUp, ArrowDown, Calendar, ArrowRightLeft, Sparkles, ChevronDown, ChevronLeft, ChevronRight, Filter, Search, Undo2, Redo2, Eye, EyeOff } from "lucide-react";
 import AddTransactionModal from "./AddTransactionModal";
 
 // Helper Component for DaisyUI Dropdown
@@ -152,7 +152,36 @@ const ExpenseTable = ({
     onOpenHeatmap
 }) => {
     const dispatch = useDispatch();
-    const { transactions, categories, sources, loading, currentMonth } = useSelector((state) => state.expense);
+    const { transactions, categories, sources, loading, currentMonth, undoStack = [], redoStack = [] } = useSelector((state) => state.expense);
+
+    const [hideNumbers, setHideNumbers] = useState(() => {
+        try {
+            const saved = localStorage.getItem("expense_hide_numbers");
+            return saved ? JSON.parse(saved) : false;
+        } catch (e) {
+            return false;
+        }
+    });
+
+    useEffect(() => {
+        const handleHideSync = () => {
+            try {
+                const saved = localStorage.getItem("expense_hide_numbers");
+                setHideNumbers(saved ? JSON.parse(saved) : false);
+            } catch (e) {}
+        };
+        window.addEventListener("expense_hide_numbers_updated", handleHideSync);
+        return () => window.removeEventListener("expense_hide_numbers_updated", handleHideSync);
+    }, []);
+
+    const toggleHideNumbers = () => {
+        const nextVal = !hideNumbers;
+        setHideNumbers(nextVal);
+        try {
+            localStorage.setItem("expense_hide_numbers", JSON.stringify(nextVal));
+            window.dispatchEvent(new Event("expense_hide_numbers_updated"));
+        } catch (e) {}
+    };
 
     const headerRef = useRef(null);
     const bodyRef = useRef(null);
@@ -179,6 +208,35 @@ const ExpenseTable = ({
 
     const filters = externalFilters || internalFilters;
     const setFilters = externalSetFilters || setInternalFilters;
+
+    // Fixed Floating Column Filter Popover State
+    const [activeFilterMenu, setActiveFilterMenu] = useState(null);
+
+    const handleToggleFilterMenu = (e, type) => {
+        e.stopPropagation();
+        if (activeFilterMenu?.type === type) {
+            setActiveFilterMenu(null);
+        } else {
+            const rect = e.currentTarget.getBoundingClientRect();
+            setActiveFilterMenu({
+                type,
+                top: rect.bottom + 6,
+                left: Math.min(rect.left, window.innerWidth - 250)
+            });
+        }
+    };
+
+    useEffect(() => {
+        const handleClose = () => setActiveFilterMenu(null);
+        if (activeFilterMenu) {
+            window.addEventListener("click", handleClose);
+            window.addEventListener("scroll", handleClose, true);
+        }
+        return () => {
+            window.removeEventListener("click", handleClose);
+            window.removeEventListener("scroll", handleClose, true);
+        };
+    }, [activeFilterMenu]);
     const sortOrder = externalSortOrder !== undefined ? externalSortOrder : internalSortOrder;
     const setSortOrder = externalSetSortOrder || setInternalSortOrder;
     const rowLimit = externalRowLimit !== undefined ? externalRowLimit : internalRowLimit;
@@ -281,7 +339,7 @@ const ExpenseTable = ({
             );
         }
         const catObj = t.categoryId;
-        const catName = catObj?.name || (typeof catObj === 'string' ? catObj : 'Uncategorized');
+        const catName = catObj?.name || (typeof catObj === 'string' ? catObj : '-');
         const style = getCategoryTagStyle(catObj || catName, categories);
         return (
             <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold ${style.bg} ${style.text} border ${style.border} truncate max-w-full`} title={catName}>
@@ -348,12 +406,32 @@ const ExpenseTable = ({
     });
 
     // Global Keyboard Bindings:
+    // 'Ctrl+Z' : Undo (up to 5 steps)
+    // 'Ctrl+Y' / 'Ctrl+Shift+Z' : Redo
     // 'I' : Inline add Transaction
     // 'M' : Modal Transaction
     useEffect(() => {
         const handleKeyDown = (e) => {
+            const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+            const isCtrl = isMac ? e.metaKey : e.ctrlKey;
+
             const activeTag = document.activeElement?.tagName?.toLowerCase();
             const isEditable = activeTag === 'input' || activeTag === 'textarea' || activeTag === 'select' || document.activeElement?.isContentEditable;
+
+            if (isCtrl) {
+                const key = e.key.toLowerCase();
+                if ((e.shiftKey && key === 'z') || key === 'y') {
+                    if (isEditable && !e.target.dataset.allowGlobalShortcuts) return;
+                    e.preventDefault();
+                    dispatch(performRedo());
+                    return;
+                } else if (key === 'z' && !e.shiftKey) {
+                    if (isEditable && !e.target.dataset.allowGlobalShortcuts) return;
+                    e.preventDefault();
+                    dispatch(performUndo());
+                    return;
+                }
+            }
 
             if (isEditable) return;
 
@@ -368,7 +446,7 @@ const ExpenseTable = ({
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [setIsAdding, setIsAddModalOpen]);
+    }, [dispatch, setIsAdding, setIsAddModalOpen]);
 
     // Categories filtered for currentMonth
     const currentMonthCategories = categories.filter(c => !c.month || c.month === currentMonth);
@@ -429,18 +507,6 @@ const ExpenseTable = ({
             };
         })
     ];
-
-    const editSourceOptions = sources.map(s => {
-        const amt = s.type === 'Card' && !s.balance && s.limit ? s.limit : (s.balance || 0);
-        const tagStyle = getSourceTagStyle(s, sources);
-        return {
-            value: s._id,
-            label: `${s.name} (₹${amt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })})`,
-            key: s._id,
-            tagStyle,
-            sourceObj: s
-        };
-    });
 
     const targetOptions = [
         ...sources.map(s => {
@@ -582,6 +648,8 @@ const ExpenseTable = ({
 
     // Edit Transaction
     const startEdit = (t) => {
+        const isAdd = t.type === "Credit";
+        const isManDebit = t.type === "Debit" && !t.categoryId;
         const isTrf = t.type === "Transfer";
         const catValue = isTrf ? `bank_${t.targetSourceId?._id || t.targetSourceId}` : (t.categoryId?._id || t.categoryId || "");
         setEditingId(t._id);
@@ -590,37 +658,118 @@ const ExpenseTable = ({
             description: t.description,
             sourceId: t.sourceId?._id || t.sourceId,
             targetSourceId: t.targetSourceId?._id || t.targetSourceId || "",
-            categoryId: isTrf ? "" : (t.categoryId?._id || t.categoryId || ""),
+            categoryId: (isTrf || isAdd || isManDebit) ? "" : (t.categoryId?._id || t.categoryId || ""),
             categoryOrToVal: catValue,
-            subCategoryId: t.subCategoryId?._id || t.subCategoryId || "",
+            subCategoryId: (isTrf || isAdd || isManDebit) ? "" : (t.subCategoryId?._id || t.subCategoryId || ""),
             amount: t.amount,
             type: t.type || "Debit",
+            isAddMoney: isAdd,
+            isManualDebit: isManDebit,
             isTransfer: isTrf,
             isReimbursable: t.isReimbursable || false
         });
     };
 
     const saveEdit = () => {
+        const isAdd = editData.isAddMoney || editData.type === "Credit";
+        const isManDebit = editData.isManualDebit || (editData.type === "Debit" && !editData.categoryId && !editData.isTransfer && !editData.isAddMoney);
         const isTrf = editData.isTransfer || editData.type === "Transfer";
+
         const srcId = typeof editData.sourceId === 'object' && editData.sourceId !== null ? editData.sourceId._id : editData.sourceId;
         const trgId = typeof editData.targetSourceId === 'object' && editData.targetSourceId !== null ? editData.targetSourceId._id : editData.targetSourceId;
         const catId = typeof editData.categoryId === 'object' && editData.categoryId !== null ? editData.categoryId._id : editData.categoryId;
         const subId = typeof editData.subCategoryId === 'object' && editData.subCategoryId !== null ? editData.subCategoryId._id : editData.subCategoryId;
 
-        dispatch(updateTransaction({
-            id: editingId,
-            data: {
-                date: editData.date,
-                description: editData.description,
-                sourceId: srcId,
-                targetSourceId: isTrf ? trgId : null,
-                categoryId: isTrf ? null : catId,
-                subCategoryId: isTrf ? null : subId,
-                amount: Number(editData.amount),
-                type: isTrf ? "Transfer" : (editData.type || "Debit"),
-                isReimbursable: editData.isReimbursable
+        if (!editData.description || !editData.amount) {
+            alert("Please fill required fields (Description and Amount)");
+            return;
+        }
+
+        if (isAdd) {
+            if (!srcId) {
+                alert("Please select a target bank account to add money to");
+                return;
             }
-        }));
+            dispatch(updateTransaction({
+                id: editingId,
+                data: {
+                    date: editData.date,
+                    description: editData.description,
+                    sourceId: srcId,
+                    targetSourceId: null,
+                    categoryId: null,
+                    subCategoryId: null,
+                    amount: Number(editData.amount),
+                    type: "Credit",
+                    isReimbursable: editData.isReimbursable
+                }
+            }));
+        } else if (isManDebit) {
+            if (!srcId) {
+                alert("Please select a bank account to debit from");
+                return;
+            }
+            dispatch(updateTransaction({
+                id: editingId,
+                data: {
+                    date: editData.date,
+                    description: editData.description,
+                    sourceId: srcId,
+                    targetSourceId: null,
+                    categoryId: null,
+                    subCategoryId: null,
+                    amount: Number(editData.amount),
+                    type: "Debit",
+                    isReimbursable: editData.isReimbursable
+                }
+            }));
+        } else if (isTrf) {
+            if (!srcId || !trgId) {
+                alert("Please select both From Bank and Target Bank for transfer");
+                return;
+            }
+            if (srcId === trgId) {
+                alert("From Bank and To Bank cannot be the same account");
+                return;
+            }
+            dispatch(updateTransaction({
+                id: editingId,
+                data: {
+                    date: editData.date,
+                    description: editData.description,
+                    sourceId: srcId,
+                    targetSourceId: trgId,
+                    categoryId: null,
+                    subCategoryId: null,
+                    amount: Number(editData.amount),
+                    type: "Transfer",
+                    isReimbursable: editData.isReimbursable
+                }
+            }));
+        } else {
+            if (!srcId) {
+                alert("Please select a From payment source");
+                return;
+            }
+            if (!catId) {
+                alert("Please select a Category or Bank");
+                return;
+            }
+            dispatch(updateTransaction({
+                id: editingId,
+                data: {
+                    date: editData.date,
+                    description: editData.description,
+                    sourceId: srcId,
+                    targetSourceId: null,
+                    categoryId: catId,
+                    subCategoryId: subId || null,
+                    amount: Number(editData.amount),
+                    type: "Debit",
+                    isReimbursable: editData.isReimbursable
+                }
+            }));
+        }
         setEditingId(null);
     };
 
@@ -649,7 +798,7 @@ const ExpenseTable = ({
         <div className="w-full bg-base-100 rounded-2xl shadow-lg border border-base-200 flex flex-col min-h-[500px]">
 
             {/* Unified Sticky Glass Header Section: Month Selector Banner + Table Column Headers */}
-            <div className="sticky top-[-17px] -mt-5 pt-5 z-30 bg-base-100/90 dark:bg-base-900/90 backdrop-blur-2xl border-b border-base-200/80 shadow-md rounded-t-2xl overflow-hidden transition-all">
+            <div className="sticky top-[-17px] -mt-5 pt-5 z-50 bg-base-100/90 dark:bg-base-900/90 backdrop-blur-2xl border-b border-base-200/80 shadow-md rounded-t-2xl transition-all">
                 
                 {/* Upper Header: Current Period Banner & Navigation Controls */}
                 <div className="p-4 flex flex-col sm:flex-row items-center justify-between gap-3 border-b border-base-200/50 bg-base-100/40 dark:bg-base-900/40">
@@ -659,9 +808,18 @@ const ExpenseTable = ({
                             <Calendar size={20} />
                         </div>
                         <div>
-                            <h3 className="text-xs font-bold text-base-content/50 uppercase tracking-widest">
-                                Current Period
-                            </h3>
+                            <div className="flex items-center gap-2">
+                                <h3 className="text-xs font-bold text-base-content/50 uppercase tracking-widest">
+                                    Current Period
+                                </h3>
+                                <button
+                                    onClick={toggleHideNumbers}
+                                    className="btn btn-xs btn-ghost btn-circle text-base-content/60 hover:text-primary transition-colors"
+                                    title={hideNumbers ? "Show numbers on page" : "Hide all numbers (Privacy Mode)"}
+                                >
+                                    {hideNumbers ? <EyeOff size={15} className="text-primary font-bold" /> : <Eye size={15} />}
+                                </button>
+                            </div>
                             <span className="text-xl font-extrabold text-base-content font-sans tracking-wide">
                                 {dayjs(currentMonth).format("MMMM YYYY")}
                             </span>
@@ -691,6 +849,54 @@ const ExpenseTable = ({
                                 <ChevronRight size={16} />
                             </button>
                         </div>
+                        {/* Undo & Redo Action Controls */}
+                        <div className="flex items-center gap-1 bg-base-100 p-1.5 rounded-xl border border-base-200 shadow-2xs">
+                            <button
+                                onClick={() => dispatch(performUndo())}
+                                disabled={!undoStack || undoStack.length === 0}
+                                className={`btn btn-xs btn-ghost gap-1.5 font-bold rounded-lg transition-all ${
+                                    undoStack && undoStack.length > 0
+                                        ? 'text-primary hover:bg-primary/10'
+                                        : 'opacity-40 cursor-not-allowed text-base-content/40'
+                                }`}
+                                title={
+                                    undoStack && undoStack.length > 0
+                                        ? `Undo: ${undoStack[undoStack.length - 1]?.label} (Ctrl + Z)`
+                                        : "Undo (Ctrl + Z) — No history"
+                                }
+                            >
+                                <Undo2 size={14} />
+                                <span className="hidden sm:inline">Undo</span>
+                                {undoStack && undoStack.length > 0 && (
+                                    <span className="badge badge-primary badge-xs px-1 font-mono font-bold text-[9px]">
+                                        {undoStack.length}
+                                    </span>
+                                )}
+                            </button>
+
+                            <button
+                                onClick={() => dispatch(performRedo())}
+                                disabled={!redoStack || redoStack.length === 0}
+                                className={`btn btn-xs btn-ghost gap-1.5 font-bold rounded-lg transition-all ${
+                                    redoStack && redoStack.length > 0
+                                        ? 'text-primary hover:bg-primary/10'
+                                        : 'opacity-40 cursor-not-allowed text-base-content/40'
+                                }`}
+                                title={
+                                    redoStack && redoStack.length > 0
+                                        ? `Redo: ${redoStack[redoStack.length - 1]?.label} (Ctrl + Y)`
+                                        : "Redo (Ctrl + Y) — No pending redo"
+                                }
+                            >
+                                <Redo2 size={14} />
+                                <span className="hidden sm:inline">Redo</span>
+                                {redoStack && redoStack.length > 0 && (
+                                    <span className="badge badge-secondary badge-xs px-1 font-mono font-bold text-[9px]">
+                                        {redoStack.length}
+                                    </span>
+                                )}
+                            </button>
+                        </div>
 
                         {/* Heatmap Trigger Button (Icon only) */}
                         {onOpenHeatmap && (
@@ -712,13 +918,13 @@ const ExpenseTable = ({
                             className="btn btn-outline btn-primary btn-sm btn-square rounded-xl shadow-xs"
                             title="Add Transaction (Modal)"
                         >
-                            <Sparkles size={18} />
+                            <PlusCircle size={18} />
                         </button>
                     </div>
                 </div>
 
                 {/* Lower Header: Table Column Headers with Interactive Filter Dropdowns */}
-                <div ref={headerRef} className="overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+                <div ref={headerRef} className="overflow-x-auto overflow-y-visible [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
                     <div className="flex items-center gap-3 px-6 py-3.5 bg-base-200/60 backdrop-blur-md text-xs font-extrabold text-base-content/80 uppercase tracking-widest min-w-[980px]">
                     
                     {/* 1. Date Header + Dropdown & Sort Order Toggle */}
@@ -734,158 +940,67 @@ const ExpenseTable = ({
                             {sortOrder === "newest" ? <ArrowDown size={11} className="text-primary" /> : <ArrowUp size={11} className="text-primary" />}
                         </button>
 
-                        {/* Date Filter Dropdown */}
-                        <div className="dropdown dropdown-bottom">
-                            <button
-                                tabIndex={0}
-                                className={`btn btn-xs btn-square btn-ghost ${filters.date ? 'text-primary bg-primary/10' : 'opacity-40 hover:opacity-100'}`}
-                                title="Filter Date"
-                            >
-                                <Filter size={11} />
-                            </button>
-                            <div tabIndex={0} className="dropdown-content z-[9999] bg-base-100 p-3 rounded-2xl shadow-2xl border border-base-300 w-52 mt-1 space-y-2 font-normal text-xs normal-case">
-                                <label className="text-[10px] font-bold text-base-content/50 uppercase block">Filter by Date</label>
-                                <input
-                                    type="date"
-                                    value={filters.date}
-                                    onChange={(e) => setFilters({ ...filters, date: e.target.value })}
-                                    className="input input-xs input-bordered w-full rounded-lg font-medium"
-                                />
-                                {filters.date && (
-                                    <button
-                                        onClick={() => setFilters({ ...filters, date: "" })}
-                                        className="text-[10px] text-error font-bold hover:underline block text-right w-full"
-                                    >
-                                        Clear Date
-                                    </button>
-                                )}
-                            </div>
-                        </div>
+                        {/* Date Filter Button */}
+                        <button
+                            type="button"
+                            onClick={(e) => handleToggleFilterMenu(e, 'date')}
+                            className={`btn btn-xs btn-square btn-ghost ${filters.date ? 'text-primary bg-primary/10' : 'opacity-40 hover:opacity-100'}`}
+                            title="Filter Date"
+                        >
+                            <Filter size={11} />
+                        </button>
                     </div>
 
                     {/* 2. Description Header + Dropdown */}
                     <div className="flex-1 min-w-[150px] flex items-center gap-1.5 relative whitespace-nowrap">
                         <span>Description</span>
-                        <div className="dropdown dropdown-bottom">
-                            <button
-                                tabIndex={0}
-                                className={`btn btn-xs btn-square btn-ghost ${filters.description ? 'text-primary bg-primary/10' : 'opacity-40 hover:opacity-100'}`}
-                                title="Filter Description"
-                            >
-                                <Filter size={11} />
-                            </button>
-                            <div tabIndex={0} className="dropdown-content z-[9999] bg-base-100 p-3 rounded-2xl shadow-2xl border border-base-300 w-56 mt-1 space-y-2 font-normal text-xs normal-case">
-                                <label className="text-[10px] font-bold text-base-content/50 uppercase block">Search Description</label>
-                                <div className="relative">
-                                    <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 opacity-50" />
-                                    <input
-                                        type="text"
-                                        placeholder="Search text..."
-                                        value={filters.description}
-                                        onChange={(e) => setFilters({ ...filters, description: e.target.value })}
-                                        className="input input-xs input-bordered w-full pl-7 font-medium rounded-lg"
-                                    />
-                                </div>
-                                {filters.description && (
-                                    <button
-                                        onClick={() => setFilters({ ...filters, description: "" })}
-                                        className="text-[10px] text-error font-bold hover:underline block text-right w-full"
-                                    >
-                                        Clear Search
-                                    </button>
-                                )}
-                            </div>
-                        </div>
+                        <button
+                            type="button"
+                            onClick={(e) => handleToggleFilterMenu(e, 'description')}
+                            className={`btn btn-xs btn-square btn-ghost ${filters.description ? 'text-primary bg-primary/10' : 'opacity-40 hover:opacity-100'}`}
+                            title="Filter Description"
+                        >
+                            <Filter size={11} />
+                        </button>
                     </div>
 
                     {/* 3. From (Account) Header + Dropdown */}
                     <div className="w-[135px] shrink-0 flex items-center gap-1.5 relative whitespace-nowrap">
                         <span className="text-blue-600 dark:text-blue-400">From</span>
-                        <div className="dropdown dropdown-bottom">
-                            <button
-                                tabIndex={0}
-                                className={`btn btn-xs btn-square btn-ghost ${filters.sourceId ? 'text-blue-600 bg-blue-500/10' : 'opacity-40 hover:opacity-100'}`}
-                                title="Filter Account / Bank"
-                            >
-                                <Filter size={11} />
-                            </button>
-                            <ul tabIndex={0} className="dropdown-content z-[9999] menu p-1.5 bg-base-100 rounded-2xl shadow-2xl border border-base-300 w-52 mt-1 font-medium text-xs normal-case max-h-56 overflow-y-auto">
-                                <li className="menu-title text-[10px] uppercase font-bold text-base-content/50">Filter Account</li>
-                                <li>
-                                    <a onClick={() => setFilters({ ...filters, sourceId: "" })} className={!filters.sourceId ? "font-bold text-primary" : ""}>
-                                        All Accounts
-                                    </a>
-                                </li>
-                                {sources.map((s) => (
-                                    <li key={s._id}>
-                                        <a onClick={() => setFilters({ ...filters, sourceId: s._id })} className={String(filters.sourceId) === String(s._id) ? "font-bold text-primary" : ""}>
-                                            {s.name}
-                                        </a>
-                                    </li>
-                                ))}
-                            </ul>
-                        </div>
+                        <button
+                            type="button"
+                            onClick={(e) => handleToggleFilterMenu(e, 'sourceId')}
+                            className={`btn btn-xs btn-square btn-ghost ${filters.sourceId ? 'text-blue-600 bg-blue-500/10' : 'opacity-40 hover:opacity-100'}`}
+                            title="Filter Account / Bank"
+                        >
+                            <Filter size={11} />
+                        </button>
                     </div>
 
                     {/* 4. Category / To Header + Dropdown */}
                     <div className="w-[145px] shrink-0 flex items-center gap-1.5 relative whitespace-nowrap">
                         <span className="text-purple-600 dark:text-purple-400">Category / To</span>
-                        <div className="dropdown dropdown-bottom">
-                            <button
-                                tabIndex={0}
-                                className={`btn btn-xs btn-square btn-ghost ${filters.categoryId ? 'text-purple-600 bg-purple-500/10' : 'opacity-40 hover:opacity-100'}`}
-                                title="Filter Category"
-                            >
-                                <Filter size={11} />
-                            </button>
-                            <ul tabIndex={0} className="dropdown-content z-[9999] menu p-1.5 bg-base-100 rounded-2xl shadow-2xl border border-base-300 w-56 mt-1 font-medium text-xs normal-case max-h-60 overflow-y-auto overflow-x-hidden">
-                                <li className="menu-title text-[10px] uppercase font-bold text-base-content/50">Filter Category</li>
-                                <li>
-                                    <a onClick={() => setFilters({ ...filters, categoryId: "", subCategoryId: "" })} className={!filters.categoryId ? "font-bold text-primary" : ""}>
-                                        All Categories
-                                    </a>
-                                </li>
-                                {monthCategories.map((c) => (
-                                    <li key={c._id}>
-                                        <a onClick={() => setFilters({ ...filters, categoryId: c._id, subCategoryId: "" })} className={`truncate max-w-[200px] ${String(filters.categoryId) === String(c._id) ? "font-bold text-primary" : ""}`}>
-                                            {c.name}
-                                        </a>
-                                    </li>
-                                ))}
-                            </ul>
-                        </div>
+                        <button
+                            type="button"
+                            onClick={(e) => handleToggleFilterMenu(e, 'categoryId')}
+                            className={`btn btn-xs btn-square btn-ghost ${filters.categoryId ? 'text-purple-600 bg-purple-500/10' : 'opacity-40 hover:opacity-100'}`}
+                            title="Filter Category"
+                        >
+                            <Filter size={11} />
+                        </button>
                     </div>
 
                     {/* 5. Sub Category Header + Dropdown */}
                     <div className="w-[145px] shrink-0 flex items-center gap-1.5 relative whitespace-nowrap">
                         <span className="text-amber-600 dark:text-amber-400">Sub Category</span>
-                        <div className="dropdown dropdown-bottom">
-                            <button
-                                tabIndex={0}
-                                className={`btn btn-xs btn-square btn-ghost ${filters.subCategoryId ? 'text-amber-600 bg-amber-500/10' : 'opacity-40 hover:opacity-100'}`}
-                                title="Filter Sub Category"
-                            >
-                                <Filter size={11} />
-                            </button>
-                            <ul tabIndex={0} className="dropdown-content z-[9999] menu p-1.5 bg-base-100 rounded-2xl shadow-2xl border border-base-300 w-56 mt-1 font-medium text-xs normal-case max-h-60 overflow-y-auto">
-                                <li className="menu-title text-[10px] uppercase font-bold text-base-content/50">Filter Sub Category</li>
-                                <li>
-                                    <a onClick={() => setFilters({ ...filters, subCategoryId: "" })} className={!filters.subCategoryId ? "font-bold text-primary" : ""}>
-                                        All Sub Categories
-                                    </a>
-                                </li>
-                                {(filters.categoryId
-                                    ? getSubCatOptions(filters.categoryId)
-                                    : categories.flatMap(c => getSubCatOptions(c._id))
-                                ).map((sub) => (
-                                    <li key={sub.value}>
-                                        <a onClick={() => setFilters({ ...filters, subCategoryId: sub.value })} className={String(filters.subCategoryId) === String(sub.value) ? "font-bold text-primary" : ""}>
-                                            {sub.label}
-                                        </a>
-                                    </li>
-                                ))}
-                            </ul>
-                        </div>
+                        <button
+                            type="button"
+                            onClick={(e) => handleToggleFilterMenu(e, 'subCategoryId')}
+                            className={`btn btn-xs btn-square btn-ghost ${filters.subCategoryId ? 'text-amber-600 bg-amber-500/10' : 'opacity-40 hover:opacity-100'}`}
+                            title="Filter Sub Category"
+                        >
+                            <Filter size={11} />
+                        </button>
                     </div>
 
                     {/* 6. Amount & Sort Controls Header */}
@@ -1095,56 +1210,112 @@ const ExpenseTable = ({
                                             </div>
                                             <input value={editData.description} onChange={e => setEditData({ ...editData, description: e.target.value })} className="flex-1 min-w-[150px] input input-xs input-bordered" />
 
+                                             {/* From / Action */}
                                             <div className="w-[135px] shrink-0">
                                                 <DaisySelect
-                                                    options={editSourceOptions}
-                                                    value={editData.sourceId}
+                                                    options={sourceOptions}
+                                                    value={editData.isAddMoney ? "add_money" : (editData.isManualDebit ? "debit_money" : editData.sourceId)}
                                                     placeholder="Source"
-                                                    onChange={(val) => setEditData({ ...editData, sourceId: val })}
-                                                />
-                                            </div>
-
-                                            <div className="w-[145px] shrink-0">
-                                                <DaisySelect
-                                                    options={categoryOptions}
-                                                    value={editData.isTransfer ? `bank_${editData.targetSourceId}` : editData.categoryId}
-                                                    placeholder="Category / To"
                                                     onChange={(val) => {
-                                                        if (val.startsWith("bank_")) {
-                                                            const trgId = val.replace("bank_", "");
+                                                        if (val === "add_money") {
                                                             setEditData({
                                                                 ...editData,
-                                                                isTransfer: true,
-                                                                type: "Transfer",
-                                                                targetSourceId: trgId,
+                                                                isAddMoney: true,
+                                                                isManualDebit: false,
+                                                                isTransfer: false,
+                                                                type: "Credit",
                                                                 categoryId: "",
-                                                                subCategoryId: ""
+                                                                subCategoryId: "",
+                                                                targetSourceId: ""
+                                                            });
+                                                        } else if (val === "debit_money") {
+                                                            setEditData({
+                                                                ...editData,
+                                                                isAddMoney: false,
+                                                                isManualDebit: true,
+                                                                isTransfer: false,
+                                                                type: "Debit",
+                                                                categoryId: "",
+                                                                subCategoryId: "",
+                                                                targetSourceId: ""
                                                             });
                                                         } else {
                                                             setEditData({
                                                                 ...editData,
-                                                                isTransfer: false,
-                                                                type: "Debit",
-                                                                targetSourceId: "",
-                                                                categoryId: val,
-                                                                subCategoryId: ""
+                                                                isAddMoney: false,
+                                                                isManualDebit: false,
+                                                                sourceId: val
                                                             });
                                                         }
                                                     }}
                                                 />
                                             </div>
 
+                                            {/* Target / Category */}
+                                            <div className="w-[145px] shrink-0">
+                                                {editData.isAddMoney ? (
+                                                    <DaisySelect
+                                                        options={targetOptions}
+                                                        value={editData.sourceId}
+                                                        placeholder="Select Bank"
+                                                        onChange={(val) => setEditData({ ...editData, sourceId: val })}
+                                                        className="text-success"
+                                                    />
+                                                ) : editData.isManualDebit ? (
+                                                    <DaisySelect
+                                                        options={targetOptions}
+                                                        value={editData.sourceId}
+                                                        placeholder="Select Bank"
+                                                        onChange={(val) => setEditData({ ...editData, sourceId: val })}
+                                                        className="text-error"
+                                                    />
+                                                ) : (
+                                                    <DaisySelect
+                                                        options={categoryOptions}
+                                                        value={editData.isTransfer ? `bank_${editData.targetSourceId}` : editData.categoryId}
+                                                        placeholder="Category / To"
+                                                        onChange={(val) => {
+                                                            if (val.startsWith("bank_")) {
+                                                                const trgId = val.replace("bank_", "");
+                                                                setEditData({
+                                                                    ...editData,
+                                                                    isAddMoney: false,
+                                                                    isManualDebit: false,
+                                                                    isTransfer: true,
+                                                                    type: "Transfer",
+                                                                    targetSourceId: trgId,
+                                                                    categoryId: "",
+                                                                    subCategoryId: ""
+                                                                });
+                                                            } else {
+                                                                setEditData({
+                                                                    ...editData,
+                                                                    isAddMoney: false,
+                                                                    isManualDebit: false,
+                                                                    isTransfer: false,
+                                                                    type: "Debit",
+                                                                    targetSourceId: "",
+                                                                    categoryId: val,
+                                                                    subCategoryId: ""
+                                                                });
+                                                            }
+                                                        }}
+                                                    />
+                                                )}
+                                            </div>
+
+                                            {/* Sub Cat */}
                                             <div className="w-[145px] shrink-0">
                                                 <DaisySelect
-                                                    options={editData.isTransfer ? [] : getSubCatOptions(editData.categoryId)}
+                                                    options={(editData.isAddMoney || editData.isManualDebit || editData.isTransfer) ? [] : getSubCatOptions(editData.categoryId)}
                                                     value={editData.subCategoryId}
-                                                    placeholder={editData.isTransfer ? "—" : "SubCat"}
-                                                    disabled={editData.isTransfer}
+                                                    placeholder={(editData.isAddMoney || editData.isManualDebit || editData.isTransfer) ? "—" : "SubCat"}
+                                                    disabled={editData.isAddMoney || editData.isManualDebit || editData.isTransfer}
                                                     onChange={(val) => setEditData({ ...editData, subCategoryId: val })}
                                                 />
                                             </div>
 
-                                            <input type="number" value={editData.amount} onChange={e => setEditData({ ...editData, amount: e.target.value })} className="w-[130px] shrink-0 input input-sm input-bordered text-right whitespace-nowrap" />
+                                            <input type="number" value={editData.amount} onChange={e => setEditData({ ...editData, amount: e.target.value })} className="w-[130px] shrink-0 input input-xs input-bordered text-right whitespace-nowrap text-xs font-mono font-bold" />
 
                                             <div className="w-[60px] shrink-0 flex items-center justify-center gap-1">
                                                 <button onClick={saveEdit} className="btn btn-xs btn-square btn-success text-white"><Save size={12} /></button>
@@ -1154,7 +1325,7 @@ const ExpenseTable = ({
                                     ) : (
                                         // View Mode
                                         <>
-                                            <div className="w-[160px] shrink-0 text-base-content/60 font-medium text-[11px] whitespace-nowrap">{dayjs(t.date).format("ddd, MMM DD, YYYY")}</div>
+                                            <div className="w-[160px] shrink-0 text-base-content/60 font-medium text-xs whitespace-nowrap">{dayjs(t.date).format("ddd, MMM DD, YYYY")}</div>
                                             <div className="flex-1 min-w-[150px] truncate">
                                                 <div className="flex items-center gap-1">
                                                     {t.isReimbursable && <Handshake size={12} className="text-warning shrink-0" title="Reimbursable: Need to collect money" />}
@@ -1175,20 +1346,20 @@ const ExpenseTable = ({
                                                     const sub = cat?.subCategories?.find(s => s._id === subId);
                                                     if (!sub?.name) return <span className="text-base-content/40 text-xs">—</span>;
                                                     return (
-                                                        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-medium bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 truncate max-w-full" title={sub.name}>
-                                                            <Folder size={11} className="shrink-0 text-amber-500" />
+                                                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 truncate max-w-full" title={sub.name}>
+                                                            <Folder size={12} className="shrink-0 text-amber-500" />
                                                             <span className="truncate">{sub.name}</span>
                                                         </span>
                                                     );
                                                 })()}
                                             </div>
                                             <div className={`w-[130px] shrink-0 text-right font-bold font-mono tracking-tight text-xs whitespace-nowrap ${
-                                                t.type === 'Transfer'
-                                                    ? 'text-amber-500 dark:text-amber-400'
-                                                    : (t.type === 'Credit' ? 'text-success' : 'text-error')
-                                            }`}>
-                                                {t.type === 'Transfer' ? '' : (t.type === 'Credit' ? '+' : '-')}₹{Number(t.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                            </div>
+                                                 t.type === 'Transfer'
+                                                     ? 'text-amber-500 dark:text-amber-400'
+                                                     : (t.type === 'Credit' ? 'text-success' : 'text-error')
+                                             }`}>
+                                                 {hideNumbers ? "••••••••" : `${t.type === 'Transfer' ? '' : (t.type === 'Credit' ? '+' : '-')}₹${Number(t.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                                             </div>
 
                                             <div className="w-[60px] shrink-0 flex items-center justify-center gap-1 opacity-80 hover:opacity-100 transition-opacity">
                                                 <button onClick={() => startEdit(t)} className="btn btn-xs btn-ghost btn-square text-info hover:bg-info/10" title="Edit Transaction"><Edit2 size={14} /></button>
@@ -1240,6 +1411,117 @@ const ExpenseTable = ({
                 isOpen={isAddModalOpen}
                 onClose={() => setIsAddModalOpen(false)}
             />
+
+            {/* Fixed Floating Column Filter Popover */}
+            {activeFilterMenu && (
+                <div
+                    onClick={(e) => e.stopPropagation()}
+                    style={{ top: `${activeFilterMenu.top}px`, left: `${activeFilterMenu.left}px` }}
+                    className="fixed z-[999999] bg-base-100 p-3 rounded-2xl shadow-2xl border border-base-300 animate-in fade-in zoom-in-95 duration-150 font-normal text-xs normal-case"
+                >
+                    {activeFilterMenu.type === 'date' && (
+                        <div className="w-52 space-y-2">
+                            <label className="text-[10px] font-bold text-base-content/50 uppercase block">Filter by Date</label>
+                            <input
+                                type="date"
+                                value={filters.date}
+                                onChange={(e) => setFilters({ ...filters, date: e.target.value })}
+                                className="input input-xs input-bordered w-full rounded-lg font-medium"
+                            />
+                            {filters.date && (
+                                <button
+                                    onClick={() => { setFilters({ ...filters, date: "" }); setActiveFilterMenu(null); }}
+                                    className="text-[10px] text-error font-bold hover:underline block text-right w-full"
+                                >
+                                    Clear Date
+                                </button>
+                            )}
+                        </div>
+                    )}
+
+                    {activeFilterMenu.type === 'description' && (
+                        <div className="w-56 space-y-2">
+                            <label className="text-[10px] font-bold text-base-content/50 uppercase block">Search Description</label>
+                            <div className="relative">
+                                <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 opacity-50" />
+                                <input
+                                    type="text"
+                                    placeholder="Search text..."
+                                    value={filters.description}
+                                    onChange={(e) => setFilters({ ...filters, description: e.target.value })}
+                                    className="input input-xs input-bordered w-full pl-7 font-medium rounded-lg"
+                                    autoFocus
+                                />
+                            </div>
+                            {filters.description && (
+                                <button
+                                    onClick={() => { setFilters({ ...filters, description: "" }); setActiveFilterMenu(null); }}
+                                    className="text-[10px] text-error font-bold hover:underline block text-right w-full"
+                                >
+                                    Clear Search
+                                </button>
+                            )}
+                        </div>
+                    )}
+
+                    {activeFilterMenu.type === 'sourceId' && (
+                        <ul className="menu p-1.5 w-52 font-medium text-xs max-h-60 overflow-y-auto">
+                            <li className="menu-title text-[10px] uppercase font-bold text-base-content/50">Filter Account</li>
+                            <li>
+                                <a onClick={() => { setFilters({ ...filters, sourceId: "" }); setActiveFilterMenu(null); }} className={!filters.sourceId ? "font-bold text-primary" : ""}>
+                                    All Accounts
+                                </a>
+                            </li>
+                            {sources.map((s) => (
+                                <li key={s._id}>
+                                    <a onClick={() => { setFilters({ ...filters, sourceId: s._id }); setActiveFilterMenu(null); }} className={String(filters.sourceId) === String(s._id) ? "font-bold text-primary" : ""}>
+                                        {s.name}
+                                    </a>
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+
+                    {activeFilterMenu.type === 'categoryId' && (
+                        <ul className="menu p-1.5 w-56 font-medium text-xs max-h-60 overflow-y-auto">
+                            <li className="menu-title text-[10px] uppercase font-bold text-base-content/50">Filter Category</li>
+                            <li>
+                                <a onClick={() => { setFilters({ ...filters, categoryId: "", subCategoryId: "" }); setActiveFilterMenu(null); }} className={!filters.categoryId ? "font-bold text-primary" : ""}>
+                                    All Categories
+                                </a>
+                            </li>
+                            {monthCategories.map((c) => (
+                                <li key={c._id}>
+                                    <a onClick={() => { setFilters({ ...filters, categoryId: c._id, subCategoryId: "" }); setActiveFilterMenu(null); }} className={`truncate max-w-[200px] ${String(filters.categoryId) === String(c._id) ? "font-bold text-primary" : ""}`}>
+                                        {c.name}
+                                    </a>
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+
+                    {activeFilterMenu.type === 'subCategoryId' && (
+                        <ul className="menu p-1.5 w-56 font-medium text-xs max-h-60 overflow-y-auto">
+                            <li className="menu-title text-[10px] uppercase font-bold text-base-content/50">Filter Sub Category</li>
+                            <li>
+                                <a onClick={() => { setFilters({ ...filters, subCategoryId: "" }); setActiveFilterMenu(null); }} className={!filters.subCategoryId ? "font-bold text-primary" : ""}>
+                                    All Sub Categories
+                                </a>
+                            </li>
+                            {(filters.categoryId
+                                ? getSubCatOptions(filters.categoryId)
+                                : categories.flatMap(c => getSubCatOptions(c._id))
+                            ).map((sub) => (
+                                <li key={sub.value}>
+                                    <a onClick={() => { setFilters({ ...filters, subCategoryId: sub.value }); setActiveFilterMenu(null); }} className={String(filters.subCategoryId) === String(sub.value) ? "font-bold text-primary" : ""}>
+                                        {sub.label}
+                                    </a>
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+                </div>
+            )}
         </div>
     );
 };

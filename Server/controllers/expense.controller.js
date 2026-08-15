@@ -17,11 +17,15 @@ const getMonthDateRange = (monthStr) => {
 export const getDashboardData = async (req, res) => {
     try {
         const { _id: userId } = req.user; // Assuming auth middleware adds user
-        const { month, fromMonth, toMonth } = req.query; // Format: "YYYY-MM"
+        const { month, fromMonth, toMonth, all } = req.query; // Format: "YYYY-MM"
 
         let startDate, endDate, monthsList = [];
 
-        if (fromMonth && toMonth) {
+        if (all === 'true' || month === 'all') {
+            startDate = new Date(0);
+            endDate = new Date(2100, 0, 1);
+            monthsList = [new Date().toISOString().slice(0, 7)];
+        } else if (fromMonth && toMonth) {
             const [fromY, fromM] = fromMonth.split('-').map(Number);
             const [toY, toM] = toMonth.split('-').map(Number);
             startDate = new Date(fromY, fromM - 1, 1);

@@ -37,7 +37,17 @@ function NutrientGraphCard({ nutrient, dailyData = [], totalDays = 1, onOpenWiki
   };
 
   // ApexChart Configuration
-  const categories = dailyData.map((d) => d.formattedDate || d.date);
+  const categories = dailyData.map((d) => {
+    if (d.formattedDate) {
+      const firstPart = String(d.formattedDate).split(" ")[0];
+      return firstPart.padStart(2, "0");
+    }
+    if (d.date) {
+      const parts = String(d.date).split("-");
+      if (parts.length === 3) return parts[2].padStart(2, "0");
+    }
+    return String(d.date || "");
+  });
 
   const series = [
     {
@@ -125,7 +135,14 @@ function NutrientGraphCard({ nutrient, dailyData = [], totalDays = 1, onOpenWiki
       categories,
       labels: {
         style: { colors: "#94a3b8", fontSize: "11px", fontWeight: 500 },
-        rotate: -30,
+        rotate: 0,
+        formatter: (val) => {
+          if (!val) return "";
+          const str = String(val).trim();
+          const match = str.match(/\b\d{1,2}\b/);
+          if (match) return match[0].padStart(2, "0");
+          return str;
+        },
       },
       axisBorder: { color: "#475569" },
       axisTicks: { color: "#475569" },
@@ -154,6 +171,22 @@ function NutrientGraphCard({ nutrient, dailyData = [], totalDays = 1, onOpenWiki
       theme: "dark",
       shared: true,
       intersect: false,
+      x: {
+        formatter: (val, opts) => {
+          const idx = opts?.dataPointIndex;
+          if (idx !== undefined && dailyData[idx]) {
+            const dObj = dailyData[idx];
+            if (dObj.fullDateStr) return dObj.fullDateStr;
+            if (dObj.date) {
+              const d = new Date(dObj.date);
+              if (!isNaN(d.getTime())) {
+                return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+              }
+            }
+          }
+          return `Day ${val}`;
+        },
+      },
       y: {
         formatter: (val) => `${val} ${nutrient.unit}`,
       },
