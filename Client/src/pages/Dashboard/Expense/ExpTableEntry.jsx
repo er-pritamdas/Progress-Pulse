@@ -377,7 +377,7 @@ const ExpTableEntry = () => {
       {/* Heatmap Modal */}
       {showHeatmapModal && (
         <HeatmapModal
-          transactions={debitTransactions}
+          transactions={transactions}
           currentMonth={currentMonth}
           onClose={() => setShowHeatmapModal(false)}
         />
@@ -403,6 +403,8 @@ const ExpTableEntry = () => {
 };
 
 const HeatmapModal = ({ transactions, currentMonth, onClose }) => {
+  const dispatch = useDispatch();
+  const { sources = [], categories = [] } = useSelector((state) => state.expense);
   const [upperLimit, setUpperLimit] = useState(() => {
     try {
       const saved = localStorage.getItem("expense_calendar_limit");
@@ -411,9 +413,21 @@ const HeatmapModal = ({ transactions, currentMonth, onClose }) => {
       return 5000;
     }
   });
+
   const [limitInput, setLimitInput] = useState(String(upperLimit));
   const [isEditingLimit, setIsEditingLimit] = useState(false);
   
+  // Close on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape") {
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
   // Default selected date to Today if in currentMonth, else 1st of month (both panels open simultaneously)
   const [selectedDateStr, setSelectedDateStr] = useState(() => {
     const todayStr = dayjs().format("YYYY-MM-DD");
@@ -456,25 +470,33 @@ const HeatmapModal = ({ transactions, currentMonth, onClose }) => {
 
     dailyTxns[dateStr].push(t);
     const amt = Number(t.amount || 0);
+    const type = (t.type || "Debit").toLowerCase();
 
-    if (t.type === "Credit") {
+    if (type === "credit") {
       dailyCredits[dateStr] += amt;
       dailyCreditCount[dateStr] += 1;
-    } else if (t.type === "Debit" || (!t.type && amt > 0)) {
+    } else if (type === "debit") {
       dailySpending[dateStr] += amt;
       dailyDebitCount[dateStr] += 1;
-    } else if (t.type === "Transfer") {
-      // Transfer transactions can be viewed in day details
+    } else if (type === "transfer") {
+      // Transfer transactions are listed in day details
+    } else if (amt > 0) {
+      // Default to debit if unspecified
+      dailySpending[dateStr] += amt;
+      dailyDebitCount[dateStr] += 1;
     }
   });
 
-  // 3. Calendar Grid Generation
+  // 3. Calendar Grid Generation (Always fixed to 42 slots / 6 rows so modal size never changes between months)
   const days = [];
   for (let i = 0; i < startDayOfWeek; i++) {
     days.push(null);
   }
   for (let i = 1; i <= daysInMonth; i++) {
     days.push(startOfMonth.date(i));
+  }
+  while (days.length < 42) {
+    days.push(null);
   }
 
   const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -488,9 +510,10 @@ const HeatmapModal = ({ transactions, currentMonth, onClose }) => {
   // Monthly stats
   const totalMonthSpent = Object.values(dailySpending).reduce((sum, v) => sum + v, 0);
   const totalMonthCredits = Object.values(dailyCredits).reduce((sum, v) => sum + v, 0);
+  const totalNetFlow = totalMonthCredits - totalMonthSpent;
   const spendingDaysCount = Object.values(dailySpending).filter((v) => v > 0).length;
 
-  // Color coding function with reduced opacity
+  // Color coding function with soft translucent styling
   const getDayColor = (debitAmt, creditAmt) => {
     if (debitAmt <= 0) {
       if (creditAmt > 0) {
@@ -510,7 +533,7 @@ const HeatmapModal = ({ transactions, currentMonth, onClose }) => {
     }
     const pct = (debitAmt / upperLimit) * 100;
     if (pct <= 25) {
-      // 0 - 25% Green with low opacity
+      // 0 - 25% Green
       return {
         bg: "bg-emerald-500/15 hover:bg-emerald-500/25",
         border: "border-emerald-500/30",
@@ -519,7 +542,7 @@ const HeatmapModal = ({ transactions, currentMonth, onClose }) => {
       };
     }
     if (pct <= 50) {
-      // 26 - 50% Blue with low opacity
+      // 26 - 50% Blue
       return {
         bg: "bg-blue-500/15 hover:bg-blue-500/25",
         border: "border-blue-500/30",
@@ -528,7 +551,7 @@ const HeatmapModal = ({ transactions, currentMonth, onClose }) => {
       };
     }
     if (pct <= 75) {
-      // 51 - 75% Yellow with low opacity
+      // 51 - 75% Yellow
       return {
         bg: "bg-amber-500/15 hover:bg-amber-500/25",
         border: "border-amber-500/30",
@@ -537,7 +560,7 @@ const HeatmapModal = ({ transactions, currentMonth, onClose }) => {
       };
     }
     if (pct <= 100) {
-      // 76 - 100% Red with low opacity
+      // 76 - 100% Red
       return {
         bg: "bg-rose-500/20 hover:bg-rose-500/30",
         border: "border-rose-500/35",
@@ -545,7 +568,7 @@ const HeatmapModal = ({ transactions, currentMonth, onClose }) => {
         tier: "q4"
       };
     }
-    // > 100% Over limit: Dark Red / Maroon with low opacity
+    // > 100% Over limit: Dark Red / Maroon
     return {
       bg: "bg-rose-950/40 hover:bg-rose-950/50",
       border: "border-rose-800/60",
@@ -561,56 +584,94 @@ const HeatmapModal = ({ transactions, currentMonth, onClose }) => {
   const selectedDayDebitCount = selectedDateStr ? dailyDebitCount[selectedDateStr] || 0 : 0;
   const selectedDayCredit = selectedDateStr ? dailyCredits[selectedDateStr] || 0 : 0;
   const selectedDayCreditCount = selectedDateStr ? dailyCreditCount[selectedDateStr] || 0 : 0;
+  const selectedDayNet = selectedDayCredit - selectedDayDebit;
   const selectedDayTier = selectedDateStr ? getDayColor(selectedDayDebit, selectedDayCredit) : null;
 
-  const formatAmtShort = (val) => {
+  const formatAmtClean = (val) => {
     if (!val) return "0";
+    if (val >= 1000000) return `${(val / 1000000).toFixed(2)}M`;
     if (val >= 100000) return `${(val / 100000).toFixed(1)}L`;
     if (val >= 1000) return `${(val / 1000).toFixed(1)}k`;
     return String(Math.round(val));
   };
 
   return (
-    <div className="fixed inset-0 z-[99999] bg-black/60 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-      <div className="flex flex-col lg:flex-row items-stretch justify-center gap-4 max-h-[92vh] max-w-5xl w-full">
-        {/* Main Calendar Modal (Left Panel) */}
-        <div className="w-full lg:w-[490px] shrink-0 bg-base-100 rounded-3xl shadow-2xl overflow-hidden border border-base-300 flex flex-col justify-between text-xs animate-in fade-in zoom-in-95 duration-200">
-          {/* Header */}
-          <div className="shrink-0 p-3.5 sm:p-4 border-b border-base-200 flex justify-between items-center bg-base-200/50">
-            <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shadow-xs shrink-0">
-                <Calendar size={18} />
+    <div className="fixed inset-0 z-[99999] bg-black/70 backdrop-blur-lg flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
+      {/* Fixed Dimension Modal Container (Constant width & height across all months) */}
+      <div className="flex flex-col lg:flex-row items-stretch justify-center gap-4 h-[90vh] min-h-[660px] max-h-[840px] max-w-7xl w-full">
+        
+        {/* Main Calendar Panel (Left - Fixed Size & 6-Row Grid) */}
+        <div className="flex-[1.4] h-full bg-base-100 rounded-3xl shadow-2xl overflow-hidden border border-base-300 flex flex-col justify-between text-xs animate-in fade-in zoom-in-95 duration-200">
+          
+          {/* Header with Integrated Month Switcher & Totals */}
+          <div className="shrink-0 p-4 sm:p-5 border-b border-base-200 bg-base-200/50 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shadow-xs shrink-0">
+                <Calendar size={22} />
               </div>
               <div>
-                <h3 className="font-extrabold text-sm sm:text-base text-base-content flex items-center gap-1.5">
-                  Spending Calendar
-                </h3>
-                <p className="text-[11px] text-base-content/60 font-medium">
-                  {dayjs(currentMonth).format("MMM YYYY")} • Spent: <strong className="text-rose-500 font-mono">₹{totalMonthSpent.toLocaleString()}</strong> | Received: <strong className="text-emerald-500 font-mono">₹{totalMonthCredits.toLocaleString()}</strong>
-                </p>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-extrabold text-base sm:text-lg text-base-content leading-tight">
+                    Spending & Cash Flow Calendar
+                  </h3>
+                </div>
+                <div className="flex items-center gap-2 mt-0.5 text-xs text-base-content/70 flex-wrap font-medium">
+                  <span>Debited: <strong className="text-rose-400 font-mono">₹{totalMonthSpent.toLocaleString()}</strong> ({spendingDaysCount} active days)</span>
+                  <span>•</span>
+                  <span>Credited: <strong className="text-emerald-500 font-mono">₹{totalMonthCredits.toLocaleString()}</strong></span>
+                  <span>•</span>
+                  <span>Net: <strong className={`font-mono ${totalNetFlow >= 0 ? "text-emerald-500" : "text-rose-400"}`}>{totalNetFlow >= 0 ? "+" : "-"}₹{Math.abs(totalNetFlow).toLocaleString()}</strong></span>
+                </div>
               </div>
             </div>
-            <button
-              onClick={onClose}
-              className="btn btn-sm btn-ghost btn-circle rounded-full"
-            >
-              <X size={18} />
-            </button>
+
+            {/* Month Switcher & Close Button */}
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1 bg-base-100 px-2 py-1 rounded-xl border border-base-300 shadow-2xs">
+                <button
+                  onClick={() => dispatch(setMonth(dayjs(currentMonth).subtract(1, 'month').format("YYYY-MM")))}
+                  className="btn btn-xs btn-ghost btn-square font-bold"
+                  title="Previous Month"
+                >
+                  <ChevronLeft size={16} />
+                </button>
+                <span className="font-extrabold text-xs font-sans px-2 text-primary whitespace-nowrap">
+                  {dayjs(currentMonth).format("MMMM YYYY")}
+                </span>
+                <button
+                  onClick={() => dispatch(setMonth(dayjs(currentMonth).add(1, 'month').format("YYYY-MM")))}
+                  className="btn btn-xs btn-ghost btn-square font-bold"
+                  title="Next Month"
+                >
+                  <ChevronRight size={16} />
+                </button>
+              </div>
+
+              <button
+                onClick={onClose}
+                className="btn btn-xs sm:btn-sm btn-ghost gap-1 px-1.5 rounded-xl text-base-content/70 hover:text-base-content hover:bg-base-200/80 transition-all font-mono select-none"
+                title="Close (Press Esc)"
+              >
+                <kbd className="kbd kbd-sm font-mono font-black text-[11px] bg-base-100 border border-base-300 shadow-2xs px-2 py-0.5 rounded-lg cursor-pointer">ESC</kbd>
+              </button>
+            </div>
           </div>
 
-          {/* Upper Limit Control Bar */}
-          <div className="px-4 py-2 bg-base-200/40 border-b border-base-200 flex flex-wrap items-center justify-between gap-2 text-xs">
-            <div className="flex items-center gap-1.5">
-              <span className="font-bold text-[11px] text-base-content/80">Debit Limit:</span>
+          {/* Daily Limit & Quartile Target Bar */}
+          <div className="px-5 py-2.5 bg-base-200/40 border-b border-base-200 flex flex-wrap items-center justify-between gap-3 text-xs shrink-0">
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-base-content/80 text-[11px] uppercase tracking-wider">
+                Daily Debit Target:
+              </span>
               {isEditingLimit ? (
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1.5">
                   <div className="relative">
-                    <span className="absolute left-2 top-1/2 -translate-y-1/2 font-mono font-bold opacity-50 text-[10px]">₹</span>
+                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 font-mono font-bold opacity-50 text-[11px]">₹</span>
                     <input
                       type="number"
                       value={limitInput}
                       onChange={(e) => setLimitInput(e.target.value)}
-                      className="input input-xs input-bordered pl-5 pr-1 w-20 font-mono font-bold text-primary rounded-lg text-[11px]"
+                      className="input input-xs input-bordered pl-6 pr-2 w-28 font-mono font-bold text-primary rounded-lg text-xs"
                       autoFocus
                       onKeyDown={(e) => {
                         if (e.key === "Enter") handleLimitSave(limitInput);
@@ -620,15 +681,15 @@ const HeatmapModal = ({ transactions, currentMonth, onClose }) => {
                   </div>
                   <button
                     onClick={() => handleLimitSave(limitInput)}
-                    className="btn btn-xs btn-primary rounded-lg font-bold px-2"
+                    className="btn btn-xs btn-primary rounded-lg font-bold px-2.5"
                   >
-                    Set
+                    Save
                   </button>
                   <button
                     onClick={() => setIsEditingLimit(false)}
-                    className="btn btn-xs btn-ghost rounded-lg px-1.5"
+                    className="btn btn-xs btn-ghost rounded-lg px-2"
                   >
-                    ✕
+                    Cancel
                   </button>
                 </div>
               ) : (
@@ -638,22 +699,23 @@ const HeatmapModal = ({ transactions, currentMonth, onClose }) => {
                       setLimitInput(String(upperLimit));
                       setIsEditingLimit(true);
                     }}
-                    className="badge badge-primary badge-outline font-mono font-extrabold text-[11px] px-2 py-1.5 cursor-pointer hover:bg-primary hover:text-primary-content transition-colors"
-                    title="Click to edit upper limit"
+                    className="badge badge-primary badge-outline font-mono font-extrabold text-xs px-2.5 py-2 cursor-pointer hover:bg-primary hover:text-primary-content transition-colors"
+                    title="Click to edit daily upper limit"
                   >
-                    ₹{upperLimit.toLocaleString()} <span className="text-[9px] ml-0.5 opacity-70">✎</span>
+                    ₹{upperLimit.toLocaleString()} <span className="text-[10px] ml-1 opacity-70">✎ Edit</span>
                   </button>
                 </div>
               )}
             </div>
 
             {/* Quick Preset Buttons */}
-            <div className="flex items-center gap-1 flex-wrap">
-              {[2000, 5000, 10000, 20000].map((preset) => (
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="text-[11px] font-semibold text-base-content/50">Presets:</span>
+              {[2000, 5000, 10000, 20000, 50000].map((preset) => (
                 <button
                   key={preset}
                   onClick={() => handleLimitSave(preset)}
-                  className={`btn btn-xs rounded-md font-mono font-bold px-1.5 text-[10px] ${
+                  className={`btn btn-xs rounded-lg font-mono font-bold px-2 text-[11px] ${
                     upperLimit === preset
                       ? "btn-primary shadow-xs"
                       : "btn-ghost bg-base-100 hover:bg-base-200 text-base-content/70 border border-base-300/60"
@@ -665,250 +727,334 @@ const HeatmapModal = ({ transactions, currentMonth, onClose }) => {
             </div>
           </div>
 
-          {/* Calendar Grid Area (Spacious Square Date Boxes) */}
-          <div className="p-3 sm:p-3.5 space-y-1.5 flex-1 flex flex-col justify-center">
-            <div className="w-full max-w-[440px] mx-auto space-y-1.5">
-              {/* Weekday Header */}
-              <div className="grid grid-cols-7 gap-1.5 text-center font-black text-[10px] uppercase tracking-wider text-base-content/60">
-                {weekDays.map((day) => (
-                  <div key={day} className="py-0.5">
-                    {day}
-                  </div>
-                ))}
-              </div>
+          {/* Calendar Grid Area (Fixed 6-Row Grid, Fits Entire Vertical Space) */}
+          <div className="p-3.5 sm:p-4 flex-1 flex flex-col justify-between overflow-hidden min-h-0">
+            {/* Weekday Header */}
+            <div className="grid grid-cols-7 gap-2 text-center font-black text-xs uppercase tracking-wider text-base-content/60 mb-1.5 shrink-0">
+              {weekDays.map((day) => (
+                <div key={day} className="py-0.5">
+                  {day}
+                </div>
+              ))}
+            </div>
 
-              {/* Days Grid */}
-              <div className="grid grid-cols-7 gap-1.5">
-                {days.map((date, idx) => {
-                  if (!date) return <div key={`empty-${idx}`} className="aspect-square min-h-[58px]"></div>;
-
-                  const dateStr = date.format("YYYY-MM-DD");
-                  const debitAmt = dailySpending[dateStr] || 0;
-                  const debitCnt = dailyDebitCount[dateStr] || 0;
-                  const creditAmt = dailyCredits[dateStr] || 0;
-                  const creditCnt = dailyCreditCount[dateStr] || 0;
-                  const isToday = dateStr === dayjs().format("YYYY-MM-DD");
-                  const isSelected = selectedDateStr === dateStr;
-
-                  const style = getDayColor(debitAmt, creditAmt);
-
+            {/* Days Grid - 6 Fixed Rows */}
+            <div className="grid grid-cols-7 grid-rows-6 gap-2 sm:gap-2.5 flex-1 min-h-0">
+              {days.map((date, idx) => {
+                if (!date) {
                   return (
                     <div
-                      key={dateStr}
-                      onClick={() => setSelectedDateStr(dateStr)}
-                      className={`aspect-square min-h-[58px] sm:min-h-[64px] rounded-xl flex flex-col justify-between p-1.5 transition-all cursor-pointer relative border ${
-                        style.bg
-                      } ${style.border} ${
-                        isSelected ? "ring-2 ring-primary ring-offset-1 ring-offset-base-100 scale-105 z-20 shadow-md font-bold" : ""
-                      } ${
-                        isToday ? "border-2 border-primary shadow-xs" : ""
-                      }`}
-                      title={`${date.format("ddd, DD MMM YYYY")}\nDebited: ₹${debitAmt.toLocaleString()} (${debitCnt} Dr)\nCredited: ₹${creditAmt.toLocaleString()} (${creditCnt} Cr)`}
-                    >
-                      {/* Top Header: Date Number + Today Dot */}
-                      <div className="flex items-center justify-between w-full leading-none">
-                        <span className={`text-[11px] font-black ${style.text}`}>
-                          {date.date()}
-                        </span>
-                        {isToday && (
-                          <span className="w-1.5 h-1.5 rounded-full bg-primary ring-1 ring-primary/40 animate-pulse"></span>
-                        )}
-                      </div>
-
-                      {/* Bottom Info: Debited & Credited amounts + counts */}
-                      <div className="w-full space-y-0.5 leading-none">
-                        {debitAmt > 0 && (
-                          <div className="flex items-center justify-between text-[9.5px] sm:text-[10px] font-mono font-black text-rose-500">
-                            <span>-₹{formatAmtShort(debitAmt)}</span>
-                            {debitCnt > 1 && (
-                              <span className="text-[7.5px] font-sans font-bold opacity-75">{debitCnt}Dr</span>
-                            )}
-                          </div>
-                        )}
-
-                        {creditAmt > 0 && (
-                          <div className="flex items-center justify-between text-[9.5px] sm:text-[10px] font-mono font-black text-emerald-600 dark:text-emerald-400">
-                            <span>+₹{formatAmtShort(creditAmt)}</span>
-                            {creditCnt > 1 && (
-                              <span className="text-[7.5px] font-sans font-bold opacity-75">{creditCnt}Cr</span>
-                            )}
-                          </div>
-                        )}
-
-                        {debitAmt === 0 && creditAmt === 0 && (
-                          <div className="text-right">
-                            <span className="text-[9px] text-base-content/20 font-mono">—</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
+                      key={`empty-${idx}`}
+                      className="h-full min-h-0 rounded-2xl bg-base-200/20 border border-dashed border-base-300/20"
+                    ></div>
                   );
-                })}
-              </div>
+                }
+
+                const dateStr = date.format("YYYY-MM-DD");
+                const debitAmt = dailySpending[dateStr] || 0;
+                const debitCnt = dailyDebitCount[dateStr] || 0;
+                const creditAmt = dailyCredits[dateStr] || 0;
+                const creditCnt = dailyCreditCount[dateStr] || 0;
+                const totalDayTxns = debitCnt + creditCnt;
+                const isToday = dateStr === dayjs().format("YYYY-MM-DD");
+                const isSelected = selectedDateStr === dateStr;
+
+                const style = getDayColor(debitAmt, creditAmt);
+
+                return (
+                  <div
+                    key={dateStr}
+                    onClick={() => setSelectedDateStr(dateStr)}
+                    className={`h-full min-h-0 rounded-2xl flex flex-col justify-between p-2 sm:p-2.5 transition-all cursor-pointer relative border ${
+                      style.bg
+                    } ${style.border} ${
+                      isSelected ? "ring-2 ring-primary ring-offset-2 ring-offset-base-100 scale-[1.02] z-20 shadow-xl font-bold bg-primary/5" : "hover:scale-[1.01] hover:shadow-md"
+                    } ${
+                      isToday ? "border-2 border-primary shadow-xs" : ""
+                    }`}
+                    title={`${date.format("ddd, DD MMM YYYY")}\nDebited: ₹${debitAmt.toLocaleString()} (${debitCnt} Db)\nCredited: ₹${creditAmt.toLocaleString()} (${creditCnt} Cr)`}
+                  >
+                    {/* Top Row: Date Number + Today Pill or Total Txns badge */}
+                    <div className="flex items-center justify-between w-full leading-none">
+                      <span className={`text-xs sm:text-sm font-black ${style.text}`}>
+                        {date.date()}
+                      </span>
+                      
+                      {isToday ? (
+                        <span className="badge badge-xs badge-primary font-extrabold text-[8.5px] uppercase tracking-wider px-1.5 py-0.5">
+                          Today
+                        </span>
+                      ) : totalDayTxns > 0 ? (
+                        <span className="text-[9.5px] font-mono font-bold text-base-content/40">
+                          {totalDayTxns} txn{totalDayTxns === 1 ? "" : "s"}
+                        </span>
+                      ) : null}
+                    </div>
+
+                    {/* Bottom Area: Clean debited and credited amounts matching txns font size with lightened colors */}
+                    <div className="w-full space-y-0.5">
+                      {debitAmt > 0 && (
+                        <div className="flex items-center justify-between text-[9.5px] font-mono font-extrabold text-rose-400 leading-tight">
+                          <span>-₹{formatAmtClean(debitAmt)}</span>
+                          {debitCnt > 1 && (
+                            <span className="text-[8.5px] font-sans font-bold text-rose-400/75">{debitCnt} Db</span>
+                          )}
+                        </div>
+                      )}
+
+                      {creditAmt > 0 && (
+                        <div className="flex items-center justify-between text-[9.5px] font-mono font-extrabold text-emerald-500 leading-tight">
+                          <span>+₹{formatAmtClean(creditAmt)}</span>
+                          {creditCnt > 1 && (
+                            <span className="text-[8.5px] font-sans font-bold text-emerald-500/75">{creditCnt} Cr</span>
+                          )}
+                        </div>
+                      )}
+
+                      {debitAmt === 0 && creditAmt === 0 && (
+                        <div className="text-center py-0.5">
+                          <span className="text-[9.5px] text-base-content/20 font-mono">—</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-          </div>
-
-          {/* Dynamic 4-Tier Legend with Low Opacity */}
-          <div className="p-2.5 sm:p-3 bg-base-200/60 border-t border-base-200 flex flex-wrap justify-between items-center gap-2">
-            <div className="flex items-center gap-1 sm:gap-1.5 flex-wrap text-[10px] font-medium">
-              <span className="font-bold text-base-content/60 uppercase tracking-wider text-[9px]">
-                Debit Tiers:
-              </span>
-
-              {/* Q1: 0 - 25% */}
-              <div className="flex items-center gap-1 bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 px-1.5 py-0.5 rounded-md">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>
-                <span>0-25% (≤₹{q1 >= 1000 ? `${q1/1000}k` : q1})</span>
-              </div>
-
-              {/* Q2: 26 - 50% */}
-              <div className="flex items-center gap-1 bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30 px-1.5 py-0.5 rounded-md">
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0"></span>
-                <span>26-50% (≤₹{q2 >= 1000 ? `${q2/1000}k` : q2})</span>
-              </div>
-
-              {/* Q3: 51 - 75% */}
-              <div className="flex items-center gap-1 bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 px-1.5 py-0.5 rounded-md">
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0"></span>
-                <span>51-75% (≤₹{q3 >= 1000 ? `${q3/1000}k` : q3})</span>
-              </div>
-
-              {/* Q4: 76 - 100% */}
-              <div className="flex items-center gap-1 bg-rose-500/20 text-rose-700 dark:text-rose-300 border border-rose-500/35 px-1.5 py-0.5 rounded-md">
-                <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0"></span>
-                <span>76-100% (≤₹{q4 >= 1000 ? `${q4/1000}k` : q4})</span>
-              </div>
-
-              {/* Over 100% Maroon */}
-              <div className="flex items-center gap-1 bg-rose-950/40 text-rose-300 border border-rose-800/60 px-1.5 py-0.5 rounded-md">
-                <span className="w-1.5 h-1.5 rounded-full bg-rose-800 shrink-0"></span>
-                <span>&gt;100%</span>
-              </div>
-            </div>
-
-            <button onClick={onClose} className="btn btn-xs btn-primary rounded-xl font-bold px-3">
-              Done
-            </button>
           </div>
         </div>
 
-        {/* Dedicated Right-Side Day Detail Panel (Always Visible) */}
-        <div className="flex-1 w-full lg:min-w-[340px] bg-base-100 rounded-3xl shadow-2xl overflow-hidden border border-base-300 flex flex-col justify-between text-xs animate-in fade-in zoom-in-95 duration-200 shrink-0 max-h-[92vh]">
+        {/* Dedicated Right-Side Day Detail Panel (Always Visible, Fixed Height) */}
+        <div className="w-full lg:w-[420px] h-full bg-base-100 rounded-3xl shadow-2xl overflow-hidden border border-base-300 flex flex-col justify-between text-xs animate-in fade-in zoom-in-95 duration-200 shrink-0">
+          
           {/* Right Panel Header */}
-          <div className="p-4 sm:p-5 border-b border-base-200 flex justify-between items-center bg-base-200/50">
-            <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-2xl bg-secondary/15 flex items-center justify-center text-secondary shadow-xs shrink-0">
-                <Calendar size={18} />
+          <div className="p-4 sm:p-5 border-b border-base-200 flex justify-between items-center bg-base-200/50 shrink-0">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-secondary/15 flex items-center justify-center text-secondary shadow-xs shrink-0">
+                <Calendar size={20} />
               </div>
               <div>
-                <h4 className="font-extrabold text-sm text-base-content">
+                <h4 className="font-extrabold text-base text-base-content">
                   {selectedDateStr ? dayjs(selectedDateStr).format("DD MMMM YYYY") : "Select a Day"}
                 </h4>
-                <p className="text-[11px] text-base-content/60 font-medium">
+                <p className="text-xs text-base-content/60 font-medium">
                   {selectedDateStr ? dayjs(selectedDateStr).format("dddd") : "Click any date on calendar"}
                 </p>
               </div>
             </div>
             {selectedDateStr && (
-              <span className="badge badge-sm badge-neutral font-bold opacity-75">
-                Day View
+              <span className="badge badge-sm badge-neutral font-bold opacity-80">
+                {selectedTxns.length} Activity
               </span>
             )}
           </div>
 
           {/* Right Panel Body */}
-          <div className="p-4 sm:p-5 space-y-3 flex-1 overflow-y-auto">
-            {/* Day Summary Cards (Debited & Credited) */}
-            <div className="grid grid-cols-2 gap-2">
+          <div className="p-4 sm:p-5 space-y-4 flex-1 overflow-y-auto">
+            
+            {/* Day Summary Cards (Debited, Credited & Net Flow) */}
+            <div className="grid grid-cols-2 gap-2.5">
               {/* Debited Box */}
-              <div className="p-3 rounded-2xl bg-rose-500/10 border border-rose-500/25 space-y-1">
-                <div className="flex justify-between items-center text-[10px] font-bold text-rose-700 dark:text-rose-400 uppercase">
+              <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/25 space-y-1">
+                <div className="flex justify-between items-center text-[10.5px] font-extrabold text-rose-400 uppercase tracking-wider">
                   <span>Debited</span>
-                  <span className="badge badge-xs badge-error text-white font-bold">{selectedDayDebitCount} Dr</span>
+                  <span className="badge badge-xs bg-rose-500/20 text-rose-400 border border-rose-500/30 font-bold">{selectedDayDebitCount} Db</span>
                 </div>
-                <div className="text-base sm:text-lg font-black font-mono text-rose-500">
+                <div className="text-lg sm:text-xl font-black font-mono text-rose-400 leading-tight">
                   -₹{Number(selectedDayDebit || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </div>
               </div>
 
               {/* Credited Box */}
-              <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 space-y-1">
-                <div className="flex justify-between items-center text-[10px] font-bold text-emerald-700 dark:text-emerald-400 uppercase">
+              <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 space-y-1">
+                <div className="flex justify-between items-center text-[10.5px] font-extrabold text-emerald-500 dark:text-emerald-300 uppercase tracking-wider">
                   <span>Credited</span>
-                  <span className="badge badge-xs badge-success text-white font-bold">{selectedDayCreditCount} Cr</span>
+                  <span className="badge badge-xs bg-emerald-500/20 text-emerald-500 dark:text-emerald-300 border border-emerald-500/30 font-bold">{selectedDayCreditCount} Cr</span>
                 </div>
-                <div className="text-base sm:text-lg font-black font-mono text-emerald-600 dark:text-emerald-400">
+                <div className="text-lg sm:text-xl font-black font-mono text-emerald-500 dark:text-emerald-300 leading-tight">
                   +₹{Number(selectedDayCredit || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </div>
               </div>
             </div>
 
-            {/* Transactions List */}
-            <div className="space-y-2 pt-1">
+            {/* Net Day Flow Banner */}
+            <div className={`p-3 rounded-2xl border flex items-center justify-between ${
+              selectedDayNet >= 0
+                ? "bg-emerald-500/10 border-emerald-500/25 text-emerald-500 dark:text-emerald-300"
+                : "bg-rose-500/10 border-rose-500/25 text-rose-400"
+            }`}>
+              <div className="flex items-center gap-2">
+                {selectedDayNet >= 0 ? <TrendingUp size={16} className="text-emerald-500" /> : <TrendingDown size={16} className="text-rose-400" />}
+                <span className="font-extrabold text-xs">Day Net Flow:</span>
+              </div>
+              <span className="font-mono font-black text-sm">
+                {selectedDayNet >= 0 ? "+" : "-"}₹{Math.abs(selectedDayNet).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
+            </div>
+
+            {/* Transactions Feed */}
+            <div className="space-y-2.5 pt-1">
               <div className="flex justify-between items-center">
-                <span className="font-bold text-[11px] text-base-content/70 uppercase tracking-wider">
+                <span className="font-extrabold text-xs text-base-content/70 uppercase tracking-wider">
                   Transactions ({selectedTxns.length})
                 </span>
-                <span className="text-[10px] text-base-content/50 font-mono">
-                  Net: {selectedDayCredit >= selectedDayDebit ? "+" : "-"}₹{Math.abs(selectedDayCredit - selectedDayDebit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                <span className="text-[11px] text-base-content/50 font-medium">
+                  {selectedDateStr ? dayjs(selectedDateStr).format("MMM DD") : ""}
                 </span>
               </div>
 
               {selectedTxns.length > 0 ? (
-                <div className="space-y-2 max-h-[340px] overflow-y-auto pr-1">
+                <div className="space-y-2.5 max-h-[380px] overflow-y-auto pr-1">
                   {selectedTxns.map((t) => {
-                    const isCredit = t.type === "Credit";
-                    const isTrf = t.type === "Transfer";
-                    const catName = t.categoryId?.name || (typeof t.categoryId === "string" ? t.categoryId : "");
-                    const srcName = t.sourceId?.name || (typeof t.sourceId === "string" ? t.sourceId : "");
+                    const rawType = t.type || "Debit";
+                    const isCredit = rawType.toLowerCase() === "credit";
+                    const isTrf = rawType.toLowerCase() === "transfer";
+                    const isManDebit = rawType.toLowerCase() === "debit" && !t.categoryId;
+
+                    const sourceObj = t.sourceId;
+                    const srcName = sourceObj?.name || (typeof sourceObj === "string" ? sourceObj : "");
+                    const srcStyle = getSourceTagStyle(sourceObj || srcName, sources);
+
+                    const targetObj = t.targetSourceId;
+                    const trgName = targetObj?.name || (typeof targetObj === "string" ? targetObj : "Bank");
+                    const trgStyle = getSourceTagStyle(targetObj || trgName, sources);
+
+                    const catObj = t.categoryId;
+                    const catName = catObj?.name || (typeof catObj === "string" ? catObj : "");
+                    const catStyle = getCategoryTagStyle(catObj || catName, categories);
+
+                    const catId = catObj?._id || (typeof catObj === "string" ? catObj : "");
+                    const subId = t.subCategoryId?._id || (typeof t.subCategoryId === "string" ? t.subCategoryId : "");
+                    const foundCat = categories.find((c) => c._id === catId);
+                    const foundSub = foundCat?.subCategories?.find((s) => s._id === subId);
+                    const subName = foundSub?.name || (typeof t.subCategoryId === "object" ? t.subCategoryId?.name : (typeof t.subCategoryId === "string" && t.subCategoryId !== subId ? t.subCategoryId : ""));
 
                     return (
                       <div
                         key={t._id || t.id}
-                        className="bg-base-200/50 hover:bg-base-200/80 transition-colors p-3 rounded-2xl border border-base-300/60 space-y-2"
+                        className="bg-base-200/40 hover:bg-base-200/80 transition-all p-3 rounded-2xl border border-base-300/60 space-y-2.5 hover:shadow-xs"
                       >
+                        {/* Top Line: Tag Badge + Description + Amount */}
                         <div className="flex justify-between items-start gap-2">
-                          <div className="flex items-center gap-1.5 min-w-0">
-                            <span
-                              className={`badge badge-xs font-bold px-1.5 ${
-                                isCredit
-                                  ? "badge-success text-white"
-                                  : isTrf
-                                  ? "badge-warning text-white"
-                                  : "badge-error text-white"
-                              }`}
-                            >
-                              {isCredit ? "Cr" : isTrf ? "Trf" : "Dr"}
-                            </span>
-                            <span className="font-bold text-xs text-base-content leading-snug truncate">
-                              {t.description || (isCredit ? "Credit Transaction" : "Expense Transaction")}
+                          <div className="flex items-center gap-2 min-w-0">
+                            {/* Tag matching table entry style */}
+                            {isCredit ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10.5px] font-bold bg-emerald-500/15 text-emerald-500 dark:text-emerald-400 border border-emerald-500/30 shrink-0">
+                                <TrendingUp size={11} className="shrink-0 text-emerald-500" />
+                                <span>+ Add Money</span>
+                              </span>
+                            ) : isTrf ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10.5px] font-bold bg-amber-500/15 text-amber-500 dark:text-amber-400 border border-amber-500/30 shrink-0">
+                                <ArrowRightLeft size={11} className="shrink-0 text-amber-500" />
+                                <span>Transfer</span>
+                              </span>
+                            ) : isManDebit ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10.5px] font-bold bg-rose-500/15 text-rose-400 border border-rose-500/30 shrink-0">
+                                <TrendingDown size={11} className="shrink-0 text-rose-400" />
+                                <span>- Debit Money</span>
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10.5px] font-bold bg-rose-500/15 text-rose-400 border border-rose-500/30 shrink-0">
+                                <TrendingDown size={11} className="shrink-0 text-rose-400" />
+                                <span>Debit</span>
+                              </span>
+                            )}
+
+                            <span className="font-extrabold text-xs text-base-content leading-snug truncate">
+                              {t.description || (isCredit ? "Credit Income" : "Expense Transaction")}
                             </span>
                           </div>
 
                           <span
-                            className={`font-mono font-extrabold text-xs shrink-0 whitespace-nowrap ${
+                            className={`font-mono font-black text-sm shrink-0 whitespace-nowrap ${
                               isCredit
-                                ? "text-emerald-600 dark:text-emerald-400"
+                                ? "text-emerald-500 dark:text-emerald-300"
                                 : isTrf
                                 ? "text-amber-500 dark:text-amber-400"
-                                : "text-rose-500"
+                                : "text-rose-400"
                             }`}
                           >
                             {isCredit ? "+" : isTrf ? "" : "-"}₹{Number(t.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </span>
                         </div>
 
-                        <div className="flex items-center justify-between gap-1 flex-wrap pt-1 border-t border-base-300/40 text-[10px]">
+                        {/* Bottom Line: Source, Category / Target Bank Tags & Note Icon */}
+                        <div className="flex items-center justify-between gap-1 flex-wrap pt-1.5 border-t border-base-300/40 text-[11px]">
                           <div className="flex items-center gap-1.5 flex-wrap">
-                            {catName && (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-purple-500/10 text-purple-600 dark:text-purple-400 font-bold border border-purple-500/20">
-                                <Folder size={10} /> {catName}
-                              </span>
-                            )}
-                            {srcName && (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-base-100 border border-base-300 text-base-content/70 font-medium">
-                                <Wallet size={10} className="text-primary" /> {srcName}
-                              </span>
+                            {isCredit ? (
+                              /* 1. Add Money: To Bank Tag */
+                              srcName && (
+                                <span
+                                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10.5px] font-bold ${srcStyle.bg} ${srcStyle.text} border ${srcStyle.border} shrink-0`}
+                                  title={`Added to ${srcName}`}
+                                >
+                                  <Wallet size={11} className="shrink-0 text-emerald-500" />
+                                  <span>To: {srcName}</span>
+                                </span>
+                              )
+                            ) : isManDebit ? (
+                              /* 2. Debited Money: From Bank Tag */
+                              srcName && (
+                                <span
+                                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10.5px] font-bold ${srcStyle.bg} ${srcStyle.text} border ${srcStyle.border} shrink-0`}
+                                  title={`Debited from ${srcName}`}
+                                >
+                                  <Wallet size={11} className="shrink-0 text-rose-400" />
+                                  <span>From: {srcName}</span>
+                                </span>
+                              )
+                            ) : isTrf ? (
+                              /* 3. Transfer: From Bank and To Bank */
+                              <>
+                                {srcName && (
+                                  <span
+                                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10.5px] font-semibold ${srcStyle.bg} ${srcStyle.text} border ${srcStyle.border} shrink-0`}
+                                    title={`From ${srcName}`}
+                                  >
+                                    <Wallet size={11} className="shrink-0" />
+                                    <span>From: {srcName}</span>
+                                  </span>
+                                )}
+                                {trgName && (
+                                  <span
+                                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10.5px] font-bold ${trgStyle.bg} ${trgStyle.text} border ${trgStyle.border} shrink-0`}
+                                    title={`Transfer to ${trgName}`}
+                                  >
+                                    <ArrowRightLeft size={11} className="shrink-0 text-amber-500" />
+                                    <span>To: {trgName}</span>
+                                  </span>
+                                )}
+                              </>
+                            ) : (
+                              /* 4. Regular Expense: Bank tag, Category tag, Sub Category tag */
+                              <>
+                                {srcName && (
+                                  <span
+                                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10.5px] font-semibold ${srcStyle.bg} ${srcStyle.text} border ${srcStyle.border} shrink-0`}
+                                    title={srcName}
+                                  >
+                                    <Wallet size={11} className="shrink-0" />
+                                    <span>{srcName}</span>
+                                  </span>
+                                )}
+                                {catName && (
+                                  <span
+                                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10.5px] font-semibold ${catStyle.bg} ${catStyle.text} border ${catStyle.border} shrink-0`}
+                                    title={catName}
+                                  >
+                                    <Folder size={11} className="shrink-0" />
+                                    <span>{catName}</span>
+                                  </span>
+                                )}
+                                {subName && (
+                                  <span
+                                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10.5px] font-medium bg-base-300/50 text-base-content/70 border border-base-300 shrink-0"
+                                    title={`Subcategory: ${subName}`}
+                                  >
+                                    <span>{subName}</span>
+                                  </span>
+                                )}
+                              </>
                             )}
                           </div>
 
@@ -916,14 +1062,14 @@ const HeatmapModal = ({ transactions, currentMonth, onClose }) => {
                           <button
                             type="button"
                             onClick={() => setInfoModalTx(t)}
-                            className={`btn btn-xs btn-ghost btn-square rounded-lg ${
+                            className={`btn btn-xs btn-ghost btn-circle ${
                               t.info && t.info.trim()
-                                ? "text-primary bg-primary/10"
-                                : "text-base-content/40 hover:text-base-content"
+                                ? "text-primary bg-primary/10 hover:bg-primary/20"
+                                : "text-base-content/40 hover:text-base-content hover:bg-base-300/60"
                             }`}
                             title={t.info && t.info.trim() ? `Note: ${t.info}` : "Add / View Notes (i)"}
                           >
-                            <Info size={12} />
+                            <Info size={13} />
                           </button>
                         </div>
                       </div>
@@ -939,8 +1085,8 @@ const HeatmapModal = ({ transactions, currentMonth, onClose }) => {
           </div>
 
           {/* Right Panel Footer */}
-          <div className="p-3.5 bg-base-200/50 border-t border-base-200 text-center text-[11px] text-base-content/50 italic">
-            Click any date on the calendar to switch day
+          <div className="p-3.5 bg-base-200/50 border-t border-base-200 text-center text-xs text-base-content/60 font-medium">
+            Click any date on the calendar to inspect transactions
           </div>
         </div>
       </div>
@@ -1062,6 +1208,17 @@ const TransactionListModal = ({ type, transactions, currentMonth, onClose }) => 
 
   const totalSum = filteredTransactions.reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
 
+  // Close on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape") {
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
   return (
     <div className="fixed inset-0 z-[99999] bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
       <div className="bg-base-100 rounded-3xl shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden border border-base-300 animate-in fade-in zoom-in-95 duration-200">
@@ -1086,8 +1243,12 @@ const TransactionListModal = ({ type, transactions, currentMonth, onClose }) => 
             <span className={`px-3 py-1 rounded-xl text-sm font-extrabold font-mono border ${bgBadge}`}>
               Total: ₹{totalSum.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
-            <button onClick={onClose} className="btn btn-sm btn-ghost btn-circle rounded-full">
-              <X size={18} />
+            <button
+              onClick={onClose}
+              className="btn btn-xs sm:btn-sm btn-ghost gap-1 px-1.5 rounded-xl text-base-content/70 hover:text-base-content hover:bg-base-200/80 transition-all font-mono select-none"
+              title="Close (Press Esc)"
+            >
+              <kbd className="kbd kbd-sm font-mono font-black text-[11px] bg-base-100 border border-base-300 shadow-2xs px-2 py-0.5 rounded-lg cursor-pointer">ESC</kbd>
             </button>
           </div>
         </div>
