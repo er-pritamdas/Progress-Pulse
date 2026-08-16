@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from "react-redux";
 import dayjs from "dayjs";
 import { addTransaction, updateTransaction, deleteTransaction, setMonth, performUndo, performRedo } from "../../services/redux/slice/ExpenseSlice";
 import { getSourceTagStyle, getCategoryTagStyle } from "../../utils/expenseTheme";
-import { Trash2, Save, X, Edit2, Plus, PlusCircle, Handshake, AlertTriangle, Wallet, Tag, Folder, TrendingUp, TrendingDown, ArrowUp, ArrowDown, Calendar, ArrowRightLeft, Sparkles, ChevronDown, ChevronLeft, ChevronRight, Filter, Search, Undo2, Redo2, Eye, EyeOff } from "lucide-react";
+import { Trash2, Save, X, Edit2, Plus, PlusCircle, Handshake, AlertTriangle, Wallet, Tag, Folder, TrendingUp, TrendingDown, ArrowUp, ArrowDown, Calendar, ArrowRightLeft, Sparkles, ChevronDown, ChevronLeft, ChevronRight, Filter, Search, Undo2, Redo2, Eye, EyeOff, SlidersHorizontal } from "lucide-react";
 import AddTransactionModal from "./AddTransactionModal";
 
 // Helper Component for DaisyUI Dropdown
@@ -209,6 +209,47 @@ const ExpenseTable = ({
     const filters = externalFilters || internalFilters;
     const setFilters = externalSetFilters || setInternalFilters;
 
+    // Day Collapsible Grouping State
+    const [collapsedDays, setCollapsedDays] = useState({});
+
+    const toggleDayCollapse = (dateKey) => {
+        setCollapsedDays(prev => ({
+            ...prev,
+            [dateKey]: !prev[dateKey]
+        }));
+    };
+
+    // Header Display Settings State (Default: show only Total Txn count and Net total)
+    const DEFAULT_HEADER_SETTINGS = {
+        showTotalTxn: true,
+        showNet: true,
+        showCreditCount: false,
+        showDebitCount: false,
+        showCreditAmt: false,
+        showDebitAmt: false,
+    };
+
+    const [headerSettings, setHeaderSettings] = useState(() => {
+        try {
+            const saved = localStorage.getItem("expense_header_metrics");
+            if (saved) {
+                return { ...DEFAULT_HEADER_SETTINGS, ...JSON.parse(saved) };
+            }
+        } catch (e) {}
+        return DEFAULT_HEADER_SETTINGS;
+    });
+
+    const updateHeaderSettings = (key, value) => {
+        const updated = { ...headerSettings, [key]: value };
+        setHeaderSettings(updated);
+        try {
+            localStorage.setItem("expense_header_metrics", JSON.stringify(updated));
+        } catch (e) {}
+    };
+
+    // Modal Popup State for Header Display Settings
+    const [showHeaderSettingsModal, setShowHeaderSettingsModal] = useState(false);
+
     // Fixed Floating Column Filter Popover State
     const [activeFilterMenu, setActiveFilterMenu] = useState(null);
 
@@ -388,6 +429,57 @@ const ExpenseTable = ({
 
         return list;
     })();
+
+    const groupedTransactions = useMemo(() => {
+        const groups = [];
+        const map = new Map();
+
+        filteredTransactions.forEach((t) => {
+            const dateKey = dayjs(t.date).format("YYYY-MM-DD");
+            if (!map.has(dateKey)) {
+                const groupObj = {
+                    dateKey,
+                    dateObj: t.date,
+                    transactions: [],
+                    totalCredit: 0,
+                    totalDebit: 0,
+                    creditCount: 0,
+                    debitCount: 0,
+                    netAmount: 0
+                };
+                map.set(dateKey, groupObj);
+                groups.push(groupObj);
+            }
+            const group = map.get(dateKey);
+            group.transactions.push(t);
+            const amt = Number(t.amount || 0);
+            if (t.type === 'Credit') {
+                group.totalCredit += amt;
+                group.creditCount += 1;
+                group.netAmount += amt;
+            } else if (t.type === 'Debit') {
+                group.totalDebit += amt;
+                group.debitCount += 1;
+                group.netAmount -= amt;
+            }
+        });
+
+        return groups;
+    }, [filteredTransactions]);
+
+    const isAllCollapsed = groupedTransactions.length > 0 && groupedTransactions.every(g => collapsedDays[g.dateKey]);
+
+    const toggleCollapseAll = () => {
+        if (isAllCollapsed) {
+            setCollapsedDays({});
+        } else {
+            const newMap = {};
+            groupedTransactions.forEach(g => {
+                newMap[g.dateKey] = true;
+            });
+            setCollapsedDays(newMap);
+        }
+    };
 
     // Adding State
     const [isAdding, setIsAdding] = useState(false);
@@ -896,6 +988,27 @@ const ExpenseTable = ({
                                     </span>
                                 )}
                             </button>
+
+                            {groupedTransactions.length > 0 && (
+                                <button
+                                    onClick={toggleCollapseAll}
+                                    className="btn btn-xs btn-ghost gap-1.5 font-bold rounded-lg text-base-content/70 hover:bg-base-200 transition-all"
+                                    title={isAllCollapsed ? "Expand All Days" : "Collapse All Days"}
+                                >
+                                    {isAllCollapsed ? <ChevronRight size={14} className="text-primary" /> : <ChevronDown size={14} className="text-primary" />}
+                                    <span className="hidden sm:inline">{isAllCollapsed ? "Expand All" : "Collapse All"}</span>
+                                </button>
+                            )}
+
+                            {/* Day Header Display Customization Modal Trigger */}
+                            <button
+                                onClick={() => setShowHeaderSettingsModal(true)}
+                                className="btn btn-xs btn-ghost gap-1.5 font-bold rounded-lg text-base-content/70 hover:bg-base-200 transition-all"
+                                title="Configure Day Header Display Metrics"
+                            >
+                                <SlidersHorizontal size={14} className="text-primary" />
+                                <span className="hidden sm:inline">Header Display</span>
+                            </button>
                         </div>
 
                         {/* Heatmap Trigger Button (Icon only) */}
@@ -1186,189 +1299,267 @@ const ExpenseTable = ({
                             {/* Top position when sortOrder is newest */}
                             {sortOrder === "newest" && renderInlineAddRow()}
 
-                            {/* Rows */}
-                            {filteredTransactions.map(t => (
-                                <div key={t._id} className="flex items-center gap-3 px-6 py-2.5 border-b border-base-200 hover:bg-base-200/50 transition-colors group text-xs font-medium relative min-w-[980px]">
-                                    {editingId === t._id ? (
-                                        // Edit Mode (Inline Inputs)
-                                        <>
-                                            <div className="w-[160px] shrink-0 flex items-center gap-1.5">
-                                                <button
-                                                    onClick={() => setEditData({ ...editData, isReimbursable: !editData.isReimbursable })}
-                                                    className={`btn btn-xs btn-square ${editData.isReimbursable ? 'btn-warning' : 'btn-ghost opacity-40 hover:opacity-100'}`}
-                                                    title="Need to collect money? (Mark as Reimbursable)"
-                                                >
-                                                    <Handshake size={14} />
-                                                </button>
-                                                <CallyDatePicker
-                                                    value={editData.date}
-                                                    onChange={(val) => setEditData({ ...editData, date: val })}
-                                                    placeholder="Select Date"
-                                                    size="xs"
-                                                    className="w-full"
-                                                />
-                                            </div>
-                                            <input value={editData.description} onChange={e => setEditData({ ...editData, description: e.target.value })} className="flex-1 min-w-[150px] input input-xs input-bordered" />
+                            {/* Grouped Collapsible Rows */}
+                            {groupedTransactions.map((group) => {
+                                const isCollapsed = Boolean(collapsedDays[group.dateKey]);
+                                const formattedGroupDate = dayjs(group.dateObj).format("ddd, MMM DD, YYYY");
 
-                                             {/* From / Action */}
-                                            <div className="w-[135px] shrink-0">
-                                                <DaisySelect
-                                                    options={sourceOptions}
-                                                    value={editData.isAddMoney ? "add_money" : (editData.isManualDebit ? "debit_money" : editData.sourceId)}
-                                                    placeholder="Source"
-                                                    onChange={(val) => {
-                                                        if (val === "add_money") {
-                                                            setEditData({
-                                                                ...editData,
-                                                                isAddMoney: true,
-                                                                isManualDebit: false,
-                                                                isTransfer: false,
-                                                                type: "Credit",
-                                                                categoryId: "",
-                                                                subCategoryId: "",
-                                                                targetSourceId: ""
-                                                            });
-                                                        } else if (val === "debit_money") {
-                                                            setEditData({
-                                                                ...editData,
-                                                                isAddMoney: false,
-                                                                isManualDebit: true,
-                                                                isTransfer: false,
-                                                                type: "Debit",
-                                                                categoryId: "",
-                                                                subCategoryId: "",
-                                                                targetSourceId: ""
-                                                            });
-                                                        } else {
-                                                            setEditData({
-                                                                ...editData,
-                                                                isAddMoney: false,
-                                                                isManualDebit: false,
-                                                                sourceId: val
-                                                            });
-                                                        }
-                                                    }}
-                                                />
-                                            </div>
+                                return (
+                                    <div key={group.dateKey} className="border-b border-base-200">
+                                        <div
+                                            onClick={() => toggleDayCollapse(group.dateKey)}
+                                            className="flex items-center gap-3.5 px-6 py-2 bg-base-200/50 hover:bg-base-200/90 cursor-pointer select-none transition-colors min-w-[980px] whitespace-nowrap border-y border-base-300/60 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+                                        >
+                                            <button
+                                                type="button"
+                                                className="btn btn-xs btn-square btn-ghost text-base-content/70 hover:bg-base-300/50 shrink-0"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    toggleDayCollapse(group.dateKey);
+                                                }}
+                                                title={isCollapsed ? "Expand Day" : "Collapse Day"}
+                                            >
+                                                {isCollapsed ? <ChevronRight size={15} className="text-primary" /> : <ChevronDown size={15} className="text-primary" />}
+                                            </button>
 
-                                            {/* Target / Category */}
-                                            <div className="w-[145px] shrink-0">
-                                                {editData.isAddMoney ? (
-                                                    <DaisySelect
-                                                        options={targetOptions}
-                                                        value={editData.sourceId}
-                                                        placeholder="Select Bank"
-                                                        onChange={(val) => setEditData({ ...editData, sourceId: val })}
-                                                        className="text-success"
-                                                    />
-                                                ) : editData.isManualDebit ? (
-                                                    <DaisySelect
-                                                        options={targetOptions}
-                                                        value={editData.sourceId}
-                                                        placeholder="Select Bank"
-                                                        onChange={(val) => setEditData({ ...editData, sourceId: val })}
-                                                        className="text-error"
-                                                    />
-                                                ) : (
-                                                    <DaisySelect
-                                                        options={categoryOptions}
-                                                        value={editData.isTransfer ? `bank_${editData.targetSourceId}` : editData.categoryId}
-                                                        placeholder="Category / To"
-                                                        onChange={(val) => {
-                                                            if (val.startsWith("bank_")) {
-                                                                const trgId = val.replace("bank_", "");
-                                                                setEditData({
-                                                                    ...editData,
-                                                                    isAddMoney: false,
-                                                                    isManualDebit: false,
-                                                                    isTransfer: true,
-                                                                    type: "Transfer",
-                                                                    targetSourceId: trgId,
-                                                                    categoryId: "",
-                                                                    subCategoryId: ""
-                                                                });
-                                                            } else {
-                                                                setEditData({
-                                                                    ...editData,
-                                                                    isAddMoney: false,
-                                                                    isManualDebit: false,
-                                                                    isTransfer: false,
-                                                                    type: "Debit",
-                                                                    targetSourceId: "",
-                                                                    categoryId: val,
-                                                                    subCategoryId: ""
-                                                                });
-                                                            }
-                                                        }}
-                                                    />
-                                                )}
-                                            </div>
+                                            <span className="font-extrabold text-xs text-base-content whitespace-nowrap shrink-0">
+                                                {formattedGroupDate}
+                                            </span>
 
-                                            {/* Sub Cat */}
-                                            <div className="w-[145px] shrink-0">
-                                                <DaisySelect
-                                                    options={(editData.isAddMoney || editData.isManualDebit || editData.isTransfer) ? [] : getSubCatOptions(editData.categoryId)}
-                                                    value={editData.subCategoryId}
-                                                    placeholder={(editData.isAddMoney || editData.isManualDebit || editData.isTransfer) ? "—" : "SubCat"}
-                                                    disabled={editData.isAddMoney || editData.isManualDebit || editData.isTransfer}
-                                                    onChange={(val) => setEditData({ ...editData, subCategoryId: val })}
-                                                />
-                                            </div>
+                                            {headerSettings.showTotalTxn && (
+                                                <span className="badge badge-sm badge-neutral font-bold text-[10px] opacity-80 px-2 py-0.5 whitespace-nowrap shrink-0">
+                                                    {group.transactions.length} {group.transactions.length === 1 ? 'transaction' : 'transactions'}
+                                                </span>
+                                            )}
 
-                                            <input type="number" value={editData.amount} onChange={e => setEditData({ ...editData, amount: e.target.value })} className="w-[130px] shrink-0 input input-xs input-bordered text-right whitespace-nowrap text-xs font-mono font-bold" />
+                                            {headerSettings.showCreditCount && (
+                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 whitespace-nowrap shrink-0">
+                                                    <TrendingUp size={11} /> {group.creditCount} Credit{group.creditCount === 1 ? '' : 's'}
+                                                </span>
+                                            )}
 
-                                            <div className="w-[60px] shrink-0 flex items-center justify-center gap-1">
-                                                <button onClick={saveEdit} className="btn btn-xs btn-square btn-success text-white"><Save size={12} /></button>
-                                                <button onClick={() => setEditingId(null)} className="btn btn-xs btn-square btn-ghost text-error"><X size={12} /></button>
-                                            </div>
-                                        </>
-                                    ) : (
-                                        // View Mode
-                                        <>
-                                            <div className="w-[160px] shrink-0 text-base-content/60 font-medium text-xs whitespace-nowrap">{dayjs(t.date).format("ddd, MMM DD, YYYY")}</div>
-                                            <div className="flex-1 min-w-[150px] truncate">
-                                                <div className="flex items-center gap-1">
-                                                    {t.isReimbursable && <Handshake size={12} className="text-warning shrink-0" title="Reimbursable: Need to collect money" />}
-                                                    <span className="font-bold text-base-content/80 truncate text-xs" title={t.description}>{t.description}</span>
+                                            {headerSettings.showDebitCount && (
+                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 whitespace-nowrap shrink-0">
+                                                    <TrendingDown size={11} /> {group.debitCount} Debit{group.debitCount === 1 ? '' : 's'}
+                                                </span>
+                                            )}
+
+                                            {headerSettings.showCreditAmt && (
+                                                <div className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 whitespace-nowrap font-mono font-bold text-xs shrink-0">
+                                                    <span className="text-base-content/40 text-[10px] font-sans uppercase font-semibold">Credited:</span>
+                                                    <span>{hideNumbers ? "••••••••" : `+₹${group.totalCredit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}</span>
                                                 </div>
-                                            </div>
-                                            <div className="w-[135px] shrink-0 truncate">
-                                                {renderSourceTag(t)}
-                                            </div>
-                                            <div className="w-[145px] shrink-0 truncate">
-                                                {renderCategoryTag(t)}
-                                            </div>
-                                            <div className="w-[145px] shrink-0 truncate">
-                                                {(() => {
-                                                    const catId = t.categoryId?._id || t.categoryId;
-                                                    const subId = t.subCategoryId?._id || t.subCategoryId;
-                                                    const cat = categories.find(c => c._id === catId);
-                                                    const sub = cat?.subCategories?.find(s => s._id === subId);
-                                                    if (!sub?.name) return <span className="text-base-content/40 text-xs">—</span>;
-                                                    return (
-                                                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 truncate max-w-full" title={sub.name}>
-                                                            <Folder size={12} className="shrink-0 text-amber-500" />
-                                                            <span className="truncate">{sub.name}</span>
-                                                        </span>
-                                                    );
-                                                })()}
-                                            </div>
-                                            <div className={`w-[130px] shrink-0 text-right font-bold font-mono tracking-tight text-xs whitespace-nowrap ${
-                                                 t.type === 'Transfer'
-                                                     ? 'text-amber-500 dark:text-amber-400'
-                                                     : (t.type === 'Credit' ? 'text-success' : 'text-error')
-                                             }`}>
-                                                 {hideNumbers ? "••••••••" : `${t.type === 'Transfer' ? '' : (t.type === 'Credit' ? '+' : '-')}₹${Number(t.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-                                             </div>
+                                            )}
 
-                                            <div className="w-[60px] shrink-0 flex items-center justify-center gap-1 opacity-80 hover:opacity-100 transition-opacity">
-                                                <button onClick={() => startEdit(t)} className="btn btn-xs btn-ghost btn-square text-info hover:bg-info/10" title="Edit Transaction"><Edit2 size={14} /></button>
-                                                <button onClick={() => handleDelete(t._id)} className="btn btn-xs btn-ghost btn-square text-error hover:bg-error/10" title="Delete Transaction"><Trash2 size={14} /></button>
+                                            {headerSettings.showDebitAmt && (
+                                                <div className="flex items-center gap-1 text-rose-600 dark:text-rose-400 whitespace-nowrap font-mono font-bold text-xs shrink-0">
+                                                    <span className="text-base-content/40 text-[10px] font-sans uppercase font-semibold">Debited:</span>
+                                                    <span>{hideNumbers ? "••••••••" : `-₹${group.totalDebit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}</span>
+                                                </div>
+                                            )}
+
+                                            {headerSettings.showNet && (
+                                                <div className="flex items-center gap-1 whitespace-nowrap font-mono font-bold text-xs shrink-0">
+                                                    <span className="text-base-content/50 text-[10px] font-sans uppercase font-semibold">Net:</span>
+                                                    <span className={group.netAmount > 0 ? 'text-success' : (group.netAmount < 0 ? 'text-error' : 'text-base-content/60')}>
+                                                        {hideNumbers
+                                                            ? "••••••••"
+                                                            : `${group.netAmount > 0 ? '+' : (group.netAmount < 0 ? '-' : '')}₹${Math.abs(group.netAmount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                                                    </span>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Day Group Transactions (Visible when not collapsed) */}
+                                        {!isCollapsed && (
+                                            <div className="divide-y divide-base-200/60">
+                                                {group.transactions.map((t) => (
+                                                    <div key={t._id} className="flex items-center gap-3 px-6 py-2.5 hover:bg-base-200/50 transition-colors group text-xs font-medium relative min-w-[980px]">
+                                                        {editingId === t._id ? (
+                                                            // Edit Mode (Inline Inputs)
+                                                            <>
+                                                                <div className="w-[160px] shrink-0 flex items-center gap-1.5">
+                                                                    <button
+                                                                        onClick={() => setEditData({ ...editData, isReimbursable: !editData.isReimbursable })}
+                                                                        className={`btn btn-xs btn-square ${editData.isReimbursable ? 'btn-warning' : 'btn-ghost opacity-40 hover:opacity-100'}`}
+                                                                        title="Need to collect money? (Mark as Reimbursable)"
+                                                                    >
+                                                                        <Handshake size={14} />
+                                                                    </button>
+                                                                    <CallyDatePicker
+                                                                        value={editData.date}
+                                                                        onChange={(val) => setEditData({ ...editData, date: val })}
+                                                                        placeholder="Select Date"
+                                                                        size="xs"
+                                                                        className="w-full"
+                                                                    />
+                                                                </div>
+                                                                <input value={editData.description} onChange={e => setEditData({ ...editData, description: e.target.value })} className="flex-1 min-w-[150px] input input-xs input-bordered" />
+
+                                                                {/* From / Action */}
+                                                                <div className="w-[135px] shrink-0">
+                                                                    <DaisySelect
+                                                                        options={sourceOptions}
+                                                                        value={editData.isAddMoney ? "add_money" : (editData.isManualDebit ? "debit_money" : editData.sourceId)}
+                                                                        placeholder="Source"
+                                                                        onChange={(val) => {
+                                                                            if (val === "add_money") {
+                                                                                setEditData({
+                                                                                    ...editData,
+                                                                                    isAddMoney: true,
+                                                                                    isManualDebit: false,
+                                                                                    isTransfer: false,
+                                                                                    type: "Credit",
+                                                                                    categoryId: "",
+                                                                                    subCategoryId: "",
+                                                                                    targetSourceId: ""
+                                                                                });
+                                                                            } else if (val === "debit_money") {
+                                                                                setEditData({
+                                                                                    ...editData,
+                                                                                    isAddMoney: false,
+                                                                                    isManualDebit: true,
+                                                                                    isTransfer: false,
+                                                                                    type: "Debit",
+                                                                                    categoryId: "",
+                                                                                    subCategoryId: "",
+                                                                                    targetSourceId: ""
+                                                                                });
+                                                                            } else {
+                                                                                setEditData({
+                                                                                    ...editData,
+                                                                                    isAddMoney: false,
+                                                                                    isManualDebit: false,
+                                                                                    sourceId: val
+                                                                                });
+                                                                            }
+                                                                        }}
+                                                                    />
+                                                                </div>
+
+                                                                {/* Target / Category */}
+                                                                <div className="w-[145px] shrink-0">
+                                                                    {editData.isAddMoney ? (
+                                                                        <DaisySelect
+                                                                            options={targetOptions}
+                                                                            value={editData.sourceId}
+                                                                            placeholder="Select Bank"
+                                                                            onChange={(val) => setEditData({ ...editData, sourceId: val })}
+                                                                            className="text-success"
+                                                                        />
+                                                                    ) : editData.isManualDebit ? (
+                                                                        <DaisySelect
+                                                                            options={targetOptions}
+                                                                            value={editData.sourceId}
+                                                                            placeholder="Select Bank"
+                                                                            onChange={(val) => setEditData({ ...editData, sourceId: val })}
+                                                                            className="text-error"
+                                                                        />
+                                                                    ) : (
+                                                                        <DaisySelect
+                                                                            options={categoryOptions}
+                                                                            value={editData.isTransfer ? `bank_${editData.targetSourceId}` : editData.categoryId}
+                                                                            placeholder="Category / To"
+                                                                            onChange={(val) => {
+                                                                                if (val.startsWith("bank_")) {
+                                                                                    const trgId = val.replace("bank_", "");
+                                                                                    setEditData({
+                                                                                        ...editData,
+                                                                                        isAddMoney: false,
+                                                                                        isManualDebit: false,
+                                                                                        isTransfer: true,
+                                                                                        type: "Transfer",
+                                                                                        targetSourceId: trgId,
+                                                                                        categoryId: "",
+                                                                                        subCategoryId: ""
+                                                                                    });
+                                                                                } else {
+                                                                                    setEditData({
+                                                                                        ...editData,
+                                                                                        isAddMoney: false,
+                                                                                        isManualDebit: false,
+                                                                                        isTransfer: false,
+                                                                                        type: "Debit",
+                                                                                        targetSourceId: "",
+                                                                                        categoryId: val,
+                                                                                        subCategoryId: ""
+                                                                                    });
+                                                                                }
+                                                                            }}
+                                                                        />
+                                                                    )}
+                                                                </div>
+
+                                                                {/* Sub Cat */}
+                                                                <div className="w-[145px] shrink-0">
+                                                                    <DaisySelect
+                                                                        options={(editData.isAddMoney || editData.isManualDebit || editData.isTransfer) ? [] : getSubCatOptions(editData.categoryId)}
+                                                                        value={editData.subCategoryId}
+                                                                        placeholder={(editData.isAddMoney || editData.isManualDebit || editData.isTransfer) ? "—" : "SubCat"}
+                                                                        disabled={editData.isAddMoney || editData.isManualDebit || editData.isTransfer}
+                                                                        onChange={(val) => setEditData({ ...editData, subCategoryId: val })}
+                                                                    />
+                                                                </div>
+
+                                                                <input type="number" value={editData.amount} onChange={e => setEditData({ ...editData, amount: e.target.value })} className="w-[130px] shrink-0 input input-xs input-bordered text-right whitespace-nowrap text-xs font-mono font-bold" />
+
+                                                                <div className="w-[60px] shrink-0 flex items-center justify-center gap-1">
+                                                                    <button onClick={saveEdit} className="btn btn-xs btn-square btn-success text-white"><Save size={12} /></button>
+                                                                    <button onClick={() => setEditingId(null)} className="btn btn-xs btn-square btn-ghost text-error"><X size={12} /></button>
+                                                                </div>
+                                                            </>
+                                                        ) : (
+                                                            // View Mode
+                                                            <>
+                                                                <div className="w-[160px] shrink-0 text-base-content/60 font-medium text-xs whitespace-nowrap">{dayjs(t.date).format("ddd, MMM DD, YYYY")}</div>
+                                                                <div className="flex-1 min-w-[150px] truncate">
+                                                                    <div className="flex items-center gap-1">
+                                                                        {t.isReimbursable && <Handshake size={12} className="text-warning shrink-0" title="Reimbursable: Need to collect money" />}
+                                                                        <span className="font-bold text-base-content/80 truncate text-xs" title={t.description}>{t.description}</span>
+                                                                    </div>
+                                                                </div>
+                                                                <div className="w-[135px] shrink-0 truncate">
+                                                                    {renderSourceTag(t)}
+                                                                </div>
+                                                                <div className="w-[145px] shrink-0 truncate">
+                                                                    {renderCategoryTag(t)}
+                                                                </div>
+                                                                <div className="w-[145px] shrink-0 truncate">
+                                                                    {(() => {
+                                                                        const catId = t.categoryId?._id || t.categoryId;
+                                                                        const subId = t.subCategoryId?._id || t.subCategoryId;
+                                                                        const cat = categories.find(c => c._id === catId);
+                                                                        const sub = cat?.subCategories?.find(s => s._id === subId);
+                                                                        if (!sub?.name) return <span className="text-base-content/40 text-xs">—</span>;
+                                                                        return (
+                                                                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 truncate max-w-full" title={sub.name}>
+                                                                                <Folder size={12} className="shrink-0 text-amber-500" />
+                                                                                <span className="truncate">{sub.name}</span>
+                                                                            </span>
+                                                                        );
+                                                                    })()}
+                                                                </div>
+                                                                <div className={`w-[130px] shrink-0 text-right font-bold font-mono tracking-tight text-xs whitespace-nowrap ${
+                                                                    t.type === 'Transfer'
+                                                                        ? 'text-amber-500 dark:text-amber-400'
+                                                                        : (t.type === 'Credit' ? 'text-success' : 'text-error')
+                                                                }`}>
+                                                                    {hideNumbers ? "••••••••" : `${t.type === 'Transfer' ? '' : (t.type === 'Credit' ? '+' : '-')}₹${Number(t.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                                                                </div>
+
+                                                                <div className="w-[60px] shrink-0 flex items-center justify-center gap-1 opacity-80 hover:opacity-100 transition-opacity">
+                                                                    <button onClick={() => startEdit(t)} className="btn btn-xs btn-ghost btn-square text-info hover:bg-info/10" title="Edit Transaction"><Edit2 size={14} /></button>
+                                                                    <button onClick={() => handleDelete(t._id)} className="btn btn-xs btn-ghost btn-square text-error hover:bg-error/10" title="Delete Transaction"><Trash2 size={14} /></button>
+                                                                </div>
+                                                            </>
+                                                        )}
+                                                    </div>
+                                                ))}
                                             </div>
-                                        </>
-                                    )}
-                                </div>
-                            ))}
+                                        )}
+                                    </div>
+                                );
+                            })}
 
                             {/* Bottom position when sortOrder is oldest */}
                             {sortOrder === "oldest" && renderInlineAddRow()}
@@ -1520,6 +1711,243 @@ const ExpenseTable = ({
                             ))}
                         </ul>
                     )}
+                </div>
+            )}
+
+            {/* Header Display Customization Modal Popup with Live Visualization Preview */}
+            {showHeaderSettingsModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
+                    <div className="bg-base-100 border border-base-300 rounded-3xl shadow-2xl max-w-4xl w-full p-6 space-y-5 relative overflow-hidden">
+                        {/* Modal Header */}
+                        <div className="flex items-center justify-between border-b border-base-200 pb-3.5">
+                            <div className="flex items-center gap-2.5">
+                                <div className="p-2 rounded-xl bg-primary/10 text-primary">
+                                    <SlidersHorizontal size={20} />
+                                </div>
+                                <div>
+                                    <h3 className="font-extrabold text-base text-base-content">
+                                        Day Header Display Settings
+                                    </h3>
+                                    <p className="text-xs text-base-content/60">
+                                        Select which metrics to display on day headers. See the live preview update below.
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => setShowHeaderSettingsModal(false)}
+                                className="btn btn-sm btn-circle btn-ghost text-base-content/60 hover:text-base-content"
+                            >
+                                <X size={18} />
+                            </button>
+                        </div>
+
+                        {/* Live Header Visualization Preview Box */}
+                        <div className="space-y-2">
+                            <div className="flex items-center justify-between text-xs font-bold text-base-content/70 px-1">
+                                <span className="flex items-center gap-1.5">
+                                    <Eye size={14} className="text-primary" /> Live Header Visualization
+                                </span>
+                                <span className="text-[10px] text-base-content/40 uppercase tracking-wider font-semibold">Single Line View</span>
+                            </div>
+
+                            {/* Live Interactive Sample Header Row (No Scrollbar) */}
+                            <div className="p-3.5 bg-base-200/80 border border-primary/30 rounded-2xl shadow-inner overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+                                <div className="flex items-center gap-4 whitespace-nowrap">
+                                    <button type="button" className="btn btn-xs btn-square btn-ghost text-base-content/70 shrink-0">
+                                        <ChevronDown size={15} className="text-primary" />
+                                    </button>
+
+                                    <span className="font-extrabold text-xs text-base-content whitespace-nowrap shrink-0">
+                                        Sun, Aug 15, 2026
+                                    </span>
+
+                                    {headerSettings.showTotalTxn && (
+                                        <span className="badge badge-sm badge-neutral font-bold text-[10px] opacity-90 px-2.5 py-1 whitespace-nowrap shrink-0">
+                                            3 transactions
+                                        </span>
+                                    )}
+
+                                    {headerSettings.showCreditCount && (
+                                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 whitespace-nowrap shrink-0">
+                                            <TrendingUp size={11} /> 1 Credit
+                                        </span>
+                                    )}
+
+                                    {headerSettings.showDebitCount && (
+                                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-bold bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30 whitespace-nowrap shrink-0">
+                                            <TrendingDown size={11} /> 2 Debits
+                                        </span>
+                                    )}
+
+                                    {headerSettings.showCreditAmt && (
+                                        <div className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 whitespace-nowrap font-mono font-bold text-xs shrink-0">
+                                            <span className="text-base-content/40 text-[10px] font-sans uppercase font-semibold">Credited:</span>
+                                            <span>+₹5,000.00</span>
+                                        </div>
+                                    )}
+
+                                    {headerSettings.showDebitAmt && (
+                                        <div className="flex items-center gap-1 text-rose-600 dark:text-rose-400 whitespace-nowrap font-mono font-bold text-xs shrink-0">
+                                            <span className="text-base-content/40 text-[10px] font-sans uppercase font-semibold">Debited:</span>
+                                            <span>-₹2,200.00</span>
+                                        </div>
+                                    )}
+
+                                    {headerSettings.showNet && (
+                                        <div className="flex items-center gap-1 whitespace-nowrap font-mono font-bold text-xs shrink-0">
+                                            <span className="text-base-content/50 text-[10px] font-sans uppercase font-semibold">Net:</span>
+                                            <span className="text-success">+₹2,800.00</span>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Interactive Metric Selection Cards */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 pt-1">
+                            <div
+                                onClick={() => updateHeaderSettings("showTotalTxn", !headerSettings.showTotalTxn)}
+                                className={`flex items-center justify-between p-3 rounded-2xl border transition-all cursor-pointer select-none ${
+                                    headerSettings.showTotalTxn
+                                        ? 'border-primary/50 bg-primary/10 shadow-xs'
+                                        : 'border-base-200 bg-base-100 hover:border-base-300 opacity-60'
+                                }`}
+                            >
+                                <div className="flex items-center gap-2.5">
+                                    <input
+                                        type="checkbox"
+                                        className="checkbox checkbox-xs checkbox-primary pointer-events-none"
+                                        checked={headerSettings.showTotalTxn}
+                                        readOnly
+                                    />
+                                    <span className="text-xs font-bold text-base-content">Total Transactions</span>
+                                </div>
+                                <span className="badge badge-xs badge-neutral">3 txn</span>
+                            </div>
+
+                            <div
+                                onClick={() => updateHeaderSettings("showNet", !headerSettings.showNet)}
+                                className={`flex items-center justify-between p-3 rounded-2xl border transition-all cursor-pointer select-none ${
+                                    headerSettings.showNet
+                                        ? 'border-primary/50 bg-primary/10 shadow-xs'
+                                        : 'border-base-200 bg-base-100 hover:border-base-300 opacity-60'
+                                }`}
+                            >
+                                <div className="flex items-center gap-2.5">
+                                    <input
+                                        type="checkbox"
+                                        className="checkbox checkbox-xs checkbox-primary pointer-events-none"
+                                        checked={headerSettings.showNet}
+                                        readOnly
+                                    />
+                                    <span className="text-xs font-bold text-base-content">Net Total Amount</span>
+                                </div>
+                                <span className="font-mono text-xs font-bold text-success">+₹2,800</span>
+                            </div>
+
+                            <div
+                                onClick={() => updateHeaderSettings("showCreditAmt", !headerSettings.showCreditAmt)}
+                                className={`flex items-center justify-between p-3 rounded-2xl border transition-all cursor-pointer select-none ${
+                                    headerSettings.showCreditAmt
+                                        ? 'border-emerald-500/50 bg-emerald-500/10 shadow-xs'
+                                        : 'border-base-200 bg-base-100 hover:border-base-300 opacity-60'
+                                }`}
+                            >
+                                <div className="flex items-center gap-2.5">
+                                    <input
+                                        type="checkbox"
+                                        className="checkbox checkbox-xs checkbox-success pointer-events-none"
+                                        checked={headerSettings.showCreditAmt}
+                                        readOnly
+                                    />
+                                    <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">Total Credited Amount</span>
+                                </div>
+                                <span className="font-mono text-xs font-bold text-emerald-500">+₹5,000</span>
+                            </div>
+
+                            <div
+                                onClick={() => updateHeaderSettings("showDebitAmt", !headerSettings.showDebitAmt)}
+                                className={`flex items-center justify-between p-3 rounded-2xl border transition-all cursor-pointer select-none ${
+                                    headerSettings.showDebitAmt
+                                        ? 'border-rose-500/50 bg-rose-500/10 shadow-xs'
+                                        : 'border-base-200 bg-base-100 hover:border-base-300 opacity-60'
+                                }`}
+                            >
+                                <div className="flex items-center gap-2.5">
+                                    <input
+                                        type="checkbox"
+                                        className="checkbox checkbox-xs checkbox-error pointer-events-none"
+                                        checked={headerSettings.showDebitAmt}
+                                        readOnly
+                                    />
+                                    <span className="text-xs font-bold text-rose-600 dark:text-rose-400">Total Debited Amount</span>
+                                </div>
+                                <span className="font-mono text-xs font-bold text-rose-500">-₹2,200</span>
+                            </div>
+
+                            <div
+                                onClick={() => updateHeaderSettings("showCreditCount", !headerSettings.showCreditCount)}
+                                className={`flex items-center justify-between p-3 rounded-2xl border transition-all cursor-pointer select-none ${
+                                    headerSettings.showCreditCount
+                                        ? 'border-emerald-500/50 bg-emerald-500/10 shadow-xs'
+                                        : 'border-base-200 bg-base-100 hover:border-base-300 opacity-60'
+                                }`}
+                            >
+                                <div className="flex items-center gap-2.5">
+                                    <input
+                                        type="checkbox"
+                                        className="checkbox checkbox-xs checkbox-success pointer-events-none"
+                                        checked={headerSettings.showCreditCount}
+                                        readOnly
+                                    />
+                                    <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">Credit Count</span>
+                                </div>
+                                <span className="badge badge-xs badge-success text-white font-bold">1 Cr</span>
+                            </div>
+
+                            <div
+                                onClick={() => updateHeaderSettings("showDebitCount", !headerSettings.showDebitCount)}
+                                className={`flex items-center justify-between p-3 rounded-2xl border transition-all cursor-pointer select-none ${
+                                    headerSettings.showDebitCount
+                                        ? 'border-rose-500/50 bg-rose-500/10 shadow-xs'
+                                        : 'border-base-200 bg-base-100 hover:border-base-300 opacity-60'
+                                }`}
+                            >
+                                <div className="flex items-center gap-2.5">
+                                    <input
+                                        type="checkbox"
+                                        className="checkbox checkbox-xs checkbox-error pointer-events-none"
+                                        checked={headerSettings.showDebitCount}
+                                        readOnly
+                                    />
+                                    <span className="text-xs font-bold text-rose-600 dark:text-rose-400">Debit Count</span>
+                                </div>
+                                <span className="badge badge-xs badge-error text-white font-bold">2 Dr</span>
+                            </div>
+                        </div>
+
+                        {/* Modal Footer */}
+                        <div className="flex items-center justify-between border-t border-base-200 pt-3.5">
+                            <button
+                                onClick={() => {
+                                    setHeaderSettings(DEFAULT_HEADER_SETTINGS);
+                                    try {
+                                        localStorage.setItem("expense_header_metrics", JSON.stringify(DEFAULT_HEADER_SETTINGS));
+                                    } catch (e) {}
+                                }}
+                                className="btn btn-sm btn-ghost text-xs font-bold text-base-content/60 hover:text-base-content"
+                            >
+                                Reset Defaults
+                            </button>
+
+                            <button
+                                onClick={() => setShowHeaderSettingsModal(false)}
+                                className="btn btn-sm btn-primary rounded-xl font-bold px-6 shadow-sm"
+                            >
+                                Done
+                            </button>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>
