@@ -5,10 +5,13 @@ import { fetchRangeData } from "../../../services/redux/slice/ExpenseSlice";
 import { useAuth } from "../../../Context/JwtAuthContext";
 import { TitleChanger } from "../../../utils/TitleChanger";
 import { getCategoryTagStyle } from "../../../utils/expenseTheme";
+import Chart from "react-apexcharts";
 import {
   ResponsiveContainer,
   BarChart,
+  ComposedChart,
   Bar,
+  Line,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -18,6 +21,8 @@ import {
   LabelList
 } from "recharts";
 import {
+  Banknote,
+  Wallet,
   Folder,
   Sparkles,
   Layers,
@@ -94,7 +99,7 @@ const getUsedPercentageStyle = (pct) => {
 const ExpDashboard = () => {
   TitleChanger("Progress Pulse | Detailed Category Analysis");
   const dispatch = useDispatch();
-  const { categories, transactions, loading } = useSelector((state) => state.expense);
+  const { categories, transactions, salary, loading } = useSelector((state) => state.expense);
   const { user } = useAuth();
 
   // Default Selection: Current Year January to December
@@ -106,8 +111,10 @@ const ExpDashboard = () => {
   const [toYear, setToYear] = useState(currentYearStr);
   const [toMonth, setToMonth] = useState("12"); // December
 
-  // Selected Category ID
+  // Selected Category ID or "SALARY"
   const [selectedCatId, setSelectedCatId] = useState("");
+
+  const isSalaryMode = selectedCatId === "SALARY";
 
   // Category Section View Tab ("graph" | "table")
   const [mainCategoryTab, setMainCategoryTab] = useState("graph");
@@ -203,24 +210,67 @@ const ExpDashboard = () => {
   // Set default selected category once categories load
   useEffect(() => {
     if (availableCategories.length > 0) {
-      if (!selectedCatId || !availableCategories.some((c) => String(c._id) === String(selectedCatId))) {
+      if (!selectedCatId || (!isSalaryMode && !availableCategories.some((c) => String(c._id) === String(selectedCatId)))) {
         setSelectedCatId(String(availableCategories[0]._id));
       }
     }
-  }, [availableCategories, selectedCatId]);
+  }, [availableCategories, selectedCatId, isSalaryMode]);
 
   // Selected Category object
   const selectedCategory = useMemo(() => {
+    if (isSalaryMode) return { _id: "SALARY", name: "Salary" };
     return availableCategories.find((c) => String(c._id) === String(selectedCatId)) || availableCategories[0];
-  }, [availableCategories, selectedCatId]);
+  }, [availableCategories, selectedCatId, isSalaryMode]);
 
   // Clean name for selected category
-  const categoryCleanName = selectedCategory ? selectedCategory.name : "Category";
+  const categoryCleanName = isSalaryMode ? "Salary" : (selectedCategory ? selectedCategory.name : "Category");
 
-  // Build Main Category Plot Data for each month in date range
+  // Build Main Category / Salary Plot Data for each month in date range
   const monthlyPlotData = useMemo(() => {
-    if (!selectedCategory || rangeMonths.length === 0) return [];
+    if (rangeMonths.length === 0) return [];
+    if (!isSalaryMode && !selectedCategory) return [];
 
+    if (isSalaryMode) {
+      return rangeMonths.map((m) => {
+        const monthLabel = dayjs(`${m}-01`).format("MMM YYYY");
+
+        // Total Budget across all categories for month m
+        let totalBudget = 0;
+        categories.forEach((c) => {
+          (c.subCategories || []).forEach((sub) => {
+            if (!sub.month || sub.month === m) {
+              totalBudget += Number(sub.budget) || 0;
+            }
+          });
+        });
+
+        // Use salary from store if available, otherwise total budget
+        const allotted = Number(salary) > 0 ? Number(salary) : totalBudget;
+
+        // Total spent across all categories in month m
+        const used = transactions
+          .filter((t) => {
+            if (t.type === "Credit") return false;
+            const tMonth = dayjs(t.date).format("YYYY-MM");
+            return tMonth === m;
+          })
+          .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+
+        const left = Math.max(0, allotted - used);
+        const percentage = allotted > 0 ? Number(((used / allotted) * 100).toFixed(2)) : (used > 0 ? 100 : 0);
+
+        return {
+          monthLabel,
+          rawMonth: m,
+          allotted,
+          left,
+          used,
+          percentage
+        };
+      });
+    }
+
+    // Normal Category mode
     const matchingCats = categories.filter((c) => c.name === selectedCategory.name);
     const matchingCatIds = new Set(matchingCats.map((c) => String(c._id)));
 
@@ -257,9 +307,9 @@ const ExpDashboard = () => {
         percentage
       };
     });
-  }, [selectedCategory, rangeMonths, categories, transactions]);
+  }, [isSalaryMode, selectedCategory, rangeMonths, categories, transactions, salary]);
 
-  // Total range aggregates for selected category
+  // Total range aggregates for selected category / salary
   const rangeTotals = useMemo(() => {
     const totalAllotted = monthlyPlotData.reduce((sum, d) => sum + d.allotted, 0);
     const totalUsed = monthlyPlotData.reduce((sum, d) => sum + d.used, 0);
@@ -268,8 +318,11 @@ const ExpDashboard = () => {
     return { totalAllotted, totalUsed, totalLeft, overallPct };
   }, [monthlyPlotData]);
 
-  // --- Sub-Category Computations & Data ---
+  // --- Sub-Category or Category Breakdown Names ---
   const subCategoryNames = useMemo(() => {
+    if (isSalaryMode) {
+      return availableCategories.map((c) => c.name);
+    }
     if (!selectedCategory) return [];
     const matchingCats = categories.filter((c) => c.name === selectedCategory.name);
     const namesSet = new Set();
@@ -279,9 +332,7 @@ const ExpDashboard = () => {
       });
     });
     return Array.from(namesSet);
-  }, [selectedCategory, categories]);
-
-
+  }, [isSalaryMode, availableCategories, selectedCategory, categories]);
 
   // Color Palettes for Dual Stacked Bars (Stack 1 = Allotted, Stack 2 = Actual Spent)
   const subCatAllottedPalette = useMemo(() => [
@@ -294,9 +345,52 @@ const ExpDashboard = () => {
     "#06b6d4", "#f97316", "#84cc16", "#14b8a6", "#6366f1"
   ], []);
 
-  // Tab 1: Sub-Category Dual Stacked Plot Data (Allotted Stack & Actual Spent Stack side-by-side)
+  // Sub-Category / Category Split Dual Stacked Plot Data per month
   const subCatDualStackedPlotData = useMemo(() => {
-    if (!selectedCategory || rangeMonths.length === 0 || subCategoryNames.length === 0) return [];
+    if (rangeMonths.length === 0 || subCategoryNames.length === 0) return [];
+    if (!isSalaryMode && !selectedCategory) return [];
+
+    if (isSalaryMode) {
+      // Category Split Mode: Breakdown of all categories
+      return rangeMonths.map((m) => {
+        const monthLabel = dayjs(`${m}-01`).format("MMM YYYY");
+        const row = { monthLabel, rawMonth: m, totalAllotted: 0, totalSpent: 0 };
+
+        availableCategories.forEach((cat) => {
+          const catName = cat.name;
+          const matchingCats = categories.filter((c) => c.name === catName);
+          const matchingCatIds = new Set(matchingCats.map((c) => String(c._id)));
+
+          let catBudget = 0;
+          matchingCats.forEach((c) => {
+            (c.subCategories || []).forEach((sub) => {
+              if (!sub.month || sub.month === m) {
+                catBudget += Number(sub.budget) || 0;
+              }
+            });
+          });
+          row[`${catName}_allotted`] = catBudget;
+          row.totalAllotted += catBudget;
+
+          const catSpent = transactions
+            .filter((t) => {
+              if (t.type === "Credit") return false;
+              const tMonth = dayjs(t.date).format("YYYY-MM");
+              if (tMonth !== m) return false;
+              const catId = String(t.categoryId?._id || t.categoryId);
+              return matchingCatIds.has(catId);
+            })
+            .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+
+          row[`${catName}_spent`] = catSpent;
+          row.totalSpent += catSpent;
+        });
+
+        return row;
+      });
+    }
+
+    // Normal Category Mode: Sub-Category breakdown
     const matchingCats = categories.filter((c) => c.name === selectedCategory.name);
     const matchingCatIds = new Set(matchingCats.map((c) => String(c._id)));
 
@@ -305,7 +399,6 @@ const ExpDashboard = () => {
       const row = { monthLabel, rawMonth: m, totalAllotted: 0, totalSpent: 0 };
 
       subCategoryNames.forEach((subName) => {
-        // 1. Allotted Budget per sub-category
         let subBudget = 0;
         matchingCats.forEach((c) => {
           (c.subCategories || []).forEach((sub) => {
@@ -317,7 +410,6 @@ const ExpDashboard = () => {
         row[`${subName}_allotted`] = subBudget;
         row.totalAllotted += subBudget;
 
-        // 2. Actual Spent per sub-category
         const subSpent = transactions
           .filter((t) => {
             if (t.type === "Credit") return false;
@@ -347,16 +439,235 @@ const ExpDashboard = () => {
 
       return row;
     });
-  }, [selectedCategory, rangeMonths, subCategoryNames, categories, transactions]);
+  }, [isSalaryMode, availableCategories, selectedCategory, rangeMonths, subCategoryNames, categories, transactions]);
+
+  // Sub-Category / Category Split ApexChart Series (Stacked bars per sub-category + Total Used Line)
+  const subCatApexSeries = useMemo(() => {
+    if (!subCatDualStackedPlotData.length || !subCategoryNames.length) return [];
+
+    const series = subCategoryNames.map((subName) => ({
+      name: subName,
+      type: "bar",
+      data: subCatDualStackedPlotData.map((m) => m[`${subName}_spent`] || 0),
+    }));
+
+    series.push({
+      name: "Total Used",
+      type: "line",
+      data: subCatDualStackedPlotData.map((m) => m.totalSpent || 0),
+    });
+
+    return series;
+  }, [subCatDualStackedPlotData, subCategoryNames]);
+
+  // Sub-Category / Category Split ApexChart Options mirroring Habit Dashboard Calorie chart
+  const subCatApexOptions = useMemo(() => {
+    const numSubs = subCategoryNames.length;
+    const colors = [
+      ...subCategoryNames.map((_, i) => subCatSpentPalette[i % subCatSpentPalette.length]),
+      "#38bdf8", // Total Used line color
+    ];
+
+    return {
+      chart: {
+        type: "line",
+        stacked: true,
+        background: "transparent",
+        toolbar: {
+          show: false,
+        },
+        zoom: { enabled: false },
+      },
+      stroke: {
+        width: [...subCategoryNames.map(() => 0), 2.5],
+        curve: "smooth",
+        dashArray: [...subCategoryNames.map(() => 0), 0],
+      },
+      colors: colors,
+      plotOptions: {
+        bar: {
+          columnWidth: "75%",
+          borderRadius: 0,
+          dataLabels: { position: "top" },
+          distributed: false,
+        },
+      },
+      dataLabels: {
+        enabled: true,
+        enabledOnSeries: [...Array(numSubs + 1).keys()],
+        formatter: (val) =>
+          val > 0
+            ? val >= 100000
+              ? `₹${(val / 100000).toFixed(1)}L`
+              : val >= 1000
+              ? `₹${(val / 1000).toFixed(1)}k`
+              : `₹${val}`
+            : "",
+        style: {
+          fontSize: "10px",
+          fontWeight: "700",
+          colors: ["#ffffffdd"],
+        },
+        background: {
+          enabled: false,
+        },
+        offsetY: -2,
+      },
+      markers: {
+        size: [...subCategoryNames.map(() => 0), 5],
+        strokeColor: "#1e293b",
+        strokeWidth: 2,
+        hover: { size: 7 },
+      },
+      legend: {
+        show: true,
+        position: "bottom",
+        horizontalAlign: "center",
+        labels: { colors: "#FFFFFF" },
+        markers: {
+          fillColors: colors,
+        },
+        itemMargin: { horizontal: 10, vertical: 5 },
+        onItemClick: {
+          toggleDataSeries: true,
+        },
+        onItemHover: {
+          highlightDataSeries: true,
+        },
+      },
+      xaxis: {
+        categories: subCatDualStackedPlotData.map((m) => m.monthLabel),
+        labels: {
+          style: { colors: "#FFFFFF", fontSize: "11px", fontWeight: "600" },
+          rotate: -45,
+        },
+        axisBorder: { color: "#888" },
+        axisTicks: { color: "#888" },
+        title: {
+          text: "Months",
+          style: { color: "#FFFFFF", fontSize: "11px" },
+        },
+      },
+      yaxis: [
+        {
+          title: {
+            text: "Amount (₹)",
+            style: { color: "#FFFFFF", fontSize: "11px" },
+          },
+          labels: {
+            style: { colors: "#FFFFFF", fontSize: "11px" },
+            formatter: (v) =>
+              v >= 100000
+                ? `₹${(v / 100000).toFixed(1)}L`
+                : v >= 1000
+                ? `₹${(v / 1000).toFixed(0)}k`
+                : `₹${v}`,
+          },
+        },
+      ],
+      tooltip: {
+        theme: "dark",
+        shared: true,
+        intersect: false,
+        fillSeriesColor: false,
+        marker: { show: true },
+        style: { fontSize: "12px" },
+        y: {
+          formatter: (val) => (val != null ? `₹${Number(val).toLocaleString("en-IN")}` : "₹0"),
+        },
+      },
+      grid: {
+        show: true,
+        borderColor: "#444",
+        strokeDashArray: 4,
+        xaxis: { lines: { show: true } },
+        yaxis: { lines: { show: true } },
+      },
+      responsive: [
+        {
+          breakpoint: 768,
+          options: {
+            chart: { height: 320 },
+            legend: { position: "bottom" },
+          },
+        },
+      ],
+    };
+  }, [subCategoryNames, subCatDualStackedPlotData, subCatSpentPalette]);
 
   // Aliases for Vite HMR backward compatibility
   const subCatAllotmentPlotData = subCatDualStackedPlotData;
   const subCatUsagePlotData = { list: [], avgUsage: 0 };
   const subCatMonthlyComparisonData = { list: [], totals: { allotted: 0, spent: 0, remaining: 0, pct: 0 } };
 
-  // Detailed Sub-Category Monthly Table Data with expandable sub-rows
+  // Detailed Sub-Category / Category Monthly Table Data with expandable sub-rows
   const subCatMonthlyTableData = useMemo(() => {
-    if (!selectedCategory || rangeMonths.length === 0 || subCategoryNames.length === 0) return [];
+    if (rangeMonths.length === 0 || subCategoryNames.length === 0) return [];
+    if (!isSalaryMode && !selectedCategory) return [];
+
+    if (isSalaryMode) {
+      // Category Split Table in Salary Mode
+      return rangeMonths.map((m) => {
+        const monthLabel = dayjs(`${m}-01`).format("MMM YYYY");
+        let monthTotalAllotted = 0;
+        let monthTotalUsed = 0;
+
+        const subRows = availableCategories.map((cat) => {
+          const catName = cat.name;
+          const matchingCats = categories.filter((c) => c.name === catName);
+          const matchingCatIds = new Set(matchingCats.map((c) => String(c._id)));
+
+          let catBudget = 0;
+          matchingCats.forEach((c) => {
+            (c.subCategories || []).forEach((sub) => {
+              if (!sub.month || sub.month === m) {
+                catBudget += Number(sub.budget) || 0;
+              }
+            });
+          });
+
+          const catSpent = transactions
+            .filter((t) => {
+              if (t.type === "Credit") return false;
+              const tMonth = dayjs(t.date).format("YYYY-MM");
+              if (tMonth !== m) return false;
+              const catId = String(t.categoryId?._id || t.categoryId);
+              return matchingCatIds.has(catId);
+            })
+            .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+
+          const catRemaining = Math.max(0, catBudget - catSpent);
+          const catPct = catBudget > 0 ? Number(((catSpent / catBudget) * 100).toFixed(2)) : (catSpent > 0 ? 100 : 0);
+
+          monthTotalAllotted += catBudget;
+          monthTotalUsed += catSpent;
+
+          return {
+            subName: catName,
+            allotted: catBudget,
+            used: catSpent,
+            remaining: catRemaining,
+            pct: catPct
+          };
+        });
+
+        const salaryForMonth = Number(salary) > 0 ? Number(salary) : monthTotalAllotted;
+        const monthRemaining = Math.max(0, salaryForMonth - monthTotalUsed);
+        const monthPct = salaryForMonth > 0 ? Number(((monthTotalUsed / salaryForMonth) * 100).toFixed(2)) : (monthTotalUsed > 0 ? 100 : 0);
+
+        return {
+          monthLabel,
+          rawMonth: m,
+          totalAllotted: salaryForMonth,
+          totalUsed: monthTotalUsed,
+          totalRemaining: monthRemaining,
+          overallPct: monthPct,
+          subRows
+        };
+      });
+    }
+
+    // Normal Category Mode
     const matchingCats = categories.filter((c) => c.name === selectedCategory.name);
     const matchingCatIds = new Set(matchingCats.map((c) => String(c._id)));
 
@@ -427,7 +738,7 @@ const ExpDashboard = () => {
         subRows
       };
     });
-  }, [selectedCategory, rangeMonths, subCategoryNames, categories, transactions]);
+  }, [isSalaryMode, availableCategories, selectedCategory, rangeMonths, subCategoryNames, categories, transactions, salary]);
 
   // Range aggregate totals for Sub-Category Table View
   const subCatRangeTotals = useMemo(() => {
@@ -502,9 +813,9 @@ const ExpDashboard = () => {
             </div>
             <div className="flex justify-between items-center gap-4">
               <span className="text-base-content/70 flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-rose-500 inline-block"></span> Used:
+                <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ backgroundColor: "rgba(16, 185, 129, 0.35)" }}></span> Used:
               </span>
-              <span className="font-mono font-bold text-rose-500">
+              <span className="font-mono font-bold text-emerald-600/50 dark:text-emerald-400/50">
                 ₹{(dataItem.used || 0).toLocaleString()}
               </span>
             </div>
@@ -855,7 +1166,7 @@ const ExpDashboard = () => {
                     <span className="w-3.5 h-3.5 rounded bg-emerald-500"></span> Left {categoryCleanName}
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="w-3.5 h-3.5 rounded bg-rose-500"></span> Used {categoryCleanName}
+                    <span className="w-3.5 h-3.5 rounded" style={{ backgroundColor: "rgba(16, 185, 129, 0.35)" }}></span> Used {categoryCleanName}
                   </div>
                 </div>
               </div>
@@ -881,13 +1192,13 @@ const ExpDashboard = () => {
                         tickFormatter={(v) => `₹${v >= 1000 ? (v / 1000).toFixed(0) + 'k' : v}`}
                       />
                       <Tooltip content={<MainCategoryTooltip />} cursor={{ fill: 'rgba(255, 255, 255, 0.05)', rx: 8 }} />
-                      <Legend />
+                      <Legend formatter={(value) => <span style={{ color: '#ffffff' }}>{value}</span>} />
                       <Bar
                         dataKey="left"
                         stackId="a"
                         name={`Left ${categoryCleanName}`}
                         fill="#10b981"
-                        radius={[0, 0, 6, 6]}
+                        radius={0}
                         maxBarSize={55}
                       >
                         <LabelList
@@ -901,8 +1212,8 @@ const ExpDashboard = () => {
                         dataKey="used"
                         stackId="a"
                         name={`Used ${categoryCleanName}`}
-                        fill="#f43f5e"
-                        radius={[6, 6, 0, 0]}
+                        fill="rgba(16, 185, 129, 0.35)"
+                        radius={0}
                         maxBarSize={55}
                       >
                         <LabelList
@@ -1050,101 +1361,14 @@ const ExpDashboard = () => {
           {/* TAB 1: Graph View */}
           {subCategoryTab === "graph" && (
             <div className="space-y-4">
-              {/* Interactive Sub-Category Visibility Chips */}
-              {subCategoryNames.length > 0 && (
-                <div className="flex flex-wrap items-center justify-between gap-3 bg-base-200/50 p-3 rounded-2xl border border-base-300">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-xs font-extrabold uppercase tracking-wider text-base-content/60 mr-1">
-                      Toggle Sub-Categories:
-                    </span>
-                    {subCategoryNames.map((subName, index) => {
-                      const isHidden = hiddenSubCats.includes(subName);
-                      const color = subCatSpentPalette[index % subCatSpentPalette.length];
-                      return (
-                        <button
-                          key={subName}
-                          onClick={() => toggleSubCatVisibility(subName)}
-                          className={`btn btn-xs rounded-xl font-bold transition-all border flex items-center gap-1.5 cursor-pointer ${
-                            isHidden
-                              ? "bg-base-200/40 text-base-content/40 border-base-300 line-through opacity-60"
-                              : "bg-base-100 text-base-content border-base-300 shadow-xs hover:scale-105"
-                          }`}
-                        >
-                          <span
-                            className={`w-2.5 h-2.5 rounded-full shrink-0 ${isHidden ? "opacity-30" : ""}`}
-                            style={{ backgroundColor: color }}
-                          ></span>
-                          <span>{subName}</span>
-                          {isHidden ? (
-                            <EyeOff size={12} className="opacity-50 ml-0.5" />
-                          ) : (
-                            <Eye size={12} className="opacity-70 ml-0.5 text-primary" />
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  <div className="flex items-center gap-2 text-xs font-semibold">
-                    <button
-                      onClick={showAllSubCats}
-                      className="text-primary hover:underline font-bold cursor-pointer text-[11px]"
-                    >
-                      Show All
-                    </button>
-                    <span className="opacity-30">•</span>
-                    <button
-                      onClick={hideAllSubCats}
-                      className="text-base-content/60 hover:underline cursor-pointer text-[11px]"
-                    >
-                      Hide All
-                    </button>
-                  </div>
-                </div>
-              )}
-
               {subCategoryNames.length > 0 ? (
-                <div className="w-full h-[400px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={subCatDualStackedPlotData}
-                      margin={{ top: 20, right: 30, left: 15, bottom: 25 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" opacity={0.15} vertical={false} />
-                      <XAxis
-                        dataKey="monthLabel"
-                        tick={{ fill: 'currentColor', fontSize: 12, fontWeight: 600, opacity: 0.8 }}
-                      />
-                      <YAxis
-                        tick={{ fill: 'currentColor', fontSize: 11, opacity: 0.7 }}
-                        tickFormatter={(v) => `₹${v >= 1000 ? (v / 1000).toFixed(0) + 'k' : v}`}
-                      />
-                      <Tooltip content={<SubCatSpentOnlyTooltip />} cursor={{ fill: 'rgba(255, 255, 255, 0.05)', rx: 8 }} />
-                      <Legend />
-
-                      {/* Actual Spent Stack (Filterable) */}
-                      {subCategoryNames.map((subName, index) => {
-                        if (hiddenSubCats.includes(subName)) return null;
-                        return (
-                          <Bar
-                            key={`${subName}_spent`}
-                            dataKey={`${subName}_spent`}
-                            stackId="spentStack"
-                            name={subName}
-                            fill={subCatSpentPalette[index % subCatSpentPalette.length]}
-                            maxBarSize={55}
-                          >
-                            <LabelList
-                              dataKey={`${subName}_spent`}
-                              position="center"
-                              formatter={(v) => (v > 0 ? `₹${v >= 1000 ? (v / 1000).toFixed(1) + 'k' : v}` : '')}
-                              style={{ fill: '#ffffff', fontSize: 10, fontWeight: 800 }}
-                            />
-                          </Bar>
-                        );
-                      })}
-                    </BarChart>
-                  </ResponsiveContainer>
+                <div className="w-full">
+                  <Chart
+                    options={subCatApexOptions}
+                    series={subCatApexSeries}
+                    type="line"
+                    height={420}
+                  />
                 </div>
               ) : (
                 <div className="p-12 text-center text-sm opacity-50 italic">
