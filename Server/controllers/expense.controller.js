@@ -386,7 +386,7 @@ export const deleteSource = async (req, res) => {
 export const addTransaction = async (req, res) => {
     try {
         const { _id: userId } = req.user;
-        const { date, description, sourceId, targetSourceId, categoryId, subCategoryId, amount, type, isReimbursable } = req.body;
+        const { date, description, sourceId, targetSourceId, categoryId, subCategoryId, amount, type, isReimbursable, info } = req.body;
 
         const cleanSourceId = typeof sourceId === 'object' && sourceId !== null ? sourceId._id : sourceId;
         const cleanTargetId = typeof targetSourceId === 'object' && targetSourceId !== null ? targetSourceId._id : targetSourceId;
@@ -406,7 +406,8 @@ export const addTransaction = async (req, res) => {
             subCategoryId: transactionType === "Debit" ? cleanSubCatId : undefined,
             amount: numAmount,
             type: transactionType,
-            isReimbursable: isReimbursable || false
+            isReimbursable: isReimbursable || false,
+            info: info !== undefined ? info : ""
         });
 
         // Atomic balance update
@@ -440,7 +441,7 @@ export const addTransaction = async (req, res) => {
 export const updateTransaction = async (req, res) => {
     try {
         const { id } = req.params;
-        const { date, description, sourceId, targetSourceId, categoryId, subCategoryId, amount, type, isReimbursable } = req.body;
+        const { date, description, sourceId, targetSourceId, categoryId, subCategoryId, amount, type, isReimbursable, info } = req.body;
 
         const cleanSourceId = typeof sourceId === 'object' && sourceId !== null ? sourceId._id : sourceId;
         const cleanTargetId = typeof targetSourceId === 'object' && targetSourceId !== null ? targetSourceId._id : targetSourceId;
@@ -475,12 +476,13 @@ export const updateTransaction = async (req, res) => {
             date: date || oldTransaction.date,
             description: description !== undefined ? description : oldTransaction.description,
             sourceId: cleanSourceId || oldTransaction.sourceId,
-            targetSourceId: newType === "Transfer" ? (cleanTargetId || null) : null,
-            categoryId: newType === "Debit" ? (cleanCatId || null) : null,
-            subCategoryId: newType === "Debit" ? (cleanSubCatId || null) : null,
+            targetSourceId: newType === "Transfer" ? (targetSourceId !== undefined ? cleanTargetId : oldTransaction.targetSourceId) : null,
+            categoryId: newType === "Debit" ? (categoryId !== undefined ? cleanCatId : oldTransaction.categoryId) : null,
+            subCategoryId: newType === "Debit" ? (subCategoryId !== undefined ? cleanSubCatId : oldTransaction.subCategoryId) : null,
             amount: newAmt,
             type: newType,
-            isReimbursable: isReimbursable !== undefined ? isReimbursable : oldTransaction.isReimbursable
+            isReimbursable: isReimbursable !== undefined ? isReimbursable : oldTransaction.isReimbursable,
+            info: info !== undefined ? info : (oldTransaction.info || "")
         };
 
         const transaction = await ExpenseTransaction.findByIdAndUpdate(

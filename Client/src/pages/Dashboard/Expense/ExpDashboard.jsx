@@ -247,12 +247,15 @@ const ExpDashboard = () => {
         // Use salary from store if available, otherwise total budget
         const allotted = Number(salary) > 0 ? Number(salary) : totalBudget;
 
-        // Total spent across all categories in month m
+        // Total spent across all valid categories in month m
+        const allCategoryIds = new Set(categories.map((c) => String(c._id)));
         const used = transactions
           .filter((t) => {
-            if (t.type === "Credit") return false;
+            if (t.type === "Credit" || t.type === "Transfer") return false;
             const tMonth = dayjs(t.date).format("YYYY-MM");
-            return tMonth === m;
+            if (tMonth !== m) return false;
+            const catId = String(t.categoryId?._id || t.categoryId || "");
+            return allCategoryIds.has(catId);
           })
           .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
 
@@ -287,7 +290,7 @@ const ExpDashboard = () => {
 
       const used = transactions
         .filter((t) => {
-          if (t.type === "Credit") return false;
+          if (t.type === "Credit" || t.type === "Transfer") return false;
           const tMonth = dayjs(t.date).format("YYYY-MM");
           if (tMonth !== m) return false;
           const catId = String(t.categoryId?._id || t.categoryId);
@@ -374,7 +377,7 @@ const ExpDashboard = () => {
 
           const catSpent = transactions
             .filter((t) => {
-              if (t.type === "Credit") return false;
+              if (t.type === "Credit" || t.type === "Transfer") return false;
               const tMonth = dayjs(t.date).format("YYYY-MM");
               if (tMonth !== m) return false;
               const catId = String(t.categoryId?._id || t.categoryId);
@@ -412,7 +415,7 @@ const ExpDashboard = () => {
 
         const subSpent = transactions
           .filter((t) => {
-            if (t.type === "Credit") return false;
+            if (t.type === "Credit" || t.type === "Transfer") return false;
             const tMonth = dayjs(t.date).format("YYYY-MM");
             if (tMonth !== m) return false;
 
@@ -479,9 +482,12 @@ const ExpDashboard = () => {
         zoom: { enabled: false },
       },
       stroke: {
-        width: [...subCategoryNames.map(() => 0), 2.5],
+        width: [...subCategoryNames.map(() => 0), 1.25],
         curve: "smooth",
         dashArray: [...subCategoryNames.map(() => 0), 0],
+      },
+      fill: {
+        opacity: [...subCategoryNames.map(() => 0.5), 1],
       },
       colors: colors,
       plotOptions: {
@@ -514,10 +520,10 @@ const ExpDashboard = () => {
         offsetY: -2,
       },
       markers: {
-        size: [...subCategoryNames.map(() => 0), 5],
+        size: [...subCategoryNames.map(() => 0), 3.5],
         strokeColor: "#1e293b",
-        strokeWidth: 2,
-        hover: { size: 7 },
+        strokeWidth: 1.5,
+        hover: { size: 5.5 },
       },
       legend: {
         show: true,
@@ -569,11 +575,43 @@ const ExpDashboard = () => {
         theme: "dark",
         shared: true,
         intersect: false,
-        fillSeriesColor: false,
-        marker: { show: true },
-        style: { fontSize: "12px" },
-        y: {
-          formatter: (val) => (val != null ? `₹${Number(val).toLocaleString("en-IN")}` : "₹0"),
+        custom: function({ dataPointIndex }) {
+          const monthLabel = subCatDualStackedPlotData[dataPointIndex]?.monthLabel || "";
+          const dataItem = subCatDualStackedPlotData[dataPointIndex] || {};
+          const totalSpent = dataItem.totalSpent || 0;
+
+          const rowsHtml = subCategoryNames.map((name, idx) => {
+            const color = subCatSpentPalette[idx % subCatSpentPalette.length];
+            const amount = dataItem[`${name}_spent`] || 0;
+            return `
+              <div class="flex justify-between items-center gap-4" style="display: flex; justify-content: space-between; align-items: center; gap: 16px;">
+                <span class="text-base-content/70 flex items-center gap-1.5 truncate" style="display: flex; align-items: center; gap: 6px; font-size: 11px; opacity: 0.85;">
+                  <span class="w-2.5 h-2.5 rounded-full inline-block shrink-0" style="width: 10px; height: 10px; border-radius: 50%; background-color: ${color}; display: inline-block; flex-shrink: 0;"></span>
+                  <span class="truncate">${name}:</span>
+                </span>
+                <span class="font-mono font-bold" style="font-family: monospace; font-weight: 700; color: ${color}; font-size: 11px; white-space: nowrap;">₹${Number(amount).toLocaleString("en-IN")}</span>
+              </div>
+            `;
+          }).join("");
+
+          return `
+            <div class="bg-base-100/80 backdrop-blur-md border border-base-300 p-4 rounded-2xl shadow-xl space-y-3 min-w-[220px] text-xs text-base-content" style="background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.15); padding: 14px 16px; border-radius: 16px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5); min-width: 220px; font-size: 12px; font-family: inherit;">
+              <p class="font-extrabold text-sm border-b border-base-200 pb-1.5 flex justify-between items-center" style="font-weight: 800; font-size: 13px; border-bottom: 1px solid rgba(255, 255, 255, 0.1); padding-bottom: 6px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+                <span>${monthLabel}</span>
+                <span class="text-[11px] opacity-60 font-mono" style="font-size: 10px; opacity: 0.6; font-family: monospace;">${isSalaryMode ? "Category Split" : categoryCleanName}</span>
+              </p>
+              <div class="space-y-1.5 font-medium" style="display: flex; flex-direction: column; gap: 6px; font-weight: 500;">
+                ${rowsHtml}
+                <div class="flex justify-between items-center gap-4 pt-1.5 border-t border-base-200" style="display: flex; justify-content: space-between; align-items: center; gap: 16px; padding-top: 8px; margin-top: 4px; border-top: 1px solid rgba(255, 255, 255, 0.1); font-weight: 800;">
+                  <span class="text-base-content/80 flex items-center gap-1.5" style="display: flex; align-items: center; gap: 6px; color: #38bdf8; font-size: 11px;">
+                    <span class="w-2.5 h-2.5 rounded-full inline-block shrink-0" style="width: 10px; height: 10px; border-radius: 50%; background-color: #38bdf8; display: inline-block; flex-shrink: 0;"></span>
+                    Total Used:
+                  </span>
+                  <span class="font-mono font-bold" style="font-family: monospace; color: #38bdf8; font-size: 12px; font-weight: 800;">₹${Number(totalSpent).toLocaleString("en-IN")}</span>
+                </div>
+              </div>
+            </div>
+          `;
         },
       },
       grid: {
@@ -593,7 +631,7 @@ const ExpDashboard = () => {
         },
       ],
     };
-  }, [subCategoryNames, subCatDualStackedPlotData, subCatSpentPalette]);
+  }, [subCategoryNames, subCatDualStackedPlotData, subCatSpentPalette, isSalaryMode, categoryCleanName]);
 
   // Aliases for Vite HMR backward compatibility
   const subCatAllotmentPlotData = subCatDualStackedPlotData;
@@ -628,7 +666,7 @@ const ExpDashboard = () => {
 
           const catSpent = transactions
             .filter((t) => {
-              if (t.type === "Credit") return false;
+              if (t.type === "Credit" || t.type === "Transfer") return false;
               const tMonth = dayjs(t.date).format("YYYY-MM");
               if (tMonth !== m) return false;
               const catId = String(t.categoryId?._id || t.categoryId);
@@ -689,7 +727,7 @@ const ExpDashboard = () => {
 
         const subUsed = transactions
           .filter((t) => {
-            if (t.type === "Credit") return false;
+            if (t.type === "Credit" || t.type === "Transfer") return false;
             const tMonth = dayjs(t.date).format("YYYY-MM");
             if (tMonth !== m) return false;
 
@@ -968,19 +1006,44 @@ const ExpDashboard = () => {
                 role="button"
                 className="btn btn-ghost text-lg font-bold p-0 min-h-0 h-auto hover:bg-base-200/70 px-2.5 py-1 rounded-xl flex items-center gap-2 transition-all border border-base-300/40 shadow-xs"
               >
-                <Folder className="text-primary w-5 h-5" />
+                {isSalaryMode ? (
+                  <Banknote className="text-primary w-5 h-5" />
+                ) : (
+                  <Folder className="text-primary w-5 h-5" />
+                )}
                 <span>{categoryCleanName}</span>
                 <ChevronDown className="w-4 h-4 opacity-60 ml-0.5" />
               </div>
               <ul
                 tabIndex={0}
-                className="dropdown-content menu p-2 shadow-2xl bg-base-100/95 backdrop-blur-md rounded-2xl w-56 z-[100] mt-2 border border-base-300/50"
+                className="dropdown-content menu p-2 shadow-2xl bg-base-100/95 backdrop-blur-md rounded-2xl w-60 z-[100] mt-2 border border-base-300/50"
               >
                 <li className="menu-title text-xs font-bold text-base-content/50 uppercase tracking-wider px-3 py-1">
-                  Select Category
+                  Salary & Overview
+                </li>
+                <li>
+                  <button
+                    className={`flex items-center gap-3 py-2.5 px-3 rounded-xl transition-all font-medium ${
+                      isSalaryMode
+                        ? "bg-primary text-primary-content font-bold shadow-md"
+                        : "hover:bg-base-200"
+                    }`}
+                    onClick={() => {
+                      setSelectedCatId("SALARY");
+                      if (document.activeElement instanceof HTMLElement) {
+                        document.activeElement.blur();
+                      }
+                    }}
+                  >
+                    <Banknote className={`w-4 h-4 ${isSalaryMode ? "text-primary-content" : "text-primary"}`} />
+                    <span>Salary / Total Income</span>
+                  </button>
+                </li>
+                <li className="menu-title text-xs font-bold text-base-content/50 uppercase tracking-wider px-3 py-1 mt-1">
+                  Categories
                 </li>
                 {availableCategories.map((cat) => {
-                  const isActive = String(cat._id) === String(selectedCatId);
+                  const isActive = !isSalaryMode && String(cat._id) === String(selectedCatId);
                   return (
                     <li key={cat._id}>
                       <button
@@ -1070,10 +1133,12 @@ const ExpDashboard = () => {
         </div>
       )}
 
-      {/* 2. Range Summary Cards for Selected Category */}
+      {/* 2. Range Summary Cards for Selected Category / Salary */}
       <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         <div className="card bg-base-100 shadow-md border border-base-200 p-5">
-          <span className="text-xs font-bold uppercase tracking-wider text-base-content/50">Total Allotted</span>
+          <span className="text-xs font-bold uppercase tracking-wider text-base-content/50">
+            {isSalaryMode ? "Total Salary" : "Total Allotted"}
+          </span>
           <span className="text-2xl font-black font-mono text-primary mt-1 block">
             ₹{rangeTotals.totalAllotted.toLocaleString()}
           </span>
@@ -1088,17 +1153,19 @@ const ExpDashboard = () => {
             ₹{rangeTotals.totalUsed.toLocaleString()}
           </span>
           <span className="text-[11px] opacity-60 mt-2 block">
-            Total Spent in {categoryCleanName}
+            {isSalaryMode ? "Total Expenses across Categories" : `Total Spent in ${categoryCleanName}`}
           </span>
         </div>
 
         <div className="card bg-base-100 shadow-md border border-base-200 p-5">
-          <span className="text-xs font-bold uppercase tracking-wider text-base-content/50">Total Left</span>
+          <span className="text-xs font-bold uppercase tracking-wider text-base-content/50">
+            {isSalaryMode ? "Net Savings" : "Total Left"}
+          </span>
           <span className="text-2xl font-black font-mono text-emerald-600 dark:text-emerald-400 mt-1 block">
             ₹{rangeTotals.totalLeft.toLocaleString()}
           </span>
           <span className="text-[11px] opacity-60 mt-2 block">
-            Remaining Unspent Budget
+            {isSalaryMode ? "Remaining Unspent Salary" : "Remaining Unspent Budget"}
           </span>
         </div>
 
@@ -1116,16 +1183,23 @@ const ExpDashboard = () => {
         </div>
       </section>
 
-      {/* 3. Main Category Section (Graph View & Table View Tabs) */}
+      {/* 3. Main Category / Salary Section (Graph View & Table View Tabs) */}
       <section className="card bg-base-100 shadow-xl border border-base-200">
         <div className="card-body p-6 space-y-6">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-base-200 pb-4">
             <div>
               <h2 className="text-xl font-bold flex items-center gap-2">
-                <Folder size={22} className="text-primary" /> {categoryCleanName} Performance Analysis
+                {isSalaryMode ? (
+                  <Banknote size={22} className="text-primary" />
+                ) : (
+                  <Folder size={22} className="text-primary" />
+                )}
+                {categoryCleanName} Performance Analysis
               </h2>
               <p className="text-xs text-base-content/60 mt-0.5">
-                Category overview displaying Left vs Used amounts for <strong className="text-primary">{categoryCleanName}</strong>
+                {isSalaryMode
+                  ? "Overview displaying Net Savings vs Total Spent across all categories"
+                  : `Category overview displaying Left vs Used amounts for ${categoryCleanName}`}
               </p>
             </div>
 
@@ -1163,10 +1237,10 @@ const ExpDashboard = () => {
                 </p>
                 <div className="flex items-center gap-4 font-bold bg-base-200/70 px-3 py-1.5 rounded-xl border border-base-300">
                   <div className="flex items-center gap-2">
-                    <span className="w-3.5 h-3.5 rounded bg-emerald-500"></span> Left {categoryCleanName}
+                    {/* <span className="w-3.5 h-3.5 rounded bg-emerald-500"></span> Left {categoryCleanName} */}
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="w-3.5 h-3.5 rounded" style={{ backgroundColor: "rgba(16, 185, 129, 0.35)" }}></span> Used {categoryCleanName}
+                    {/* <span className="w-3.5 h-3.5 rounded" style={{ backgroundColor: "rgba(16, 185, 129, 0.35)" }}></span> Used {categoryCleanName} */}
                   </div>
                 </div>
               </div>
@@ -1197,7 +1271,7 @@ const ExpDashboard = () => {
                         dataKey="left"
                         stackId="a"
                         name={`Left ${categoryCleanName}`}
-                        fill="#10b981"
+                        fill="#10b981a1"
                         radius={0}
                         maxBarSize={55}
                       >
@@ -1212,7 +1286,7 @@ const ExpDashboard = () => {
                         dataKey="used"
                         stackId="a"
                         name={`Used ${categoryCleanName}`}
-                        fill="rgba(16, 185, 129, 0.35)"
+                        fill="rgba(16, 185, 129, 0.17)"
                         radius={0}
                         maxBarSize={55}
                       >
@@ -1244,9 +1318,9 @@ const ExpDashboard = () => {
                   <thead className="bg-base-200/80 text-base-content uppercase font-black tracking-wider text-[11px]">
                     <tr>
                       <th className="py-3.5 px-4 text-left">Months</th>
-                      <th className="py-3.5 px-4 text-right">Allotted</th>
+                      <th className="py-3.5 px-4 text-right">{isSalaryMode ? "Salary" : "Allotted"}</th>
                       <th className="py-3.5 px-4 text-right">Used</th>
-                      <th className="py-3.5 px-4 text-right">Remaining</th>
+                      <th className="py-3.5 px-4 text-right">{isSalaryMode ? "Net Savings" : "Remaining"}</th>
                       <th className="py-3.5 px-4 text-center">Percentage Used</th>
                     </tr>
                   </thead>
@@ -1260,13 +1334,13 @@ const ExpDashboard = () => {
                               {d.monthLabel}
                             </td>
                             <td className="py-3 px-4 text-right font-mono font-bold text-primary whitespace-nowrap">
-                              ₹{d.allotted.toLocaleString()}
+                              ₹{(d.allotted || 0).toLocaleString()}
                             </td>
                             <td className="py-3 px-4 text-right font-mono font-bold text-rose-500 whitespace-nowrap">
-                              ₹{d.used.toLocaleString()}
+                              ₹{(d.used || 0).toLocaleString()}
                             </td>
                             <td className="py-3 px-4 text-right font-mono font-bold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
-                              ₹{d.left.toLocaleString()}
+                              ₹{(d.left || 0).toLocaleString()}
                             </td>
                             <td className="py-3 px-4 text-center">
                               <div className="flex items-center justify-center gap-2">
@@ -1319,17 +1393,24 @@ const ExpDashboard = () => {
         </div>
       </section>
 
-      {/* 4. Sub-Category Interactive Analytics & Monthly Breakdown Section */}
+      {/* 4. Sub-Category / Category Split Interactive Analytics & Monthly Breakdown Section */}
       <section className="card bg-base-100 shadow-xl border border-base-200">
         <div className="card-body p-6 space-y-6">
           {/* Section Header & View Switcher */}
           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 border-b border-base-200 pb-4">
             <div>
               <h2 className="text-xl font-bold flex items-center gap-2">
-                <Layers size={22} className="text-secondary" /> Sub-Category Detailed Analytics
+                {isSalaryMode ? (
+                  <PieChart size={22} className="text-secondary" />
+                ) : (
+                  <Layers size={22} className="text-secondary" />
+                )}
+                {isSalaryMode ? "Category Split Breakdown" : `${categoryCleanName} — Sub-Category Detailed Analytics`}
               </h2>
               <p className="text-xs text-base-content/60 mt-0.5">
-                Analyze sub-category spending under <strong className="text-primary">{categoryCleanName}</strong> in Graph or Table view
+                {isSalaryMode
+                  ? "Monthly expenditure split across all categories with total expenses trend line"
+                  : `Analyze sub-category spending under ${categoryCleanName} in Graph or Table view`}
               </p>
             </div>
 
@@ -1372,7 +1453,9 @@ const ExpDashboard = () => {
                 </div>
               ) : (
                 <div className="p-12 text-center text-sm opacity-50 italic">
-                  No sub-categories configured under {categoryCleanName}. Add sub-categories in Table View to view actual spent breakdown.
+                  {isSalaryMode
+                    ? "No categories configured. Add categories in Table View to view category split."
+                    : `No sub-categories configured under ${categoryCleanName}. Add sub-categories in Table View to view actual spent breakdown.`}
                 </div>
               )}
             </div>
@@ -1383,7 +1466,9 @@ const ExpDashboard = () => {
             <div className="space-y-4">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-base-200/50 p-3 rounded-2xl border border-base-300">
                 <p className="text-xs font-semibold text-base-content/70">
-                  Collapsible monthly breakdown showing <strong>Allotted</strong>, <strong>Used</strong>, <strong>Remaining</strong>, and <strong>% Utilized</strong> for each sub-category under <strong className="text-primary">{categoryCleanName}</strong>.
+                  {isSalaryMode
+                    ? "Collapsible monthly breakdown showing Allotted, Used, Remaining, and % Utilized for each category."
+                    : `Collapsible monthly breakdown showing Allotted, Used, Remaining, and % Utilized for each sub-category under ${categoryCleanName}.`}
                 </p>
                 <div className="flex items-center gap-2 text-xs font-extrabold shrink-0">
                   <button
@@ -1406,7 +1491,7 @@ const ExpDashboard = () => {
                 <table className="table w-full text-xs">
                   <thead className="bg-base-200/80 text-base-content font-bold uppercase tracking-wider text-[11px]">
                     <tr>
-                      <th className="py-3 px-4">Month / Sub-Category</th>
+                      <th className="py-3 px-4">Month / {isSalaryMode ? "Category" : "Sub-Category"}</th>
                       <th className="py-3 px-4 text-right">Allotted Budget</th>
                       <th className="py-3 px-4 text-right">Actual Spent</th>
                       <th className="py-3 px-4 text-right">Remaining</th>
@@ -1434,7 +1519,7 @@ const ExpDashboard = () => {
                                     {mRow.monthLabel}
                                   </span>
                                   <span className="badge badge-xs font-extrabold bg-base-200 border-base-300 text-base-content/70">
-                                    {mRow.subRows.length} sub-categories
+                                    {mRow.subRows.length} {isSalaryMode ? "categories" : "sub-categories"}
                                   </span>
                                 </div>
                               </td>
@@ -1482,7 +1567,7 @@ const ExpDashboard = () => {
                                       <div className="flex items-center gap-2">
                                         <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: color }}></span>
                                         <span className="font-semibold text-base-content/90">
-                          {sub.subName}
+                                          {sub.subName}
                                         </span>
                                       </div>
                                     </td>
@@ -1517,7 +1602,9 @@ const ExpDashboard = () => {
                     ) : (
                       <tr>
                         <td colSpan="5" className="py-8 text-center opacity-50 italic">
-                          No sub-category data available for the selected month range.
+                          {isSalaryMode
+                            ? "No category data available for the selected month range."
+                            : "No sub-category data available for the selected month range."}
                         </td>
                       </tr>
                     )}

@@ -57,6 +57,11 @@ const expenseTransactionSchema = new mongoose.Schema({
     isReimbursable: {
         type: Boolean,
         default: false
+    },
+    info: {
+        type: String,
+        trim: true,
+        default: ""
     }
 }, { timestamps: true });
 

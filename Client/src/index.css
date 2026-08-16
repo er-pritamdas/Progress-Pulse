@@ -35,10 +35,13 @@ html {
   scroll-behavior: smooth;
 }
 
-.apexcharts-tooltip {
-  background: rgba(0, 0, 0, 0.5) !important; /* 20% black */
-  backdrop-filter: blur(6px);
+.apexcharts-tooltip,
+.apexcharts-tooltip.apexcharts-theme-dark,
+.apexcharts-tooltip.apexcharts-theme-light {
+  background: transparent !important;
   border: none !important;
+  box-shadow: none !important;
+  overflow: visible !important;
 }
 
 .apexcharts-tooltip-title {

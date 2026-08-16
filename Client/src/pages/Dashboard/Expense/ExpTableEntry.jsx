@@ -5,8 +5,9 @@ import { useAuth } from "../../../Context/JwtAuthContext";
 import ExpenseTable from "../../../components/Expense/ExpenseTable";
 import BankBalancesModal from "../../../components/Expense/BankBalancesModal";
 import dayjs from "dayjs";
-import { ChevronLeft, ChevronRight, TrendingUp, TrendingDown, Eye, EyeOff, Calendar, X, Wallet, Search, Folder, ExternalLink, ArrowUp, ArrowDown, ArrowUpDown, ArrowRightLeft, Sparkles, Filter, ChevronDown, ChevronUp, Building2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, TrendingUp, TrendingDown, Eye, EyeOff, Calendar, X, Wallet, Search, Folder, ExternalLink, ArrowUp, ArrowDown, ArrowUpDown, ArrowRightLeft, Sparkles, Filter, ChevronDown, ChevronUp, Building2, Info } from "lucide-react";
 import { getSourceTagStyle, getCategoryTagStyle } from "../../../utils/expenseTheme";
+import TransactionInfoModal from "../../../components/Expense/TransactionInfoModal";
 
 const ExpTableEntry = () => {
   const dispatch = useDispatch();
@@ -402,113 +403,556 @@ const ExpTableEntry = () => {
 };
 
 const HeatmapModal = ({ transactions, currentMonth, onClose }) => {
+  const [upperLimit, setUpperLimit] = useState(() => {
+    try {
+      const saved = localStorage.getItem("expense_calendar_limit");
+      return saved ? Number(saved) : 5000;
+    } catch (e) {
+      return 5000;
+    }
+  });
+  const [limitInput, setLimitInput] = useState(String(upperLimit));
+  const [isEditingLimit, setIsEditingLimit] = useState(false);
+  
+  // Default selected date to Today if in currentMonth, else 1st of month (both panels open simultaneously)
+  const [selectedDateStr, setSelectedDateStr] = useState(() => {
+    const todayStr = dayjs().format("YYYY-MM-DD");
+    if (dayjs().isSame(dayjs(currentMonth), "month")) {
+      return todayStr;
+    }
+    return dayjs(currentMonth).startOf("month").format("YYYY-MM-DD");
+  });
+
+  const handleLimitSave = (newVal) => {
+    const num = Math.max(100, Number(newVal) || 5000);
+    setUpperLimit(num);
+    setLimitInput(String(num));
+    setIsEditingLimit(false);
+    try {
+      localStorage.setItem("expense_calendar_limit", String(num));
+    } catch (e) {}
+  };
+
   // 1. Generate all dates for current month
-  const startOfMonth = dayjs(currentMonth).startOf('month');
-  const endOfMonth = dayjs(currentMonth).endOf('month');
+  const startOfMonth = dayjs(currentMonth).startOf("month");
+  const endOfMonth = dayjs(currentMonth).endOf("month");
   const daysInMonth = endOfMonth.date();
   const startDayOfWeek = startOfMonth.day(); // 0 (Sun) - 6 (Sat)
 
-  // 2. Aggregate spending per day
-  const dailySpending = {};
-  transactions.forEach(t => {
+  // 2. Aggregate spending, credits and txns per day
+  const dailySpending = {}; // Debits
+  const dailyCredits = {};  // Credits
+  const dailyDebitCount = {};
+  const dailyCreditCount = {};
+  const dailyTxns = {};
+
+  transactions.forEach((t) => {
     const dateStr = dayjs(t.date).format("YYYY-MM-DD");
     if (!dailySpending[dateStr]) dailySpending[dateStr] = 0;
-    dailySpending[dateStr] += t.amount;
+    if (!dailyCredits[dateStr]) dailyCredits[dateStr] = 0;
+    if (!dailyDebitCount[dateStr]) dailyDebitCount[dateStr] = 0;
+    if (!dailyCreditCount[dateStr]) dailyCreditCount[dateStr] = 0;
+    if (!dailyTxns[dateStr]) dailyTxns[dateStr] = [];
+
+    dailyTxns[dateStr].push(t);
+    const amt = Number(t.amount || 0);
+
+    if (t.type === "Credit") {
+      dailyCredits[dateStr] += amt;
+      dailyCreditCount[dateStr] += 1;
+    } else if (t.type === "Debit" || (!t.type && amt > 0)) {
+      dailySpending[dateStr] += amt;
+      dailyDebitCount[dateStr] += 1;
+    } else if (t.type === "Transfer") {
+      // Transfer transactions can be viewed in day details
+    }
   });
 
   // 3. Calendar Grid Generation
   const days = [];
-  // Padding for start of month
   for (let i = 0; i < startDayOfWeek; i++) {
     days.push(null);
   }
-  // Days of month
   for (let i = 1; i <= daysInMonth; i++) {
     days.push(startOfMonth.date(i));
   }
 
   const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
+  // Quartile cutoffs based on user's upperLimit
+  const q1 = Math.round(upperLimit * 0.25);
+  const q2 = Math.round(upperLimit * 0.5);
+  const q3 = Math.round(upperLimit * 0.75);
+  const q4 = upperLimit;
+
+  // Monthly stats
+  const totalMonthSpent = Object.values(dailySpending).reduce((sum, v) => sum + v, 0);
+  const totalMonthCredits = Object.values(dailyCredits).reduce((sum, v) => sum + v, 0);
+  const spendingDaysCount = Object.values(dailySpending).filter((v) => v > 0).length;
+
+  // Color coding function with reduced opacity
+  const getDayColor = (debitAmt, creditAmt) => {
+    if (debitAmt <= 0) {
+      if (creditAmt > 0) {
+        return {
+          bg: "bg-emerald-500/10 hover:bg-emerald-500/20",
+          border: "border-emerald-500/25",
+          text: "text-emerald-700 dark:text-emerald-300 font-bold",
+          tier: "credit_only"
+        };
+      }
+      return {
+        bg: "bg-base-200/30 hover:bg-base-200/60",
+        border: "border-base-300/40",
+        text: "text-base-content/60",
+        tier: "none"
+      };
+    }
+    const pct = (debitAmt / upperLimit) * 100;
+    if (pct <= 25) {
+      // 0 - 25% Green with low opacity
+      return {
+        bg: "bg-emerald-500/15 hover:bg-emerald-500/25",
+        border: "border-emerald-500/30",
+        text: "text-emerald-700 dark:text-emerald-300 font-bold",
+        tier: "q1"
+      };
+    }
+    if (pct <= 50) {
+      // 26 - 50% Blue with low opacity
+      return {
+        bg: "bg-blue-500/15 hover:bg-blue-500/25",
+        border: "border-blue-500/30",
+        text: "text-blue-700 dark:text-blue-300 font-bold",
+        tier: "q2"
+      };
+    }
+    if (pct <= 75) {
+      // 51 - 75% Yellow with low opacity
+      return {
+        bg: "bg-amber-500/15 hover:bg-amber-500/25",
+        border: "border-amber-500/30",
+        text: "text-amber-700 dark:text-amber-300 font-bold",
+        tier: "q3"
+      };
+    }
+    if (pct <= 100) {
+      // 76 - 100% Red with low opacity
+      return {
+        bg: "bg-rose-500/20 hover:bg-rose-500/30",
+        border: "border-rose-500/35",
+        text: "text-rose-700 dark:text-rose-300 font-bold",
+        tier: "q4"
+      };
+    }
+    // > 100% Over limit: Dark Red / Maroon with low opacity
+    return {
+      bg: "bg-rose-950/40 hover:bg-rose-950/50",
+      border: "border-rose-800/60",
+      text: "text-rose-200 font-bold",
+      tier: "over"
+    };
+  };
+
+  const [infoModalTx, setInfoModalTx] = useState(null);
+
+  const selectedTxns = selectedDateStr ? dailyTxns[selectedDateStr] || [] : [];
+  const selectedDayDebit = selectedDateStr ? dailySpending[selectedDateStr] || 0 : 0;
+  const selectedDayDebitCount = selectedDateStr ? dailyDebitCount[selectedDateStr] || 0 : 0;
+  const selectedDayCredit = selectedDateStr ? dailyCredits[selectedDateStr] || 0 : 0;
+  const selectedDayCreditCount = selectedDateStr ? dailyCreditCount[selectedDateStr] || 0 : 0;
+  const selectedDayTier = selectedDateStr ? getDayColor(selectedDayDebit, selectedDayCredit) : null;
+
+  const formatAmtShort = (val) => {
+    if (!val) return "0";
+    if (val >= 100000) return `${(val / 100000).toFixed(1)}L`;
+    if (val >= 1000) return `${(val / 1000).toFixed(1)}k`;
+    return String(Math.round(val));
+  };
+
   return (
-    <div className="fixed inset-0 z-[99999] bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
-      <div className="bg-base-200 rounded-3xl shadow-2xl w-full max-w-2xl h-[580px] flex flex-col justify-between overflow-hidden border border-base-300 text-sm animate-in fade-in zoom-in-95 duration-200">
-        <div className="shrink-0 p-4 border-b border-base-200 flex justify-between items-center bg-base-200/50">
-          <div className="flex items-center gap-3">
-            <h3 className="font-bold text-lg flex items-center gap-2">
-              <Calendar size={20} className="text-primary" />
-              Spending Calendar ({dayjs(currentMonth).format("MMM YYYY")})
-            </h3>
-            <span className="badge badge-primary badge-outline gap-1.5 font-bold text-xs py-2 px-2.5 shadow-2xs">
-              Today: {dayjs().format("DD MMM YYYY")}
-            </span>
+    <div className="fixed inset-0 z-[99999] bg-black/60 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+      <div className="flex flex-col lg:flex-row items-stretch justify-center gap-4 max-h-[92vh] max-w-5xl w-full">
+        {/* Main Calendar Modal (Left Panel) */}
+        <div className="w-full lg:w-[490px] shrink-0 bg-base-100 rounded-3xl shadow-2xl overflow-hidden border border-base-300 flex flex-col justify-between text-xs animate-in fade-in zoom-in-95 duration-200">
+          {/* Header */}
+          <div className="shrink-0 p-3.5 sm:p-4 border-b border-base-200 flex justify-between items-center bg-base-200/50">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shadow-xs shrink-0">
+                <Calendar size={18} />
+              </div>
+              <div>
+                <h3 className="font-extrabold text-sm sm:text-base text-base-content flex items-center gap-1.5">
+                  Spending Calendar
+                </h3>
+                <p className="text-[11px] text-base-content/60 font-medium">
+                  {dayjs(currentMonth).format("MMM YYYY")} • Spent: <strong className="text-rose-500 font-mono">₹{totalMonthSpent.toLocaleString()}</strong> | Received: <strong className="text-emerald-500 font-mono">₹{totalMonthCredits.toLocaleString()}</strong>
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={onClose}
+              className="btn btn-sm btn-ghost btn-circle rounded-full"
+            >
+              <X size={18} />
+            </button>
           </div>
-          <button onClick={onClose} className="btn btn-sm btn-ghost btn-square rounded-full"><X size={20} /></button>
-        </div>
 
-        <div className="p-6">
-          {/* Weekday Header */}
-          <div className="grid grid-cols-7 gap-2 mb-2">
-            {weekDays.map(day => (
-              <div key={day} className="text-center font-bold text-xs opacity-80 uppercase tracking-wider">{day}</div>
-            ))}
-          </div>
-
-          {/* Calendar Grid */}
-          <div className="grid grid-cols-7 gap-2">
-            {days.map((date, idx) => {
-              if (!date) return <div key={`empty-${idx}`} className="aspect-square"></div>;
-
-              const dateStr = date.format("YYYY-MM-DD");
-              const amount = dailySpending[dateStr] || 0;
-              const isToday = dateStr === dayjs().format("YYYY-MM-DD");
-
-              // Intensity Logic
-              let bgClass = "bg-base-200/50 hover:bg-base-200";
-              let textClass = "text-base-content";
-
-              if (amount > 0) {
-                if (amount > 5000) {
-                  bgClass = "bg-error text-error-content hover:bg-error/90";
-                  textClass = "text-error-content font-bold";
-                } else if (amount > 1000) {
-                  bgClass = "bg-warning text-warning-content hover:bg-warning/90";
-                  textClass = "text-warning-content font-bold";
-                } else {
-                  bgClass = "bg-success text-success-content hover:bg-success/90";
-                  textClass = "text-success-content font-bold";
-                }
-              }
-
-              return (
-                <div
-                  key={dateStr}
-                  className={`aspect-square rounded-xl flex flex-col items-center justify-center p-1 transition-all cursor-default relative group ${
-                    isToday ? 'ring-2 ring-primary ring-offset-2 ring-offset-base-100 z-10 font-black shadow-md border-2 border-primary scale-105' : ''
-                  } ${bgClass}`}
-                  title={(isToday ? 'Today - ' : '') + `Spending: ₹${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-                >
-                  <span className={`text-xs ${amount > 0 || isToday ? 'opacity-100 font-bold' : 'opacity-80'}`}>{date.date()}</span>
-                  {amount > 0 && (
-                    <span className={`text-[10px] leading-tight mt-1 ${textClass}`}>
-                      ₹{amount > 1000 ? (amount / 1000).toFixed(1) + "k" : amount}
-                    </span>
-                  )}
+          {/* Upper Limit Control Bar */}
+          <div className="px-4 py-2 bg-base-200/40 border-b border-base-200 flex flex-wrap items-center justify-between gap-2 text-xs">
+            <div className="flex items-center gap-1.5">
+              <span className="font-bold text-[11px] text-base-content/80">Debit Limit:</span>
+              {isEditingLimit ? (
+                <div className="flex items-center gap-1">
+                  <div className="relative">
+                    <span className="absolute left-2 top-1/2 -translate-y-1/2 font-mono font-bold opacity-50 text-[10px]">₹</span>
+                    <input
+                      type="number"
+                      value={limitInput}
+                      onChange={(e) => setLimitInput(e.target.value)}
+                      className="input input-xs input-bordered pl-5 pr-1 w-20 font-mono font-bold text-primary rounded-lg text-[11px]"
+                      autoFocus
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") handleLimitSave(limitInput);
+                        if (e.key === "Escape") setIsEditingLimit(false);
+                      }}
+                    />
+                  </div>
+                  <button
+                    onClick={() => handleLimitSave(limitInput)}
+                    className="btn btn-xs btn-primary rounded-lg font-bold px-2"
+                  >
+                    Set
+                  </button>
+                  <button
+                    onClick={() => setIsEditingLimit(false)}
+                    className="btn btn-xs btn-ghost rounded-lg px-1.5"
+                  >
+                    ✕
+                  </button>
                 </div>
-              );
-            })}
+              ) : (
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => {
+                      setLimitInput(String(upperLimit));
+                      setIsEditingLimit(true);
+                    }}
+                    className="badge badge-primary badge-outline font-mono font-extrabold text-[11px] px-2 py-1.5 cursor-pointer hover:bg-primary hover:text-primary-content transition-colors"
+                    title="Click to edit upper limit"
+                  >
+                    ₹{upperLimit.toLocaleString()} <span className="text-[9px] ml-0.5 opacity-70">✎</span>
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Quick Preset Buttons */}
+            <div className="flex items-center gap-1 flex-wrap">
+              {[2000, 5000, 10000, 20000].map((preset) => (
+                <button
+                  key={preset}
+                  onClick={() => handleLimitSave(preset)}
+                  className={`btn btn-xs rounded-md font-mono font-bold px-1.5 text-[10px] ${
+                    upperLimit === preset
+                      ? "btn-primary shadow-xs"
+                      : "btn-ghost bg-base-100 hover:bg-base-200 text-base-content/70 border border-base-300/60"
+                  }`}
+                >
+                  ₹{preset >= 1000 ? `${preset / 1000}k` : preset}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Calendar Grid Area (Spacious Square Date Boxes) */}
+          <div className="p-3 sm:p-3.5 space-y-1.5 flex-1 flex flex-col justify-center">
+            <div className="w-full max-w-[440px] mx-auto space-y-1.5">
+              {/* Weekday Header */}
+              <div className="grid grid-cols-7 gap-1.5 text-center font-black text-[10px] uppercase tracking-wider text-base-content/60">
+                {weekDays.map((day) => (
+                  <div key={day} className="py-0.5">
+                    {day}
+                  </div>
+                ))}
+              </div>
+
+              {/* Days Grid */}
+              <div className="grid grid-cols-7 gap-1.5">
+                {days.map((date, idx) => {
+                  if (!date) return <div key={`empty-${idx}`} className="aspect-square min-h-[58px]"></div>;
+
+                  const dateStr = date.format("YYYY-MM-DD");
+                  const debitAmt = dailySpending[dateStr] || 0;
+                  const debitCnt = dailyDebitCount[dateStr] || 0;
+                  const creditAmt = dailyCredits[dateStr] || 0;
+                  const creditCnt = dailyCreditCount[dateStr] || 0;
+                  const isToday = dateStr === dayjs().format("YYYY-MM-DD");
+                  const isSelected = selectedDateStr === dateStr;
+
+                  const style = getDayColor(debitAmt, creditAmt);
+
+                  return (
+                    <div
+                      key={dateStr}
+                      onClick={() => setSelectedDateStr(dateStr)}
+                      className={`aspect-square min-h-[58px] sm:min-h-[64px] rounded-xl flex flex-col justify-between p-1.5 transition-all cursor-pointer relative border ${
+                        style.bg
+                      } ${style.border} ${
+                        isSelected ? "ring-2 ring-primary ring-offset-1 ring-offset-base-100 scale-105 z-20 shadow-md font-bold" : ""
+                      } ${
+                        isToday ? "border-2 border-primary shadow-xs" : ""
+                      }`}
+                      title={`${date.format("ddd, DD MMM YYYY")}\nDebited: ₹${debitAmt.toLocaleString()} (${debitCnt} Dr)\nCredited: ₹${creditAmt.toLocaleString()} (${creditCnt} Cr)`}
+                    >
+                      {/* Top Header: Date Number + Today Dot */}
+                      <div className="flex items-center justify-between w-full leading-none">
+                        <span className={`text-[11px] font-black ${style.text}`}>
+                          {date.date()}
+                        </span>
+                        {isToday && (
+                          <span className="w-1.5 h-1.5 rounded-full bg-primary ring-1 ring-primary/40 animate-pulse"></span>
+                        )}
+                      </div>
+
+                      {/* Bottom Info: Debited & Credited amounts + counts */}
+                      <div className="w-full space-y-0.5 leading-none">
+                        {debitAmt > 0 && (
+                          <div className="flex items-center justify-between text-[9.5px] sm:text-[10px] font-mono font-black text-rose-500">
+                            <span>-₹{formatAmtShort(debitAmt)}</span>
+                            {debitCnt > 1 && (
+                              <span className="text-[7.5px] font-sans font-bold opacity-75">{debitCnt}Dr</span>
+                            )}
+                          </div>
+                        )}
+
+                        {creditAmt > 0 && (
+                          <div className="flex items-center justify-between text-[9.5px] sm:text-[10px] font-mono font-black text-emerald-600 dark:text-emerald-400">
+                            <span>+₹{formatAmtShort(creditAmt)}</span>
+                            {creditCnt > 1 && (
+                              <span className="text-[7.5px] font-sans font-bold opacity-75">{creditCnt}Cr</span>
+                            )}
+                          </div>
+                        )}
+
+                        {debitAmt === 0 && creditAmt === 0 && (
+                          <div className="text-right">
+                            <span className="text-[9px] text-base-content/20 font-mono">—</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* Dynamic 4-Tier Legend with Low Opacity */}
+          <div className="p-2.5 sm:p-3 bg-base-200/60 border-t border-base-200 flex flex-wrap justify-between items-center gap-2">
+            <div className="flex items-center gap-1 sm:gap-1.5 flex-wrap text-[10px] font-medium">
+              <span className="font-bold text-base-content/60 uppercase tracking-wider text-[9px]">
+                Debit Tiers:
+              </span>
+
+              {/* Q1: 0 - 25% */}
+              <div className="flex items-center gap-1 bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 px-1.5 py-0.5 rounded-md">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>
+                <span>0-25% (≤₹{q1 >= 1000 ? `${q1/1000}k` : q1})</span>
+              </div>
+
+              {/* Q2: 26 - 50% */}
+              <div className="flex items-center gap-1 bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30 px-1.5 py-0.5 rounded-md">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0"></span>
+                <span>26-50% (≤₹{q2 >= 1000 ? `${q2/1000}k` : q2})</span>
+              </div>
+
+              {/* Q3: 51 - 75% */}
+              <div className="flex items-center gap-1 bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 px-1.5 py-0.5 rounded-md">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0"></span>
+                <span>51-75% (≤₹{q3 >= 1000 ? `${q3/1000}k` : q3})</span>
+              </div>
+
+              {/* Q4: 76 - 100% */}
+              <div className="flex items-center gap-1 bg-rose-500/20 text-rose-700 dark:text-rose-300 border border-rose-500/35 px-1.5 py-0.5 rounded-md">
+                <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0"></span>
+                <span>76-100% (≤₹{q4 >= 1000 ? `${q4/1000}k` : q4})</span>
+              </div>
+
+              {/* Over 100% Maroon */}
+              <div className="flex items-center gap-1 bg-rose-950/40 text-rose-300 border border-rose-800/60 px-1.5 py-0.5 rounded-md">
+                <span className="w-1.5 h-1.5 rounded-full bg-rose-800 shrink-0"></span>
+                <span>&gt;100%</span>
+              </div>
+            </div>
+
+            <button onClick={onClose} className="btn btn-xs btn-primary rounded-xl font-bold px-3">
+              Done
+            </button>
           </div>
         </div>
 
-        <div className="p-3 bg-base-100 border-t border-base-200 flex justify-center items-center gap-4 opacity-100 flex-wrap">
-          <div className="flex items-center gap-1.5 font-bold text-xs text-primary bg-primary/10 px-2 py-0.5 rounded-md border border-primary/20">
-            <span className="w-2.5 h-2.5 rounded-full bg-primary ring-2 ring-primary/40 animate-pulse"></span>
-            Today ({dayjs().format('D MMM')})
+        {/* Dedicated Right-Side Day Detail Panel (Always Visible) */}
+        <div className="flex-1 w-full lg:min-w-[340px] bg-base-100 rounded-3xl shadow-2xl overflow-hidden border border-base-300 flex flex-col justify-between text-xs animate-in fade-in zoom-in-95 duration-200 shrink-0 max-h-[92vh]">
+          {/* Right Panel Header */}
+          <div className="p-4 sm:p-5 border-b border-base-200 flex justify-between items-center bg-base-200/50">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-2xl bg-secondary/15 flex items-center justify-center text-secondary shadow-xs shrink-0">
+                <Calendar size={18} />
+              </div>
+              <div>
+                <h4 className="font-extrabold text-sm text-base-content">
+                  {selectedDateStr ? dayjs(selectedDateStr).format("DD MMMM YYYY") : "Select a Day"}
+                </h4>
+                <p className="text-[11px] text-base-content/60 font-medium">
+                  {selectedDateStr ? dayjs(selectedDateStr).format("dddd") : "Click any date on calendar"}
+                </p>
+              </div>
+            </div>
+            {selectedDateStr && (
+              <span className="badge badge-sm badge-neutral font-bold opacity-75">
+                Day View
+              </span>
+            )}
           </div>
-          <div className="flex items-center gap-1"><div className="w-2 h-2 rounded bg-success"></div> Low</div>
-          <div className="flex items-center gap-1"><div className="w-2 h-2 rounded bg-warning"></div> Med</div>
-          <div className="flex items-center gap-1"><div className="w-2 h-2 rounded bg-error"></div> High</div>
+
+          {/* Right Panel Body */}
+          <div className="p-4 sm:p-5 space-y-3 flex-1 overflow-y-auto">
+            {/* Day Summary Cards (Debited & Credited) */}
+            <div className="grid grid-cols-2 gap-2">
+              {/* Debited Box */}
+              <div className="p-3 rounded-2xl bg-rose-500/10 border border-rose-500/25 space-y-1">
+                <div className="flex justify-between items-center text-[10px] font-bold text-rose-700 dark:text-rose-400 uppercase">
+                  <span>Debited</span>
+                  <span className="badge badge-xs badge-error text-white font-bold">{selectedDayDebitCount} Dr</span>
+                </div>
+                <div className="text-base sm:text-lg font-black font-mono text-rose-500">
+                  -₹{Number(selectedDayDebit || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </div>
+              </div>
+
+              {/* Credited Box */}
+              <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 space-y-1">
+                <div className="flex justify-between items-center text-[10px] font-bold text-emerald-700 dark:text-emerald-400 uppercase">
+                  <span>Credited</span>
+                  <span className="badge badge-xs badge-success text-white font-bold">{selectedDayCreditCount} Cr</span>
+                </div>
+                <div className="text-base sm:text-lg font-black font-mono text-emerald-600 dark:text-emerald-400">
+                  +₹{Number(selectedDayCredit || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </div>
+              </div>
+            </div>
+
+            {/* Transactions List */}
+            <div className="space-y-2 pt-1">
+              <div className="flex justify-between items-center">
+                <span className="font-bold text-[11px] text-base-content/70 uppercase tracking-wider">
+                  Transactions ({selectedTxns.length})
+                </span>
+                <span className="text-[10px] text-base-content/50 font-mono">
+                  Net: {selectedDayCredit >= selectedDayDebit ? "+" : "-"}₹{Math.abs(selectedDayCredit - selectedDayDebit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+              </div>
+
+              {selectedTxns.length > 0 ? (
+                <div className="space-y-2 max-h-[340px] overflow-y-auto pr-1">
+                  {selectedTxns.map((t) => {
+                    const isCredit = t.type === "Credit";
+                    const isTrf = t.type === "Transfer";
+                    const catName = t.categoryId?.name || (typeof t.categoryId === "string" ? t.categoryId : "");
+                    const srcName = t.sourceId?.name || (typeof t.sourceId === "string" ? t.sourceId : "");
+
+                    return (
+                      <div
+                        key={t._id || t.id}
+                        className="bg-base-200/50 hover:bg-base-200/80 transition-colors p-3 rounded-2xl border border-base-300/60 space-y-2"
+                      >
+                        <div className="flex justify-between items-start gap-2">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <span
+                              className={`badge badge-xs font-bold px-1.5 ${
+                                isCredit
+                                  ? "badge-success text-white"
+                                  : isTrf
+                                  ? "badge-warning text-white"
+                                  : "badge-error text-white"
+                              }`}
+                            >
+                              {isCredit ? "Cr" : isTrf ? "Trf" : "Dr"}
+                            </span>
+                            <span className="font-bold text-xs text-base-content leading-snug truncate">
+                              {t.description || (isCredit ? "Credit Transaction" : "Expense Transaction")}
+                            </span>
+                          </div>
+
+                          <span
+                            className={`font-mono font-extrabold text-xs shrink-0 whitespace-nowrap ${
+                              isCredit
+                                ? "text-emerald-600 dark:text-emerald-400"
+                                : isTrf
+                                ? "text-amber-500 dark:text-amber-400"
+                                : "text-rose-500"
+                            }`}
+                          >
+                            {isCredit ? "+" : isTrf ? "" : "-"}₹{Number(t.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center justify-between gap-1 flex-wrap pt-1 border-t border-base-300/40 text-[10px]">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            {catName && (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-purple-500/10 text-purple-600 dark:text-purple-400 font-bold border border-purple-500/20">
+                                <Folder size={10} /> {catName}
+                              </span>
+                            )}
+                            {srcName && (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-base-100 border border-base-300 text-base-content/70 font-medium">
+                                <Wallet size={10} className="text-primary" /> {srcName}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Note / Info Button */}
+                          <button
+                            type="button"
+                            onClick={() => setInfoModalTx(t)}
+                            className={`btn btn-xs btn-ghost btn-square rounded-lg ${
+                              t.info && t.info.trim()
+                                ? "text-primary bg-primary/10"
+                                : "text-base-content/40 hover:text-base-content"
+                            }`}
+                            title={t.info && t.info.trim() ? `Note: ${t.info}` : "Add / View Notes (i)"}
+                          >
+                            <Info size={12} />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="p-8 text-center text-xs opacity-50 italic bg-base-200/30 rounded-2xl border border-dashed border-base-300">
+                  No transactions recorded on this day.
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Right Panel Footer */}
+          <div className="p-3.5 bg-base-200/50 border-t border-base-200 text-center text-[11px] text-base-content/50 italic">
+            Click any date on the calendar to switch day
+          </div>
         </div>
       </div>
+
+      {/* Info / Notes Modal */}
+      {infoModalTx && (
+        <TransactionInfoModal
+          transaction={infoModalTx}
+          isOpen={Boolean(infoModalTx)}
+          onClose={() => setInfoModalTx(null)}
+        />
+      )}
     </div>
   );
 };
@@ -541,6 +985,8 @@ const TransactionListModal = ({ type, transactions, currentMonth, onClose }) => 
     sourceId: "",
     categoryId: ""
   });
+
+  const [infoModalTx, setInfoModalTx] = useState(null);
 
   const hasColFilters = Boolean(colFilters.date || colFilters.description || colFilters.sourceId || colFilters.categoryId);
   const clearColFilters = () => setColFilters({ date: "", description: "", sourceId: "", categoryId: "" });
@@ -853,6 +1299,7 @@ const TransactionListModal = ({ type, transactions, currentMonth, onClose }) => 
                     </th>
 
                     <th className="py-3 px-4 text-right">Amount</th>
+                    <th className="py-3 px-4 text-center">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-base-200/70 font-medium">
@@ -925,6 +1372,23 @@ const TransactionListModal = ({ type, transactions, currentMonth, onClose }) => 
                             {isTrf ? "" : (isDebit ? "-" : "+")}₹{Number(t.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </span>
                         </td>
+                        <td className="py-3 px-4 text-center">
+                          <button
+                            type="button"
+                            onClick={() => setInfoModalTx(t)}
+                            className={`btn btn-xs btn-ghost btn-square relative ${
+                              t.info && t.info.trim()
+                                ? "text-primary bg-primary/10 hover:bg-primary/20"
+                                : "text-base-content/40 hover:text-base-content hover:bg-base-300/40"
+                            }`}
+                            title={t.info && t.info.trim() ? `Note: ${t.info}` : "Add / View Notes (i)"}
+                          >
+                            <Info size={13} />
+                            {t.info && t.info.trim() && (
+                              <span className="w-1.5 h-1.5 rounded-full bg-primary absolute top-1 right-1"></span>
+                            )}
+                          </button>
+                        </td>
                       </tr>
                     );
                   })}
@@ -948,6 +1412,15 @@ const TransactionListModal = ({ type, transactions, currentMonth, onClose }) => 
           </button>
         </div>
       </div>
+
+      {/* Info Modal */}
+      {infoModalTx && (
+        <TransactionInfoModal
+          transaction={infoModalTx}
+          isOpen={Boolean(infoModalTx)}
+          onClose={() => setInfoModalTx(null)}
+        />
+      )}
     </div>
   );
 };

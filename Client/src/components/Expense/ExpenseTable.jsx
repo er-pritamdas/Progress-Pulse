@@ -3,8 +3,9 @@ import { useDispatch, useSelector } from "react-redux";
 import dayjs from "dayjs";
 import { addTransaction, updateTransaction, deleteTransaction, setMonth, performUndo, performRedo } from "../../services/redux/slice/ExpenseSlice";
 import { getSourceTagStyle, getCategoryTagStyle } from "../../utils/expenseTheme";
-import { Trash2, Save, X, Edit2, Plus, PlusCircle, Handshake, AlertTriangle, Wallet, Tag, Folder, TrendingUp, TrendingDown, ArrowUp, ArrowDown, Calendar, ArrowRightLeft, Sparkles, ChevronDown, ChevronLeft, ChevronRight, Filter, Search, Undo2, Redo2, Eye, EyeOff, SlidersHorizontal } from "lucide-react";
+import { Trash2, Save, X, Edit2, Plus, PlusCircle, Handshake, AlertTriangle, Wallet, Tag, Folder, TrendingUp, TrendingDown, ArrowUp, ArrowDown, Calendar, ArrowRightLeft, Sparkles, ChevronDown, ChevronLeft, ChevronRight, Filter, Search, Undo2, Redo2, Eye, EyeOff, SlidersHorizontal, Info, ArrowUpRight } from "lucide-react";
 import AddTransactionModal from "./AddTransactionModal";
+import TransactionInfoModal from "./TransactionInfoModal";
 
 // Helper Component for DaisyUI Dropdown
 const DaisySelect = ({ value, onChange, options, placeholder, disabled, className }) => {
@@ -249,6 +250,9 @@ const ExpenseTable = ({
 
     // Modal Popup State for Header Display Settings
     const [showHeaderSettingsModal, setShowHeaderSettingsModal] = useState(false);
+
+    // Modal Popup State for Transaction Info / Notes
+    const [infoModalTx, setInfoModalTx] = useState(null);
 
     // Fixed Floating Column Filter Popover State
     const [activeFilterMenu, setActiveFilterMenu] = useState(null);
@@ -896,24 +900,37 @@ const ExpenseTable = ({
                 <div className="p-4 flex flex-col sm:flex-row items-center justify-between gap-3 border-b border-base-200/50 bg-base-100/40 dark:bg-base-900/40">
                     {/* Period Header & Title */}
                     <div className="flex items-center gap-3">
-                        <div className="p-2.5 rounded-xl bg-primary/10 text-primary">
+                        <div
+                            onClick={onOpenHeatmap}
+                            className={`p-2.5 rounded-xl bg-primary/10 text-primary ${onOpenHeatmap ? 'cursor-pointer hover:bg-primary/20 transition-all hover:scale-105 shadow-xs' : ''}`}
+                            title={onOpenHeatmap ? "Open Spending Calendar" : ""}
+                        >
                             <Calendar size={20} />
                         </div>
                         <div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1.5">
                                 <h3 className="text-xs font-bold text-base-content/50 uppercase tracking-widest">
                                     Current Period
                                 </h3>
                                 <button
                                     onClick={toggleHideNumbers}
-                                    className="btn btn-xs btn-ghost btn-circle text-base-content/60 hover:text-primary transition-colors"
+                                    className="btn btn-xs btn-ghost btn-circle text-base-content/60 hover:text-primary transition-colors h-5 w-5 min-h-0"
                                     title={hideNumbers ? "Show numbers on page" : "Hide all numbers (Privacy Mode)"}
                                 >
-                                    {hideNumbers ? <EyeOff size={15} className="text-primary font-bold" /> : <Eye size={15} />}
+                                    {hideNumbers ? <EyeOff size={13} className="text-primary font-bold" /> : <Eye size={13} />}
                                 </button>
                             </div>
-                            <span className="text-xl font-extrabold text-base-content font-sans tracking-wide">
+                            <span
+                                onClick={onOpenHeatmap}
+                                className={`text-xl font-extrabold text-base-content font-sans tracking-wide ${
+                                    onOpenHeatmap ? 'cursor-pointer hover:text-primary transition-colors inline-flex items-center gap-1.5 group' : ''
+                                }`}
+                                title={onOpenHeatmap ? "Click to open Spending Calendar" : ""}
+                            >
                                 {dayjs(currentMonth).format("MMMM YYYY")}
+                                {onOpenHeatmap && (
+                                    <ArrowUpRight size={17} className="text-primary opacity-70 group-hover:opacity-100 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all stroke-[2.5]" />
+                                )}
                             </span>
                         </div>
                     </div>
@@ -1010,17 +1027,6 @@ const ExpenseTable = ({
                                 <span className="hidden sm:inline">Header Display</span>
                             </button>
                         </div>
-
-                        {/* Heatmap Trigger Button (Icon only) */}
-                        {onOpenHeatmap && (
-                            <button
-                                onClick={onOpenHeatmap}
-                                className="btn btn-outline btn-primary btn-sm btn-square rounded-xl shadow-xs"
-                                title="View Daily Spending Heatmap"
-                            >
-                                <Calendar size={18} />
-                            </button>
-                        )}
 
                         {/* Primary Action Button: Add Transaction Modal (Icon only) */}
                         <button
@@ -1129,7 +1135,7 @@ const ExpenseTable = ({
                     </div>
 
                     {/* 7. Action Header & Reset All */}
-                    <div className="w-[60px] shrink-0 text-center flex items-center justify-center gap-1">
+                    <div className="w-[85px] shrink-0 text-center flex items-center justify-center gap-1">
                         <span>Action</span>
                         {hasActiveFilters && (
                             <button
@@ -1261,7 +1267,7 @@ const ExpenseTable = ({
                                     <input type="number" placeholder="0.00" value={newData.amount} onChange={e => setNewData({ ...newData, amount: e.target.value })} className="w-[130px] shrink-0 input input-sm input-bordered focus:input-primary text-xs text-right whitespace-nowrap" />
 
                                     {/* Actions */}
-                                    <div className="w-[60px] shrink-0 flex items-center justify-center gap-1">
+                                    <div className="w-[85px] shrink-0 flex items-center justify-center gap-1">
                                         <button onClick={handleAdd} className="btn btn-sm btn-square btn-primary text-white" title="Save"><Save size={14} /></button>
                                         <button onClick={() => setIsAdding(false)} className="btn btn-sm btn-square btn-ghost text-error" title="Cancel"><X size={14} /></button>
                                     </div>
@@ -1503,7 +1509,7 @@ const ExpenseTable = ({
 
                                                                 <input type="number" value={editData.amount} onChange={e => setEditData({ ...editData, amount: e.target.value })} className="w-[130px] shrink-0 input input-xs input-bordered text-right whitespace-nowrap text-xs font-mono font-bold" />
 
-                                                                <div className="w-[60px] shrink-0 flex items-center justify-center gap-1">
+                                                                <div className="w-[85px] shrink-0 flex items-center justify-center gap-1">
                                                                     <button onClick={saveEdit} className="btn btn-xs btn-square btn-success text-white"><Save size={12} /></button>
                                                                     <button onClick={() => setEditingId(null)} className="btn btn-xs btn-square btn-ghost text-error"><X size={12} /></button>
                                                                 </div>
@@ -1547,9 +1553,24 @@ const ExpenseTable = ({
                                                                     {hideNumbers ? "••••••••" : `${t.type === 'Transfer' ? '' : (t.type === 'Credit' ? '+' : '-')}₹${Number(t.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                                                                 </div>
 
-                                                                <div className="w-[60px] shrink-0 flex items-center justify-center gap-1 opacity-80 hover:opacity-100 transition-opacity">
-                                                                    <button onClick={() => startEdit(t)} className="btn btn-xs btn-ghost btn-square text-info hover:bg-info/10" title="Edit Transaction"><Edit2 size={14} /></button>
-                                                                    <button onClick={() => handleDelete(t._id)} className="btn btn-xs btn-ghost btn-square text-error hover:bg-error/10" title="Delete Transaction"><Trash2 size={14} /></button>
+                                                                <div className="w-[85px] shrink-0 flex items-center justify-center gap-0.5 opacity-80 hover:opacity-100 transition-opacity">
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => setInfoModalTx(t)}
+                                                                        className={`btn btn-xs btn-ghost btn-square relative ${
+                                                                            t.info && t.info.trim()
+                                                                                ? "text-primary bg-primary/10 hover:bg-primary/20"
+                                                                                : "text-base-content/40 hover:text-base-content hover:bg-base-300/40"
+                                                                        }`}
+                                                                        title={t.info && t.info.trim() ? `Note: ${t.info}` : "Add / View Notes (i)"}
+                                                                    >
+                                                                        <Info size={13} />
+                                                                        {t.info && t.info.trim() && (
+                                                                            <span className="w-1.5 h-1.5 rounded-full bg-primary absolute top-1 right-1"></span>
+                                                                        )}
+                                                                    </button>
+                                                                    <button onClick={() => startEdit(t)} className="btn btn-xs btn-ghost btn-square text-info hover:bg-info/10" title="Edit Transaction"><Edit2 size={13} /></button>
+                                                                    <button onClick={() => handleDelete(t._id)} className="btn btn-xs btn-ghost btn-square text-error hover:bg-error/10" title="Delete Transaction"><Trash2 size={13} /></button>
                                                                 </div>
                                                             </>
                                                         )}
@@ -1949,6 +1970,15 @@ const ExpenseTable = ({
                         </div>
                     </div>
                 </div>
+            )}
+
+            {/* Transaction Info / Notes Modal */}
+            {infoModalTx && (
+                <TransactionInfoModal
+                    transaction={infoModalTx}
+                    isOpen={Boolean(infoModalTx)}
+                    onClose={() => setInfoModalTx(null)}
+                />
             )}
         </div>
     );
