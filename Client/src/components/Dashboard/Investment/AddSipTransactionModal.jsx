@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { X, Plus, Calendar, DollarSign, Layers, PiggyBank, Check, Calculator } from "lucide-react";
 
 export default function AddSipTransactionModal({
@@ -19,6 +20,7 @@ export default function AddSipTransactionModal({
   const [amtDeposit, setAmtDeposit] = useState("");
   const [er, setEr] = useState("0");
   const [nav, setNav] = useState("");
+  const [units, setUnits] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
 
   // Setup initial data or pre-fill from last transaction
@@ -34,6 +36,7 @@ export default function AddSipTransactionModal({
       setAmtDeposit(initialTxn.amtDeposit ?? initialTxn.amount ?? "");
       setEr(initialTxn.er ?? "0");
       setNav(initialTxn.nav ?? "");
+      setUnits(initialTxn.units !== undefined && initialTxn.units !== null ? String(initialTxn.units) : "");
     } else if (fund) {
       const txns = fund.transactions || [];
       const nextTermNum = txns.length + 1;
@@ -46,11 +49,16 @@ export default function AddSipTransactionModal({
         setAmtDeposit(last.amtDeposit ?? last.amount ?? "");
         setEr(last.er ?? "0");
         setNav(last.nav ?? "");
+        const lastActual = Math.max(0, (last.amtDeposit ?? last.amount ?? 0) - (last.er ?? 0));
+        const lastNav = parseFloat(last.nav) || 0;
+        const defaultUnits = last.units ?? (lastNav > 0 ? (lastActual / lastNav).toFixed(3) : "");
+        setUnits(defaultUnits !== undefined && defaultUnits !== null ? String(defaultUnits) : "");
       } else {
         setType("SIP");
         setAmtDeposit("");
         setEr("0");
         setNav("");
+        setUnits("");
       }
     }
   }, [initialTxn, fund, isEdit]);
@@ -60,7 +68,44 @@ export default function AddSipTransactionModal({
   const numericEr = parseFloat(er) || 0;
   const actualAmt = Math.max(0, numericDeposit - numericEr);
   const numericNav = parseFloat(nav) || 0;
-  const units = numericNav > 0 ? (actualAmt / numericNav).toFixed(3) : "0.000";
+
+  // Auto-calculate units when deposit, er, or nav changes
+  const handleAmtDepositChange = (val) => {
+    setAmtDeposit(val);
+    const dep = parseFloat(val) || 0;
+    const expense = parseFloat(er) || 0;
+    const actual = Math.max(0, dep - expense);
+    const navNum = parseFloat(nav) || 0;
+    if (navNum > 0) {
+      setUnits((actual / navNum).toFixed(3));
+    }
+  };
+
+  const handleErChange = (val) => {
+    setEr(val);
+    const dep = parseFloat(amtDeposit) || 0;
+    const expense = parseFloat(val) || 0;
+    const actual = Math.max(0, dep - expense);
+    const navNum = parseFloat(nav) || 0;
+    if (navNum > 0) {
+      setUnits((actual / navNum).toFixed(3));
+    }
+  };
+
+  const handleNavChange = (val) => {
+    setNav(val);
+    const dep = parseFloat(amtDeposit) || 0;
+    const expense = parseFloat(er) || 0;
+    const actual = Math.max(0, dep - expense);
+    const navNum = parseFloat(val) || 0;
+    if (navNum > 0) {
+      setUnits((actual / navNum).toFixed(3));
+    }
+  };
+
+  const handleUnitsChange = (val) => {
+    setUnits(val);
+  };
 
   const handleSubmit = (e) => {
     if (e) e.preventDefault();
@@ -79,6 +124,11 @@ export default function AddSipTransactionModal({
       return;
     }
 
+    const parsedUnits = parseFloat(units);
+    const finalUnits = !isNaN(parsedUnits) && parsedUnits >= 0
+      ? parsedUnits
+      : (numericNav > 0 ? parseFloat((actualAmt / numericNav).toFixed(3)) : 0);
+
     const payload = {
       term: term.trim(),
       type,
@@ -87,7 +137,7 @@ export default function AddSipTransactionModal({
       er: numericEr,
       nav: numericNav,
       actualAmt,
-      units: parseFloat(units) || 0,
+      units: finalUnits,
     };
 
     if (isEdit && initialTxn) {
@@ -98,15 +148,15 @@ export default function AddSipTransactionModal({
     onClose();
   };
 
-  return (
+  const modalContent = (
     <div
-      className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto animate-in fade-in duration-200"
+      className="fixed inset-0 w-screen h-screen z-[1000005] flex items-center justify-center p-4 bg-black/75 backdrop-blur-md overflow-y-auto animate-in fade-in duration-200"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
       <div
-        className="bg-base-100 rounded-3xl border border-base-200 shadow-2xl w-full max-w-lg overflow-hidden my-auto animate-in zoom-in-95 duration-200"
+        className="bg-base-100 rounded-3xl border border-base-300 shadow-2xl w-full max-w-lg overflow-hidden my-auto animate-in zoom-in-95 duration-200 relative z-10"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -121,7 +171,7 @@ export default function AddSipTransactionModal({
               </h3>
               <p className="text-xs text-base-content/60 font-medium">
                 {fund?.amc || "Mutual Fund"}{" "}
-                {fund?.folioNumber ? `• Folio #${fund.folioNumber}` : ""}
+                {fund?.folioNumber ? `• #${fund.folioNumber.replace(/^#/, "")}` : ""}
               </p>
             </div>
           </div>
@@ -213,9 +263,9 @@ export default function AddSipTransactionModal({
                 type="number"
                 step="100"
                 value={amtDeposit}
-                onChange={(e) => setAmtDeposit(e.target.value)}
+                onChange={(e) => handleAmtDepositChange(e.target.value)}
                 placeholder="e.g. 5000"
-                className="input input-sm input-bordered w-full rounded-xl font-bold text-xs focus:outline-none focus:border-secondary"
+                className="input input-sm input-bordered w-full rounded-xl font-bold text-xs focus:outline-none focus:border-secondary font-mono"
                 required
               />
             </div>
@@ -227,26 +277,42 @@ export default function AddSipTransactionModal({
                 type="number"
                 step="1"
                 value={er}
-                onChange={(e) => setEr(e.target.value)}
+                onChange={(e) => handleErChange(e.target.value)}
                 placeholder="0"
-                className="input input-sm input-bordered w-full rounded-xl font-bold text-xs focus:outline-none focus:border-secondary"
+                className="input input-sm input-bordered w-full rounded-xl font-bold text-xs focus:outline-none focus:border-secondary font-mono"
               />
             </div>
           </div>
 
-          {/* Row 3: NAV */}
-          <div>
-            <label className="text-[11px] font-bold uppercase tracking-wider text-base-content/60 mb-1 block">
-              Net Asset Value / NAV (₹)
-            </label>
-            <input
-              type="number"
-              step="0.01"
-              value={nav}
-              onChange={(e) => setNav(e.target.value)}
-              placeholder="e.g. 65.40"
-              className="input input-sm input-bordered w-full rounded-xl font-bold text-xs focus:outline-none focus:border-secondary"
-            />
+          {/* Row 3: NAV & Units Allotted */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="text-[11px] font-bold uppercase tracking-wider text-base-content/60 mb-1 block flex items-center justify-between">
+                <span>Net Asset Value / NAV (₹)</span>
+              </label>
+              <input
+                type="number"
+                step="0.0001"
+                value={nav}
+                onChange={(e) => handleNavChange(e.target.value)}
+                placeholder="e.g. 65.40"
+                className="input input-sm input-bordered w-full rounded-xl font-bold text-xs focus:outline-none focus:border-secondary font-mono"
+              />
+            </div>
+            <div>
+              <label className="text-[11px] font-bold uppercase tracking-wider text-base-content/60 mb-1 block flex items-center justify-between">
+                <span>Units Allotted</span>
+                <span className="text-[10px] text-secondary font-semibold lowercase">(auto / editable)</span>
+              </label>
+              <input
+                type="number"
+                step="0.001"
+                value={units}
+                onChange={(e) => handleUnitsChange(e.target.value)}
+                placeholder={numericNav > 0 ? (actualAmt / numericNav).toFixed(3) : "0.000"}
+                className="input input-sm input-bordered w-full rounded-xl font-bold text-xs focus:outline-none focus:border-secondary font-mono text-secondary"
+              />
+            </div>
           </div>
 
           {/* Auto-Calculated Live Preview Box */}
@@ -260,16 +326,16 @@ export default function AddSipTransactionModal({
                 <span className="text-[10px] text-base-content/50 font-bold uppercase block">
                   Actual Amount (Deposit - ER)
                 </span>
-                <span className="font-extrabold text-sm text-secondary">
+                <span className="font-extrabold text-sm text-secondary font-mono">
                   ₹{actualAmt.toLocaleString("en-IN")}
                 </span>
               </div>
               <div>
                 <span className="text-[10px] text-base-content/50 font-bold uppercase block">
-                  Units Allotted (Actual / NAV)
+                  Units Allotted
                 </span>
                 <span className="font-mono font-black text-sm text-base-content">
-                  {units}
+                  {units || (numericNav > 0 ? (actualAmt / numericNav).toFixed(3) : "0.000")}
                 </span>
               </div>
             </div>
@@ -296,4 +362,8 @@ export default function AddSipTransactionModal({
       </div>
     </div>
   );
+
+  return typeof document !== "undefined"
+    ? createPortal(modalContent, document.body)
+    : modalContent;
 }

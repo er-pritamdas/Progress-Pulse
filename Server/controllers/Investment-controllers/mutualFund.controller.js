@@ -1,11 +1,17 @@
 import MutualFund from "../../models/Investment-models/mutualFund.model.js";
 
 // Helper to format fund object
+const cleanSubCategory = (sub) => {
+  if (!sub || typeof sub !== "string") return sub || "";
+  return sub.replace(/\s*\/\s*Tax[\s-]*Saver/gi, "").trim();
+};
+
 const formatFund = (fund) => {
   const obj = fund.toObject();
   return {
     ...obj,
     id: obj._id.toString(),
+    subCategory: cleanSubCategory(obj.subCategory),
     transactions: (obj.transactions || []).map((t) => ({
       ...t,
       id: t._id.toString(),
@@ -45,6 +51,7 @@ export const createMutualFund = async (req, res) => {
     const userId = req.user._id;
     const fundData = {
       ...req.body,
+      subCategory: cleanSubCategory(req.body.subCategory),
       userId,
     };
 
@@ -78,6 +85,9 @@ export const updateMutualFund = async (req, res) => {
     const updateBody = { ...req.body };
     delete updateBody.id;
     delete updateBody._id;
+    if (updateBody.subCategory !== undefined) {
+      updateBody.subCategory = cleanSubCategory(updateBody.subCategory);
+    }
 
     const updatedFund = await MutualFund.findOneAndUpdate(
       { _id: id, userId },

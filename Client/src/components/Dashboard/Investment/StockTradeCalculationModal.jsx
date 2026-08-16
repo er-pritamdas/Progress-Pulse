@@ -1,4 +1,5 @@
 import React, { useMemo } from "react";
+import { createPortal } from "react-dom";
 import {
   X,
   TrendingUp,
@@ -156,8 +157,8 @@ export default function StockTradeCalculationModal({ isOpen, onClose, trade }) {
     return (gainRs / costForSoldQty) * 100;
   }, [trade.gainPct, isSold, numSQty, costForSoldQty, gainRs]);
 
-  return (
-    <div className="fixed inset-0 z-[99999] bg-black/65 backdrop-blur-md flex items-center justify-center p-4 overflow-x-auto animate-in fade-in duration-200">
+  const modalContent = (
+    <div className="fixed inset-0 w-screen h-screen z-[99999] bg-black/75 backdrop-blur-md flex items-center justify-center p-4 overflow-x-auto animate-in fade-in duration-200">
       {/* Popup Container Relative Wrapper */}
       <div className="relative flex flex-row items-stretch justify-center gap-4 max-w-[1380px] w-full mx-auto my-auto p-2">
         {/* Top-Right Corner Close Button on Popup Container */}
@@ -635,4 +636,8 @@ export default function StockTradeCalculationModal({ isOpen, onClose, trade }) {
       </div>
     </div>
   );
+
+  return typeof document !== "undefined"
+    ? createPortal(modalContent, document.body)
+    : modalContent;
 }

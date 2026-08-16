@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
+import { createPortal } from "react-dom";
 import CallyDatePicker, { formatDateDDMMMYYYY } from "../DatePicker";
 import {
   X,
@@ -404,8 +405,8 @@ export default function AddStockTradeModal({
     onClose();
   };
 
-  return (
-    <div className="fixed inset-0 z-[999999] flex items-center justify-center p-3 sm:p-6 bg-black/60 backdrop-blur-md overflow-y-auto overflow-x-hidden animate-in fade-in duration-200">
+  const modalContent = (
+    <div className="fixed inset-0 w-screen h-screen z-[999999] flex items-center justify-center p-3 sm:p-6 bg-black/75 backdrop-blur-md overflow-y-auto overflow-x-hidden animate-in fade-in duration-200">
       {/* Side-by-Side Dual/Triple Popup Container */}
       <div className="flex flex-col lg:flex-row items-stretch justify-center gap-4 w-full max-w-[1440px] mx-auto my-auto">
         
@@ -1192,4 +1193,8 @@ export default function AddStockTradeModal({
       </div>
     </div>
   );
+
+  return typeof document !== "undefined"
+    ? createPortal(modalContent, document.body)
+    : modalContent;
 }

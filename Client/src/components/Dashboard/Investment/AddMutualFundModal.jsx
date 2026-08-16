@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import {
   X,
   PieChart,
@@ -66,7 +67,7 @@ export const CATEGORY_SUBOPTIONS = {
     "Contra",
     "Focused",
     "Dividend Yield",
-    "ELSS / Tax Saver",
+    "ELSS",
     "Sectoral",
     "Thematic",
   ],
@@ -410,8 +411,9 @@ export default function AddMutualFundModal({
       setAmc(initialData.amc || "");
       setFolioNumber(initialData.folioNumber || "");
       setCategory(initialData.category || "Equity");
+      const cleanedInitialSub = (initialData.subCategory || "").replace(/\s*\/\s*Tax[\s-]*Saver/gi, "").trim();
       setSubCategory(
-        initialData.subCategory ||
+        cleanedInitialSub ||
           CATEGORY_SUBOPTIONS[initialData.category || "Equity"]?.[0] ||
           ""
       );
@@ -469,7 +471,7 @@ export default function AddMutualFundModal({
       schemeName: effectiveAmc,        // use AMC as scheme name for table compat
       amc: effectiveAmc,
       category,
-      subCategory,
+      subCategory: (subCategory || "").replace(/\s*\/\s*Tax[\s-]*Saver/gi, "").trim(),
       plan,
       optionType,
       folioNumber: folioNumber.trim(),
@@ -486,9 +488,9 @@ export default function AddMutualFundModal({
     onClose();
   };
 
-  return (
+  const modalContent = (
     <div
-      className="fixed inset-0 z-[999999] flex items-center justify-center p-3 sm:p-6 bg-black/65 backdrop-blur-md overflow-y-auto overflow-x-hidden"
+      className="fixed inset-0 w-screen h-screen z-[999999] flex items-center justify-center p-3 sm:p-6 bg-black/75 backdrop-blur-md overflow-y-auto overflow-x-hidden"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
@@ -863,4 +865,8 @@ export default function AddMutualFundModal({
       `}</style>
     </div>
   );
+
+  return typeof document !== "undefined"
+    ? createPortal(modalContent, document.body)
+    : modalContent;
 }

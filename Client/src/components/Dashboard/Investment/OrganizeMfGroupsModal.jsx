@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import {
   X,
   Plus,
@@ -188,9 +189,9 @@ const OrganizeMfGroupsModal = ({ isOpen, onClose, funds = [], groups = [], onSav
     onClose();
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="bg-base-100 rounded-3xl border border-base-200 shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden">
+  const modalContent = (
+    <div className="fixed inset-0 w-screen h-screen z-[999999] flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200">
+      <div className="bg-base-100 rounded-3xl border border-base-300 shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden">
         {/* Modal Header */}
         <div className="px-6 py-4 border-b border-base-200 flex items-center justify-between bg-base-100/90 backdrop-blur-md shrink-0">
           <div className="flex items-center gap-2.5">
@@ -345,7 +346,7 @@ const OrganizeMfGroupsModal = ({ isOpen, onClose, funds = [], groups = [], onSav
                                 )}
                               </div>
                               <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold truncate">
-                                {fund.category} → {fund.subCategory}
+                                {fund.category} → {(fund.subCategory || "").replace(/\s*\/\s*Tax[\s-]*Saver/gi, "").trim()}
                               </p>
                             </div>
                           </div>
@@ -416,6 +417,10 @@ const OrganizeMfGroupsModal = ({ isOpen, onClose, funds = [], groups = [], onSav
       </div>
     </div>
   );
+
+  return typeof document !== "undefined"
+    ? createPortal(modalContent, document.body)
+    : modalContent;
 };
 
 export default OrganizeMfGroupsModal;

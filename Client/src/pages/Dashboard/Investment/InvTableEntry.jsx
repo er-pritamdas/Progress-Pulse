@@ -1,4 +1,6 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
+import { createPortal } from "react-dom";
+import dayjs from "dayjs";
 import {
   TrendingUp,
   PieChart,
@@ -37,8 +39,8 @@ import {
   X,
   ChevronsUp,
   ChevronsDown,
-  LayoutList,
-  LayoutGrid,
+  Columns2,
+  Columns3,
   FolderTree,
   FolderPlus,
   GripVertical,
@@ -49,6 +51,8 @@ import StockTradeCalculationModal from "../../../components/Dashboard/Investment
 import AddMutualFundModal from "../../../components/Dashboard/Investment/AddMutualFundModal";
 import AddSipTransactionModal from "../../../components/Dashboard/Investment/AddSipTransactionModal";
 import OrganizeMfGroupsModal from "../../../components/Dashboard/Investment/OrganizeMfGroupsModal";
+import MutualFundCard from "../../../components/Dashboard/Investment/MutualFundCard";
+import MutualFundTableModal from "../../../components/Dashboard/Investment/MutualFundTableModal";
 import axiosInstance from "../../../Context/AxiosInstance";
 import { formatDateDDMMMYYYY } from "../../../components/Dashboard/DatePicker";
 
@@ -179,7 +183,7 @@ export default function InvTableEntry() {
   const [editingMf, setEditingMf] = useState(null);
   const [expandedMfIds, setExpandedMfIds] = useState(new Set());
   const [inlineAddingMfId, setInlineAddingMfId] = useState(null);
-  const [inlineNewTxn, setInlineNewTxn] = useState({
+  const [inlineTxnData, setInlineTxnData] = useState({
     term: '',
     type: 'SIP',
     date: new Date().toISOString().split('T')[0],
@@ -243,10 +247,11 @@ export default function InvTableEntry() {
     }
   };
 
-  // Mutual Fund Layout View (1-col vs 2-col, Default: 2-col)
-  const [mfLayoutView, setMfLayoutView] = useState(
-    () => localStorage.getItem("mf_layout_view") || "2-col"
-  );
+  // Mutual Fund Layout View (2-col vs 3-col, Default: 3-col)
+  const [mfLayoutView, setMfLayoutView] = useState(() => {
+    const saved = localStorage.getItem("mf_layout_view");
+    return saved === "2-col" ? "2-col" : "3-col";
+  });
 
   const handleMfLayoutChange = (view) => {
     setMfLayoutView(view);
@@ -299,28 +304,101 @@ export default function InvTableEntry() {
     });
   }, [mfData, mfSearchTerm]);
 
-  // Helper to get detailed mutual fund metrics
-  const getMfStats = (fund) => {
-    const txns = fund.transactions || [];
-    const txnCount = txns.length;
-    const totalInvested = txns.reduce(
-      (sum, t) => sum + (t.actualAmt ?? (t.amtDeposit ? t.amtDeposit - (t.er || 0) : t.amount) ?? 0),
-      0
-    );
-    const totalUnits = txns.reduce(
-      (sum, t) =>
-        sum +
-        (parseFloat(t.units) ||
-          (t.nav > 0 ? (t.actualAmt ?? t.amtDeposit - (t.er || 0)) / t.nav : 0)),
-      0
-    );
+  // Modal State for Viewing Full Transactions Table in a Popup
+  const [viewingMfTableFundId, setViewingMfTableFundId] = useState(null);
+  const viewingMfFund = useMemo(
+    () => mfData.find((f) => f.id === viewingMfTableFundId),
+    [mfData, viewingMfTableFundId]
+  );
+
+  // Close Table View modal on Escape key
+  useEffect(() => {
+    if (!viewingMfTableFundId) return;
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape") {
+        setViewingMfTableFundId(null);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [viewingMfTableFundId]);
+
+  // Helper to compute comprehensive mutual fund summary metrics
+  const getMfDetailedSummary = (fund) => {
+    const txns = fund?.transactions || [];
+    const totalTerms = txns.length;
+
+    let sipCount = 0;
+    let lsCount = 0;
+    let totalDeposited = 0;
+    let totalEr = 0;
+    let totalInvested = 0;
+    let totalUnits = 0;
+
+    const validDates = [];
+
+    txns.forEach((t) => {
+      const isLs = t.type === "Lumpsum" || t.type === "LUMPSUM" || t.type === "LS";
+      if (isLs) {
+        lsCount += 1;
+      } else {
+        sipCount += 1;
+      }
+
+      const amtDep = Number(t.amtDeposit ?? t.amount ?? 0);
+      const er = Number(t.er ?? 0);
+      const actual = t.actualAmt !== undefined && t.actualAmt !== null
+        ? Number(t.actualAmt)
+        : Math.max(0, amtDep - er);
+      const nav = Number(t.nav ?? 0);
+      const units = parseFloat(t.units) || (nav > 0 ? actual / nav : 0);
+
+      totalDeposited += amtDep;
+      totalEr += er;
+      totalInvested += actual;
+      totalUnits += units;
+
+      if (t.date) {
+        const d = dayjs(t.date);
+        if (d.isValid()) {
+          validDates.push(d);
+        }
+      }
+    });
+
+    validDates.sort((a, b) => a.valueOf() - b.valueOf());
+    const fromDateObj = validDates.length > 0 ? validDates[0] : null;
+    const toDateObj = validDates.length > 0 ? validDates[validDates.length - 1] : null;
+
+    let durationText = "—";
+    if (fromDateObj && toDateObj) {
+      const totalDays = toDateObj.diff(fromDateObj, "day");
+      const totalMonths = toDateObj.diff(fromDateObj, "month");
+      if (totalMonths >= 12) {
+        const yrs = Math.floor(totalMonths / 12);
+        const mos = totalMonths % 12;
+        durationText = mos > 0 ? `${yrs} yr${yrs > 1 ? "s" : ""} ${mos} mo${mos > 1 ? "s" : ""}` : `${yrs} yr${yrs > 1 ? "s" : ""}`;
+      } else if (totalMonths > 0) {
+        durationText = `${totalMonths} mo${totalMonths > 1 ? "s" : ""}`;
+      } else {
+        durationText = totalDays === 0 ? "1 day" : `${totalDays} days`;
+      }
+    }
+
     const avgNav = totalUnits > 0 ? totalInvested / totalUnits : 0;
 
     return {
-      txnCount,
-      totalInvested,
-      totalUnits,
+      totalTerms,
+      sipCount,
+      lsCount,
+      fromDateStr: fromDateObj ? fromDateObj.format("DD MMM YYYY") : "—",
+      toDateStr: toDateObj ? toDateObj.format("DD MMM YYYY") : "—",
+      durationText,
+      totalDeposited,
+      totalEr,
       avgNav,
+      totalUnits,
+      totalInvested,
     };
   };
 
@@ -332,7 +410,7 @@ export default function InvTableEntry() {
           id: "default-group",
           name: "General Mutual Funds",
           funds: filteredMutualFunds,
-          totalInvested: filteredMutualFunds.reduce((acc, f) => acc + (getMfStats(f).totalInvested || 0), 0),
+          totalInvested: filteredMutualFunds.reduce((acc, f) => acc + (getMfDetailedSummary(f).totalInvested || 0), 0),
         },
       ];
     }
@@ -353,7 +431,7 @@ export default function InvTableEntry() {
           id: group.id,
           name: group.name,
           funds: groupFunds,
-          totalInvested: groupFunds.reduce((acc, f) => acc + (getMfStats(f).totalInvested || 0), 0),
+          totalInvested: groupFunds.reduce((acc, f) => acc + (getMfDetailedSummary(f).totalInvested || 0), 0),
         });
       }
     });
@@ -364,12 +442,12 @@ export default function InvTableEntry() {
         id: "unassigned-group",
         name: "Other Mutual Funds",
         funds: unassignedFunds,
-        totalInvested: unassignedFunds.reduce((acc, f) => acc + (getMfStats(f).totalInvested || 0), 0),
+        totalInvested: unassignedFunds.reduce((acc, f) => acc + (getMfDetailedSummary(f).totalInvested || 0), 0),
       });
     }
 
     return resultGroups;
-  }, [filteredMutualFunds, mfGroups, getMfStats]);
+  }, [filteredMutualFunds, mfGroups]);
 
   // Collapsed Years set for transactions inside funds
   const [collapsedMfYearKeys, setCollapsedMfYearKeys] = useState(new Set());
@@ -544,8 +622,12 @@ export default function InvTableEntry() {
           fundPayload
         );
         if (res.data && res.data.success) {
+          const updatedFund = {
+            ...res.data.data,
+            subCategory: (res.data.data?.subCategory || "").replace(/\s*\/\s*Tax[\s-]*Saver/gi, "").trim(),
+          };
           setMfData((prev) =>
-            prev.map((f) => (f.id === editingMf.id ? res.data.data : f))
+            prev.map((f) => (f.id === editingMf.id ? updatedFund : f))
           );
         }
       } else {
@@ -554,7 +636,10 @@ export default function InvTableEntry() {
           fundPayload
         );
         if (res.data && res.data.success) {
-          const newFund = res.data.data;
+          const newFund = {
+            ...res.data.data,
+            subCategory: (res.data.data?.subCategory || "").replace(/\s*\/\s*Tax[\s-]*Saver/gi, "").trim(),
+          };
           setMfData((prev) => [newFund, ...prev]);
           setExpandedMfIds((prev) => new Set([...prev, newFund.id]));
         }
@@ -599,7 +684,7 @@ export default function InvTableEntry() {
     const lastTxn = txns[0]; // Most recent transaction
     const nextTermNum = txns.length + 1;
 
-    setInlineNewTxn({
+    setInlineTxnData({
       term: `Term ${nextTermNum}`,
       type: lastTxn?.type || fund.investmentType || 'SIP',
       date: new Date().toISOString().split('T')[0],
@@ -613,21 +698,27 @@ export default function InvTableEntry() {
 
   // Save SIP Transaction to DB
   const handleAddSipTxn = async (fundId) => {
-    const amtDepVal = parseFloat(inlineNewTxn.amtDeposit) || 0;
+    const targetFundId = fundId || inlineAddingMfId || viewingMfTableFundId;
+    if (!targetFundId) return;
+
+    const amtDepVal = parseFloat(inlineTxnData.amtDeposit) || 0;
     if (amtDepVal <= 0) return;
 
-    const erVal = parseFloat(inlineNewTxn.er) || 0;
+    const erVal = parseFloat(inlineTxnData.er) || 0;
     const actualAmt = Math.max(0, amtDepVal - erVal);
-    const navVal = parseFloat(inlineNewTxn.nav) || 0;
-    const units = navVal > 0 ? parseFloat((actualAmt / navVal).toFixed(3)) : 0;
+    const navVal = parseFloat(inlineTxnData.nav) || 0;
+    const explicitUnits = parseFloat(inlineTxnData.units);
+    const units = !isNaN(explicitUnits) && explicitUnits >= 0
+      ? explicitUnits
+      : (navVal > 0 ? parseFloat((actualAmt / navVal).toFixed(3)) : 0);
 
-    const targetFund = mfData.find((f) => f.id === fundId);
+    const targetFund = mfData.find((f) => f.id === targetFundId);
     const fallbackTerm = `Term ${(targetFund?.transactions || []).length + 1}`;
 
     const newTxnPayload = {
-      term: inlineNewTxn.term.trim() || fallbackTerm,
-      type: inlineNewTxn.type || 'SIP',
-      date: inlineNewTxn.date || new Date().toISOString().split('T')[0],
+      term: inlineTxnData.term.trim() || fallbackTerm,
+      type: inlineTxnData.type || 'SIP',
+      date: inlineTxnData.date || new Date().toISOString().split('T')[0],
       amtDeposit: amtDepVal,
       er: erVal,
       actualAmt: actualAmt,
@@ -638,12 +729,12 @@ export default function InvTableEntry() {
 
     try {
       const res = await axiosInstance.post(
-        `/v1/dashboard/investment/mf/${fundId}/transactions`,
+        `/v1/dashboard/investment/mf/${targetFundId}/transactions`,
         newTxnPayload
       );
       if (res.data && res.data.success) {
         setMfData((prev) =>
-          prev.map((f) => (f.id === fundId ? res.data.data : f))
+          prev.map((f) => (f.id === targetFundId ? res.data.data : f))
         );
       }
     } catch (error) {
@@ -652,6 +743,10 @@ export default function InvTableEntry() {
     } finally {
       setInlineAddingMfId(null);
     }
+  };
+
+  const saveInlineSipTxn = async (fundId) => {
+    await handleAddSipTxn(fundId || viewingMfTableFundId || inlineAddingMfId);
   };
 
   const handleDeleteSipTxn = async (fundId, txnId) => {
@@ -679,6 +774,7 @@ export default function InvTableEntry() {
       amtDeposit: String(txn.amtDeposit ?? txn.amount ?? ''),
       er: String(txn.er ?? 0),
       nav: String(txn.nav ?? ''),
+      units: txn.units !== undefined && txn.units !== null ? String(txn.units) : '',
     });
   };
 
@@ -690,7 +786,10 @@ export default function InvTableEntry() {
     const erVal = parseFloat(editTxnData.er) || 0;
     const actualAmt = Math.max(0, amtDepVal - erVal);
     const navVal = parseFloat(editTxnData.nav) || 0;
-    const units = navVal > 0 ? parseFloat((actualAmt / navVal).toFixed(3)) : 0;
+    const explicitUnits = parseFloat(editTxnData.units);
+    const units = !isNaN(explicitUnits) && explicitUnits >= 0
+      ? explicitUnits
+      : (navVal > 0 ? parseFloat((actualAmt / navVal).toFixed(3)) : 0);
 
     const updatePayload = {
       term: editTxnData.term,
@@ -750,7 +849,11 @@ export default function InvTableEntry() {
     try {
       const res = await axiosInstance.get("/v1/dashboard/investment/mf");
       if (res.data && res.data.success) {
-        const funds = res.data.data || [];
+        const rawFunds = res.data.data || [];
+        const funds = rawFunds.map((f) => ({
+          ...f,
+          subCategory: (f.subCategory || "").replace(/\s*\/\s*Tax[\s-]*Saver/gi, "").trim(),
+        }));
         setMfData(funds);
 
         // 1. Expand all Mutual Fund accordion cards by default
@@ -1724,26 +1827,13 @@ export default function InvTableEntry() {
                 <button
                   type="button"
                   onClick={() => setIsOrganizeModalOpen(true)}
-                  className="btn btn-xs btn-ghost rounded-lg gap-1.5 font-bold text-xs border border-base-300/60 hover:bg-base-200 transition-all cursor-pointer"
+                  className="btn btn-xs btn-ghost rounded-lg px-2.5 font-bold text-xs border border-base-300/60 hover:bg-base-200 transition-all cursor-pointer"
                   title="Organize Mutual Fund Groups & Order"
                 >
                   <FolderTree size={14} className="text-secondary" />
-                  <span className="hidden sm:inline">Organize Groups</span>
                 </button>
 
                 <div className="join bg-base-200 p-0.5 rounded-xl border border-base-300/60 shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => handleMfLayoutChange("1-col")}
-                    className={`btn btn-xs rounded-lg px-2.5 transition-all cursor-pointer ${
-                      mfLayoutView === "1-col"
-                        ? "btn-secondary shadow-xs text-white"
-                        : "btn-ghost text-base-content/60 hover:text-base-content"
-                    }`}
-                    title="1 Column View"
-                  >
-                    <LayoutList size={14} />
-                  </button>
                   <button
                     type="button"
                     onClick={() => handleMfLayoutChange("2-col")}
@@ -1754,7 +1844,19 @@ export default function InvTableEntry() {
                     }`}
                     title="2 Columns View"
                   >
-                    <LayoutGrid size={14} />
+                    <Columns2 size={14} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleMfLayoutChange("3-col")}
+                    className={`btn btn-xs rounded-lg px-2.5 transition-all cursor-pointer ${
+                      mfLayoutView === "3-col"
+                        ? "btn-secondary shadow-xs text-white"
+                        : "btn-ghost text-base-content/60 hover:text-base-content"
+                    }`}
+                    title="3 Columns View"
+                  >
+                    <Columns3 size={14} />
                   </button>
                 </div>
               </div>
@@ -2497,705 +2599,40 @@ export default function InvTableEntry() {
                       </div>
                     </div>
 
-                    {/* Group Fund Cards Grid / List */}
+                    {/* Group Fund Cards Grid */}
                     {!isGroupCollapsed && (
-                      <div className={mfLayoutView === "2-col" ? "grid grid-cols-1 lg:grid-cols-2 gap-4 items-start" : "space-y-4"}>
-                        {group.funds.map((fund) => {
-                          const isExpanded = expandedMfIds.has(fund.id);
-                          const { txnCount, totalInvested, totalUnits, avgNav } = getMfStats(fund);
-                          const isInlineAdding = inlineAddingMfId === fund.id;
-                          const yearGroups = getFundTransactionsByYear(fund.transactions || [], sipSortBy, sipSortOrder);
+                      <div
+                        className={
+                          mfLayoutView === "2-col"
+                            ? "grid grid-cols-1 lg:grid-cols-2 gap-5 items-stretch"
+                            : "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 items-stretch"
+                        }
+                      >
+                        {group.funds.map((fund, fundIdx) => {
+                          const summary = getMfDetailedSummary(fund);
 
                           return (
-                            <div
+                            <MutualFundCard
                               key={fund.id}
-                              className="bg-base-100 rounded-2xl border border-base-200/90 shadow-xs hover:shadow-md h-[550px] flex flex-col relative overflow-hidden transition-all duration-300"
-                            >
-                    {/* Fund Header (Fixed at Top of Card) */}
-                    <div className="p-3.5 sm:p-4 bg-base-100 border-b border-base-200/80 shrink-0">
-                      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-                        {/* Left Section: AMC Icon & Simple Fund Info */}
-                        <div className="flex items-center gap-3 min-w-0 flex-1">
-                          {/* AMC Logo Initial Avatar */}
-                          <div className="w-9 h-9 rounded-lg bg-secondary/10 text-secondary font-bold text-xs flex items-center justify-center shrink-0">
-                            {(fund.amc || '?').charAt(0).toUpperCase()}
-                          </div>
-
-                          {/* Fund Title & Simple Plain Text Metadata */}
-                          <div className="min-w-0 flex-1 space-y-0.5">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <h3 className="font-bold text-sm text-base-content tracking-tight truncate">
-                                {fund.amc}
-                              </h3>
-                              {fund.folioNumber && (
-                                <span className="px-1.5 py-0.2 rounded-md bg-secondary/10 text-secondary text-[10px] font-mono font-bold border border-secondary/20 shrink-0">
-                                  Folio #{fund.folioNumber}
-                                </span>
-                              )}
-                            </div>
-
-                            {/* Simple Muted Tags/Metadata with Highlighted Asset Category */}
-                            <div className="flex items-center gap-1.5 text-[11px] flex-wrap">
-                              <span className="text-emerald-600 dark:text-emerald-400 font-bold">
-                                {fund.category} → {fund.subCategory}
-                              </span>
-                              <span className="text-base-content/30">•</span>
-                              <span className="text-base-content/60 font-medium">{fund.plan}</span>
-                              <span className="text-base-content/30">•</span>
-                              <span className="text-base-content/60 font-medium">{fund.optionType}</span>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Right Section: Action Buttons Toolbar */}
-                        <div className="flex items-center gap-1 shrink-0">
-                          {/* Edit Fund */}
-                          <button
-                            type="button"
-                            onClick={() => handleEditMf(fund)}
-                            className="p-1 text-info bg-info/10 hover:bg-info/20 rounded-md transition-colors cursor-pointer"
-                            title="Edit Fund Details"
-                          >
-                            <Pencil size={14} />
-                          </button>
-
-                          {/* Delete Fund */}
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteMf(fund.id)}
-                            className="p-1 text-error bg-error/10 hover:bg-error/20 rounded-md transition-colors cursor-pointer"
-                            title="Delete Fund"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
+                              index={fundIdx + 1}
+                              fund={fund}
+                              summary={summary}
+                              onOpenTable={() => setViewingMfTableFundId(fund.id)}
+                              onOpenAddSip={() => handleOpenAddSipModal(fund)}
+                              onEdit={() => handleEditMf(fund)}
+                              onDelete={() => handleDeleteMf(fund.id)}
+                            />
+                          );
+                        })}
                       </div>
-                    </div>
-
-                    {/* SIP Transactions Table grouped by Year (Scrollable Inner Content inside fixed h-[550px] container) */}
-                    <div className="flex-1 overflow-y-auto custom-scrollbar-thin p-2.5 space-y-2.5 bg-base-200/20">
-                        {/* Table Header Action Bar - Sticky inside scroll container */}
-                        <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-1.5 sticky top-0 z-20 bg-base-100/95 backdrop-blur-md rounded-xl border border-base-200/80 shadow-2xs">
-                          <div className="flex items-center gap-2">
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-base-content/50 flex items-center gap-1.5">
-                              <Layers size={12} className="text-secondary" />
-                              <span>Transactions ({txnCount} total)</span>
-                            </span>
-                            {sipSortBy && (
-                              <span className="text-[10px] text-base-content/50 font-normal">
-                                (Sorted by {sipSortBy} {sipSortOrder.toUpperCase()})
-                              </span>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-1.5">
-                            {yearGroups.length > 0 && (() => {
-                              const allYearKeys = yearGroups.map((yg) => `${fund.id}-${yg.year}`);
-                              const areAllCollapsed = allYearKeys.every((key) => collapsedMfYearKeys.has(key));
-
-                              return (
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    toggleAllMfYearsCollapse(fund.id, yearGroups);
-                                  }}
-                                  className="btn btn-ghost btn-xs rounded-lg gap-1 font-semibold text-[10px] h-6 min-h-0 text-base-content/70 hover:text-base-content hover:bg-base-200/80 cursor-pointer border border-base-200/80 shadow-2xs"
-                                  title={areAllCollapsed ? "Expand All Year Groups" : "Collapse All Year Groups"}
-                                >
-                                  {areAllCollapsed ? (
-                                    <>
-                                      <ChevronsDown size={12} className="text-secondary" />
-                                      <span>Expand Years</span>
-                                    </>
-                                  ) : (
-                                    <>
-                                      <ChevronsUp size={12} className="text-secondary" />
-                                      <span>Collapse Years</span>
-                                    </>
-                                  )}
-                                </button>
-                              );
-                            })()}
-
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleOpenAddSipModal(fund);
-                              }}
-                              className="btn btn-secondary btn-xs rounded-lg gap-1 font-semibold text-[10px] h-6 min-h-0 cursor-pointer shadow-xs hover:scale-[1.02] active:scale-95 transition-all"
-                            >
-                              <Plus size={11} />
-                              <span>Add SIP</span>
-                            </button>
-                          </div>
-                        </div>
-
-                        {/* Empty State when 0 transactions */}
-                        {txnCount === 0 && (
-                          <div className="py-6 text-center bg-base-100 rounded-xl border border-base-200/80">
-                            <div className="text-base-content/40 text-[11px] font-medium">
-                              No transactions logged yet.
-                              <button
-                                type="button"
-                                onClick={() => handleOpenAddSipModal(fund)}
-                                className="text-secondary font-semibold ml-1 hover:underline cursor-pointer"
-                              >
-                                Add first installment →
-                              </button>
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Single Consolidated Table for all years */}
-                        <div className="bg-base-100 border border-base-200/80 rounded-xl overflow-hidden shadow-2xs">
-                          <div className="w-full max-h-[400px] overflow-y-auto custom-scrollbar-thin">
-                            <table className="table table-xs w-full text-[9.5px] table-fixed">
-                              <thead className="z-20">
-                                <tr className="border-b border-base-200/80 text-[9px] font-bold text-base-content/70 uppercase tracking-wider select-none">
-                                  {/* Term Sort Button */}
-                                  <th className="sticky top-0 z-20 w-[13%] h-6 py-1 px-1 text-left font-bold bg-base-200/95 backdrop-blur-md border-b border-base-200/80 shadow-2xs">
-                                    <button
-                                      type="button"
-                                      onClick={() => handleSipSort("term")}
-                                      className="flex items-center gap-0.5 hover:text-secondary transition-colors cursor-pointer group"
-                                      title="Sort by Term"
-                                    >
-                                      <Hash size={9} className="text-secondary/70 shrink-0" />
-                                      <span className="truncate">Term</span>
-                                      {sipSortBy === "term" ? (
-                                        sipSortOrder === "asc" ? (
-                                          <ArrowUp size={10} className="text-secondary font-bold shrink-0" />
-                                        ) : (
-                                          <ArrowDown size={10} className="text-secondary font-bold shrink-0" />
-                                        )
-                                      ) : (
-                                        <ArrowUpDown size={9} className="opacity-30 group-hover:opacity-100 transition-opacity shrink-0" />
-                                      )}
-                                    </button>
-                                  </th>
-
-                                  {/* Type Sort Button */}
-                                  <th className="sticky top-0 z-20 w-[6%] h-6 py-1 px-0.5 text-center font-bold bg-base-200/95 backdrop-blur-md border-b border-base-200/80 shadow-2xs">
-                                    <button
-                                      type="button"
-                                      onClick={() => handleSipSort("type")}
-                                      className="flex items-center justify-center gap-0.5 mx-auto hover:text-secondary transition-colors cursor-pointer group"
-                                      title="Sort by Type"
-                                    >
-                                      <Sparkles size={9} className="text-secondary/70 shrink-0" />
-                                      <span className="truncate">Type</span>
-                                      {sipSortBy === "type" ? (
-                                        sipSortOrder === "asc" ? (
-                                          <ArrowUp size={10} className="text-secondary font-bold shrink-0" />
-                                        ) : (
-                                          <ArrowDown size={10} className="text-secondary font-bold shrink-0" />
-                                        )
-                                      ) : (
-                                        <ArrowUpDown size={9} className="opacity-30 group-hover:opacity-100 transition-opacity shrink-0" />
-                                      )}
-                                    </button>
-                                  </th>
-
-                                  {/* Date Sort Button */}
-                                  <th className="sticky top-0 z-20 w-[13%] h-6 py-1 px-1 text-center font-bold bg-base-200/95 backdrop-blur-md border-b border-base-200/80 shadow-2xs">
-                                    <button
-                                      type="button"
-                                      onClick={() => handleSipSort("date")}
-                                      className="flex items-center justify-center gap-0.5 mx-auto hover:text-secondary transition-colors cursor-pointer group"
-                                      title="Sort by Date"
-                                    >
-                                      <Calendar size={9} className="text-secondary/70 shrink-0" />
-                                      <span className="truncate">Date</span>
-                                      {sipSortBy === "date" ? (
-                                        sipSortOrder === "asc" ? (
-                                          <ArrowUp size={10} className="text-secondary font-bold shrink-0" />
-                                        ) : (
-                                          <ArrowDown size={10} className="text-secondary font-bold shrink-0" />
-                                        )
-                                      ) : (
-                                        <ArrowUpDown size={9} className="opacity-30 group-hover:opacity-100 transition-opacity shrink-0" />
-                                      )}
-                                    </button>
-                                  </th>
-
-                                  {/* Deposit ₹ Sort Button */}
-                                  <th className="sticky top-0 z-20 w-[13%] h-6 py-1 px-1 text-right font-bold bg-base-200/95 backdrop-blur-md border-b border-base-200/80 shadow-2xs">
-                                    <button
-                                      type="button"
-                                      onClick={() => handleSipSort("amtDeposit")}
-                                      className="flex items-center justify-end gap-0.5 ml-auto hover:text-secondary transition-colors cursor-pointer group"
-                                      title="Sort by Deposit Amount"
-                                    >
-                                      <Coins size={9} className="text-secondary/70 shrink-0" />
-                                      <span className="truncate">Deposit ₹</span>
-                                      {sipSortBy === "amtDeposit" ? (
-                                        sipSortOrder === "asc" ? (
-                                          <ArrowUp size={10} className="text-secondary font-bold shrink-0" />
-                                        ) : (
-                                          <ArrowDown size={10} className="text-secondary font-bold shrink-0" />
-                                        )
-                                      ) : (
-                                        <ArrowUpDown size={9} className="opacity-30 group-hover:opacity-100 transition-opacity shrink-0" />
-                                      )}
-                                    </button>
-                                  </th>
-
-                                  {/* ER ₹ Sort Button */}
-                                  <th className="sticky top-0 z-20 w-[7%] h-6 py-1 px-0.5 text-right font-bold bg-base-200/95 backdrop-blur-md border-b border-base-200/80 shadow-2xs">
-                                    <button
-                                      type="button"
-                                      onClick={() => handleSipSort("er")}
-                                      className="flex items-center justify-end gap-0.5 ml-auto hover:text-secondary transition-colors cursor-pointer group"
-                                      title="Sort by Expense Ratio / Charges"
-                                    >
-                                      <Percent size={9} className="text-secondary/70 shrink-0" />
-                                      <span className="truncate">ER ₹</span>
-                                      {sipSortBy === "er" ? (
-                                        sipSortOrder === "asc" ? (
-                                          <ArrowUp size={10} className="text-secondary font-bold shrink-0" />
-                                        ) : (
-                                          <ArrowDown size={10} className="text-secondary font-bold shrink-0" />
-                                        )
-                                      ) : (
-                                        <ArrowUpDown size={9} className="opacity-30 group-hover:opacity-100 transition-opacity shrink-0" />
-                                      )}
-                                    </button>
-                                  </th>
-
-                                  {/* NAV ₹ Sort Button */}
-                                  <th className="sticky top-0 z-20 w-[10%] h-6 py-1 px-1 text-right font-bold bg-base-200/95 backdrop-blur-md border-b border-base-200/80 shadow-2xs">
-                                    <button
-                                      type="button"
-                                      onClick={() => handleSipSort("nav")}
-                                      className="flex items-center justify-end gap-0.5 ml-auto hover:text-secondary transition-colors cursor-pointer group"
-                                      title="Sort by NAV"
-                                    >
-                                      <TrendingUp size={9} className="text-secondary/70 shrink-0" />
-                                      <span className="truncate">NAV ₹</span>
-                                      {sipSortBy === "nav" ? (
-                                        sipSortOrder === "asc" ? (
-                                          <ArrowUp size={10} className="text-secondary font-bold shrink-0" />
-                                        ) : (
-                                          <ArrowDown size={10} className="text-secondary font-bold shrink-0" />
-                                        )
-                                      ) : (
-                                        <ArrowUpDown size={9} className="opacity-30 group-hover:opacity-100 transition-opacity shrink-0" />
-                                      )}
-                                    </button>
-                                  </th>
-
-                                  {/* Units Sort Button */}
-                                  <th className="sticky top-0 z-20 w-[12%] h-6 py-1 px-1 text-right font-bold bg-base-200/95 backdrop-blur-md border-b border-base-200/80 shadow-2xs">
-                                    <button
-                                      type="button"
-                                      onClick={() => handleSipSort("units")}
-                                      className="flex items-center justify-end gap-0.5 ml-auto hover:text-secondary transition-colors cursor-pointer group"
-                                      title="Sort by Units"
-                                    >
-                                      <Layers size={9} className="text-secondary/70 shrink-0" />
-                                      <span className="truncate">Units</span>
-                                      {sipSortBy === "units" ? (
-                                        sipSortOrder === "asc" ? (
-                                          <ArrowUp size={10} className="text-secondary font-bold shrink-0" />
-                                        ) : (
-                                          <ArrowDown size={10} className="text-secondary font-bold shrink-0" />
-                                        )
-                                      ) : (
-                                        <ArrowUpDown size={9} className="opacity-30 group-hover:opacity-100 transition-opacity shrink-0" />
-                                      )}
-                                    </button>
-                                  </th>
-
-                                  {/* Actual Amt ₹ Sort Button */}
-                                  <th className="sticky top-0 z-20 w-[14%] h-6 py-1 px-1 text-right font-bold bg-base-200/95 backdrop-blur-md border-b border-base-200/80 shadow-2xs">
-                                    <button
-                                      type="button"
-                                      onClick={() => handleSipSort("actualAmt")}
-                                      className="flex items-center justify-end gap-0.5 ml-auto hover:text-secondary transition-colors cursor-pointer group"
-                                      title="Sort by Actual Amt"
-                                    >
-                                      <PiggyBank size={9} className="text-secondary/70 shrink-0" />
-                                      <span className="truncate">Actual Amt ₹</span>
-                                      {sipSortBy === "actualAmt" ? (
-                                        sipSortOrder === "asc" ? (
-                                          <ArrowUp size={10} className="text-secondary font-bold shrink-0" />
-                                        ) : (
-                                          <ArrowDown size={10} className="text-secondary font-bold shrink-0" />
-                                        )
-                                      ) : (
-                                        <ArrowUpDown size={9} className="opacity-30 group-hover:opacity-100 transition-opacity shrink-0" />
-                                      )}
-                                    </button>
-                                  </th>
-
-                                  {/* Actions Header */}
-                                  <th className="sticky top-0 z-20 w-[12%] h-6 py-1 px-0.5 text-center font-bold bg-base-200/95 backdrop-blur-md border-b border-base-200/80 shadow-2xs">Act</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {yearGroups.map((yg, yIdx) => {
-                                  const yearKey = `${fund.id}-${yg.year}`;
-                                  const isYearCollapsed = collapsedMfYearKeys.has(yearKey);
-
-                                  return (
-                                    <React.Fragment key={yg.year}>
-                                      {/* Collapsible Year Group Header Row (Directly Attached to Table Header) */}
-                                      <tr
-                                        className="cursor-pointer select-none font-bold transition-colors"
-                                        onClick={() => toggleMfYearCollapse(fund.id, yg.year)}
-                                      >
-                                        {/* Col 1: Term / Year Title & Count */}
-                                        <td className="sticky top-[24px] z-10 py-1 px-1.5 text-left bg-base-200/95 backdrop-blur-md border-b border-base-200/80">
-                                          <div className="flex items-center gap-1 min-w-0">
-                                            <div className={`transition-transform duration-200 shrink-0 ${!isYearCollapsed ? 'rotate-0' : '-rotate-90'}`}>
-                                              <ChevronDown size={10} className="text-base-content/60" />
-                                            </div>
-                                            <span className="font-bold text-[9.5px] text-base-content flex items-center gap-0.5 shrink-0">
-                                              <Calendar size={9} className="text-primary shrink-0" />
-                                              <span>{yg.year}</span>
-                                            </span>
-                                            <span className="px-1 py-0.1 rounded bg-secondary/10 text-secondary text-[8.5px] font-semibold border border-secondary/20 shrink-0">
-                                              {yg.txns.length}
-                                            </span>
-                                          </div>
-                                        </td>
-
-                                        {/* Col 2: Type */}
-                                        <td className="sticky top-[24px] z-10 py-1 px-0.5 text-center bg-base-200/95 backdrop-blur-md text-base-content/30 border-b border-base-200/80">—</td>
-
-                                        {/* Col 3: Date */}
-                                        <td className="sticky top-[24px] z-10 py-1 px-1 text-center bg-base-200/95 backdrop-blur-md text-base-content/30 border-b border-base-200/80">—</td>
-
-                                        {/* Col 4: Deposit ₹ Subtotal */}
-                                        <td className="sticky top-[24px] z-10 py-1 px-1 text-right bg-base-200/95 backdrop-blur-md font-bold text-base-content text-[9.5px] truncate border-b border-base-200/80">
-                                          ₹{yg.totalDeposit.toLocaleString('en-IN')}
-                                        </td>
-
-                                        {/* Col 5: ER ₹ Subtotal */}
-                                        <td className="sticky top-[24px] z-10 py-1 px-0.5 text-right bg-base-200/95 backdrop-blur-md font-bold text-error/80 text-[9.5px] truncate border-b border-base-200/80">
-                                          ₹{yg.totalEr.toLocaleString('en-IN')}
-                                        </td>
-
-                                        {/* Col 6: NAV ₹ Avg */}
-                                        <td className="sticky top-[24px] z-10 py-1 px-1 text-right bg-base-200/95 backdrop-blur-md font-semibold text-base-content/70 text-[9.5px] truncate border-b border-base-200/80">
-                                          {yg.avgNav > 0 ? `₹${yg.avgNav.toFixed(2)}` : '—'}
-                                        </td>
-
-                                        {/* Col 7: Units Subtotal */}
-                                        <td className="sticky top-[24px] z-10 py-1 px-1 text-right bg-base-200/95 backdrop-blur-md font-mono font-bold text-base-content/90 text-[9.5px] truncate border-b border-base-200/80">
-                                          {yg.totalUnits.toFixed(3)}
-                                        </td>
-
-                                        {/* Col 8: Actual Amt ₹ Subtotal */}
-                                        <td className="sticky top-[24px] z-10 py-1 px-1 text-right bg-base-200/95 backdrop-blur-md font-extrabold text-success text-[9.5px] truncate border-b border-base-200/80">
-                                          +₹{yg.totalActual.toLocaleString('en-IN')}
-                                        </td>
-
-                                        {/* Col 9: Actions */}
-                                        <td className="sticky top-[24px] z-10 py-1 px-0.5 bg-base-200/95 backdrop-blur-md border-b border-base-200/80"></td>
-                                      </tr>
-
-                                      {/* Inline Add Row (rendered inside top year block) */}
-                                      {isInlineAdding && yIdx === 0 && (() => {
-                                        const inlineAmtDep = parseFloat(inlineNewTxn.amtDeposit) || 0;
-                                        const inlineEr = parseFloat(inlineNewTxn.er) || 0;
-                                        const inlineActualAmt = Math.max(0, inlineAmtDep - inlineEr);
-                                        const inlineNav = parseFloat(inlineNewTxn.nav) || 0;
-                                        const inlineUnits = inlineNav > 0 ? (inlineActualAmt / inlineNav).toFixed(3) : '-';
-
-                                        return (
-                                          <tr className="bg-secondary/5 border-b border-secondary/15">
-                                            <td className="py-0.5 px-0.5">
-                                              <input
-                                                type="text"
-                                                placeholder="Term 1"
-                                                value={inlineNewTxn.term}
-                                                onChange={(e) => setInlineNewTxn({ ...inlineNewTxn, term: e.target.value })}
-                                                className="h-5 text-[9.5px] font-medium px-1 py-0 rounded border border-base-300 bg-base-100 w-full focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary/30"
-                                                autoFocus
-                                              />
-                                            </td>
-                                            <td className="py-0.5 px-0.5 text-center">
-                                              <select
-                                                value={inlineNewTxn.type || 'SIP'}
-                                                onChange={(e) => setInlineNewTxn({ ...inlineNewTxn, type: e.target.value })}
-                                                className="h-5 text-[9.5px] font-semibold px-0.5 py-0 rounded border border-base-300 bg-base-100 w-full focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary/30"
-                                              >
-                                                <option value="SIP">SIP</option>
-                                                <option value="Lumpsum">LS</option>
-                                              </select>
-                                            </td>
-                                            <td className="py-0.5 px-0.5 text-center">
-                                              <input
-                                                type="date"
-                                                value={inlineNewTxn.date}
-                                                onChange={(e) => setInlineNewTxn({ ...inlineNewTxn, date: e.target.value })}
-                                                className="h-5 text-[9.5px] font-mono px-0.5 py-0 rounded border border-base-300 bg-base-100 w-full focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary/30"
-                                              />
-                                            </td>
-                                            <td className="py-0.5 px-0.5 text-right">
-                                              <input
-                                                type="number"
-                                                step="100"
-                                                placeholder="5000"
-                                                value={inlineNewTxn.amtDeposit}
-                                                onChange={(e) => setInlineNewTxn({ ...inlineNewTxn, amtDeposit: e.target.value })}
-                                                className="h-5 text-[9.5px] font-medium px-0.5 py-0 rounded border border-base-300 bg-base-100 w-full text-right focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary/30"
-                                                onKeyDown={(e) => {
-                                                  if (e.key === 'Enter') handleAddSipTxn(fund.id);
-                                                  if (e.key === 'Escape') setInlineAddingMfId(null);
-                                                }}
-                                              />
-                                            </td>
-                                            <td className="py-0.5 px-0.5 text-right">
-                                              <input
-                                                type="number"
-                                                step="1"
-                                                placeholder="0"
-                                                value={inlineNewTxn.er}
-                                                onChange={(e) => setInlineNewTxn({ ...inlineNewTxn, er: e.target.value })}
-                                                className="h-5 text-[9.5px] font-medium px-0.5 py-0 rounded border border-base-300 bg-base-100 w-full text-right focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary/30"
-                                                onKeyDown={(e) => {
-                                                  if (e.key === 'Enter') handleAddSipTxn(fund.id);
-                                                  if (e.key === 'Escape') setInlineAddingMfId(null);
-                                                }}
-                                              />
-                                            </td>
-                                            <td className="py-0.5 px-0.5 text-right">
-                                              <input
-                                                type="number"
-                                                step="0.01"
-                                                placeholder="65.40"
-                                                value={inlineNewTxn.nav}
-                                                onChange={(e) => setInlineNewTxn({ ...inlineNewTxn, nav: e.target.value })}
-                                                className="h-5 text-[9.5px] font-medium px-0.5 py-0 rounded border border-base-300 bg-base-100 w-full text-right focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary/30"
-                                                onKeyDown={(e) => {
-                                                  if (e.key === 'Enter') handleAddSipTxn(fund.id);
-                                                  if (e.key === 'Escape') setInlineAddingMfId(null);
-                                                }}
-                                              />
-                                            </td>
-                                            <td className="py-0.5 px-1 text-right font-mono text-[9.5px] text-base-content/80 font-medium truncate">
-                                              {inlineUnits}
-                                            </td>
-                                            <td className="py-0.5 px-1 text-right font-medium text-[9.5px] text-success truncate">
-                                              +₹{inlineActualAmt.toLocaleString('en-IN')}
-                                            </td>
-                                            <td className="py-0.5 px-0.5 text-center">
-                                              <div className="flex items-center justify-center gap-0.5">
-                                                <button
-                                                  type="button"
-                                                  onClick={() => handleAddSipTxn(fund.id)}
-                                                  className="p-0.5 text-success hover:bg-success/10 rounded transition-colors cursor-pointer"
-                                                  title="Save"
-                                                >
-                                                  <Check size={11} />
-                                                </button>
-                                                <button
-                                                  type="button"
-                                                  onClick={() => setInlineAddingMfId(null)}
-                                                  className="p-0.5 text-error hover:bg-error/10 rounded transition-colors cursor-pointer"
-                                                  title="Cancel"
-                                                >
-                                                  <X size={11} />
-                                                </button>
-                                              </div>
-                                            </td>
-                                          </tr>
-                                        );
-                                      })()}
-
-                                      {/* Transaction Rows for this year (rendered if NOT collapsed) */}
-                                      {!isYearCollapsed &&
-                                        yg.txns.map((txn, tIdx) => {
-                                          const isEditing = editingTxnKey?.fundId === fund.id && editingTxnKey?.txnId === txn.id;
-
-                                          if (isEditing) {
-                                            const editAmtDep = parseFloat(editTxnData.amtDeposit) || 0;
-                                            const editEr = parseFloat(editTxnData.er) || 0;
-                                            const editActualAmt = Math.max(0, editAmtDep - editEr);
-                                            const editNav = parseFloat(editTxnData.nav) || 0;
-                                            const editUnits = editNav > 0 ? (editActualAmt / editNav).toFixed(3) : '-';
-
-                                            return (
-                                              <tr key={txn.id} className="bg-info/5 border-b border-info/15">
-                                                <td className="py-0.5 px-0.5">
-                                                  <input
-                                                    type="text"
-                                                    value={editTxnData.term}
-                                                    onChange={(e) => setEditTxnData({ ...editTxnData, term: e.target.value })}
-                                                    className="h-5 text-[9.5px] font-medium px-1 py-0 rounded border border-base-300 bg-base-100 w-full focus:outline-none focus:border-info focus:ring-1 focus:ring-info/30"
-                                                  />
-                                                </td>
-                                                <td className="py-0.5 px-0.5 text-center">
-                                                  <select
-                                                    value={editTxnData.type || 'SIP'}
-                                                    onChange={(e) => setEditTxnData({ ...editTxnData, type: e.target.value })}
-                                                    className="h-5 text-[9.5px] font-semibold px-0.5 py-0 rounded border border-base-300 bg-base-100 w-full focus:outline-none focus:border-info focus:ring-1 focus:ring-info/30"
-                                                  >
-                                                    <option value="SIP">SIP</option>
-                                                    <option value="Lumpsum">LS</option>
-                                                  </select>
-                                                </td>
-                                                <td className="py-0.5 px-0.5 text-center">
-                                                  <input
-                                                    type="date"
-                                                    value={editTxnData.date}
-                                                    onChange={(e) => setEditTxnData({ ...editTxnData, date: e.target.value })}
-                                                    className="h-5 text-[9.5px] font-mono px-0.5 py-0 rounded border border-base-300 bg-base-100 w-full focus:outline-none focus:border-info focus:ring-1 focus:ring-info/30"
-                                                  />
-                                                </td>
-                                                <td className="py-0.5 px-0.5 text-right">
-                                                  <input
-                                                    type="number"
-                                                    step="100"
-                                                    value={editTxnData.amtDeposit}
-                                                    onChange={(e) => setEditTxnData({ ...editTxnData, amtDeposit: e.target.value })}
-                                                    className="h-5 text-[9.5px] font-medium px-0.5 py-0 rounded border border-base-300 bg-base-100 w-full text-right focus:outline-none focus:border-info focus:ring-1 focus:ring-info/30"
-                                                    onKeyDown={(e) => {
-                                                      if (e.key === 'Enter') saveEditSipTxn();
-                                                      if (e.key === 'Escape') setEditingTxnKey(null);
-                                                    }}
-                                                  />
-                                                </td>
-                                                <td className="py-0.5 px-0.5 text-right">
-                                                  <input
-                                                    type="number"
-                                                    step="1"
-                                                    value={editTxnData.er}
-                                                    onChange={(e) => setEditTxnData({ ...editTxnData, er: e.target.value })}
-                                                    className="h-5 text-[9.5px] font-medium px-0.5 py-0 rounded border border-base-300 bg-base-100 w-full text-right focus:outline-none focus:border-info focus:ring-1 focus:ring-info/30"
-                                                    onKeyDown={(e) => {
-                                                      if (e.key === 'Enter') saveEditSipTxn();
-                                                      if (e.key === 'Escape') setEditingTxnKey(null);
-                                                    }}
-                                                  />
-                                                </td>
-                                                <td className="py-0.5 px-0.5 text-right">
-                                                  <input
-                                                    type="number"
-                                                    step="0.01"
-                                                    value={editTxnData.nav}
-                                                    onChange={(e) => setEditTxnData({ ...editTxnData, nav: e.target.value })}
-                                                    className="h-5 text-[9.5px] font-medium px-0.5 py-0 rounded border border-base-300 bg-base-100 w-full text-right focus:outline-none focus:border-info focus:ring-1 focus:ring-info/30"
-                                                    onKeyDown={(e) => {
-                                                      if (e.key === 'Enter') saveEditSipTxn();
-                                                      if (e.key === 'Escape') setEditingTxnKey(null);
-                                                    }}
-                                                  />
-                                                </td>
-                                                <td className="py-0.5 px-1 text-right font-mono text-[9.5px] text-base-content/80 font-medium truncate">
-                                                  {editUnits}
-                                                </td>
-                                                <td className="py-0.5 px-1 text-right font-medium text-[9.5px] text-success truncate">
-                                                  +₹{editActualAmt.toLocaleString('en-IN')}
-                                                </td>
-                                                <td className="py-0.5 px-0.5 text-center">
-                                                  <div className="flex items-center justify-center gap-0.5">
-                                                    <button
-                                                      type="button"
-                                                      onClick={saveEditSipTxn}
-                                                      className="p-0.5 text-success hover:bg-success/10 rounded transition-colors cursor-pointer"
-                                                      title="Save"
-                                                    >
-                                                      <Check size={11} />
-                                                    </button>
-                                                    <button
-                                                      type="button"
-                                                      onClick={() => setEditingTxnKey(null)}
-                                                      className="p-0.5 text-base-content/50 hover:bg-base-200 rounded transition-colors cursor-pointer"
-                                                      title="Cancel"
-                                                    >
-                                                      <X size={11} />
-                                                    </button>
-                                                  </div>
-                                                </td>
-                                              </tr>
-                                            );
-                                          }
-
-                                          const amtDep = txn.amtDeposit ?? txn.amount ?? 0;
-                                          const er = txn.er ?? 0;
-                                          const actualAmt = txn.actualAmt ?? Math.max(0, amtDep - er);
-                                          const nav = txn.nav ?? 0;
-                                          const unitsDisplay = txn.units ? parseFloat(txn.units).toFixed(3) : (nav > 0 ? (actualAmt / nav).toFixed(3) : '-');
-
-                                          return (
-                                            <tr key={txn.id} className="hover:bg-base-200/30 transition-colors border-b border-base-200/40">
-                                              <td className="py-1 px-1 text-left font-medium text-[9.5px] text-base-content/90 truncate">
-                                                {txn.term || `Term ${tIdx + 1}`}
-                                              </td>
-                                              <td className="py-1 px-0.5 text-center">
-                                                <span className={`px-0.5 py-0.1 text-[8px] font-bold rounded uppercase tracking-wider ${
-                                                  txn.type === 'Lumpsum' || txn.type === 'LUMPSUM'
-                                                    ? 'bg-amber-500/10 text-amber-600 border border-amber-500/20'
-                                                    : 'bg-secondary/10 text-secondary border border-secondary/20'
-                                                }`}>
-                                                  {txn.type === 'Lumpsum' || txn.type === 'LUMPSUM' ? 'LS' : (txn.type || 'SIP')}
-                                                </span>
-                                              </td>
-                                              <td className="py-1 px-1 text-center font-mono text-[9.5px] text-base-content/70 truncate">
-                                                {formatDateDDMMMYYYY(txn.date)}
-                                              </td>
-                                              <td className="py-1 px-1 text-right font-medium text-[9.5px] text-base-content truncate">
-                                                ₹{amtDep.toLocaleString('en-IN')}
-                                              </td>
-                                              <td className="py-1 px-0.5 text-right font-medium text-[9.5px] text-error/80 truncate">
-                                                ₹{er.toLocaleString('en-IN')}
-                                              </td>
-                                              <td className="py-1 px-1 text-right font-medium text-[9.5px] text-base-content/70 truncate">
-                                                {nav > 0 ? `₹${nav}` : '-'}
-                                              </td>
-                                              <td className="py-1 px-1 text-right font-mono font-medium text-[9.5px] text-base-content/80 truncate">
-                                                {unitsDisplay}
-                                              </td>
-                                              <td className="py-1 px-1 text-right font-medium text-[9.5px] text-success truncate">
-                                                +₹{actualAmt.toLocaleString('en-IN')}
-                                              </td>
-                                              <td className="py-1 px-0.5 text-center">
-                                                <div className="flex items-center justify-center gap-0.5">
-                                                  <button
-                                                    type="button"
-                                                    onClick={() => handleOpenEditSipModal(fund, txn)}
-                                                    className="p-0.5 text-info bg-info/10 hover:bg-info/20 rounded transition-colors cursor-pointer"
-                                                    title="Edit"
-                                                  >
-                                                    <Pencil size={10} />
-                                                  </button>
-                                                  <button
-                                                    type="button"
-                                                    onClick={() => handleDeleteSipTxn(fund.id, txn.id)}
-                                                    className="p-0.5 text-error bg-error/10 hover:bg-error/20 rounded transition-colors cursor-pointer"
-                                                    title="Delete"
-                                                  >
-                                                    <Trash2 size={10} />
-                                                  </button>
-                                                </div>
-                                              </td>
-                                            </tr>
-                                          );
-                                        })}
-                                    </React.Fragment>
-                                  );
-                                })}
-                              </tbody>
-                            </table>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        );
-      })}
-    </div>
-  )}
-</div>
-)}
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ------------------------------------------------------------------ */}
       {/* OTHER TABS PLACEHOLDERS (Emergency Fund, FD, RD, PF)               */}
@@ -3256,15 +2693,6 @@ export default function InvTableEntry() {
         initialData={editingMf}
       />
 
-      {/* Add / Edit SIP Transaction Popup Modal */}
-      <AddSipTransactionModal
-        isOpen={isSipModalOpen}
-        onClose={() => setIsSipModalOpen(false)}
-        onSave={handleSaveSipModalTxn}
-        fund={activeSipFund}
-        initialTxn={editingSipTxn}
-      />
-
       {/* Custom MF Groups & Ordering Modal */}
       <OrganizeMfGroupsModal
         isOpen={isOrganizeModalOpen}
@@ -3284,8 +2712,8 @@ export default function InvTableEntry() {
       {/* ------------------------------------------------------------------ */}
       {/* TABLE VIEW POPUP MODAL (Middle of UI with Sticky Top Headers)      */}
       {/* ------------------------------------------------------------------ */}
-      {isTableModalOpen && (
-        <div className="fixed inset-0 z-[999999] flex items-center justify-center p-2 sm:p-4 md:p-5 bg-black/75 backdrop-blur-md animate-in fade-in duration-200 overflow-hidden">
+      {isTableModalOpen && typeof document !== "undefined" && createPortal(
+        <div className="fixed inset-0 w-screen h-screen z-[999999] flex items-center justify-center p-2 sm:p-4 md:p-5 bg-black/75 backdrop-blur-md animate-in fade-in duration-200 overflow-hidden">
           <div className="bg-base-100 border border-base-300 rounded-3xl p-4 sm:p-6 shadow-2xl w-[98vw] max-w-[1800px] max-h-[96vh] flex flex-col gap-4 animate-in zoom-in-95 duration-200 overflow-hidden">
             {/* Modal Header */}
             <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-base-200">
@@ -4367,14 +3795,15 @@ export default function InvTableEntry() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ------------------------------------------------------------------ */}
       {/* Column Customization Modal Popup                                  */}
       {/* ------------------------------------------------------------------ */}
-      {isColumnModalOpen && (
-        <div className="fixed inset-0 z-[9999999] flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200">
+      {isColumnModalOpen && typeof document !== "undefined" && createPortal(
+        <div className="fixed inset-0 w-screen h-screen z-[9999999] flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200">
           <div className="bg-base-100 border border-base-300 rounded-3xl p-6 shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col gap-4 animate-in zoom-in-95 duration-200">
             {/* Header */}
             <div className="flex items-center justify-between pb-3 border-b border-base-200">
@@ -4577,8 +4006,51 @@ export default function InvTableEntry() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
+
+      {/* ------------------------------------------------------------------ */}
+      {/* Mutual Fund Transactions Table Modal Popup                        */}
+      {/* ------------------------------------------------------------------ */}
+      {viewingMfFund && (
+        <MutualFundTableModal
+          fund={viewingMfFund}
+          summary={getMfDetailedSummary(viewingMfFund)}
+          isOpen={Boolean(viewingMfFund)}
+          onClose={() => setViewingMfTableFundId(null)}
+          onOpenAddSip={(fund) => handleOpenAddSipModal(fund)}
+          onOpenEditSip={(fund, txn) => handleOpenEditSipModal(fund, txn)}
+          onDeleteSipTxn={handleDeleteSipTxn}
+          getFundTransactionsByYear={getFundTransactionsByYear}
+          sipSortBy={sipSortBy}
+          sipSortOrder={sipSortOrder}
+          handleSipSort={handleSipSort}
+          collapsedMfYearKeys={collapsedMfYearKeys}
+          toggleMfYearCollapse={toggleMfYearCollapse}
+          toggleAllMfYearsCollapse={toggleAllMfYearsCollapse}
+          inlineAddingMfId={inlineAddingMfId}
+          setInlineAddingMfId={setInlineAddingMfId}
+          inlineTxnData={inlineTxnData}
+          setInlineTxnData={setInlineTxnData}
+          saveInlineSipTxn={saveInlineSipTxn}
+          editingTxnKey={editingTxnKey}
+          setEditingTxnKey={setEditingTxnKey}
+          editTxnData={editTxnData}
+          setEditTxnData={setEditTxnData}
+          saveEditSipTxn={saveEditSipTxn}
+        />
+      )}
+
+      {/* Add / Edit SIP Transaction Popup Modal (Rendered on top of Table View & Card Views) */}
+      <AddSipTransactionModal
+        isOpen={isSipModalOpen}
+        onClose={() => setIsSipModalOpen(false)}
+        onSave={handleSaveSipModalTxn}
+        fund={activeSipFund}
+        initialTxn={editingSipTxn}
+      />
+
       <style>{`
         @keyframes mfSlideDown {
           from { opacity: 0; max-height: 0; }
