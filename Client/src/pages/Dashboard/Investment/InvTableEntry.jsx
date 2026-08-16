@@ -53,6 +53,7 @@ import AddSipTransactionModal from "../../../components/Dashboard/Investment/Add
 import OrganizeMfGroupsModal from "../../../components/Dashboard/Investment/OrganizeMfGroupsModal";
 import MutualFundCard from "../../../components/Dashboard/Investment/MutualFundCard";
 import MutualFundTableModal from "../../../components/Dashboard/Investment/MutualFundTableModal";
+import MutualFundInfoModal from "../../../components/Dashboard/Investment/MutualFundInfoModal";
 import axiosInstance from "../../../Context/AxiosInstance";
 import { formatDateDDMMMYYYY } from "../../../components/Dashboard/DatePicker";
 
@@ -200,20 +201,38 @@ export default function InvTableEntry() {
     er: '',
     nav: '',
   });
-  // SIP Popup Modal State
+  // SIP / Withdrawal Popup Modal State
   const [isSipModalOpen, setIsSipModalOpen] = useState(false);
   const [activeSipFund, setActiveSipFund] = useState(null);
   const [editingSipTxn, setEditingSipTxn] = useState(null);
+  const [sipModalMode, setSipModalMode] = useState("deposit"); // "deposit" | "withdrawal"
+  const [mfTableViewMode, setMfTableViewMode] = useState("deposit"); // "deposit" | "withdrawal"
+  const [viewingInfoMfFund, setViewingInfoMfFund] = useState(null);
 
-  const handleOpenAddSipModal = (fund) => {
+  const handleOpenMfInfoModal = (fund) => {
+    setViewingInfoMfFund(fund);
+  };
+
+  const handleOpenAddSipModal = (fund, mode = "deposit") => {
     setActiveSipFund(fund);
     setEditingSipTxn(null);
+    setSipModalMode(mode);
     setIsSipModalOpen(true);
+  };
+
+  const handleOpenAddWithdrawalModal = (fund) => {
+    handleOpenAddSipModal(fund, "withdrawal");
   };
 
   const handleOpenEditSipModal = (fund, txn) => {
     setActiveSipFund(fund);
     setEditingSipTxn(txn);
+    const typeLower = (txn?.type || "").toLowerCase();
+    const isW =
+      typeLower.includes("withdr") ||
+      typeLower.includes("redemp") ||
+      typeLower.includes("swp");
+    setSipModalMode(isW ? "withdrawal" : "deposit");
     setIsSipModalOpen(true);
   };
 
@@ -326,49 +345,84 @@ export default function InvTableEntry() {
   // Helper to compute comprehensive mutual fund summary metrics
   const getMfDetailedSummary = (fund) => {
     const txns = fund?.transactions || [];
-    const totalTerms = txns.length;
 
+    // Deposit aggregates
     let sipCount = 0;
     let lsCount = 0;
     let totalDeposited = 0;
     let totalEr = 0;
     let totalInvested = 0;
     let totalUnits = 0;
-
     const validDates = [];
 
+    // Withdrawal aggregates
+    let swpCount = 0;
+    let lsWithdrawalCount = 0;
+    let totalWithdrawalTerms = 0;
+    let grossWithdrawn = 0;
+    let totalWithdrawalEr = 0;
+    let totalWithdrawn = 0;
+    let totalUnitsWithdrawn = 0;
+    const validWithdrawalDates = [];
+
     txns.forEach((t) => {
-      const isLs = t.type === "Lumpsum" || t.type === "LUMPSUM" || t.type === "LS";
-      if (isLs) {
-        lsCount += 1;
-      } else {
-        sipCount += 1;
-      }
+      const typeLower = (t.type || "").toLowerCase();
+      const isWithdrawal =
+        typeLower.includes("withdr") ||
+        typeLower.includes("redemp") ||
+        typeLower.includes("swp");
 
       const amtDep = Number(t.amtDeposit ?? t.amount ?? 0);
       const er = Number(t.er ?? 0);
-      const actual = t.actualAmt !== undefined && t.actualAmt !== null
-        ? Number(t.actualAmt)
-        : Math.max(0, amtDep - er);
+      const actual =
+        t.actualAmt !== undefined && t.actualAmt !== null
+          ? Number(t.actualAmt)
+          : Math.max(0, Math.abs(amtDep) - er);
       const nav = Number(t.nav ?? 0);
       const units = parseFloat(t.units) || (nav > 0 ? actual / nav : 0);
 
-      totalDeposited += amtDep;
-      totalEr += er;
-      totalInvested += actual;
-      totalUnits += units;
+      if (isWithdrawal) {
+        totalWithdrawalTerms += 1;
+        if (typeLower.includes("swp")) {
+          swpCount += 1;
+        } else {
+          lsWithdrawalCount += 1;
+        }
+        grossWithdrawn += Math.abs(amtDep);
+        totalWithdrawalEr += er;
+        totalWithdrawn += actual;
+        totalUnitsWithdrawn += units;
+        if (t.date) {
+          const d = dayjs(t.date);
+          if (d.isValid()) validWithdrawalDates.push(d);
+        }
+      } else {
+        const isLs =
+          t.type === "Lumpsum" || t.type === "LUMPSUM" || t.type === "LS";
+        if (isLs) {
+          lsCount += 1;
+        } else {
+          sipCount += 1;
+        }
 
-      if (t.date) {
-        const d = dayjs(t.date);
-        if (d.isValid()) {
-          validDates.push(d);
+        totalDeposited += amtDep;
+        totalEr += er;
+        totalInvested += actual;
+        totalUnits += units;
+
+        if (t.date) {
+          const d = dayjs(t.date);
+          if (d.isValid()) {
+            validDates.push(d);
+          }
         }
       }
     });
 
     validDates.sort((a, b) => a.valueOf() - b.valueOf());
     const fromDateObj = validDates.length > 0 ? validDates[0] : null;
-    const toDateObj = validDates.length > 0 ? validDates[validDates.length - 1] : null;
+    const toDateObj =
+      validDates.length > 0 ? validDates[validDates.length - 1] : null;
 
     let durationText = "—";
     if (fromDateObj && toDateObj) {
@@ -377,7 +431,10 @@ export default function InvTableEntry() {
       if (totalMonths >= 12) {
         const yrs = Math.floor(totalMonths / 12);
         const mos = totalMonths % 12;
-        durationText = mos > 0 ? `${yrs} yr${yrs > 1 ? "s" : ""} ${mos} mo${mos > 1 ? "s" : ""}` : `${yrs} yr${yrs > 1 ? "s" : ""}`;
+        durationText =
+          mos > 0
+            ? `${yrs} yr${yrs > 1 ? "s" : ""} ${mos} mo${mos > 1 ? "s" : ""}`
+            : `${yrs} yr${yrs > 1 ? "s" : ""}`;
       } else if (totalMonths > 0) {
         durationText = `${totalMonths} mo${totalMonths > 1 ? "s" : ""}`;
       } else {
@@ -387,8 +444,56 @@ export default function InvTableEntry() {
 
     const avgNav = totalUnits > 0 ? totalInvested / totalUnits : 0;
 
+    // Withdrawal duration & avg exit NAV
+    validWithdrawalDates.sort((a, b) => a.valueOf() - b.valueOf());
+    const wFromDateObj =
+      validWithdrawalDates.length > 0 ? validWithdrawalDates[0] : null;
+    const wToDateObj =
+      validWithdrawalDates.length > 0
+        ? validWithdrawalDates[validWithdrawalDates.length - 1]
+        : null;
+
+    let withdrawalDurationText = "—";
+    if (wFromDateObj && wToDateObj) {
+      const totalDays = wToDateObj.diff(wFromDateObj, "day");
+      const totalMonths = wToDateObj.diff(wFromDateObj, "month");
+      if (totalMonths >= 12) {
+        const yrs = Math.floor(totalMonths / 12);
+        const mos = totalMonths % 12;
+        withdrawalDurationText =
+          mos > 0
+            ? `${yrs} yr${yrs > 1 ? "s" : ""} ${mos} mo${mos > 1 ? "s" : ""}`
+            : `${yrs} yr${yrs > 1 ? "s" : ""}`;
+      } else if (totalMonths > 0) {
+        withdrawalDurationText = `${totalMonths} mo${totalMonths > 1 ? "s" : ""}`;
+      } else {
+        withdrawalDurationText = totalDays === 0 ? "1 day" : `${totalDays} days`;
+      }
+    }
+
+    const avgExitNav =
+      totalUnitsWithdrawn > 0 ? totalWithdrawn / totalUnitsWithdrawn : 0;
+
+    // Active Holding & Redemption Status
+    const activeUnits = Math.max(
+      0,
+      parseFloat((totalUnits - totalUnitsWithdrawn).toFixed(4))
+    );
+    const isFullyRedeemed = totalUnits > 0 && activeUnits <= 0.0001;
+
+    // Calculation when all units are redeemed: Withdrawn amt - Deposited amt
+    // If -ve then loss, if +ve then profit
+    const depositedAmt = totalDeposited;
+    const withdrawnAmt = totalWithdrawn;
+    const realizedPnL = withdrawnAmt - depositedAmt;
+    const isProfit = realizedPnL > 0;
+    const isLoss = realizedPnL < 0;
+    const isBreakEven = realizedPnL === 0;
+    const realizedPnLPct =
+      depositedAmt > 0 ? (realizedPnL / depositedAmt) * 100 : 0;
+
     return {
-      totalTerms,
+      totalTerms: sipCount + lsCount,
       sipCount,
       lsCount,
       fromDateStr: fromDateObj ? fromDateObj.format("DD MMM YYYY") : "—",
@@ -399,6 +504,32 @@ export default function InvTableEntry() {
       avgNav,
       totalUnits,
       totalInvested,
+
+      // Withdrawal fields
+      totalWithdrawalTerms,
+      swpCount,
+      lsWithdrawalCount,
+      withdrawalFromDateStr: wFromDateObj
+        ? wFromDateObj.format("DD MMM YYYY")
+        : "—",
+      withdrawalToDateStr: wToDateObj ? wToDateObj.format("DD MMM YYYY") : "—",
+      withdrawalDurationText,
+      grossWithdrawn,
+      totalWithdrawalEr,
+      avgExitNav,
+      totalUnitsWithdrawn,
+      totalWithdrawn,
+
+      // Redemption & Realized P&L fields
+      activeUnits,
+      isFullyRedeemed,
+      depositedAmt,
+      withdrawnAmt,
+      realizedPnL,
+      isProfit,
+      isLoss,
+      isBreakEven,
+      realizedPnLPct,
     };
   };
 
@@ -781,19 +912,61 @@ export default function InvTableEntry() {
   const saveEditSipTxn = async () => {
     if (!editingTxnKey) return;
     const { fundId, txnId } = editingTxnKey;
+    const targetFund = mfData.find((f) => f.id === fundId);
 
     const amtDepVal = parseFloat(editTxnData.amtDeposit) || 0;
     const erVal = parseFloat(editTxnData.er) || 0;
     const actualAmt = Math.max(0, amtDepVal - erVal);
     const navVal = parseFloat(editTxnData.nav) || 0;
     const explicitUnits = parseFloat(editTxnData.units);
-    const units = !isNaN(explicitUnits) && explicitUnits >= 0
+    let units = !isNaN(explicitUnits) && explicitUnits >= 0
       ? explicitUnits
       : (navVal > 0 ? parseFloat((actualAmt / navVal).toFixed(3)) : 0);
 
+    const typeLower = (editTxnData.type || "").toLowerCase();
+    const isW =
+      typeLower.includes("withdr") ||
+      typeLower.includes("redemp") ||
+      typeLower.includes("swp");
+
+    if (isW && targetFund) {
+      const totalDepositUnits = (targetFund.transactions || []).reduce((sum, t) => {
+        const tl = (t?.type || "").toLowerCase();
+        if (tl.includes("withdr") || tl.includes("redemp") || tl.includes("swp")) return sum;
+        const act =
+          t.actualAmt !== undefined && t.actualAmt !== null
+            ? Number(t.actualAmt)
+            : Math.max(0, (t.amtDeposit ?? t.amount ?? 0) - (t.er ?? 0));
+        const n = Number(t.nav ?? 0);
+        return sum + (parseFloat(t.units) || (n > 0 ? act / n : 0));
+      }, 0);
+
+      const alreadyRedeemedUnits = (targetFund.transactions || []).reduce((sum, t) => {
+        const tl = (t?.type || "").toLowerCase();
+        if (!tl.includes("withdr") && !tl.includes("redemp") && !tl.includes("swp")) return sum;
+        if (t.id === txnId) return sum;
+        const act =
+          t.actualAmt !== undefined && t.actualAmt !== null
+            ? Number(t.actualAmt)
+            : Math.max(0, (t.amtDeposit ?? t.amount ?? 0) - (t.er ?? 0));
+        const n = Number(t.nav ?? 0);
+        return sum + (parseFloat(t.units) || (n > 0 ? act / n : 0));
+      }, 0);
+
+      const availableUnits = Math.max(
+        0,
+        parseFloat((totalDepositUnits - alreadyRedeemedUnits).toFixed(4))
+      );
+
+      if (units > availableUnits) {
+        alert(`Cannot redeem more than available units (${availableUnits.toFixed(3)}). Setting to max available.`);
+        units = availableUnits;
+      }
+    }
+
     const updatePayload = {
       term: editTxnData.term,
-      type: editTxnData.type || 'SIP',
+      type: editTxnData.type || (isW ? 'SWP' : 'SIP'),
       date: editTxnData.date,
       amtDeposit: amtDepVal,
       er: erVal,
@@ -2617,8 +2790,17 @@ export default function InvTableEntry() {
                               index={fundIdx + 1}
                               fund={fund}
                               summary={summary}
-                              onOpenTable={() => setViewingMfTableFundId(fund.id)}
-                              onOpenAddSip={() => handleOpenAddSipModal(fund)}
+                              onOpenInfo={handleOpenMfInfoModal}
+                              onOpenTable={(fund, mode) => {
+                                setMfTableViewMode(mode || "deposit");
+                                setViewingMfTableFundId(fund.id);
+                              }}
+                              onOpenAddSip={(fund, mode) =>
+                                handleOpenAddSipModal(fund, mode || "deposit")
+                              }
+                              onOpenAddWithdrawal={(fund) =>
+                                handleOpenAddWithdrawalModal(fund)
+                              }
                               onEdit={() => handleEditMf(fund)}
                               onDelete={() => handleDeleteMf(fund.id)}
                             />
@@ -4018,8 +4200,12 @@ export default function InvTableEntry() {
           fund={viewingMfFund}
           summary={getMfDetailedSummary(viewingMfFund)}
           isOpen={Boolean(viewingMfFund)}
+          defaultViewMode={mfTableViewMode}
           onClose={() => setViewingMfTableFundId(null)}
-          onOpenAddSip={(fund) => handleOpenAddSipModal(fund)}
+          onOpenAddSip={(fund, mode) =>
+            handleOpenAddSipModal(fund, mode || "deposit")
+          }
+          onOpenAddWithdrawal={(fund) => handleOpenAddWithdrawalModal(fund)}
           onOpenEditSip={(fund, txn) => handleOpenEditSipModal(fund, txn)}
           onDeleteSipTxn={handleDeleteSipTxn}
           getFundTransactionsByYear={getFundTransactionsByYear}
@@ -4042,9 +4228,19 @@ export default function InvTableEntry() {
         />
       )}
 
-      {/* Add / Edit SIP Transaction Popup Modal (Rendered on top of Table View & Card Views) */}
+      {/* Mutual Fund Detailed Insights Info Modal (Deposited, Withdrawn & Cumulative) */}
+      {viewingInfoMfFund && (
+        <MutualFundInfoModal
+          fund={viewingInfoMfFund}
+          isOpen={Boolean(viewingInfoMfFund)}
+          onClose={() => setViewingInfoMfFund(null)}
+        />
+      )}
+
+      {/* Add / Edit SIP / Withdrawal Transaction Popup Modal */}
       <AddSipTransactionModal
         isOpen={isSipModalOpen}
+        mode={sipModalMode}
         onClose={() => setIsSipModalOpen(false)}
         onSave={handleSaveSipModalTxn}
         fund={activeSipFund}

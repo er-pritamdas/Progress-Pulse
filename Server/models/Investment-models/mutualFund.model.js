@@ -16,7 +16,7 @@ const mfTransactionSchema = new mongoose.Schema(
     },
     type: {
       type: String,
-      enum: ["SIP", "Lumpsum"],
+      enum: ["SIP", "Lumpsum", "SWP", "Redemption", "Withdrawal"],
       default: "SIP",
     },
     date: {
