@@ -25,6 +25,7 @@ export default function MutualFundCard({
   onOpenAddWithdrawal,
   onEdit,
   onDelete,
+  hideNumbers = false,
 }) {
   const [activeFace, setActiveFace] = useState(0); // 0 = Deposited Details, 1 = Withdrawal Details
 
@@ -164,7 +165,9 @@ export default function MutualFundCard({
                   Total Actually Invested
                 </span>
                 <span className="text-lg font-mono font-black text-emerald-600 dark:text-emerald-400 tracking-tight">
-                  ₹{summary.totalInvested.toLocaleString("en-IN")}
+                  {hideNumbers
+                    ? "₹ ••••••"
+                    : `₹${summary.totalInvested.toLocaleString("en-IN")}`}
                 </span>
               </div>
 
@@ -172,12 +175,20 @@ export default function MutualFundCard({
                 <div className="flex items-center gap-2 text-xs font-mono font-semibold text-base-content/70">
                   <div>
                     <span className="text-[9px] uppercase text-base-content/40 block font-sans">Gross Deposited</span>
-                    <span className="text-base-content font-bold">₹{summary.totalDeposited.toLocaleString("en-IN")}</span>
+                    <span className="text-base-content font-bold">
+                      {hideNumbers
+                        ? "₹ ••••••"
+                        : `₹${summary.totalDeposited.toLocaleString("en-IN")}`}
+                    </span>
                   </div>
                   <div className="h-5 w-px bg-base-300/60" />
                   <div>
                     <span className="text-[9px] uppercase text-base-content/40 block font-sans">Total ER</span>
-                    <span className="text-error font-bold">₹{summary.totalEr.toLocaleString("en-IN")}</span>
+                    <span className="text-error font-bold">
+                      {hideNumbers
+                        ? "₹ •••"
+                        : `₹${summary.totalEr.toLocaleString("en-IN")}`}
+                    </span>
                   </div>
                 </div>
 
@@ -201,14 +212,15 @@ export default function MutualFundCard({
                   <Layers size={11} className="text-secondary" /> Total Terms
                 </span>
                 <div className="font-extrabold text-sm text-base-content font-mono">
-                  {summary.totalTerms} <span className="text-xs font-sans font-medium text-base-content/60">Terms</span>
+                  {hideNumbers ? "••" : summary.totalTerms}{" "}
+                  <span className="text-xs font-sans font-medium text-base-content/60">Terms</span>
                 </div>
                 <div className="flex items-center gap-1 pt-0.5 flex-wrap">
                   <span className="px-1.5 py-0.5 rounded-md bg-secondary/15 text-secondary text-[10px] font-bold">
-                    {summary.sipCount} SIPs
+                    {hideNumbers ? "•• SIPs" : `${summary.sipCount} SIPs`}
                   </span>
                   <span className="px-1.5 py-0.5 rounded-md bg-amber-500/15 text-amber-600 dark:text-amber-400 text-[10px] font-bold">
-                    {summary.lsCount} LS
+                    {hideNumbers ? "•• LS" : `${summary.lsCount} LS`}
                   </span>
                 </div>
               </div>
@@ -232,7 +244,11 @@ export default function MutualFundCard({
                   <TrendingUp size={11} className="text-info" /> Avg NAV
                 </span>
                 <div className="font-extrabold text-sm text-base-content font-mono">
-                  ₹{summary.avgNav > 0 ? summary.avgNav.toFixed(2) : "—"}
+                  {hideNumbers
+                    ? "₹ ••••"
+                    : summary.avgNav > 0
+                    ? `₹${summary.avgNav.toFixed(2)}`
+                    : "—"}
                 </div>
                 <div className="text-[10px] text-base-content/50 font-medium">
                   Cost per Unit
@@ -242,13 +258,28 @@ export default function MutualFundCard({
               {/* 4. Units Breakdown: Added, Redeemed, Left */}
               <div className="p-2.5 bg-base-200/40 rounded-2xl border border-base-300/35 space-y-1">
                 <span className="text-[10px] font-bold text-base-content/50 uppercase tracking-wider block flex items-center gap-1">
-                  <Coins size={11} className="text-warning" /> Units Left: <strong className="font-mono text-base-content font-black">{summary.activeUnits.toFixed(3)}</strong>
+                  <Coins size={11} className="text-warning" /> Units Left:{" "}
+                  <strong className="font-mono text-base-content font-black">
+                    {hideNumbers ? "•••••" : summary.activeUnits.toFixed(3)}
+                  </strong>
                 </span>
                 <div className="flex items-center justify-between text-[9.5px] font-mono pt-0.5 border-t border-base-300/40 text-base-content/70">
-                  <span>Added: <strong className="text-secondary">+{summary.totalUnits.toFixed(3)}</strong></span>
+                  <span>
+                    Added:{" "}
+                    <strong className="text-secondary">
+                      {hideNumbers ? "+•••••" : `+${summary.totalUnits.toFixed(3)}`}
+                    </strong>
+                  </span>
                 </div>
                 <div className="flex items-center justify-between text-[9.5px] font-mono text-base-content/70">
-                  <span>Redeemed: <strong className="text-amber-600 dark:text-amber-400">-{(summary.totalUnitsWithdrawn || 0).toFixed(3)}</strong></span>
+                  <span>
+                    Redeemed:{" "}
+                    <strong className="text-amber-600 dark:text-amber-400">
+                      {hideNumbers
+                        ? "-•••••"
+                        : `-${(summary.totalUnitsWithdrawn || 0).toFixed(3)}`}
+                    </strong>
+                  </span>
                 </div>
               </div>
 
@@ -274,14 +305,16 @@ export default function MutualFundCard({
           {/* ================================================================= */}
           <div className="w-1/2 p-3.5 sm:p-4 space-y-2.5 flex-1 flex flex-col justify-between shrink-0">
             {/* Hero Stat: Total Withdrawn & Gross / ER Ribbon with Far-Right Arrow Icons */}
-            <div className="p-3 bg-amber-500/5 dark:bg-amber-500/10 rounded-2xl border border-amber-500/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5">
+            <div className="p-3 bg-base-200/40 rounded-2xl border border-base-300/35 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5">
               <div>
                 <span className="text-[10px] uppercase font-bold tracking-wider text-base-content/50 block flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500 inline-block" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-base-content/40 inline-block" />
                   Total Actually Withdrawn
                 </span>
-                <span className="text-lg font-mono font-black text-amber-600 dark:text-amber-400 tracking-tight">
-                  ₹{(summary.totalWithdrawn || 0).toLocaleString("en-IN")}
+                <span className="text-lg font-mono font-black text-base-content tracking-tight">
+                  {hideNumbers
+                    ? "₹ ••••••"
+                    : `₹${(summary.totalWithdrawn || 0).toLocaleString("en-IN")}`}
                 </span>
               </div>
 
@@ -289,12 +322,20 @@ export default function MutualFundCard({
                 <div className="flex items-center gap-2 text-xs font-mono font-semibold text-base-content/70">
                   <div>
                     <span className="text-[9px] uppercase text-base-content/40 block font-sans">Gross Withdrawn</span>
-                    <span className="text-base-content font-bold">₹{(summary.grossWithdrawn || 0).toLocaleString("en-IN")}</span>
+                    <span className="text-base-content font-bold">
+                      {hideNumbers
+                        ? "₹ ••••••"
+                        : `₹${(summary.grossWithdrawn || 0).toLocaleString("en-IN")}`}
+                    </span>
                   </div>
                   <div className="h-5 w-px bg-base-300/60" />
                   <div>
                     <span className="text-[9px] uppercase text-base-content/40 block font-sans">Total ER</span>
-                    <span className="text-error font-bold">₹{(summary.totalWithdrawalEr || 0).toLocaleString("en-IN")}</span>
+                    <span className="text-error font-bold">
+                      {hideNumbers
+                        ? "₹ •••"
+                        : `₹${(summary.totalWithdrawalEr || 0).toLocaleString("en-IN")}`}
+                    </span>
                   </div>
                 </div>
 
@@ -315,17 +356,18 @@ export default function MutualFundCard({
               {/* 1. Total Withdrawals Breakdown */}
               <div className="p-2.5 bg-base-200/40 rounded-2xl border border-base-300/35 space-y-1">
                 <span className="text-[10px] font-bold text-base-content/50 uppercase tracking-wider block flex items-center gap-1">
-                  <Layers size={11} className="text-amber-500" /> Total Terms
+                  <Layers size={11} className="text-secondary" /> Total Terms
                 </span>
                 <div className="font-extrabold text-sm text-base-content font-mono">
-                  {summary.totalWithdrawalTerms || 0} <span className="text-xs font-sans font-medium text-base-content/60">Terms</span>
+                  {hideNumbers ? "••" : summary.totalWithdrawalTerms || 0}{" "}
+                  <span className="text-xs font-sans font-medium text-base-content/60">Terms</span>
                 </div>
                 <div className="flex items-center gap-1 pt-0.5 flex-wrap">
-                  <span className="px-1.5 py-0.5 rounded-md bg-amber-500/15 text-amber-600 dark:text-amber-400 text-[10px] font-bold">
-                    {summary.swpCount || 0} SWP
+                  <span className="px-1.5 py-0.5 rounded-md bg-base-300/60 text-base-content/80 text-[10px] font-bold">
+                    {hideNumbers ? "•• SWP" : `${summary.swpCount || 0} SWP`}
                   </span>
                   <span className="px-1.5 py-0.5 rounded-md bg-rose-500/15 text-rose-600 dark:text-rose-400 text-[10px] font-bold">
-                    {summary.lsWithdrawalCount || 0} LS
+                    {hideNumbers ? "•• LS" : `${summary.lsWithdrawalCount || 0} LS`}
                   </span>
                 </div>
               </div>
@@ -349,7 +391,11 @@ export default function MutualFundCard({
                   <TrendingUp size={11} className="text-info" /> Avg NAV
                 </span>
                 <div className="font-extrabold text-sm text-base-content font-mono">
-                  ₹{(summary.avgExitNav || 0) > 0 ? summary.avgExitNav.toFixed(2) : "—"}
+                  {hideNumbers
+                    ? "₹ ••••"
+                    : (summary.avgExitNav || 0) > 0
+                    ? `₹${summary.avgExitNav.toFixed(2)}`
+                    : "—"}
                 </div>
                 <div className="text-[10px] text-base-content/50 font-medium">
                   Exit Price per Unit
@@ -359,20 +405,35 @@ export default function MutualFundCard({
               {/* 4. Units Breakdown: Redeemed, Added, Left */}
               <div className="p-2.5 bg-base-200/40 rounded-2xl border border-base-300/35 space-y-1">
                 <span className="text-[10px] font-bold text-base-content/50 uppercase tracking-wider block flex items-center gap-1">
-                  <Coins size={11} className="text-warning" /> Units Redeemed: <strong className="font-mono text-amber-600 dark:text-amber-400 font-black">-{(summary.totalUnitsWithdrawn || 0).toFixed(3)}</strong>
+                  <Coins size={11} className="text-warning" /> Units Redeemed:{" "}
+                  <strong className="font-mono text-base-content font-black">
+                    {hideNumbers
+                      ? "-•••••"
+                      : `-${(summary.totalUnitsWithdrawn || 0).toFixed(3)}`}
+                  </strong>
                 </span>
                 <div className="flex items-center justify-between text-[9.5px] font-mono pt-0.5 border-t border-base-300/40 text-base-content/70">
-                  <span>Added: <strong className="text-secondary">+{summary.totalUnits.toFixed(3)}</strong></span>
+                  <span>
+                    Added:{" "}
+                    <strong className="text-secondary">
+                      {hideNumbers ? "+•••••" : `+${summary.totalUnits.toFixed(3)}`}
+                    </strong>
+                  </span>
                 </div>
                 <div className="flex items-center justify-between text-[9.5px] font-mono text-base-content/70">
-                  <span>Units Left: <strong className="text-base-content font-bold">{summary.activeUnits.toFixed(3)}</strong></span>
+                  <span>
+                    Units Left:{" "}
+                    <strong className="text-base-content font-bold">
+                      {hideNumbers ? "•••••" : summary.activeUnits.toFixed(3)}
+                    </strong>
+                  </span>
                 </div>
               </div>
 
               {/* 5. Date Range (From -> To) */}
               <div className="col-span-2 p-2.5 bg-base-200/40 rounded-2xl border border-base-300/35 space-y-1">
                 <span className="text-[10px] font-bold text-base-content/50 uppercase tracking-wider block flex items-center gap-1">
-                  <Calendar size={11} className="text-amber-500" /> Date Range (From → To)
+                  <Calendar size={11} className="text-secondary" /> Date Range (From → To)
                 </span>
                 <div className="font-mono font-bold text-xs text-base-content flex items-center gap-1.5 flex-wrap">
                   <span>{summary.withdrawalFromDateStr || "—"}</span>

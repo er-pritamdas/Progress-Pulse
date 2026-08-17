@@ -44,6 +44,8 @@ import {
   FolderTree,
   FolderPlus,
   GripVertical,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { TitleChanger } from "../../../utils/TitleChanger";
 import AddStockTradeModal from "../../../components/Dashboard/Investment/AddStockTradeModal";
@@ -266,6 +268,32 @@ export default function InvTableEntry() {
     }
   };
 
+  // Mutual Fund Privacy Mode (Hide Numbers in MF Cards)
+  const [hideMfNumbers, setHideMfNumbers] = useState(() => {
+    return localStorage.getItem("mf_hide_numbers") === "true";
+  });
+
+  const toggleHideMfNumbers = () => {
+    setHideMfNumbers((prev) => {
+      const next = !prev;
+      localStorage.setItem("mf_hide_numbers", String(next));
+      return next;
+    });
+  };
+
+  // Stock Privacy Mode (Hide Numbers in Stock Cards)
+  const [hideStockNumbers, setHideStockNumbers] = useState(() => {
+    return localStorage.getItem("stocks_hide_numbers") === "true";
+  });
+
+  const toggleHideStockNumbers = () => {
+    setHideStockNumbers((prev) => {
+      const next = !prev;
+      localStorage.setItem("stocks_hide_numbers", String(next));
+      return next;
+    });
+  };
+
   // Mutual Fund Layout View (2-col vs 3-col, Default: 3-col)
   const [mfLayoutView, setMfLayoutView] = useState(() => {
     const saved = localStorage.getItem("mf_layout_view");
@@ -277,22 +305,26 @@ export default function InvTableEntry() {
     localStorage.setItem("mf_layout_view", view);
   };
 
-  // Custom Mutual Fund Groups State (Persisted in localStorage)
-  const [mfGroups, setMfGroups] = useState(() => {
-    try {
-      const saved = localStorage.getItem("mf_custom_groups");
-      return saved ? JSON.parse(saved) : [];
-    } catch (e) {
-      return [];
-    }
-  });
+  // Custom Mutual Fund Groups State (Persisted in DB)
+  const [mfGroups, setMfGroups] = useState([]);
 
   const [isOrganizeModalOpen, setIsOrganizeModalOpen] = useState(false);
   const [collapsedGroupIds, setCollapsedGroupIds] = useState(new Set());
 
-  const handleSaveGroups = (newGroups) => {
+  const handleSaveGroups = async (newGroups) => {
     setMfGroups(newGroups);
-    localStorage.setItem("mf_custom_groups", JSON.stringify(newGroups));
+    try {
+      const res = await axiosInstance.put("/v1/dashboard/investment/mf-groups", {
+        groups: newGroups,
+      });
+      if (res.data && res.data.success) {
+        setMfGroups(res.data.data || []);
+        localStorage.removeItem("mf_custom_groups");
+      }
+    } catch (error) {
+      console.error("Error saving mutual fund groups to DB:", error);
+      alert("Failed to save custom groups to database: " + (error.response?.data?.message || error.message));
+    }
   };
 
   const toggleGroupCollapse = (groupId) => {
@@ -745,20 +777,26 @@ export default function InvTableEntry() {
     setIsAddMfModalOpen(true);
   };
 
-  const handleSaveMutualFund = async (fundPayload, isEdit) => {
+  const handleSaveMutualFund = async (
+    fundPayload,
+    isEdit,
+    targetGroupId = "others",
+    newGroupName = ""
+  ) => {
     try {
+      let savedFund = null;
       if (isEdit && editingMf) {
         const res = await axiosInstance.put(
           `/v1/dashboard/investment/mf/${editingMf.id}`,
           fundPayload
         );
         if (res.data && res.data.success) {
-          const updatedFund = {
+          savedFund = {
             ...res.data.data,
             subCategory: (res.data.data?.subCategory || "").replace(/\s*\/\s*Tax[\s-]*Saver/gi, "").trim(),
           };
           setMfData((prev) =>
-            prev.map((f) => (f.id === editingMf.id ? updatedFund : f))
+            prev.map((f) => (f.id === editingMf.id ? savedFund : f))
           );
         }
       } else {
@@ -767,12 +805,44 @@ export default function InvTableEntry() {
           fundPayload
         );
         if (res.data && res.data.success) {
-          const newFund = {
+          savedFund = {
             ...res.data.data,
             subCategory: (res.data.data?.subCategory || "").replace(/\s*\/\s*Tax[\s-]*Saver/gi, "").trim(),
           };
-          setMfData((prev) => [newFund, ...prev]);
-          setExpandedMfIds((prev) => new Set([...prev, newFund.id]));
+          setMfData((prev) => [savedFund, ...prev]);
+          setExpandedMfIds((prev) => new Set([...prev, savedFund.id]));
+        }
+      }
+
+      // Group Assignment Persistence
+      if (savedFund && savedFund.id) {
+        const fundId = savedFund.id;
+        let updatedGroups = (mfGroups || []).map((g) => ({
+          ...g,
+          fundIds: (g.fundIds || []).filter((id) => id !== fundId),
+        }));
+
+        if (targetGroupId === "__new__" && newGroupName?.trim()) {
+          const newGrp = {
+            id: `group-${Date.now()}`,
+            name: newGroupName.trim(),
+            fundIds: [fundId],
+          };
+          updatedGroups = [...updatedGroups, newGrp];
+          setMfGroups(updatedGroups);
+          handleSaveGroups(updatedGroups);
+        } else if (targetGroupId && targetGroupId !== "others") {
+          updatedGroups = updatedGroups.map((g) =>
+            g.id === targetGroupId
+              ? { ...g, fundIds: Array.from(new Set([...(g.fundIds || []), fundId])) }
+              : g
+          );
+          setMfGroups(updatedGroups);
+          handleSaveGroups(updatedGroups);
+        } else {
+          // If "others", fund is removed from all custom groups (so it falls under "Others")
+          setMfGroups(updatedGroups);
+          handleSaveGroups(updatedGroups);
         }
       }
     } catch (error) {
@@ -787,6 +857,12 @@ export default function InvTableEntry() {
         const res = await axiosInstance.delete(`/v1/dashboard/investment/mf/${fundId}`);
         if (res.data && res.data.success) {
           setMfData((prev) => prev.filter((f) => f.id !== fundId));
+          setMfGroups((prev) =>
+            prev.map((g) => ({
+              ...g,
+              fundIds: (g.fundIds || []).filter((id) => id !== fundId),
+            }))
+          );
         }
       } catch (error) {
         console.error("Error deleting mutual fund:", error);
@@ -1041,9 +1117,41 @@ export default function InvTableEntry() {
     }
   };
 
+  const fetchMutualFundGroups = async () => {
+    try {
+      const res = await axiosInstance.get("/v1/dashboard/investment/mf-groups");
+      if (res.data && res.data.success) {
+        const dbGroups = res.data.data || [];
+        if (dbGroups.length > 0) {
+          setMfGroups(dbGroups);
+        } else {
+          // Auto-migrate from localStorage if previous groups exist
+          const saved = localStorage.getItem("mf_custom_groups");
+          if (saved) {
+            try {
+              const parsed = JSON.parse(saved);
+              if (Array.isArray(parsed) && parsed.length > 0) {
+                setMfGroups(parsed);
+                await axiosInstance.put("/v1/dashboard/investment/mf-groups", {
+                  groups: parsed,
+                });
+                localStorage.removeItem("mf_custom_groups");
+              }
+            } catch (e) {
+              // ignore
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching mutual fund groups from DB:", error);
+    }
+  };
+
   React.useEffect(() => {
     fetchStockTrades();
     fetchMutualFunds();
+    fetchMutualFundGroups();
   }, []);
 
   const calculateStockTerm = (stock) => {
@@ -1995,7 +2103,7 @@ export default function InvTableEntry() {
                 )}
               </div>
 
-              {/* Right Side: Organize Groups & Layout View Toggle */}
+              {/* Right Side: Organize Groups, Privacy Eye Toggle & Layout View Toggle */}
               <div className="flex items-center gap-2 shrink-0 ml-auto">
                 <button
                   type="button"
@@ -2004,6 +2112,20 @@ export default function InvTableEntry() {
                   title="Organize Mutual Fund Groups & Order"
                 >
                   <FolderTree size={14} className="text-secondary" />
+                </button>
+
+                {/* Privacy Mode Eye Toggle (Hide / Show Numbers in MF Cards) */}
+                <button
+                  type="button"
+                  onClick={toggleHideMfNumbers}
+                  className={`btn btn-xs rounded-xl px-2.5 font-bold text-xs transition-all cursor-pointer border ${
+                    hideMfNumbers
+                      ? "btn-warning bg-warning/15 border-warning/30 text-warning shadow-xs"
+                      : "btn-ghost border-base-300/60 text-base-content/70 hover:text-base-content hover:bg-base-200"
+                  }`}
+                  title={hideMfNumbers ? "Numbers Hidden (Click to Show Numbers)" : "Hide Numbers in MF Cards"}
+                >
+                  {hideMfNumbers ? <EyeOff size={14} /> : <Eye size={14} />}
                 </button>
 
                 <div className="join bg-base-200 p-0.5 rounded-xl border border-base-300/60 shrink-0">
@@ -2423,15 +2545,28 @@ export default function InvTableEntry() {
                   />
                 </div>
 
+                {/* Privacy Mode Eye Toggle (Hide / Show Numbers in Stock Cards) */}
+                <button
+                  type="button"
+                  onClick={toggleHideStockNumbers}
+                  className={`btn btn-xs h-8 px-2.5 rounded-xl font-bold text-xs transition-all cursor-pointer border ${
+                    hideStockNumbers
+                      ? "btn-warning bg-warning/15 border-warning/30 text-warning shadow-xs"
+                      : "btn-ghost border-base-300/60 text-base-content/70 hover:text-base-content hover:bg-base-200"
+                  }`}
+                  title={hideStockNumbers ? "Numbers Hidden (Click to Show Numbers)" : "Hide Numbers in Stock Cards"}
+                >
+                  {hideStockNumbers ? <EyeOff size={14} /> : <Eye size={14} />}
+                </button>
+
                 {/* SIMPLE TABLE VIEW ICON BUTTON (Opens Table View Popup in Middle of UI) */}
                 <button
                   type="button"
                   onClick={() => setIsTableModalOpen(true)}
-                  className="btn btn-ghost btn-xs h-8 px-3 text-xs font-extrabold bg-primary/10 border border-primary/30 text-primary rounded-xl flex items-center gap-1.5 shadow-xs hover:bg-primary hover:text-primary-content hover:border-primary transition-all cursor-pointer shrink-0"
+                  className="btn btn-ghost btn-xs h-8 px-2.5 text-xs font-extrabold bg-primary/10 border border-primary/30 text-primary rounded-xl flex items-center justify-center shadow-xs hover:bg-primary hover:text-primary-content hover:border-primary transition-all cursor-pointer shrink-0"
                   title="Open Table View Popup Modal"
                 >
                   <Table size={15} />
-                  <span>Table View</span>
                 </button>
               </div>
             </div>
@@ -2550,19 +2685,19 @@ export default function InvTableEntry() {
                         </div>
                         <div className="flex justify-between">
                           <span className="text-base-content/60">Qty:</span>
-                          <span className="font-bold">{stock.bQty}</span>
+                          <span className="font-bold">{hideStockNumbers ? "••" : stock.bQty}</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-base-content/60">Price:</span>
-                          <span>{formatINR(stock.bShare)}</span>
+                          <span>{hideStockNumbers ? "₹ ••••" : formatINR(stock.bShare)}</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-base-content/60">Charges:</span>
-                          <span className="text-warning font-semibold">{formatINR(stock.bBkgPdc)}</span>
+                          <span className="text-warning font-semibold">{hideStockNumbers ? "₹ •••" : formatINR(stock.bBkgPdc)}</span>
                         </div>
                         <div className="flex justify-between pt-1 border-t border-base-200 font-bold">
                           <span>Cost:</span>
-                          <span className="text-primary">{formatINR(stock.bFStock)}</span>
+                          <span className="text-primary">{hideStockNumbers ? "₹ ••••••" : formatINR(stock.bFStock)}</span>
                         </div>
                       </div>
 
@@ -2579,19 +2714,19 @@ export default function InvTableEntry() {
                             </div>
                             <div className="flex justify-between">
                               <span className="text-base-content/60">Qty:</span>
-                              <span className="font-bold">{stock.sQty}</span>
+                              <span className="font-bold">{hideStockNumbers ? "••" : stock.sQty}</span>
                             </div>
                             <div className="flex justify-between">
                               <span className="text-base-content/60">Price:</span>
-                              <span>{formatINR(stock.sShare)}</span>
+                              <span>{hideStockNumbers ? "₹ ••••" : formatINR(stock.sShare)}</span>
                             </div>
                             <div className="flex justify-between">
                               <span className="text-base-content/60">Charges:</span>
-                              <span className="text-warning font-semibold">{formatINR(stock.sBkgPdc + stock.dp)}</span>
+                              <span className="text-warning font-semibold">{hideStockNumbers ? "₹ •••" : formatINR(stock.sBkgPdc + stock.dp)}</span>
                             </div>
                             <div className="flex justify-between pt-1 border-t border-base-200 font-bold">
                               <span>Net:</span>
-                              <span className="text-secondary">{formatINR(stock.sFStock)}</span>
+                              <span className="text-secondary">{hideStockNumbers ? "₹ ••••••" : formatINR(stock.sFStock)}</span>
                             </div>
                           </>
                         ) : (
@@ -2600,7 +2735,7 @@ export default function InvTableEntry() {
                               Position Active
                             </div>
                             <div className="text-xs font-black text-primary">
-                              {stock.qLeft > 0 ? `${stock.qLeft} Shares Holding` : "Holding"}
+                              {stock.qLeft > 0 ? (hideStockNumbers ? "•• Shares Holding" : `${stock.qLeft} Shares Holding`) : "Holding"}
                             </div>
                           </div>
                         )}
@@ -2623,8 +2758,9 @@ export default function InvTableEntry() {
                           <div className="flex items-center gap-1 text-sm font-black">
                             {isProfit ? <ArrowUpRight size={16} /> : <ArrowDownRight size={16} />}
                             <span>
-                              {isProfit ? "+" : ""}
-                              {formatINR(stock.gainRs)} ({stock.gainPct}%)
+                              {hideStockNumbers
+                                ? (isProfit ? "+₹ •••••• (••%)" : "-₹ •••••• (••%)")
+                                : `${isProfit ? "+" : ""}${formatINR(stock.gainRs)} (${stock.gainPct}%)`}
                             </span>
                           </div>
                         </div>
@@ -2767,7 +2903,12 @@ export default function InvTableEntry() {
                       {/* Group Subtotal Summary */}
                       <div className="flex items-center gap-4 text-xs font-medium text-base-content/70 shrink-0">
                         <span className="hidden sm:inline">
-                          Invested: <strong className="text-base-content font-bold">₹{group.totalInvested.toLocaleString('en-IN')}</strong>
+                          Invested:{" "}
+                          <strong className="text-base-content font-bold">
+                            {hideMfNumbers
+                              ? "₹ ••••••"
+                              : `₹${group.totalInvested.toLocaleString("en-IN")}`}
+                          </strong>
                         </span>
                       </div>
                     </div>
@@ -2790,6 +2931,7 @@ export default function InvTableEntry() {
                               index={fundIdx + 1}
                               fund={fund}
                               summary={summary}
+                              hideNumbers={hideMfNumbers}
                               onOpenInfo={handleOpenMfInfoModal}
                               onOpenTable={(fund, mode) => {
                                 setMfTableViewMode(mode || "deposit");
@@ -2873,6 +3015,7 @@ export default function InvTableEntry() {
         onClose={() => setIsAddMfModalOpen(false)}
         onSaveFund={handleSaveMutualFund}
         initialData={editingMf}
+        groups={mfGroups}
       />
 
       {/* Custom MF Groups & Ordering Modal */}

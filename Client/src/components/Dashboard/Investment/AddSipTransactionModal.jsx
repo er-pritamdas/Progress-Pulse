@@ -11,6 +11,7 @@ import {
   Check,
   Calculator,
   Coins,
+  TrendingUp,
 } from "lucide-react";
 
 export default function AddSipTransactionModal({
@@ -382,59 +383,69 @@ export default function AddSipTransactionModal({
             </div>
           )}
 
-          {/* Type Selector */}
+          {/* Type Selector Tags */}
           <div>
-            <label className="text-[11px] font-bold uppercase tracking-wider text-base-content/60 mb-1.5 block">
+            <label className="text-[11px] font-bold uppercase tracking-wider text-base-content/60 mb-2 block">
               {isWithdrawal ? "Withdrawal Type" : "Investment Type"}
             </label>
             {isWithdrawal ? (
-              <div className="grid grid-cols-2 gap-2 bg-base-200/60 p-1 rounded-2xl border border-base-200">
+              <div className="flex items-center gap-2 flex-wrap">
                 <button
                   type="button"
                   onClick={() => setType("SWP")}
-                  className={`py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+                  className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all duration-200 flex items-center gap-1.5 cursor-pointer border ${
                     type === "SWP"
-                      ? "bg-amber-500 text-white shadow-sm"
-                      : "text-base-content/60 hover:text-base-content"
+                      ? "bg-primary/15 text-primary border-primary/35 shadow-xs"
+                      : "bg-base-200/70 border-base-200 text-base-content/60 hover:bg-base-200 hover:text-base-content"
                   }`}
                 >
-                  SWP (Recurring)
+                  {type === "SWP" && <Check size={13} strokeWidth={2.5} />}
+                  <TrendingUp size={13} className="shrink-0" />
+                  <span>SWP (Recurring)</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setType("Redemption")}
-                  className={`py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+                  className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all duration-200 flex items-center gap-1.5 cursor-pointer border ${
                     type === "Redemption" || type === "Lumpsum"
-                      ? "bg-rose-500 text-white shadow-sm"
-                      : "text-base-content/60 hover:text-base-content"
+                      ? "bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/35 shadow-xs"
+                      : "bg-base-200/70 border-base-200 text-base-content/60 hover:bg-base-200 hover:text-base-content"
                   }`}
                 >
-                  Redemption (One-time)
+                  {(type === "Redemption" || type === "Lumpsum") && (
+                    <Check size={13} strokeWidth={2.5} />
+                  )}
+                  <Minus size={13} className="shrink-0" />
+                  <span>Redemption (One-time)</span>
                 </button>
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-2 bg-base-200/60 p-1 rounded-2xl border border-base-200">
+              <div className="flex items-center gap-2 flex-wrap">
                 <button
                   type="button"
                   onClick={() => setType("SIP")}
-                  className={`py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+                  className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all duration-200 flex items-center gap-1.5 cursor-pointer border ${
                     type === "SIP"
-                      ? "bg-secondary text-white shadow-sm"
-                      : "text-base-content/60 hover:text-base-content"
+                      ? "bg-secondary/15 text-secondary border-secondary/35 shadow-xs"
+                      : "bg-base-200/70 border-base-200 text-base-content/60 hover:bg-base-200 hover:text-base-content"
                   }`}
                 >
-                  SIP (Recurring)
+                  {type === "SIP" && <Check size={13} strokeWidth={2.5} />}
+                  <TrendingUp size={13} className="shrink-0" />
+                  <span>SIP (Recurring)</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setType("Lumpsum")}
-                  className={`py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+                  className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all duration-200 flex items-center gap-1.5 cursor-pointer border ${
                     type === "Lumpsum"
-                      ? "bg-amber-500 text-white shadow-sm"
-                      : "text-base-content/60 hover:text-base-content"
+                      ? "bg-primary/15 text-primary border-primary/35 shadow-xs"
+                      : "bg-base-200/70 border-base-200 text-base-content/60 hover:bg-base-200 hover:text-base-content"
                   }`}
                 >
-                  Lumpsum (One-time)
+                  {type === "Lumpsum" && <Check size={13} strokeWidth={2.5} />}
+                  <Coins size={13} className="shrink-0" />
+                  <span>Lumpsum (One-time)</span>
                 </button>
               </div>
             )}
@@ -532,11 +543,8 @@ export default function AddSipTransactionModal({
               {/* Row 3: Gross Amount & Exit Load */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="text-[11px] font-bold uppercase tracking-wider text-base-content/60 mb-1 block flex items-center justify-between">
-                    <span>Gross Amount (₹)</span>
-                    <span className="text-[10px] text-amber-500 font-semibold lowercase">
-                      (auto / editable)
-                    </span>
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-base-content/60 mb-1 block">
+                    Gross Amount (₹)
                   </label>
                   <input
                     type="number"
@@ -615,11 +623,8 @@ export default function AddSipTransactionModal({
                   />
                 </div>
                 <div>
-                  <label className="text-[11px] font-bold uppercase tracking-wider text-base-content/60 mb-1 block flex items-center justify-between">
-                    <span>Units Allotted</span>
-                    <span className="text-[10px] text-secondary font-semibold lowercase">
-                      (auto / editable)
-                    </span>
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-base-content/60 mb-1 block">
+                    Units Allotted
                   </label>
                   <input
                     type="number"
@@ -698,10 +703,10 @@ export default function AddSipTransactionModal({
             </button>
             <button
               type="submit"
-              className={`btn btn-sm rounded-xl gap-2 font-bold px-5 cursor-pointer shadow-md ${
+              className={`btn btn-sm rounded-xl gap-2 font-bold px-5 cursor-pointer shadow-md transition-all duration-200 hover:scale-[1.02] active:scale-95 ${
                 isWithdrawal
-                  ? "btn-warning bg-amber-500 hover:bg-amber-600 text-white border-none shadow-amber-500/20"
-                  : "btn-secondary shadow-secondary/20"
+                  ? "btn-primary text-primary-content shadow-primary/20"
+                  : "btn-secondary text-secondary-content shadow-secondary/20"
               }`}
             >
               <Check size={16} />

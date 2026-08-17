@@ -14,6 +14,8 @@ import {
   addSipTransaction,
   updateSipTransaction,
   deleteSipTransaction,
+  getMutualFundGroups,
+  updateMutualFundGroups,
 } from "../../controllers/Investment-controllers/mutualFund.controller.js";
 
 const router = Router();
@@ -31,6 +33,17 @@ router
   .route("/stocks/:id")
   .put(updateStockTrade)
   .delete(deleteStockTrade);
+
+// Mutual Fund Custom Groups routes (placed before /mf/:id to avoid parameter clash)
+router
+  .route("/mf-groups")
+  .get(getMutualFundGroups)
+  .put(updateMutualFundGroups);
+
+router
+  .route("/mf/groups")
+  .get(getMutualFundGroups)
+  .put(updateMutualFundGroups);
 
 // Mutual Fund routes
 router

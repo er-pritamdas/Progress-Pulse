@@ -1,4 +1,5 @@
 import MutualFund from "../../models/Investment-models/mutualFund.model.js";
+import MutualFundGroup from "../../models/Investment-models/mutualFundGroup.model.js";
 
 // Helper to format fund object
 const cleanSubCategory = (sub) => {
@@ -133,6 +134,12 @@ export const deleteMutualFund = async (req, res) => {
       });
     }
 
+    // Also remove fund ID from user's custom groups if present
+    await MutualFundGroup.updateOne(
+      { userId },
+      { $pull: { "groups.$[].fundIds": id } }
+    ).catch(() => {});
+
     return res.status(200).json({
       success: true,
       message: "Mutual Fund deleted successfully",
@@ -262,3 +269,62 @@ export const deleteSipTransaction = async (req, res) => {
     });
   }
 };
+
+// ----------------------------------------------------------------------
+// Get Custom Groups for authenticated user
+// ----------------------------------------------------------------------
+export const getMutualFundGroups = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const groupDoc = await MutualFundGroup.findOne({ userId });
+
+    return res.status(200).json({
+      success: true,
+      message: "Mutual fund groups retrieved successfully",
+      data: groupDoc?.groups || [],
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch mutual fund groups",
+      error: error.message,
+    });
+  }
+};
+
+// ----------------------------------------------------------------------
+// Update / Save Custom Groups for authenticated user
+// ----------------------------------------------------------------------
+export const updateMutualFundGroups = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { groups } = req.body;
+
+    const formattedGroups = Array.isArray(groups)
+      ? groups.map((g) => ({
+          id: String(g.id || `group-${Date.now()}-${Math.random()}`),
+          name: String(g.name || "").trim() || "Untitled Group",
+          fundIds: Array.isArray(g.fundIds) ? g.fundIds.map(String) : [],
+        }))
+      : [];
+
+    const updatedDoc = await MutualFundGroup.findOneAndUpdate(
+      { userId },
+      { $set: { groups: formattedGroups } },
+      { new: true, upsert: true, runValidators: true }
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Mutual fund groups saved successfully",
+      data: updatedDoc.groups,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Failed to save mutual fund groups",
+      error: error.message,
+    });
+  }
+};
+

@@ -387,12 +387,15 @@ export default function AddMutualFundModal({
   onClose,
   onSaveFund,
   initialData = null,
+  groups = [],
 }) {
   if (!isOpen) return null;
 
   // ─── Form State ──────────────────────────────────────────────────────────
   const [amc, setAmc] = useState("");
   const [folioNumber, setFolioNumber] = useState("");
+  const [targetGroupId, setTargetGroupId] = useState("others");
+  const [newGroupName, setNewGroupName] = useState("");
 
   const [category, setCategory] = useState("Equity");
   const [subCategory, setSubCategory] = useState(
@@ -420,8 +423,17 @@ export default function AddMutualFundModal({
       setPlan(initialData.plan || "Direct");
       setOptionType(initialData.optionType || "Growth");
       setInvestmentType(initialData.investmentType || "SIP");
+
+      const foundGroup = (groups || []).find((g) =>
+        (g.fundIds || []).includes(initialData.id)
+      );
+      setTargetGroupId(foundGroup ? foundGroup.id : "others");
+      setNewGroupName("");
+    } else {
+      setTargetGroupId("others");
+      setNewGroupName("");
     }
-  }, [initialData]);
+  }, [initialData, groups, isOpen]);
 
   // When main category changes, reset sub-category
   const handleCategoryChange = (newCat) => {
@@ -483,7 +495,7 @@ export default function AddMutualFundModal({
     };
 
     if (onSaveFund) {
-      onSaveFund(payload, !!initialData);
+      onSaveFund(payload, !!initialData, targetGroupId, newGroupName);
     }
     onClose();
   };
@@ -504,7 +516,7 @@ export default function AddMutualFundModal({
         }}
       >
         {/* ================================================================= */}
-        {/*  LEFT PANEL — AMC Name & Folio Number                             */}
+        {/*  LEFT PANEL — AMC Name, Folio Number & Group                      */}
         {/* ================================================================= */}
         <div className="bg-base-100 border border-base-300 lg:border-r-0 rounded-3xl lg:rounded-r-none shadow-2xl w-full lg:w-[420px] flex flex-col overflow-hidden shrink-0">
           {/* Header */}
@@ -518,7 +530,7 @@ export default function AddMutualFundModal({
                   {initialData ? "Edit Mutual Fund" : "Add Mutual Fund"}
                 </h2>
                 <p className="text-[10px] text-base-content/55">
-                  Fund House & Folio Details
+                  Fund House, Folio & Group
                 </p>
               </div>
             </div>
@@ -532,7 +544,7 @@ export default function AddMutualFundModal({
           </div>
 
           {/* Body */}
-          <div className="p-5 flex-1 flex flex-col gap-5 overflow-y-auto">
+          <div className="p-5 flex-1 flex flex-col gap-4 overflow-y-auto">
             {/* Validation Banner */}
             {errorMsg && (
               <div
@@ -548,7 +560,7 @@ export default function AddMutualFundModal({
             )}
 
             {/* AMC Search */}
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <label className="label-text text-xs font-extrabold text-base-content/90 flex items-center gap-1.5">
                 <Landmark size={13} className="text-primary" />
                 AMC (Asset Management Company){" "}
@@ -564,8 +576,56 @@ export default function AddMutualFundModal({
               </p>
             </div>
 
+            {/* Mutual Fund Group Selection */}
+            <div className="space-y-1.5">
+              <label className="label-text text-xs font-extrabold text-base-content/90 flex items-center justify-between">
+                <span className="flex items-center gap-1.5">
+                  <Layers size={13} className="text-secondary" />
+                  Mutual Fund Group
+                </span>
+                <span className="text-[10px] font-semibold text-base-content/40">
+                  Default: Others
+                </span>
+              </label>
+              <select
+                value={targetGroupId}
+                onChange={(e) => {
+                  setTargetGroupId(e.target.value);
+                  if (e.target.value !== "__new__") {
+                    setNewGroupName("");
+                  }
+                }}
+                className="select select-sm select-bordered w-full rounded-xl font-bold text-xs bg-base-100 focus:outline-none focus:ring-2 focus:ring-secondary/20 focus:border-secondary/60 cursor-pointer"
+              >
+                <option value="others">📁 Others / Unassigned</option>
+                {groups &&
+                  groups.map((g) => (
+                    <option key={g.id} value={g.id}>
+                      📂 {g.name}
+                    </option>
+                  ))}
+                <option value="__new__">➕ Create New Group...</option>
+              </select>
+
+              {targetGroupId === "__new__" && (
+                <div className="pt-1 animate-in fade-in slide-in-from-top-1 duration-150">
+                  <input
+                    type="text"
+                    placeholder="Enter new group name..."
+                    value={newGroupName}
+                    onChange={(e) => setNewGroupName(e.target.value)}
+                    className="input input-sm input-bordered w-full rounded-xl font-bold text-xs bg-base-100 focus:outline-none focus:ring-2 focus:ring-secondary/20 focus:border-secondary/60"
+                    autoFocus
+                  />
+                </div>
+              )}
+              <p className="text-[10px] text-base-content/40 pl-1">
+                Select an existing group or keep it in "Others"
+              </p>
+            </div>
+
             {/* Folio Number */}
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <label className="label-text text-xs font-extrabold text-base-content/90 flex items-center gap-1.5">
                 <Hash size={13} className="text-base-content/50" />
                 Folio Number
@@ -615,14 +675,23 @@ export default function AddMutualFundModal({
                     </div>
                   </div>
                 </div>
-                {folioNumber.trim() && (
-                  <div className="text-[10px] text-base-content/50 pt-1 border-t border-base-300/50">
-                    Folio:{" "}
-                    <span className="font-bold text-base-content/70 font-mono">
-                      {folioNumber}
+                <div className="text-[10px] text-base-content/50 flex items-center justify-between pt-1 border-t border-base-300/50">
+                  <span>
+                    Group:{" "}
+                    <strong className="text-secondary font-bold">
+                      {targetGroupId === "__new__"
+                        ? newGroupName.trim() || "New Group"
+                        : targetGroupId === "others"
+                        ? "Others / Unassigned"
+                        : groups.find((g) => g.id === targetGroupId)?.name || "Others"}
+                    </strong>
+                  </span>
+                  {folioNumber.trim() && (
+                    <span className="font-mono font-bold text-base-content/70">
+                      #{folioNumber}
                     </span>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
             )}
           </div>
