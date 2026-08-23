@@ -17,6 +17,25 @@ import {
   getMutualFundGroups,
   updateMutualFundGroups,
 } from "../../controllers/Investment-controllers/mutualFund.controller.js";
+import {
+  getAllFixedDeposits,
+  createFixedDeposit,
+  updateFixedDeposit,
+  deleteFixedDeposit,
+  getFixedDepositGroups,
+  updateFixedDepositGroups,
+} from "../../controllers/Investment-controllers/fixedDeposit.controller.js";
+import {
+  getAllRecurringDeposits,
+  createRecurringDeposit,
+  updateRecurringDeposit,
+  deleteRecurringDeposit,
+  getRecurringDepositGroups,
+  updateRecurringDepositGroups,
+  addRdDeposit,
+  updateRdDeposit,
+  deleteRdDeposit,
+} from "../../controllers/Investment-controllers/recurringDeposit.controller.js";
 
 const router = Router();
 
@@ -64,5 +83,58 @@ router
   .route("/mf/:id/transactions/:txnId")
   .put(updateSipTransaction)
   .delete(deleteSipTransaction);
+
+// Fixed Deposit Custom Groups routes (placed before /fd/:id to avoid parameter clash)
+router
+  .route("/fd-groups")
+  .get(getFixedDepositGroups)
+  .put(updateFixedDepositGroups);
+
+router
+  .route("/fd/groups")
+  .get(getFixedDepositGroups)
+  .put(updateFixedDepositGroups);
+
+// Fixed Deposit routes
+router
+  .route("/fd")
+  .get(getAllFixedDeposits)
+  .post(createFixedDeposit);
+
+router
+  .route("/fd/:id")
+  .put(updateFixedDeposit)
+  .delete(deleteFixedDeposit);
+
+// Recurring Deposit Custom Groups routes (placed before /rd/:id to avoid parameter clash)
+router
+  .route("/rd-groups")
+  .get(getRecurringDepositGroups)
+  .put(updateRecurringDepositGroups);
+
+router
+  .route("/rd/groups")
+  .get(getRecurringDepositGroups)
+  .put(updateRecurringDepositGroups);
+
+// Recurring Deposit routes
+router
+  .route("/rd")
+  .get(getAllRecurringDeposits)
+  .post(createRecurringDeposit);
+
+router
+  .route("/rd/:id")
+  .put(updateRecurringDeposit)
+  .delete(deleteRecurringDeposit);
+
+router
+  .route("/rd/:id/transactions")
+  .post(addRdDeposit);
+
+router
+  .route("/rd/:id/transactions/:txnId")
+  .put(updateRdDeposit)
+  .delete(deleteRdDeposit);
 
 export default router;

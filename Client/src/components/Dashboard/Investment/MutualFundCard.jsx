@@ -30,14 +30,14 @@ export default function MutualFundCard({
   const [activeFace, setActiveFace] = useState(0); // 0 = Deposited Details, 1 = Withdrawal Details
 
   return (
-    <div className="bg-base-100 rounded-3xl border border-base-300/35 hover:border-secondary/30 shadow-sm hover:shadow-xl flex flex-col justify-between overflow-hidden transition-all duration-300 group/card">
+    <div className="bg-base-100 rounded-3xl border border-base-300 dark:border-base-content/20 hover:border-secondary/50 shadow-xs hover:shadow-lg flex flex-col justify-between overflow-hidden transition-all duration-300 group/card">
       {/* Card Header: AMC Name, # Number, Folio, Category, Plan, Option & Actions */}
-      <div className="p-4 sm:p-5 border-b border-base-200/60 bg-base-100 flex flex-col gap-2.5">
+      <div className="p-4 sm:p-5 border-b border-base-300 dark:border-base-content/15 bg-base-100 flex flex-col gap-2.5">
         <div className="flex items-start justify-between gap-3">
           {/* AMC Name with small light opacity # Number */}
           <div className="flex items-center gap-2.5 min-w-0 flex-1">
             {index !== undefined && index !== null && (
-              <span className="text-[11px] font-mono font-bold text-base-content/40 bg-base-200/60 px-2 py-0.5 rounded-lg border border-base-300/35 shrink-0 select-none">
+              <span className="text-[11px] font-mono font-bold text-base-content/40 bg-base-200/60 px-2 py-0.5 rounded-lg shrink-0 select-none">
                 #{index}
               </span>
             )}
@@ -158,7 +158,7 @@ export default function MutualFundCard({
           {/* ================================================================= */}
           <div className="w-1/2 p-3.5 sm:p-4 space-y-2.5 flex-1 flex flex-col justify-between shrink-0">
             {/* Hero Stat: Total Invested & Gross Deposited / ER Ribbon with Far-Right Arrow Icons */}
-            <div className="p-3 bg-base-200/40 rounded-2xl border border-base-300/35 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5">
+            <div className="p-3 bg-base-200/40 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5">
               <div>
                 <span className="text-[10px] uppercase font-bold tracking-wider text-base-content/50 block flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
@@ -207,7 +207,7 @@ export default function MutualFundCard({
             {/* Face 1 Body: Structured 2x3 Grid of Deposit Metrics */}
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               {/* 1. Total Terms & Frequency Breakdown */}
-              <div className="p-2.5 bg-base-200/40 rounded-2xl border border-base-300/35 space-y-1">
+              <div className="p-2.5 bg-base-200/40 rounded-2xl space-y-1">
                 <span className="text-[10px] font-bold text-base-content/50 uppercase tracking-wider block flex items-center gap-1">
                   <Layers size={11} className="text-secondary" /> Total Terms
                 </span>
@@ -226,7 +226,7 @@ export default function MutualFundCard({
               </div>
 
               {/* 2. Duration */}
-              <div className="p-2.5 bg-base-200/40 rounded-2xl border border-base-300/35 space-y-1">
+              <div className="p-2.5 bg-base-200/40 rounded-2xl space-y-1">
                 <span className="text-[10px] font-bold text-base-content/50 uppercase tracking-wider block flex items-center gap-1">
                   <Clock size={11} className="text-primary" /> Duration
                 </span>
@@ -239,7 +239,7 @@ export default function MutualFundCard({
               </div>
 
               {/* 3. Average NAV */}
-              <div className="p-2.5 bg-base-200/40 rounded-2xl border border-base-300/35 space-y-1">
+              <div className="p-2.5 bg-base-200/40 rounded-2xl space-y-1">
                 <span className="text-[10px] font-bold text-base-content/50 uppercase tracking-wider block flex items-center gap-1">
                   <TrendingUp size={11} className="text-info" /> Avg NAV
                 </span>
@@ -256,7 +256,7 @@ export default function MutualFundCard({
               </div>
 
               {/* 4. Units Breakdown: Added, Redeemed, Left */}
-              <div className="p-2.5 bg-base-200/40 rounded-2xl border border-base-300/35 space-y-1">
+              <div className="p-2.5 bg-base-200/40 rounded-2xl space-y-1">
                 <span className="text-[10px] font-bold text-base-content/50 uppercase tracking-wider block flex items-center gap-1">
                   <Coins size={11} className="text-warning" /> Units Left:{" "}
                   <strong className="font-mono text-base-content font-black">
@@ -284,7 +284,7 @@ export default function MutualFundCard({
               </div>
 
               {/* 5. Date Range (From -> To) */}
-              <div className="col-span-2 p-2.5 bg-base-200/40 rounded-2xl border border-base-300/35 space-y-1">
+              <div className="col-span-2 p-2.5 bg-base-200/40 rounded-2xl space-y-1">
                 <span className="text-[10px] font-bold text-base-content/50 uppercase tracking-wider block flex items-center gap-1">
                   <Calendar size={11} className="text-secondary" /> Date Range (From → To)
                 </span>
@@ -305,7 +305,7 @@ export default function MutualFundCard({
           {/* ================================================================= */}
           <div className="w-1/2 p-3.5 sm:p-4 space-y-2.5 flex-1 flex flex-col justify-between shrink-0">
             {/* Hero Stat: Total Withdrawn & Gross / ER Ribbon with Far-Right Arrow Icons */}
-            <div className="p-3 bg-base-200/40 rounded-2xl border border-base-300/35 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5">
+            <div className="p-3 bg-base-200/40 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5">
               <div>
                 <span className="text-[10px] uppercase font-bold tracking-wider text-base-content/50 block flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-base-content/40 inline-block" />
@@ -354,7 +354,7 @@ export default function MutualFundCard({
             {/* Face 2 Body: Structured 2x3 Grid of Withdrawal Metrics */}
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               {/* 1. Total Withdrawals Breakdown */}
-              <div className="p-2.5 bg-base-200/40 rounded-2xl border border-base-300/35 space-y-1">
+              <div className="p-2.5 bg-base-200/40 rounded-2xl space-y-1">
                 <span className="text-[10px] font-bold text-base-content/50 uppercase tracking-wider block flex items-center gap-1">
                   <Layers size={11} className="text-secondary" /> Total Terms
                 </span>
@@ -373,7 +373,7 @@ export default function MutualFundCard({
               </div>
 
               {/* 2. Duration */}
-              <div className="p-2.5 bg-base-200/40 rounded-2xl border border-base-300/35 space-y-1">
+              <div className="p-2.5 bg-base-200/40 rounded-2xl space-y-1">
                 <span className="text-[10px] font-bold text-base-content/50 uppercase tracking-wider block flex items-center gap-1">
                   <Clock size={11} className="text-primary" /> Duration
                 </span>
@@ -386,7 +386,7 @@ export default function MutualFundCard({
               </div>
 
               {/* 3. Average Exit NAV */}
-              <div className="p-2.5 bg-base-200/40 rounded-2xl border border-base-300/35 space-y-1">
+              <div className="p-2.5 bg-base-200/40 rounded-2xl space-y-1">
                 <span className="text-[10px] font-bold text-base-content/50 uppercase tracking-wider block flex items-center gap-1">
                   <TrendingUp size={11} className="text-info" /> Avg NAV
                 </span>
@@ -403,7 +403,7 @@ export default function MutualFundCard({
               </div>
 
               {/* 4. Units Breakdown: Redeemed, Added, Left */}
-              <div className="p-2.5 bg-base-200/40 rounded-2xl border border-base-300/35 space-y-1">
+              <div className="p-2.5 bg-base-200/40 rounded-2xl space-y-1">
                 <span className="text-[10px] font-bold text-base-content/50 uppercase tracking-wider block flex items-center gap-1">
                   <Coins size={11} className="text-warning" /> Units Redeemed:{" "}
                   <strong className="font-mono text-base-content font-black">
@@ -431,7 +431,7 @@ export default function MutualFundCard({
               </div>
 
               {/* 5. Date Range (From -> To) */}
-              <div className="col-span-2 p-2.5 bg-base-200/40 rounded-2xl border border-base-300/35 space-y-1">
+              <div className="col-span-2 p-2.5 bg-base-200/40 rounded-2xl space-y-1">
                 <span className="text-[10px] font-bold text-base-content/50 uppercase tracking-wider block flex items-center gap-1">
                   <Calendar size={11} className="text-secondary" /> Date Range (From → To)
                 </span>

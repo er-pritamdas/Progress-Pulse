@@ -35,18 +35,49 @@ html {
   scroll-behavior: smooth;
 }
 
+/* Glassmorphism Effect for ApexCharts Tooltips */
 .apexcharts-tooltip,
 .apexcharts-tooltip.apexcharts-theme-dark,
 .apexcharts-tooltip.apexcharts-theme-light {
-  background: transparent !important;
-  border: none !important;
-  box-shadow: none !important;
+  background: rgba(15, 23, 42, 0.82) !important;
+  backdrop-filter: blur(16px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(180%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  border-radius: 1.25rem !important;
+  box-shadow: 0 20px 35px -5px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.08) !important;
+  color: #f8fafc !important;
   overflow: visible !important;
 }
 
 .apexcharts-tooltip-title {
-  background: transparent !important;
-  border: none !important;
+  background: rgba(255, 255, 255, 0.07) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+  font-weight: 700 !important;
+  font-size: 11px !important;
+  padding: 0.4rem 0.75rem !important;
+  color: #e2e8f0 !important;
+  border-radius: 1.25rem 1.25rem 0 0 !important;
+}
+
+.apexcharts-tooltip-series-group {
+  padding: 0.35rem 0.75rem !important;
+}
+
+[data-theme="light"] .apexcharts-tooltip,
+[data-theme="light"] .apexcharts-tooltip.apexcharts-theme-light,
+[data-theme="light"] .apexcharts-tooltip.apexcharts-theme-dark {
+  background: rgba(255, 255, 255, 0.85) !important;
+  backdrop-filter: blur(16px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(180%) !important;
+  border: 1px solid rgba(0, 0, 0, 0.12) !important;
+  box-shadow: 0 20px 35px -5px rgba(0, 0, 0, 0.15) !important;
+  color: #0f172a !important;
+}
+
+[data-theme="light"] .apexcharts-tooltip-title {
+  background: rgba(0, 0, 0, 0.05) !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08) !important;
+  color: #1e293b !important;
 }
 
 /* Custom Animations for Dashboard */

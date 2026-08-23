@@ -26,9 +26,11 @@ import {
   BarChart2,
   Filter,
   TrendingDown,
+  Table,
 } from "lucide-react";
 import NutrientGraphCard from "../Charts/NutrientGraphCard";
 import NutrientWikiModal from "../../FoodLogging/NutrientWikiModal";
+import NutrientTableModal from "../NutrientTableModal";
 
 export const NUTRIENT_CATEGORIES_CONFIG = {
   Macronutrients: [
@@ -175,6 +177,8 @@ function NutrientAnalysis({
   const setActiveCategoryTab = setExternalCategoryTab || setInternalCategoryTab;
   const [foodLogs, setFoodLogs] = useState([]);
   const [selectedWikiNutrient, setSelectedWikiNutrient] = useState(null);
+  const [isTableModalOpen, setIsTableModalOpen] = useState(false);
+  const [tableCategory, setTableCategory] = useState("Macronutrients");
 
   // Selected graphs per category map: { Macronutrients: ['calories', 'protein', ...], Vitamins: [...] }
   const [selectedGraphs, setSelectedGraphs] = useState(() => {
@@ -711,6 +715,20 @@ function NutrientAnalysis({
                       <span className="hidden sm:inline">Metrics Only</span>
                     </button>
                   </div>
+
+                  {/* Sub Dashboard Table View Button */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTableCategory(category);
+                      setIsTableModalOpen(true);
+                    }}
+                    className="btn btn-xs h-7 px-2.5 rounded-xl font-extrabold bg-primary/10 border border-primary/30 text-primary hover:bg-primary hover:text-primary-content hover:border-primary shadow-xs transition-all cursor-pointer flex items-center gap-1.5 shrink-0"
+                    title={`Open ${category} Table View (Dates & Days grouped by month)`}
+                  >
+                    <Table size={13} />
+                    <span className="hidden sm:inline">Table View</span>
+                  </button>
                 </div>
               </div>
 
@@ -788,6 +806,17 @@ function NutrientAnalysis({
           </section>
         );
       })}
+
+      {/* Nutrient Table Modal Popup (Middle of UI with Month Groups & Sticky Headers) */}
+      <NutrientTableModal
+        isOpen={isTableModalOpen}
+        onClose={() => setIsTableModalOpen(false)}
+        initialCategory={tableCategory}
+        dateRangeList={dateRangeList}
+        foodLogs={foodLogs}
+        habitData={habitData}
+        targetsConfig={TARGETS_CONFIG}
+      />
 
       {/* Nutrient Wiki Modal */}
       <NutrientWikiModal

@@ -3,9 +3,10 @@ import { useDispatch, useSelector } from "react-redux";
 import dayjs from "dayjs";
 import { addTransaction, updateTransaction, deleteTransaction, setMonth, performUndo, performRedo } from "../../services/redux/slice/ExpenseSlice";
 import { getSourceTagStyle, getCategoryTagStyle } from "../../utils/expenseTheme";
-import { Trash2, Save, X, Edit2, Plus, PlusCircle, Handshake, AlertTriangle, Wallet, Tag, Folder, TrendingUp, TrendingDown, ArrowUp, ArrowDown, Calendar, ArrowRightLeft, Sparkles, ChevronDown, ChevronLeft, ChevronRight, Filter, Search, Undo2, Redo2, Eye, EyeOff, SlidersHorizontal, Info, ArrowUpRight } from "lucide-react";
+import { Trash2, Save, X, Edit2, Plus, PlusCircle, Handshake, AlertTriangle, Wallet, Tag, Folder, TrendingUp, TrendingDown, ArrowUp, ArrowDown, Calendar, ArrowRightLeft, Sparkles, ChevronDown, ChevronLeft, ChevronRight, Filter, Search, Undo2, Redo2, Eye, EyeOff, SlidersHorizontal, Info, ArrowUpRight, Zap } from "lucide-react";
 import AddTransactionModal from "./AddTransactionModal";
 import TransactionInfoModal from "./TransactionInfoModal";
+import { evaluateMathExpression } from "../../utils/mathExpression";
 
 // Helper Component for DaisyUI Dropdown
 const DaisySelect = ({ value, onChange, options, placeholder, disabled, className }) => {
@@ -501,6 +502,9 @@ const ExpenseTable = ({
         isReimbursable: false
     });
 
+    const calculatedNewAmount = evaluateMathExpression(newData.amount);
+    const calculatedEditAmount = evaluateMathExpression(editData.amount);
+
     // Global Keyboard Bindings:
     // 'Ctrl+Z' : Undo (up to 5 steps)
     // 'Ctrl+Y' / 'Ctrl+Shift+Z' : Redo
@@ -655,8 +659,9 @@ const ExpenseTable = ({
 
     // Add Transaction
     const handleAdd = () => {
-        if (!newData.description || !newData.amount) {
-            alert("Please fill required fields (Description and Amount)");
+        const parsedAmount = evaluateMathExpression(newData.amount) ?? (Number(newData.amount) || 0);
+        if (!newData.description || !newData.amount || parsedAmount <= 0) {
+            alert("Please fill required fields (Description and valid positive Amount)");
             return;
         }
 
@@ -674,7 +679,7 @@ const ExpenseTable = ({
                 description: newData.description,
                 sourceId: newData.sourceId,
                 targetSourceId: newData.targetSourceId,
-                amount: Number(newData.amount),
+                amount: parsedAmount,
                 type: "Transfer",
                 isReimbursable: newData.isReimbursable
             }));
@@ -687,7 +692,7 @@ const ExpenseTable = ({
                 date: newData.date || new Date(),
                 description: newData.description,
                 sourceId: newData.sourceId,
-                amount: Number(newData.amount),
+                amount: parsedAmount,
                 type: "Credit",
                 isReimbursable: newData.isReimbursable
             }));
@@ -700,7 +705,7 @@ const ExpenseTable = ({
                 date: newData.date || new Date(),
                 description: newData.description,
                 sourceId: newData.sourceId,
-                amount: Number(newData.amount),
+                amount: parsedAmount,
                 type: "Debit",
                 isReimbursable: newData.isReimbursable
             }));
@@ -719,7 +724,7 @@ const ExpenseTable = ({
                 sourceId: newData.sourceId,
                 categoryId: newData.categoryId,
                 subCategoryId: newData.subCategoryId || undefined,
-                amount: Number(newData.amount),
+                amount: parsedAmount,
                 type: "Debit",
                 isReimbursable: newData.isReimbursable
             }));
@@ -767,6 +772,7 @@ const ExpenseTable = ({
     };
 
     const saveEdit = () => {
+        const parsedAmount = evaluateMathExpression(editData.amount) ?? (Number(editData.amount) || 0);
         const isAdd = editData.isAddMoney || editData.type === "Credit";
         const isManDebit = editData.isManualDebit || (editData.type === "Debit" && !editData.categoryId && !editData.isTransfer && !editData.isAddMoney);
         const isTrf = editData.isTransfer || editData.type === "Transfer";
@@ -776,8 +782,8 @@ const ExpenseTable = ({
         const catId = typeof editData.categoryId === 'object' && editData.categoryId !== null ? editData.categoryId._id : editData.categoryId;
         const subId = typeof editData.subCategoryId === 'object' && editData.subCategoryId !== null ? editData.subCategoryId._id : editData.subCategoryId;
 
-        if (!editData.description || !editData.amount) {
-            alert("Please fill required fields (Description and Amount)");
+        if (!editData.description || !editData.amount || parsedAmount <= 0) {
+            alert("Please fill required fields (Description and valid positive Amount)");
             return;
         }
 
@@ -795,7 +801,7 @@ const ExpenseTable = ({
                     targetSourceId: null,
                     categoryId: null,
                     subCategoryId: null,
-                    amount: Number(editData.amount),
+                    amount: parsedAmount,
                     type: "Credit",
                     isReimbursable: editData.isReimbursable
                 }
@@ -814,7 +820,7 @@ const ExpenseTable = ({
                     targetSourceId: null,
                     categoryId: null,
                     subCategoryId: null,
-                    amount: Number(editData.amount),
+                    amount: parsedAmount,
                     type: "Debit",
                     isReimbursable: editData.isReimbursable
                 }
@@ -837,7 +843,7 @@ const ExpenseTable = ({
                     targetSourceId: trgId,
                     categoryId: null,
                     subCategoryId: null,
-                    amount: Number(editData.amount),
+                    amount: parsedAmount,
                     type: "Transfer",
                     isReimbursable: editData.isReimbursable
                 }
@@ -860,7 +866,7 @@ const ExpenseTable = ({
                     targetSourceId: null,
                     categoryId: catId,
                     subCategoryId: subId || null,
-                    amount: Number(editData.amount),
+                    amount: parsedAmount,
                     type: "Debit",
                     isReimbursable: editData.isReimbursable
                 }
@@ -1035,9 +1041,9 @@ const ExpenseTable = ({
                                 else setInternalIsAddModalOpen(true);
                             }}
                             className="btn btn-outline btn-primary btn-sm btn-square rounded-xl shadow-xs"
-                            title="Add Transaction (Modal)"
+                            title="Quick Add Transaction (M)"
                         >
-                            <PlusCircle size={18} />
+                            <Zap size={17} className="text-primary fill-primary/20" />
                         </button>
                     </div>
                 </div>
@@ -1123,7 +1129,7 @@ const ExpenseTable = ({
                     </div>
 
                     {/* 6. Amount & Sort Controls Header */}
-                    <div className="w-[130px] shrink-0 text-right flex items-center justify-end gap-1 whitespace-nowrap">
+                    <div className="w-[155px] shrink-0 text-right flex items-center justify-end gap-1 whitespace-nowrap">
                         <span>Amount</span>
                         <button
                             onClick={() => handleSortChange(sortOrder === "newest" ? "oldest" : "newest")}
@@ -1263,8 +1269,26 @@ const ExpenseTable = ({
                                         />
                                     </div>
 
-                                    {/* Amount */}
-                                    <input type="number" placeholder="0.00" value={newData.amount} onChange={e => setNewData({ ...newData, amount: e.target.value })} className="w-[130px] shrink-0 input input-sm input-bordered focus:input-primary text-xs text-right whitespace-nowrap" />
+                                    {/* Amount with Real-Time Math Calculator */}
+                                    <div className="w-[155px] shrink-0 flex items-center gap-1 bg-base-100 p-0.5 rounded-lg border border-base-300 focus-within:border-primary">
+                                        <input
+                                            type="text"
+                                            placeholder="e.g. 23-8-4"
+                                            value={newData.amount}
+                                            onChange={e => setNewData({ ...newData, amount: e.target.value })}
+                                            className="w-[85px] input input-xs border-0 focus:outline-none text-xs font-mono font-bold text-right px-1"
+                                            title="Type math expression (e.g. 23-8-4, 500/2)"
+                                        />
+                                        <span className="font-bold text-base-content/40 text-xs select-none">=</span>
+                                        <span
+                                            className={`flex-1 text-right text-xs font-mono font-extrabold px-1 truncate select-none ${
+                                                calculatedNewAmount !== null ? 'text-primary font-black' : 'text-base-content/40'
+                                            }`}
+                                            title={calculatedNewAmount !== null ? `Calculated: ₹${calculatedNewAmount.toLocaleString()}` : "0.00"}
+                                        >
+                                            {calculatedNewAmount !== null ? `₹${calculatedNewAmount}` : "0.00"}
+                                        </span>
+                                    </div>
 
                                     {/* Actions */}
                                     <div className="w-[85px] shrink-0 flex items-center justify-center gap-1">
@@ -1507,7 +1531,26 @@ const ExpenseTable = ({
                                                                     />
                                                                 </div>
 
-                                                                <input type="number" value={editData.amount} onChange={e => setEditData({ ...editData, amount: e.target.value })} className="w-[130px] shrink-0 input input-xs input-bordered text-right whitespace-nowrap text-xs font-mono font-bold" />
+                                                                 {/* Amount with Real-Time Math Calculator (Edit) */}
+                                                                 <div className="w-[155px] shrink-0 flex items-center gap-1 bg-base-100 p-0.5 rounded-lg border border-base-300 focus-within:border-primary">
+                                                                     <input
+                                                                         type="text"
+                                                                         placeholder="e.g. 23-8-4"
+                                                                         value={editData.amount}
+                                                                         onChange={e => setEditData({ ...editData, amount: e.target.value })}
+                                                                         className="w-[85px] input input-xs border-0 focus:outline-none text-xs font-mono font-bold text-right px-1"
+                                                                         title="Type math expression (e.g. 23-8-4, 500/2)"
+                                                                     />
+                                                                     <span className="font-bold text-base-content/40 text-xs select-none">=</span>
+                                                                     <span
+                                                                         className={`flex-1 text-right text-xs font-mono font-extrabold px-1 truncate select-none ${
+                                                                             calculatedEditAmount !== null ? 'text-primary font-black' : 'text-base-content/40'
+                                                                         }`}
+                                                                         title={calculatedEditAmount !== null ? `Calculated: ₹${calculatedEditAmount.toLocaleString()}` : "0.00"}
+                                                                     >
+                                                                         {calculatedEditAmount !== null ? `₹${calculatedEditAmount}` : "0.00"}
+                                                                     </span>
+                                                                 </div>
 
                                                                 <div className="w-[85px] shrink-0 flex items-center justify-center gap-1">
                                                                     <button onClick={saveEdit} className="btn btn-xs btn-square btn-success text-white"><Save size={12} /></button>
@@ -1545,7 +1588,7 @@ const ExpenseTable = ({
                                                                         );
                                                                     })()}
                                                                 </div>
-                                                                <div className={`w-[130px] shrink-0 text-right font-bold font-mono tracking-tight text-xs whitespace-nowrap ${
+                                                                <div className={`w-[155px] shrink-0 text-right font-bold font-mono tracking-tight text-xs whitespace-nowrap ${
                                                                     t.type === 'Transfer'
                                                                         ? 'text-amber-500 dark:text-amber-400'
                                                                         : (t.type === 'Credit' ? 'text-success' : 'text-error')

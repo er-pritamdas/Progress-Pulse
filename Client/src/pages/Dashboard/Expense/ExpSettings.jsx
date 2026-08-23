@@ -529,16 +529,30 @@ function ExpSettings() {
                     return 0;
                 };
 
+                // Canonical comparator for transactions in ascending chronological order
+                const compareTransactionsAsc = (a, b) => {
+                    const timeA = new Date(a.date).getTime();
+                    const timeB = new Date(b.date).getTime();
+                    if (timeA !== timeB) return timeA - timeB;
+
+                    const createA = new Date(a.createdAt || a.updatedAt || a.date).getTime();
+                    const createB = new Date(b.createdAt || b.updatedAt || b.date).getTime();
+                    if (createA !== createB) return createA - createB;
+
+                    return String(a._id || a.id || '').localeCompare(String(b._id || b.id || ''));
+                };
+
                 // Calculate closing balance for each transaction chronologically (oldest to newest)
-                const txsAsc = [...sourceTxns].sort((a, b) => new Date(a.date) - new Date(b.date) || new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
-                const currentBal = targetSource?.balance || 0;
+                const txsAsc = [...sourceTxns].sort(compareTransactionsAsc);
+                const currentBal = Number(targetSource?.balance || 0);
                 const totalDelta = txsAsc.reduce((sum, t) => sum + getDelta(t), 0);
                 let runningBal = currentBal - totalDelta;
 
                 const closingBalMap = new Map();
                 txsAsc.forEach((t) => {
                     runningBal += getDelta(t);
-                    closingBalMap.set(String(t._id || t.id), runningBal);
+                    const roundedBal = Math.round((runningBal + Number.EPSILON) * 100) / 100;
+                    closingBalMap.set(String(t._id || t.id), roundedBal);
                 });
 
                 const hasHistoryColFilters = Boolean(historyColFilters.date || historyColFilters.description || historyColFilters.categoryId);
@@ -572,16 +586,11 @@ function ExpSettings() {
                     return true;
                 });
 
-                // Sort Order
+                // Sort Order strictly consistent with the chronological sequence
                 filteredList.sort((a, b) => {
-                    const timeA = new Date(a.date).getTime();
-                    const timeB = new Date(b.date).getTime();
-                    if (timeA !== timeB) {
-                        return historySortOrder === "newest" ? timeB - timeA : timeA - timeB;
-                    }
-                    const updateA = new Date(a.updatedAt || a.createdAt || a.date).getTime();
-                    const updateB = new Date(b.updatedAt || b.createdAt || b.date).getTime();
-                    return historySortOrder === "newest" ? updateB - updateA : updateA - updateB;
+                    return historySortOrder === "newest"
+                        ? compareTransactionsAsc(b, a)
+                        : compareTransactionsAsc(a, b);
                 });
 
                 if (historyLimitCount !== "all") {
@@ -861,11 +870,13 @@ function ExpSettings() {
                                                             </td>
                                                             <td className="py-3 px-4 text-right font-mono font-extrabold whitespace-nowrap">
                                                                 <span className={isTransfer ? "text-amber-500" : (isCredit ? "text-success" : "text-error")}>
-                                                                    {isCredit ? '+' : (isTransfer ? '⇄ ' : '-')}₹{Number(t.amount || 0).toLocaleString()}
+                                                                    {isCredit ? '+' : (isTransfer ? (getDelta(t) >= 0 ? '+⇄ ' : '-⇄ ') : '-')}₹{Number(t.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
                                                                 </span>
                                                             </td>
-                                                            <td className="py-3 px-4 text-right font-mono font-extrabold whitespace-nowrap text-base-content/90">
-                                                                ₹{closingBal.toLocaleString()}
+                                                            <td className={`py-3 px-4 text-right font-mono font-extrabold whitespace-nowrap ${closingBal < 0 ? 'text-rose-500' : 'text-base-content/90'}`}>
+                                                                {closingBal < 0
+                                                                    ? `-₹${Math.abs(closingBal).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`
+                                                                    : `₹${closingBal.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`}
                                                             </td>
                                                         </tr>
                                                     );

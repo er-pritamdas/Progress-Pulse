@@ -56,6 +56,17 @@ import OrganizeMfGroupsModal from "../../../components/Dashboard/Investment/Orga
 import MutualFundCard from "../../../components/Dashboard/Investment/MutualFundCard";
 import MutualFundTableModal from "../../../components/Dashboard/Investment/MutualFundTableModal";
 import MutualFundInfoModal from "../../../components/Dashboard/Investment/MutualFundInfoModal";
+import AddFixedDepositModal from "../../../components/Dashboard/Investment/AddFixedDepositModal";
+import WithdrawFdModal from "../../../components/Dashboard/Investment/WithdrawFdModal";
+import OrganizeFdGroupsModal from "../../../components/Dashboard/Investment/OrganizeFdGroupsModal";
+import FixedDepositCard from "../../../components/Dashboard/Investment/FixedDepositCard";
+import FixedDepositInfoModal from "../../../components/Dashboard/Investment/FixedDepositInfoModal";
+import AddRecurringDepositModal from "../../../components/Dashboard/Investment/AddRecurringDepositModal";
+import WithdrawRdModal from "../../../components/Dashboard/Investment/WithdrawRdModal";
+import OrganizeRdGroupsModal from "../../../components/Dashboard/Investment/OrganizeRdGroupsModal";
+import RecurringDepositCard from "../../../components/Dashboard/Investment/RecurringDepositCard";
+import AddRdDepositModal from "../../../components/Dashboard/Investment/AddRdDepositModal";
+import RecurringDepositTableModal from "../../../components/Dashboard/Investment/RecurringDepositTableModal";
 import axiosInstance from "../../../Context/AxiosInstance";
 import { formatDateDDMMMYYYY } from "../../../components/Dashboard/DatePicker";
 
@@ -612,6 +623,229 @@ export default function InvTableEntry() {
     return resultGroups;
   }, [filteredMutualFunds, mfGroups]);
 
+  // ----------------------------------------------------------------------
+  // Fixed Deposit (FD) State & Helper Computations
+  // ----------------------------------------------------------------------
+  const [fdData, setFdData] = useState([]);
+  const [isAddFdModalOpen, setIsAddFdModalOpen] = useState(false);
+  const [editingFd, setEditingFd] = useState(null);
+  const [fdGroups, setFdGroups] = useState([]);
+  const [isOrganizeFdModalOpen, setIsOrganizeFdModalOpen] = useState(false);
+  const [collapsedFdGroupIds, setCollapsedFdGroupIds] = useState(new Set());
+  const [fdSearchTerm, setFdSearchTerm] = useState("");
+
+  const [hideFdNumbers, setHideFdNumbers] = useState(() => {
+    return localStorage.getItem("fd_hide_numbers") === "true";
+  });
+  const toggleHideFdNumbers = () => {
+    setHideFdNumbers((prev) => {
+      const next = !prev;
+      localStorage.setItem("fd_hide_numbers", String(next));
+      return next;
+    });
+  };
+
+  const [fdLayoutView, setFdLayoutView] = useState(() => {
+    const saved = localStorage.getItem("fd_layout_view");
+    return saved === "2-col" ? "2-col" : "3-col";
+  });
+  const handleFdLayoutChange = (view) => {
+    setFdLayoutView(view);
+    localStorage.setItem("fd_layout_view", view);
+  };
+
+  // FD Single Settlement (Withdrawal / Liquidation) Modal
+  const [withdrawingFd, setWithdrawingFd] = useState(null);
+
+  // FD Info Modal State
+  const [viewingInfoFd, setViewingInfoFd] = useState(null);
+
+  const toggleFdGroupCollapse = (groupId) => {
+    setCollapsedFdGroupIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(groupId)) next.delete(groupId);
+      else next.add(groupId);
+      return next;
+    });
+  };
+
+  const filteredFixedDeposits = useMemo(() => {
+    if (!fdSearchTerm.trim()) return fdData;
+    const term = fdSearchTerm.toLowerCase().trim();
+    return fdData.filter((fd) => {
+      const bankMatch = (fd.bankName || "").toLowerCase().includes(term);
+      const numMatch = (fd.fdNumber || "").toLowerCase().includes(term);
+      const schemeMatch = (fd.schemeName || "").toLowerCase().includes(term);
+      return bankMatch || numMatch || schemeMatch;
+    });
+  }, [fdData, fdSearchTerm]);
+
+  const groupedFixedDeposits = useMemo(() => {
+    const list = filteredFixedDeposits;
+    if (!list || list.length === 0) return [];
+
+    const fdMap = new Map(list.map((f) => [f.id, f]));
+    const assignedIds = new Set();
+    const result = [];
+
+    (fdGroups || []).forEach((g) => {
+      const groupFds = [];
+      (g.fdIds || []).forEach((id) => {
+        if (fdMap.has(id)) {
+          groupFds.push(fdMap.get(id));
+          assignedIds.add(id);
+        }
+      });
+
+      if (groupFds.length > 0) {
+        const totalInvested = groupFds.reduce(
+          (sum, f) => sum + (f.isWithdrawn ? 0 : Number(f.amount || 0)),
+          0
+        );
+        result.push({
+          id: g.id,
+          name: g.name,
+          fds: groupFds,
+          totalInvested,
+        });
+      }
+    });
+
+    const unassigned = list.filter((f) => !assignedIds.has(f.id));
+    if (unassigned.length > 0) {
+      const totalInvested = unassigned.reduce(
+        (sum, f) => sum + (f.isWithdrawn ? 0 : Number(f.amount || 0)),
+        0
+      );
+      result.unshift({
+        id: "default-group",
+        name: "General Fixed Deposits",
+        fds: unassigned,
+        totalInvested,
+      });
+    }
+
+    return result;
+  }, [filteredFixedDeposits, fdGroups]);
+
+  // ----------------------------------------------------------------------
+  // Recurring Deposit (RD) State & Helper Computations
+  // ----------------------------------------------------------------------
+  const [rdData, setRdData] = useState([]);
+  const [isAddRdModalOpen, setIsAddRdModalOpen] = useState(false);
+  const [editingRd, setEditingRd] = useState(null);
+  const [rdGroups, setRdGroups] = useState([]);
+  const [isOrganizeRdModalOpen, setIsOrganizeRdModalOpen] = useState(false);
+  const [collapsedRdGroupIds, setCollapsedRdGroupIds] = useState(new Set());
+  const [rdSearchTerm, setRdSearchTerm] = useState("");
+
+  const [hideRdNumbers, setHideRdNumbers] = useState(() => {
+    return localStorage.getItem("rd_hide_numbers") === "true";
+  });
+  const toggleHideRdNumbers = () => {
+    setHideRdNumbers((prev) => {
+      const next = !prev;
+      localStorage.setItem("rd_hide_numbers", String(next));
+      return next;
+    });
+  };
+
+  const [rdLayoutView, setRdLayoutView] = useState(() => {
+    const saved = localStorage.getItem("rd_layout_view");
+    return saved === "2-col" ? "2-col" : "3-col";
+  });
+  const handleRdLayoutChange = (view) => {
+    setRdLayoutView(view);
+    localStorage.setItem("rd_layout_view", view);
+  };
+
+  // RD Single Settlement (Withdrawal / Liquidation) Modal
+  const [withdrawingRd, setWithdrawingRd] = useState(null);
+
+  // RD Deposit Modal & Table Modal States
+  const [isAddRdDepositModalOpen, setIsAddRdDepositModalOpen] = useState(false);
+  const [activeRdForDeposit, setActiveRdForDeposit] = useState(null);
+  const [editingRdTxn, setEditingRdTxn] = useState(null);
+  const [isRdTableModalOpen, setIsRdTableModalOpen] = useState(false);
+  const [viewingTableRd, setViewingTableRd] = useState(null);
+
+  const getRdTotalPrincipal = (rd) => {
+    if (rd.isWithdrawn) return 0;
+    const txns = rd.transactions || [];
+    if (txns.length > 0) {
+      return txns.reduce((sum, t) => sum + Number(t.amount || t.amtDeposit || 0), 0);
+    }
+    return Number(rd.amount || 0);
+  };
+
+  const toggleRdGroupCollapse = (groupId) => {
+    setCollapsedRdGroupIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(groupId)) next.delete(groupId);
+      else next.add(groupId);
+      return next;
+    });
+  };
+
+  const filteredRecurringDeposits = useMemo(() => {
+    if (!rdSearchTerm.trim()) return rdData;
+    const term = rdSearchTerm.toLowerCase().trim();
+    return rdData.filter((rd) => {
+      const bankMatch = (rd.bankName || "").toLowerCase().includes(term);
+      const numMatch = (rd.rdNumber || "").toLowerCase().includes(term);
+      const schemeMatch = (rd.schemeName || "").toLowerCase().includes(term);
+      return bankMatch || numMatch || schemeMatch;
+    });
+  }, [rdData, rdSearchTerm]);
+
+  const groupedRecurringDeposits = useMemo(() => {
+    const list = filteredRecurringDeposits;
+    if (!list || list.length === 0) return [];
+
+    const rdMap = new Map(list.map((f) => [f.id, f]));
+    const assignedIds = new Set();
+    const result = [];
+
+    (rdGroups || []).forEach((g) => {
+      const groupRds = [];
+      (g.rdIds || []).forEach((id) => {
+        if (rdMap.has(id)) {
+          groupRds.push(rdMap.get(id));
+          assignedIds.add(id);
+        }
+      });
+
+      if (groupRds.length > 0) {
+        const totalInvested = groupRds.reduce(
+          (sum, f) => sum + getRdTotalPrincipal(f),
+          0
+        );
+        result.push({
+          id: g.id,
+          name: g.name,
+          rds: groupRds,
+          totalInvested,
+        });
+      }
+    });
+
+    const unassigned = list.filter((f) => !assignedIds.has(f.id));
+    if (unassigned.length > 0) {
+      const totalInvested = unassigned.reduce(
+        (sum, f) => sum + getRdTotalPrincipal(f),
+        0
+      );
+      result.unshift({
+        id: "default-group",
+        name: "General Recurring Deposits",
+        rds: unassigned,
+        totalInvested,
+      });
+    }
+
+    return result;
+  }, [filteredRecurringDeposits, rdGroups]);
+
   // Collapsed Years set for transactions inside funds
   const [collapsedMfYearKeys, setCollapsedMfYearKeys] = useState(new Set());
 
@@ -1148,11 +1382,419 @@ export default function InvTableEntry() {
     }
   };
 
+  const fetchFixedDeposits = async () => {
+    try {
+      const res = await axiosInstance.get("/v1/dashboard/investment/fd");
+      if (res.data && res.data.success) {
+        setFdData(res.data.data || []);
+      }
+    } catch (error) {
+      console.error("Error fetching fixed deposits:", error);
+    }
+  };
+
+  const fetchFixedDepositGroups = async () => {
+    try {
+      const res = await axiosInstance.get("/v1/dashboard/investment/fd-groups");
+      if (res.data && res.data.success) {
+        setFdGroups(res.data.data || []);
+      }
+    } catch (error) {
+      console.error("Error fetching fixed deposit groups:", error);
+    }
+  };
+
+  const fetchRecurringDeposits = async () => {
+    try {
+      const res = await axiosInstance.get("/v1/dashboard/investment/rd");
+      if (res.data && res.data.success) {
+        setRdData(res.data.data || []);
+      }
+    } catch (error) {
+      console.error("Error fetching recurring deposits:", error);
+    }
+  };
+
+  const fetchRecurringDepositGroups = async () => {
+    try {
+      const res = await axiosInstance.get("/v1/dashboard/investment/rd-groups");
+      if (res.data && res.data.success) {
+        setRdGroups(res.data.data || []);
+      }
+    } catch (error) {
+      console.error("Error fetching recurring deposit groups:", error);
+    }
+  };
+
   React.useEffect(() => {
     fetchStockTrades();
     fetchMutualFunds();
     fetchMutualFundGroups();
+    fetchFixedDeposits();
+    fetchFixedDepositGroups();
+    fetchRecurringDeposits();
+    fetchRecurringDepositGroups();
   }, []);
+
+  const handleOpenAddFdModal = () => {
+    setEditingFd(null);
+    setIsAddFdModalOpen(true);
+  };
+
+  const handleEditFd = (fd) => {
+    setEditingFd(fd);
+    setIsAddFdModalOpen(true);
+  };
+
+  const handleSaveFixedDeposit = async (fdPayload) => {
+    const editId = editingFd?.id || editingFd?._id;
+    try {
+      if (editId) {
+        const res = await axiosInstance.put(
+          `/v1/dashboard/investment/fd/${editId}`,
+          fdPayload
+        );
+        if (res.data && res.data.success) {
+          const updated = res.data.data;
+          setFdData((prev) =>
+            prev.map((f) => ((f.id || f._id) === editId ? updated : f))
+          );
+        }
+      } else {
+        const res = await axiosInstance.post(
+          "/v1/dashboard/investment/fd",
+          fdPayload
+        );
+        if (res.data && res.data.success) {
+          const newFd = res.data.data;
+          setFdData((prev) => [newFd, ...prev]);
+
+          setFdGroups((prev) => {
+            if (prev.length > 0) {
+              const updated = [...prev];
+              updated[0] = {
+                ...updated[0],
+                fdIds: [newFd.id || newFd._id, ...(updated[0].fdIds || [])],
+              };
+              axiosInstance.put("/v1/dashboard/investment/fd-groups", { groups: updated }).catch(() => {});
+              return updated;
+            }
+            return prev;
+          });
+        }
+      }
+      setIsAddFdModalOpen(false);
+      setEditingFd(null);
+    } catch (error) {
+      console.error("Error saving fixed deposit:", error);
+      alert("Failed to save Fixed Deposit: " + (error.response?.data?.message || error.message));
+    }
+  };
+
+  const handleDeleteFd = async (fdId) => {
+    if (!window.confirm("Are you sure you want to delete this Fixed Deposit entry?")) return;
+    try {
+      const res = await axiosInstance.delete(`/v1/dashboard/investment/fd/${fdId}`);
+      if (res.data && res.data.success) {
+        setFdData((prev) => prev.filter((f) => (f.id || f._id) !== fdId));
+      }
+    } catch (error) {
+      console.error("Error deleting fixed deposit:", error);
+      alert("Failed to delete Fixed Deposit: " + (error.response?.data?.message || error.message));
+    }
+  };
+
+  const handleSaveFdSettlement = async (settlementPayload) => {
+    const fdId = settlementPayload.id || settlementPayload._id;
+    if (!fdId) {
+      alert("Error: Missing Fixed Deposit ID");
+      return;
+    }
+    try {
+      const res = await axiosInstance.put(
+        `/v1/dashboard/investment/fd/${fdId}`,
+        settlementPayload
+      );
+      if (res.data && res.data.success) {
+        const updated = res.data.data;
+        setFdData((prev) =>
+          prev.map((f) => ((f.id || f._id) === fdId ? updated : f))
+        );
+      }
+      setWithdrawingFd(null);
+    } catch (error) {
+      console.error("Error saving FD settlement:", error);
+      alert("Failed to save settlement: " + (error.response?.data?.message || error.message));
+    }
+  };
+
+  const handleRemoveFdWithdrawal = async (fd) => {
+    const fdId = fd?.id || fd?._id;
+    if (!fdId) return;
+    if (!window.confirm("Are you sure you want to remove the Withdrawn transaction and restore this Fixed Deposit to Active?")) return;
+
+    try {
+      const resetPayload = {
+        ...fd,
+        isWithdrawn: false,
+        withdrawalDate: "",
+        totalPayout: 0,
+        penalty: 0,
+        realizedGain: 0,
+        realizedReturnPercent: 0,
+        realizedPrincipal: 0,
+        realizedInterest: 0,
+        status: "Active",
+      };
+      const res = await axiosInstance.put(
+        `/v1/dashboard/investment/fd/${fdId}`,
+        resetPayload
+      );
+      if (res.data && res.data.success) {
+        const updated = res.data.data;
+        setFdData((prev) =>
+          prev.map((f) => ((f.id || f._id) === fdId ? updated : f))
+        );
+      }
+    } catch (error) {
+      console.error("Error removing FD withdrawal:", error);
+      alert("Failed to remove withdrawal: " + (error.response?.data?.message || error.message));
+    }
+  };
+
+  const handleSaveFdGroups = async (newGroups) => {
+    setFdGroups(newGroups);
+    try {
+      const res = await axiosInstance.put("/v1/dashboard/investment/fd-groups", {
+        groups: newGroups,
+      });
+      if (res.data && res.data.success) {
+        setFdGroups(res.data.data || []);
+      }
+    } catch (error) {
+      console.error("Error saving FD groups:", error);
+    }
+  };
+
+  // ----------------------------------------------------------------------
+  // Recurring Deposit (RD) Handlers
+  // ----------------------------------------------------------------------
+  const handleOpenAddRdModal = () => {
+    setEditingRd(null);
+    setIsAddRdModalOpen(true);
+  };
+
+  const handleEditRd = (rd) => {
+    setEditingRd(rd);
+    setIsAddRdModalOpen(true);
+  };
+
+  const handleSaveRecurringDeposit = async (rdPayload) => {
+    const editId = editingRd?.id || editingRd?._id;
+    try {
+      if (editId) {
+        const res = await axiosInstance.put(
+          `/v1/dashboard/investment/rd/${editId}`,
+          rdPayload
+        );
+        if (res.data && res.data.success) {
+          const updated = res.data.data;
+          setRdData((prev) =>
+            prev.map((f) => ((f.id || f._id) === editId ? updated : f))
+          );
+        }
+      } else {
+        const res = await axiosInstance.post(
+          "/v1/dashboard/investment/rd",
+          rdPayload
+        );
+        if (res.data && res.data.success) {
+          const newRd = res.data.data;
+          setRdData((prev) => [newRd, ...prev]);
+
+          setRdGroups((prev) => {
+            if (prev.length > 0) {
+              const updated = [...prev];
+              updated[0] = {
+                ...updated[0],
+                rdIds: [newRd.id || newRd._id, ...(updated[0].rdIds || [])],
+              };
+              axiosInstance.put("/v1/dashboard/investment/rd-groups", { groups: updated }).catch(() => {});
+              return updated;
+            }
+            return prev;
+          });
+        }
+      }
+      setIsAddRdModalOpen(false);
+      setEditingRd(null);
+    } catch (error) {
+      console.error("Error saving recurring deposit:", error);
+      alert("Failed to save Recurring Deposit: " + (error.response?.data?.message || error.message));
+    }
+  };
+
+  const handleDeleteRd = async (rdId) => {
+    if (!window.confirm("Are you sure you want to delete this Recurring Deposit entry?")) return;
+    try {
+      const res = await axiosInstance.delete(`/v1/dashboard/investment/rd/${rdId}`);
+      if (res.data && res.data.success) {
+        setRdData((prev) => prev.filter((f) => (f.id || f._id) !== rdId));
+      }
+    } catch (error) {
+      console.error("Error deleting recurring deposit:", error);
+      alert("Failed to delete Recurring Deposit: " + (error.response?.data?.message || error.message));
+    }
+  };
+
+  const handleSaveRdSettlement = async (settlementPayload) => {
+    const rdId = settlementPayload.id || settlementPayload._id;
+    if (!rdId) {
+      alert("Error: Missing Recurring Deposit ID");
+      return;
+    }
+    try {
+      const res = await axiosInstance.put(
+        `/v1/dashboard/investment/rd/${rdId}`,
+        settlementPayload
+      );
+      if (res.data && res.data.success) {
+        const updated = res.data.data;
+        setRdData((prev) =>
+          prev.map((f) => ((f.id || f._id) === rdId ? updated : f))
+        );
+      }
+      setWithdrawingRd(null);
+    } catch (error) {
+      console.error("Error saving RD settlement:", error);
+      alert("Failed to save settlement: " + (error.response?.data?.message || error.message));
+    }
+  };
+
+  const handleRemoveRdWithdrawal = async (rd) => {
+    const rdId = rd?.id || rd?._id;
+    if (!rdId) return;
+    if (!window.confirm("Are you sure you want to remove the Withdrawn transaction and restore this Recurring Deposit to Active?")) return;
+
+    try {
+      const resetPayload = {
+        ...rd,
+        isWithdrawn: false,
+        withdrawalDate: "",
+        totalPayout: 0,
+        penalty: 0,
+        realizedGain: 0,
+        realizedReturnPercent: 0,
+        realizedPrincipal: 0,
+        realizedInterest: 0,
+        status: "Active",
+      };
+      const res = await axiosInstance.put(
+        `/v1/dashboard/investment/rd/${rdId}`,
+        resetPayload
+      );
+      if (res.data && res.data.success) {
+        const updated = res.data.data;
+        setRdData((prev) =>
+          prev.map((f) => ((f.id || f._id) === rdId ? updated : f))
+        );
+      }
+    } catch (error) {
+      console.error("Error removing RD withdrawal:", error);
+      alert("Failed to remove withdrawal: " + (error.response?.data?.message || error.message));
+    }
+  };
+
+  const handleSaveRdGroups = async (newGroups) => {
+    setRdGroups(newGroups);
+    try {
+      const res = await axiosInstance.put("/v1/dashboard/investment/rd-groups", {
+        groups: newGroups,
+      });
+      if (res.data && res.data.success) {
+        setRdGroups(res.data.data || []);
+      }
+    } catch (error) {
+      console.error("Error saving RD groups:", error);
+    }
+  };
+
+  const handleOpenAddRdDeposit = (rd, initialTxn = null) => {
+    setActiveRdForDeposit(rd);
+    setEditingRdTxn(initialTxn);
+    setIsAddRdDepositModalOpen(true);
+  };
+
+  const handleOpenRdTable = (rd) => {
+    setViewingTableRd(rd);
+    setIsRdTableModalOpen(true);
+  };
+
+  const handleSaveRdDeposit = async (payload, txnId = null) => {
+    const rdId = activeRdForDeposit?.id || activeRdForDeposit?._id;
+    if (!rdId) return;
+
+    try {
+      if (txnId) {
+        const res = await axiosInstance.put(
+          `/v1/dashboard/investment/rd/${rdId}/transactions/${txnId}`,
+          payload
+        );
+        if (res.data && res.data.success) {
+          const updated = res.data.data;
+          setRdData((prev) =>
+            prev.map((f) => ((f.id || f._id) === rdId ? updated : f))
+          );
+          if (viewingTableRd && (viewingTableRd.id || viewingTableRd._id) === rdId) {
+            setViewingTableRd(updated);
+          }
+        }
+      } else {
+        const res = await axiosInstance.post(
+          `/v1/dashboard/investment/rd/${rdId}/transactions`,
+          payload
+        );
+        if (res.data && res.data.success) {
+          const updated = res.data.data;
+          setRdData((prev) =>
+            prev.map((f) => ((f.id || f._id) === rdId ? updated : f))
+          );
+          if (viewingTableRd && (viewingTableRd.id || viewingTableRd._id) === rdId) {
+            setViewingTableRd(updated);
+          }
+        }
+      }
+      setIsAddRdDepositModalOpen(false);
+      setEditingRdTxn(null);
+    } catch (error) {
+      console.error("Error saving RD deposit:", error);
+      alert("Failed to save deposit: " + (error.response?.data?.message || error.message));
+    }
+  };
+
+  const handleDeleteRdDeposit = async (rd, txnId) => {
+    const rdId = rd?.id || rd?._id;
+    if (!rdId || !txnId) return;
+    if (!window.confirm("Are you sure you want to delete this deposit entry?")) return;
+
+    try {
+      const res = await axiosInstance.delete(
+        `/v1/dashboard/investment/rd/${rdId}/transactions/${txnId}`
+      );
+      if (res.data && res.data.success) {
+        const updated = res.data.data;
+        setRdData((prev) =>
+          prev.map((f) => ((f.id || f._id) === rdId ? updated : f))
+        );
+        if (viewingTableRd && (viewingTableRd.id || viewingTableRd._id) === rdId) {
+          setViewingTableRd(updated);
+        }
+      }
+    } catch (error) {
+      console.error("Error deleting RD deposit:", error);
+      alert("Failed to delete deposit: " + (error.response?.data?.message || error.message));
+    }
+  };
 
   const calculateStockTerm = (stock) => {
     if (!stock) return "";
@@ -1253,14 +1895,6 @@ export default function InvTableEntry() {
       icon: PieChart,
       badge: "SIP Active",
       badgeColor: "badge-secondary",
-    },
-    {
-      id: "ef",
-      label: "Emergency Fund",
-      subLabel: "Liquid Funds & High-Yield Savings",
-      icon: ShieldAlert,
-      badge: "6 Months Cover",
-      badgeColor: "badge-warning",
     },
     {
       id: "fd",
@@ -2076,6 +2710,28 @@ export default function InvTableEntry() {
               <span>Add Mutual Fund Entry</span>
             </button>
           )}
+
+          {activeTab === "fd" && (
+            <button
+              type="button"
+              className="btn btn-primary btn-sm rounded-xl gap-2 font-medium shadow-md shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all cursor-pointer shrink-0"
+              onClick={handleOpenAddFdModal}
+            >
+              <Plus size={16} />
+              <span>Add Fixed Deposit Entry</span>
+            </button>
+          )}
+
+          {activeTab === "rd" && (
+            <button
+              type="button"
+              className="btn btn-primary btn-sm rounded-xl gap-2 font-medium shadow-md shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all cursor-pointer shrink-0"
+              onClick={handleOpenAddRdModal}
+            >
+              <Plus size={16} />
+              <span>Add Recurring Deposit Entry</span>
+            </button>
+          )}
         </div>
 
         {/* Single-Line Controls & Filters Bar for Mutual Funds */}
@@ -2103,13 +2759,13 @@ export default function InvTableEntry() {
                 )}
               </div>
 
-              {/* Right Side: Organize Groups, Privacy Eye Toggle & Layout View Toggle */}
+              {/* Right Side: MF Actions */}
               <div className="flex items-center gap-2 shrink-0 ml-auto">
                 <button
                   type="button"
                   onClick={() => setIsOrganizeModalOpen(true)}
                   className="btn btn-xs btn-ghost rounded-lg px-2.5 font-bold text-xs border border-base-300/60 hover:bg-base-200 transition-all cursor-pointer"
-                  title="Organize Mutual Fund Groups & Order"
+                  title="Organize Fund Groups & Order"
                 >
                   <FolderTree size={14} className="text-secondary" />
                 </button>
@@ -2147,6 +2803,168 @@ export default function InvTableEntry() {
                     className={`btn btn-xs rounded-lg px-2.5 transition-all cursor-pointer ${
                       mfLayoutView === "3-col"
                         ? "btn-secondary shadow-xs text-white"
+                        : "btn-ghost text-base-content/60 hover:text-base-content"
+                    }`}
+                    title="3 Columns View"
+                  >
+                    <Columns3 size={14} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Single-Line Controls & Filters Bar for Fixed Deposits */}
+        {activeTab === "fd" && (
+          <div className="bg-base-100/80 backdrop-blur-md p-2.5 rounded-2xl border border-base-200/70 shadow-sm overflow-visible">
+            <div className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-2.5 w-full">
+              {/* Left Side: Search Bar */}
+              <div className="relative flex-1 min-w-[200px] max-w-md">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-base-content/40" />
+                <input
+                  type="text"
+                  value={fdSearchTerm}
+                  onChange={(e) => setFdSearchTerm(e.target.value)}
+                  placeholder="Search fixed deposits by Bank, Account #, Scheme..."
+                  className="input input-sm pl-9 pr-8 w-full rounded-xl bg-base-200/60 border-base-200 focus:border-primary text-xs"
+                />
+                {fdSearchTerm && (
+                  <button
+                    type="button"
+                    onClick={() => setFdSearchTerm("")}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-base-content/40 hover:text-base-content cursor-pointer"
+                  >
+                    <X size={12} />
+                  </button>
+                )}
+              </div>
+
+              {/* Right Side: Organize Groups, Privacy Eye Toggle & Layout View Toggle */}
+              <div className="flex items-center gap-2 shrink-0 ml-auto">
+                <button
+                  type="button"
+                  onClick={() => setIsOrganizeFdModalOpen(true)}
+                  className="btn btn-xs btn-ghost rounded-lg px-2.5 font-bold text-xs border border-base-300/60 hover:bg-base-200 transition-all cursor-pointer"
+                  title="Organize Fixed Deposit Groups & Order"
+                >
+                  <FolderTree size={14} className="text-primary" />
+                </button>
+
+                {/* Privacy Mode Eye Toggle (Hide / Show Numbers in FD Cards) */}
+                <button
+                  type="button"
+                  onClick={toggleHideFdNumbers}
+                  className={`btn btn-xs rounded-xl px-2.5 font-bold text-xs transition-all cursor-pointer border ${
+                    hideFdNumbers
+                      ? "btn-warning bg-warning/15 border-warning/30 text-warning shadow-xs"
+                      : "btn-ghost border-base-300/60 text-base-content/70 hover:text-base-content hover:bg-base-200"
+                  }`}
+                  title={hideFdNumbers ? "Numbers Hidden (Click to Show Numbers)" : "Hide Numbers in FD Cards"}
+                >
+                  {hideFdNumbers ? <EyeOff size={14} /> : <Eye size={14} />}
+                </button>
+
+                <div className="join bg-base-200 p-0.5 rounded-xl border border-base-300/60 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => handleFdLayoutChange("2-col")}
+                    className={`btn btn-xs rounded-lg px-2.5 transition-all cursor-pointer ${
+                      fdLayoutView === "2-col"
+                        ? "btn-primary shadow-xs text-white"
+                        : "btn-ghost text-base-content/60 hover:text-base-content"
+                    }`}
+                    title="2 Columns View"
+                  >
+                    <Columns2 size={14} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleFdLayoutChange("3-col")}
+                    className={`btn btn-xs rounded-lg px-2.5 transition-all cursor-pointer ${
+                      fdLayoutView === "3-col"
+                        ? "btn-primary shadow-xs text-white"
+                        : "btn-ghost text-base-content/60 hover:text-base-content"
+                    }`}
+                    title="3 Columns View"
+                  >
+                    <Columns3 size={14} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Single-Line Controls & Filters Bar for Recurring Deposits */}
+        {activeTab === "rd" && (
+          <div className="bg-base-100/80 backdrop-blur-md p-2.5 rounded-2xl border border-base-200/70 shadow-sm overflow-visible">
+            <div className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-2.5 w-full">
+              {/* Left Side: Search Bar */}
+              <div className="relative flex-1 min-w-[200px] max-w-md">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-base-content/40" />
+                <input
+                  type="text"
+                  value={rdSearchTerm}
+                  onChange={(e) => setRdSearchTerm(e.target.value)}
+                  placeholder="Search recurring deposits by Bank, Account #, Scheme..."
+                  className="input input-sm pl-9 pr-8 w-full rounded-xl bg-base-200/60 border-base-200 focus:border-primary text-xs"
+                />
+                {rdSearchTerm && (
+                  <button
+                    type="button"
+                    onClick={() => setRdSearchTerm("")}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-base-content/40 hover:text-base-content cursor-pointer"
+                  >
+                    <X size={12} />
+                  </button>
+                )}
+              </div>
+
+              {/* Right Side: Organize Groups, Privacy Eye Toggle & Layout View Toggle */}
+              <div className="flex items-center gap-2 shrink-0 ml-auto">
+                <button
+                  type="button"
+                  onClick={() => setIsOrganizeRdModalOpen(true)}
+                  className="btn btn-xs btn-ghost rounded-lg px-2.5 font-bold text-xs border border-base-300/60 hover:bg-base-200 transition-all cursor-pointer"
+                  title="Organize Recurring Deposit Groups & Order"
+                >
+                  <FolderTree size={14} className="text-primary" />
+                </button>
+
+                {/* Privacy Mode Eye Toggle (Hide / Show Numbers in RD Cards) */}
+                <button
+                  type="button"
+                  onClick={toggleHideRdNumbers}
+                  className={`btn btn-xs rounded-xl px-2.5 font-bold text-xs transition-all cursor-pointer border ${
+                    hideRdNumbers
+                      ? "btn-warning bg-warning/15 border-warning/30 text-warning shadow-xs"
+                      : "btn-ghost border-base-300/60 text-base-content/70 hover:text-base-content hover:bg-base-200"
+                  }`}
+                  title={hideRdNumbers ? "Numbers Hidden (Click to Show Numbers)" : "Hide Numbers in RD Cards"}
+                >
+                  {hideRdNumbers ? <EyeOff size={14} /> : <Eye size={14} />}
+                </button>
+
+                <div className="join bg-base-200 p-0.5 rounded-xl border border-base-300/60 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => handleRdLayoutChange("2-col")}
+                    className={`btn btn-xs rounded-lg px-2.5 transition-all cursor-pointer ${
+                      rdLayoutView === "2-col"
+                        ? "btn-primary shadow-xs text-white"
+                        : "btn-ghost text-base-content/60 hover:text-base-content"
+                    }`}
+                    title="2 Columns View"
+                  >
+                    <Columns2 size={14} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleRdLayoutChange("3-col")}
+                    className={`btn btn-xs rounded-lg px-2.5 transition-all cursor-pointer ${
+                      rdLayoutView === "3-col"
+                        ? "btn-primary shadow-xs text-white"
                         : "btn-ghost text-base-content/60 hover:text-base-content"
                     }`}
                     title="3 Columns View"
@@ -2961,13 +3779,269 @@ export default function InvTableEntry() {
       {/* ------------------------------------------------------------------ */}
       {/* OTHER TABS PLACEHOLDERS (Emergency Fund, FD, RD, PF)               */}
       {/* ------------------------------------------------------------------ */}
-      {activeTab !== "stocks" && activeTab !== "mf" && (
+      {/* ------------------------------------------------------------------ */}
+      {/* FIXED DEPOSIT TAB VIEW (activeTab === "fd")                        */}
+      {/* ------------------------------------------------------------------ */}
+      {activeTab === "fd" && (
+        <div className="space-y-5 animate-in fade-in duration-300">
+          {/* Empty State */}
+          {fdData.length === 0 ? (
+            <div className="bg-base-100 p-12 rounded-3xl border border-base-200 shadow-sm text-center">
+              <div className="max-w-md mx-auto flex flex-col items-center gap-4">
+                <div className="p-4 bg-primary/10 text-primary rounded-3xl">
+                  <Landmark size={40} />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-base-content">
+                    No Fixed Deposits Yet
+                  </h3>
+                  <p className="text-xs text-base-content/60 mt-1">
+                    Add your bank and NBFC Fixed Deposits to track interest rates, compounding maturity schedules, and partial or full withdrawals.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleOpenAddFdModal}
+                  className="btn btn-primary btn-sm rounded-xl gap-2 font-bold px-5 cursor-pointer shadow-md"
+                >
+                  <Plus size={16} />
+                  <span>Add First Fixed Deposit</span>
+                </button>
+              </div>
+            </div>
+          ) : filteredFixedDeposits.length === 0 ? (
+            <div className="bg-base-100 p-10 rounded-3xl border border-base-200 shadow-sm text-center">
+              <div className="max-w-md mx-auto flex flex-col items-center gap-3">
+                <div className="p-3 bg-primary/10 text-primary rounded-2xl">
+                  <Search size={32} />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-base-content">
+                    No Matching Fixed Deposits Found
+                  </h3>
+                  <p className="text-xs text-base-content/60 mt-1">
+                    No fixed deposits matched your search query <span className="font-semibold text-primary">"{fdSearchTerm}"</span>.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setFdSearchTerm("")}
+                  className="btn btn-ghost btn-xs text-primary font-bold hover:bg-primary/10 cursor-pointer"
+                >
+                  Clear Search
+                </button>
+              </div>
+            </div>
+          ) : (
+            /* Grouped Fixed Deposit Cards with Collapsible Headers */
+            <div className="space-y-6">
+              {groupedFixedDeposits.map((group) => {
+                const isGroupCollapsed = collapsedFdGroupIds.has(group.id);
+
+                return (
+                  <div key={group.id} className="space-y-3.5">
+                    {/* Collapsible Group Header */}
+                    <div
+                      onClick={() => toggleFdGroupCollapse(group.id)}
+                      className="flex items-center justify-between px-4 py-2.5 bg-base-100/90 backdrop-blur-md rounded-2xl border border-base-200/90 shadow-2xs cursor-pointer hover:bg-base-200/40 transition-all select-none group"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className={`p-1 rounded-xl bg-primary/10 text-primary transition-transform duration-200 shrink-0 ${isGroupCollapsed ? '-rotate-90' : 'rotate-0'}`}>
+                          <ChevronDown size={16} />
+                        </div>
+                        <div className="flex items-center gap-2 flex-wrap min-w-0">
+                          <h3 className="font-extrabold text-sm text-base-content tracking-tight group-hover:text-primary transition-colors truncate">
+                            {group.name}
+                          </h3>
+                          <span className="px-2 py-0.5 rounded-full bg-primary/15 text-primary text-[11px] font-bold border border-primary/20 shrink-0">
+                            {group.fds.length} deposit{group.fds.length !== 1 ? 's' : ''}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Group Subtotal Summary */}
+                      <div className="flex items-center gap-4 text-xs font-medium text-base-content/70 shrink-0">
+                        <span className="hidden sm:inline">
+                          Active Principal:{" "}
+                          <strong className="text-base-content font-bold">
+                            {hideFdNumbers
+                              ? "₹ ••••••"
+                              : `₹${group.totalInvested.toLocaleString("en-IN")}`}
+                          </strong>
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Group FD Cards Grid */}
+                    {!isGroupCollapsed && (
+                      <div
+                        className={
+                          fdLayoutView === "2-col"
+                            ? "grid grid-cols-1 lg:grid-cols-2 gap-5 items-stretch"
+                            : "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 items-stretch"
+                        }
+                      >
+                        {group.fds.map((fd, fdIdx) => {
+                          return (
+                            <FixedDepositCard
+                              key={fd.id}
+                              index={fdIdx + 1}
+                              fd={fd}
+                              hideNumbers={hideFdNumbers}
+                              onOpenInfo={setViewingInfoFd}
+                              onOpenWithdraw={setWithdrawingFd}
+                              onRemoveWithdrawal={handleRemoveFdWithdrawal}
+                              onEdit={() => handleEditFd(fd)}
+                              onDelete={() => handleDeleteFd(fd.id)}
+                            />
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ------------------------------------------------------------------ */}
+      {/* RECURRING DEPOSIT TAB VIEW (activeTab === "rd")                    */}
+      {/* ------------------------------------------------------------------ */}
+      {activeTab === "rd" && (
+        <div className="space-y-5 animate-in fade-in duration-300">
+          {/* Empty State */}
+          {rdData.length === 0 ? (
+            <div className="bg-base-100 p-12 rounded-3xl border border-base-200 shadow-sm text-center">
+              <div className="max-w-md mx-auto flex flex-col items-center gap-4">
+                <div className="p-4 bg-primary/10 text-primary rounded-3xl">
+                  <PiggyBank size={40} />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-base-content">
+                    No Recurring Deposits Yet
+                  </h3>
+                  <p className="text-xs text-base-content/60 mt-1">
+                    Add your bank and NBFC Recurring Deposits to track interest rates, compounding maturity schedules, and withdrawals.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleOpenAddRdModal}
+                  className="btn btn-primary btn-sm rounded-xl gap-2 font-bold px-5 cursor-pointer shadow-md"
+                >
+                  <Plus size={16} />
+                  <span>Add First Recurring Deposit</span>
+                </button>
+              </div>
+            </div>
+          ) : filteredRecurringDeposits.length === 0 ? (
+            <div className="bg-base-100 p-10 rounded-3xl border border-base-200 shadow-sm text-center">
+              <div className="max-w-md mx-auto flex flex-col items-center gap-3">
+                <div className="p-3 bg-primary/10 text-primary rounded-2xl">
+                  <Search size={32} />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-base-content">
+                    No Matching Recurring Deposits Found
+                  </h3>
+                  <p className="text-xs text-base-content/60 mt-1">
+                    No recurring deposits matched your search query <span className="font-semibold text-primary">"{rdSearchTerm}"</span>.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setRdSearchTerm("")}
+                  className="btn btn-ghost btn-xs text-primary font-bold hover:bg-primary/10 cursor-pointer"
+                >
+                  Clear Search
+                </button>
+              </div>
+            </div>
+          ) : (
+            /* Grouped Recurring Deposit Cards with Collapsible Headers */
+            <div className="space-y-6">
+              {groupedRecurringDeposits.map((group) => {
+                const isGroupCollapsed = collapsedRdGroupIds.has(group.id);
+
+                return (
+                  <div key={group.id} className="space-y-3.5">
+                    {/* Collapsible Group Header */}
+                    <div
+                      onClick={() => toggleRdGroupCollapse(group.id)}
+                      className="flex items-center justify-between px-4 py-2.5 bg-base-100/90 backdrop-blur-md rounded-2xl border border-base-200/90 shadow-2xs cursor-pointer hover:bg-base-200/40 transition-all select-none group"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className={`p-1 rounded-xl bg-primary/10 text-primary transition-transform duration-200 shrink-0 ${isGroupCollapsed ? '-rotate-90' : 'rotate-0'}`}>
+                          <ChevronDown size={16} />
+                        </div>
+                        <div className="flex items-center gap-2 flex-wrap min-w-0">
+                          <h3 className="font-extrabold text-sm text-base-content tracking-tight group-hover:text-primary transition-colors truncate">
+                            {group.name}
+                          </h3>
+                          <span className="px-2 py-0.5 rounded-full bg-primary/15 text-primary text-[11px] font-bold border border-primary/20 shrink-0">
+                            {group.rds.length} deposit{group.rds.length !== 1 ? 's' : ''}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Group Subtotal Summary */}
+                      <div className="flex items-center gap-4 text-xs font-medium text-base-content/70 shrink-0">
+                        <span className="hidden sm:inline">
+                          Active Principal:{" "}
+                          <strong className="text-base-content font-bold">
+                            {hideRdNumbers
+                              ? "₹ ••••••"
+                              : `₹${group.totalInvested.toLocaleString("en-IN")}`}
+                          </strong>
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Group RD Cards Grid */}
+                    {!isGroupCollapsed && (
+                      <div
+                        className={
+                          rdLayoutView === "2-col"
+                            ? "grid grid-cols-1 lg:grid-cols-2 gap-5 items-stretch"
+                            : "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 items-stretch"
+                        }
+                      >
+                        {group.rds.map((rd, rdIdx) => {
+                          return (
+                            <RecurringDepositCard
+                              key={rd.id}
+                              index={rdIdx + 1}
+                              rd={rd}
+                              hideNumbers={hideRdNumbers}
+                              onOpenWithdraw={setWithdrawingRd}
+                              onRemoveWithdrawal={handleRemoveRdWithdrawal}
+                              onOpenAddDeposit={(targetRd) => handleOpenAddRdDeposit(targetRd)}
+                              onOpenTable={(targetRd) => handleOpenRdTable(targetRd)}
+                              onEdit={() => handleEditRd(rd)}
+                              onDelete={() => handleDeleteRd(rd.id)}
+                            />
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ------------------------------------------------------------------ */}
+      {/* OTHER TABS PLACEHOLDERS (Emergency Fund, PF)                       */}
+      {/* ------------------------------------------------------------------ */}
+      {activeTab !== "stocks" && activeTab !== "mf" && activeTab !== "fd" && activeTab !== "rd" && (
         <div className="bg-base-100 p-12 rounded-3xl border border-base-200 shadow-sm text-center animate-in fade-in duration-300">
           <div className="max-w-md mx-auto flex flex-col items-center gap-4">
             <div className="p-4 bg-primary/10 text-primary rounded-3xl">
               {activeTab === "ef" && <ShieldAlert size={36} />}
-              {activeTab === "fd" && <Landmark size={36} />}
-              {activeTab === "rd" && <PiggyBank size={36} />}
               {activeTab === "pf" && <Percent size={36} />}
             </div>
 
@@ -2977,7 +4051,7 @@ export default function InvTableEntry() {
               </h2>
               <p className="text-xs text-base-content/70 mt-1">
                 Configure your {categories.find((c) => c.id === activeTab)?.subLabel}{" "}
-                entries, SIP calculations, and maturity schedules.
+                entries, calculations, and maturity schedules.
               </p>
             </div>
 
@@ -3025,6 +4099,90 @@ export default function InvTableEntry() {
         funds={mfData}
         groups={mfGroups}
         onSaveGroups={handleSaveGroups}
+      />
+
+      {/* Add / Edit Fixed Deposit Modal */}
+      <AddFixedDepositModal
+        isOpen={isAddFdModalOpen}
+        onClose={() => setIsAddFdModalOpen(false)}
+        onSave={handleSaveFixedDeposit}
+        initialData={editingFd}
+      />
+
+      {/* Single Settlement (Withdraw / Liquidate) Modal */}
+      <WithdrawFdModal
+        isOpen={!!withdrawingFd}
+        onClose={() => setWithdrawingFd(null)}
+        fd={withdrawingFd}
+        onSaveSettlement={handleSaveFdSettlement}
+      />
+
+      {/* Fixed Deposit Detailed Info Modal */}
+      <FixedDepositInfoModal
+        isOpen={!!viewingInfoFd}
+        onClose={() => setViewingInfoFd(null)}
+        fd={viewingInfoFd}
+      />
+
+      {/* Custom FD Groups & Ordering Modal */}
+      <OrganizeFdGroupsModal
+        isOpen={isOrganizeFdModalOpen}
+        onClose={() => setIsOrganizeFdModalOpen(false)}
+        fds={fdData}
+        groups={fdGroups}
+        onSaveGroups={handleSaveFdGroups}
+      />
+
+      {/* Add / Edit Recurring Deposit Modal */}
+      <AddRecurringDepositModal
+        isOpen={isAddRdModalOpen}
+        onClose={() => setIsAddRdModalOpen(false)}
+        onSave={handleSaveRecurringDeposit}
+        editingRd={editingRd}
+      />
+
+      {/* Single Settlement (Withdraw / Liquidate) Modal for RD */}
+      <WithdrawRdModal
+        isOpen={!!withdrawingRd}
+        onClose={() => setWithdrawingRd(null)}
+        rd={withdrawingRd}
+        onSaveSettlement={handleSaveRdSettlement}
+      />
+
+      {/* Custom RD Groups & Ordering Modal */}
+      <OrganizeRdGroupsModal
+        isOpen={isOrganizeRdModalOpen}
+        onClose={() => setIsOrganizeRdModalOpen(false)}
+        rds={rdData}
+        groups={rdGroups}
+        onSaveGroups={handleSaveRdGroups}
+      />
+
+      {/* Add / Edit RD Deposit Installment Modal */}
+      <AddRdDepositModal
+        isOpen={isAddRdDepositModalOpen}
+        onClose={() => {
+          setIsAddRdDepositModalOpen(false);
+          setEditingRdTxn(null);
+        }}
+        rd={activeRdForDeposit}
+        initialTxn={editingRdTxn}
+        onSave={handleSaveRdDeposit}
+      />
+
+      {/* RD Deposits Table Modal */}
+      <RecurringDepositTableModal
+        isOpen={isRdTableModalOpen}
+        onClose={() => {
+          setIsRdTableModalOpen(false);
+          setViewingTableRd(null);
+        }}
+        rd={viewingTableRd}
+        hideNumbers={hideRdNumbers}
+        onOpenAddDeposit={(rd) => handleOpenAddRdDeposit(rd)}
+        onOpenEditDeposit={(rd, txn) => handleOpenAddRdDeposit(rd, txn)}
+        onDeleteDeposit={handleDeleteRdDeposit}
+        onSaveInlineDeposit={(payload, txnId) => handleSaveRdDeposit(payload, txnId)}
       />
 
       {/* 5-Window Read-Only Calculation Viewer Modal */}

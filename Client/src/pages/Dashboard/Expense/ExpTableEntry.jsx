@@ -5,9 +5,31 @@ import { useAuth } from "../../../Context/JwtAuthContext";
 import ExpenseTable from "../../../components/Expense/ExpenseTable";
 import BankBalancesModal from "../../../components/Expense/BankBalancesModal";
 import dayjs from "dayjs";
-import { ChevronLeft, ChevronRight, TrendingUp, TrendingDown, Eye, EyeOff, Calendar, X, Wallet, Search, Folder, ExternalLink, ArrowUp, ArrowDown, ArrowUpDown, ArrowRightLeft, Sparkles, Filter, ChevronDown, ChevronUp, Building2, Info } from "lucide-react";
+import { ChevronLeft, ChevronRight, TrendingUp, TrendingDown, Eye, EyeOff, Calendar, X, Wallet, Search, Folder, ExternalLink, ArrowUp, ArrowDown, ArrowUpDown, ArrowRightLeft, Sparkles, Filter, ChevronDown, ChevronUp, Building2, Info, Handshake, Users, Plus, Minus } from "lucide-react";
 import { getSourceTagStyle, getCategoryTagStyle } from "../../../utils/expenseTheme";
 import TransactionInfoModal from "../../../components/Expense/TransactionInfoModal";
+
+export const getReimbursableBreakdown = (t, splitsMap = {}) => {
+  const amt = Number(t?.amount || 0);
+  const txKey = String(t?._id || t?.id || "");
+  const splitCount = Math.max(1, Number(splitsMap[txKey]) || 1);
+  if (splitCount <= 1) {
+    return {
+      total: amt,
+      splitCount: 1,
+      myShare: 0,
+      toCollect: amt,
+    };
+  }
+  const myShare = Math.round((amt / splitCount + Number.EPSILON) * 100) / 100;
+  const toCollect = Math.round(((amt * (splitCount - 1)) / splitCount + Number.EPSILON) * 100) / 100;
+  return {
+    total: amt,
+    splitCount,
+    myShare,
+    toCollect,
+  };
+};
 
 const ExpTableEntry = () => {
   const dispatch = useDispatch();
@@ -17,9 +39,41 @@ const ExpTableEntry = () => {
 
   const [showDebit, setShowDebit] = useState(true);
   const [showCredit, setShowCredit] = useState(true);
+  const [showReimbursable, setShowReimbursable] = useState(true);
   const [showHeatmapModal, setShowHeatmapModal] = useState(false);
-  const [showTransactionModal, setShowTransactionModal] = useState(null); // 'debit' | 'credit' | null
+  const [showTransactionModal, setShowTransactionModal] = useState(null); // 'debit' | 'credit' | 'reimbursable' | null
   const [showBankBalancesModal, setShowBankBalancesModal] = useState(false);
+
+  // Reimbursable Splits Map (txId -> splitCount)
+  const [reimbursableSplits, setReimbursableSplits] = useState(() => {
+    try {
+      const saved = localStorage.getItem("expense_reimbursable_splits");
+      return saved ? JSON.parse(saved) : {};
+    } catch (e) {
+      return {};
+    }
+  });
+
+  useEffect(() => {
+    const handleSplitSync = () => {
+      try {
+        const saved = localStorage.getItem("expense_reimbursable_splits");
+        setReimbursableSplits(saved ? JSON.parse(saved) : {});
+      } catch (e) {}
+    };
+    window.addEventListener("reimbursable_splits_updated", handleSplitSync);
+    return () => window.removeEventListener("reimbursable_splits_updated", handleSplitSync);
+  }, []);
+
+  const updateSplit = (txId, count) => {
+    const newCount = Math.max(1, Math.min(100, Number(count) || 1));
+    const updated = { ...reimbursableSplits, [String(txId)]: newCount };
+    setReimbursableSplits(updated);
+    try {
+      localStorage.setItem("expense_reimbursable_splits", JSON.stringify(updated));
+      window.dispatchEvent(new Event("reimbursable_splits_updated"));
+    } catch (e) {}
+  };
 
   // Table Controls & Filters State
   const [filters, setFilters] = useState({
@@ -63,9 +117,20 @@ const ExpTableEntry = () => {
   // Sidebar Stats & Sorted Sources
   const debitTransactions = transactions.filter(t => t.type === 'Debit');
   const creditTransactions = transactions.filter(t => t.type === 'Credit');
+  const reimbursableTransactions = transactions.filter(t => Boolean(t.isReimbursable));
 
-  const totalDebited = debitTransactions.reduce((sum, t) => sum + t.amount, 0);
-  const totalCredited = creditTransactions.reduce((sum, t) => sum + t.amount, 0);
+  const totalDebited = debitTransactions.reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+  const totalCredited = creditTransactions.reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+
+  const totalReimbursableToCollect = useMemo(() => {
+    return reimbursableTransactions.reduce((sum, t) => {
+      return sum + getReimbursableBreakdown(t, reimbursableSplits).toCollect;
+    }, 0);
+  }, [reimbursableTransactions, reimbursableSplits]);
+
+  const totalReimbursableSpent = useMemo(() => {
+    return reimbursableTransactions.reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+  }, [reimbursableTransactions]);
 
   // Privacy Mode State (Sync with ExpenseTable Eye icon in Current Period)
   const [hideNumbers, setHideNumbers] = useState(() => {
@@ -355,6 +420,48 @@ const ExpTableEntry = () => {
             </div>
           </div>
 
+          {/* Total Reimbursable Card */}
+          <div
+            onClick={() => setShowTransactionModal("reimbursable")}
+            className="card bg-gradient-to-br from-base-100 to-base-200 shadow-xl overflow-hidden relative group cursor-pointer hover:scale-[1.02] transition-all border border-transparent hover:border-warning/40"
+          >
+            {/* Background Icon */}
+            <div className="absolute -right-6 -bottom-6 opacity-5 group-hover:scale-110 transition-transform duration-500">
+              <Handshake size={120} className="text-warning" />
+            </div>
+            <div className="card-body p-6 relative z-10">
+              <div className="flex justify-between items-start">
+                <h3 className="text-xs font-bold text-base-content/50 uppercase tracking-widest mb-1 flex items-center gap-1.5">
+                  Total Reimbursable <ExternalLink size={12} className="opacity-0 group-hover:opacity-100 transition-opacity text-warning" />
+                </h3>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowReimbursable(!showReimbursable);
+                  }}
+                  className="btn btn-xs btn-ghost btn-square opacity-50 hover:opacity-100"
+                  title={showReimbursable ? "Hide Balance" : "Show Balance"}
+                >
+                  {showReimbursable ? <EyeOff size={14} /> : <Eye size={14} />}
+                </button>
+              </div>
+              <div className="text-3xl font-bold text-warning font-mono tracking-tighter">
+                {hideNumbers || !showReimbursable ? "••••••••" : `₹${totalReimbursableToCollect.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+              </div>
+              <div className="flex items-center justify-between mt-2">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-warning animate-pulse"></div>
+                  <span className="text-[11px] font-bold text-base-content/60 font-mono">
+                    {reimbursableTransactions.length} {reimbursableTransactions.length === 1 ? 'Pending Item' : 'Pending Items'}
+                  </span>
+                </div>
+                <span className="text-[10px] font-bold text-warning bg-warning/10 px-2 py-0.5 rounded-md opacity-80 group-hover:opacity-100 transition-opacity">
+                  View Pending →
+                </span>
+              </div>
+            </div>
+          </div>
+
         </div>
 
         {/* Main Table Area (Right) */}
@@ -383,12 +490,20 @@ const ExpTableEntry = () => {
         />
       )}
 
-      {/* Debited / Credited Transactions List Popup Modal */}
+      {/* Debited / Credited / Reimbursable Transactions List Popup Modal */}
       {showTransactionModal && (
         <TransactionListModal
           type={showTransactionModal}
-          transactions={showTransactionModal === "debit" ? debitTransactions : creditTransactions}
+          transactions={
+            showTransactionModal === "debit"
+              ? debitTransactions
+              : showTransactionModal === "credit"
+              ? creditTransactions
+              : reimbursableTransactions
+          }
           currentMonth={currentMonth}
+          reimbursableSplits={reimbursableSplits}
+          onUpdateSplit={updateSplit}
           onClose={() => setShowTransactionModal(null)}
         />
       )}
@@ -1103,7 +1218,7 @@ const HeatmapModal = ({ transactions, currentMonth, onClose }) => {
   );
 };
 
-const TransactionListModal = ({ type, transactions, currentMonth, onClose }) => {
+const TransactionListModal = ({ type, transactions, currentMonth, reimbursableSplits = {}, onUpdateSplit, onClose }) => {
   const { categories, sources } = useSelector((state) => state.expense);
   const [searchTerm, setSearchTerm] = useState("");
   const [sortOrder, setSortOrder] = useState(() => {
@@ -1143,10 +1258,13 @@ const TransactionListModal = ({ type, transactions, currentMonth, onClose }) => 
   };
 
   const isDebit = type === "debit";
-  const title = isDebit ? "Debited Transactions" : "Credited Transactions";
-  const accentColor = isDebit ? "text-error" : "text-success";
-  const bgBadge = isDebit ? "bg-error/10 text-error border-error/20" : "bg-success/10 text-success border-success/20";
-  const Icon = isDebit ? TrendingDown : TrendingUp;
+  const isReimbursable = type === "reimbursable";
+  const title = isReimbursable ? "Pending Reimbursable Money" : (isDebit ? "Debited Transactions" : "Credited Transactions");
+  const accentColor = isReimbursable ? "text-warning" : (isDebit ? "text-error" : "text-success");
+  const bgBadge = isReimbursable
+    ? "bg-warning/10 text-warning border-warning/20"
+    : (isDebit ? "bg-error/10 text-error border-error/20" : "bg-success/10 text-success border-success/20");
+  const Icon = isReimbursable ? Handshake : (isDebit ? TrendingDown : TrendingUp);
 
   // Filter transactions matching search term, column filters, sort order & row limit
   const filteredTransactions = useMemo(() => {
@@ -1206,7 +1324,18 @@ const TransactionListModal = ({ type, transactions, currentMonth, onClose }) => 
     return list;
   }, [transactions, searchTerm, colFilters, categories, sources, sortOrder, limitCount]);
 
-  const totalSum = filteredTransactions.reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+  const totalSpent = useMemo(() => {
+    return filteredTransactions.reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+  }, [filteredTransactions]);
+
+  const totalToCollect = useMemo(() => {
+    if (!isReimbursable) return totalSpent;
+    return filteredTransactions.reduce((sum, t) => {
+      return sum + getReimbursableBreakdown(t, reimbursableSplits).toCollect;
+    }, 0);
+  }, [filteredTransactions, isReimbursable, reimbursableSplits]);
+
+  const totalMyShare = totalSpent - totalToCollect;
 
   // Close on Escape key
   useEffect(() => {
@@ -1221,11 +1350,11 @@ const TransactionListModal = ({ type, transactions, currentMonth, onClose }) => 
 
   return (
     <div className="fixed inset-0 z-[99999] bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
-      <div className="bg-base-100 rounded-3xl shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden border border-base-300 animate-in fade-in zoom-in-95 duration-200">
+      <div className="bg-base-100 rounded-3xl shadow-2xl w-full max-w-5xl max-h-[85vh] flex flex-col overflow-hidden border border-base-300 animate-in fade-in zoom-in-95 duration-200">
         {/* Header */}
-        <div className="p-5 border-b border-base-200 flex justify-between items-center bg-base-200/50">
+        <div className="p-5 border-b border-base-200 flex flex-wrap gap-3 justify-between items-center bg-base-200/50">
           <div className="flex items-center gap-3">
-            <div className={`p-2.5 rounded-2xl ${isDebit ? 'bg-error/15 text-error' : 'bg-success/15 text-success'}`}>
+            <div className={`p-2.5 rounded-2xl ${isReimbursable ? 'bg-warning/15 text-warning' : (isDebit ? 'bg-error/15 text-error' : 'bg-success/15 text-success')}`}>
               <Icon size={22} />
             </div>
             <div>
@@ -1234,15 +1363,35 @@ const TransactionListModal = ({ type, transactions, currentMonth, onClose }) => 
                 <span className="text-xs opacity-60 font-mono font-medium">({dayjs(currentMonth).format("MMMM YYYY")})</span>
               </h3>
               <p className="text-xs opacity-60 font-medium mt-0.5">
-                Showing {filteredTransactions.length} of {transactions.length} transactions
+                {isReimbursable ? (
+                  <span>Split bill among people — 1 part is your own share, remaining parts to collect.</span>
+                ) : (
+                  <span>Showing {filteredTransactions.length} of {transactions.length} transactions</span>
+                )}
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <span className={`px-3 py-1 rounded-xl text-sm font-extrabold font-mono border ${bgBadge}`}>
-              Total: ₹{totalSum.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </span>
+          <div className="flex items-center gap-2 flex-wrap justify-end">
+            {isReimbursable ? (
+              <>
+                <span className="px-2.5 py-1 rounded-xl text-xs font-bold font-mono bg-base-200 border border-base-300 text-base-content/70 hidden sm:inline-block">
+                  Spent: ₹{totalSpent.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+                {totalMyShare > 0 && (
+                  <span className="px-2.5 py-1 rounded-xl text-xs font-bold font-mono bg-base-200 border border-base-300 text-base-content/70 hidden sm:inline-block">
+                    My Share: ₹{totalMyShare.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
+                )}
+                <span className="px-3 py-1 rounded-xl text-sm font-extrabold font-mono border bg-warning/10 text-warning border-warning/30 shadow-2xs">
+                  To Collect: ₹{totalToCollect.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+              </>
+            ) : (
+              <span className={`px-3 py-1 rounded-xl text-sm font-extrabold font-mono border ${bgBadge}`}>
+                Total: ₹{totalSpent.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
+            )}
             <button
               onClick={onClose}
               className="btn btn-xs sm:btn-sm btn-ghost gap-1 px-1.5 rounded-xl text-base-content/70 hover:text-base-content hover:bg-base-200/80 transition-all font-mono select-none"
@@ -1459,7 +1608,17 @@ const TransactionListModal = ({ type, transactions, currentMonth, onClose }) => 
                       </div>
                     </th>
 
-                    <th className="py-3 px-4 text-right">Amount</th>
+                    {/* Reimbursable Split Column (Only in Reimbursable Modal) */}
+                    {isReimbursable && (
+                      <th className="py-3 px-4 text-center min-w-[170px]">
+                        <div className="flex items-center justify-center gap-1.5 text-warning font-black">
+                          <Users size={12} />
+                          <span>Split (People)</span>
+                        </div>
+                      </th>
+                    )}
+
+                    <th className="py-3 px-4 text-right">{isReimbursable ? "Net To Collect" : "Amount"}</th>
                     <th className="py-3 px-4 text-center">Action</th>
                   </tr>
                 </thead>
@@ -1475,13 +1634,15 @@ const TransactionListModal = ({ type, transactions, currentMonth, onClose }) => 
                     const srcObj = sources.find((s) => String(s._id) === String(t.sourceId?._id || t.sourceId));
                     const srcTagStyle = getSourceTagStyle(srcObj);
 
+                    const breakdown = getReimbursableBreakdown(t, reimbursableSplits);
+
                     return (
                       <tr key={t._id || t.id} className="hover:bg-base-200/40 transition-colors">
                         <td className="py-3 px-4 font-mono text-base-content/70 whitespace-nowrap">
                           {dayjs(t.date).format("DD MMM YYYY")}
                         </td>
                         <td className="py-3 px-4 font-semibold text-base-content">
-                          {t.description || <span className="opacity-40 italic">No description</span>}
+                          <span>{t.description || <span className="opacity-40 italic">No description</span>}</span>
                         </td>
                         <td className="py-3 px-4">
                           {(() => {
@@ -1528,10 +1689,91 @@ const TransactionListModal = ({ type, transactions, currentMonth, onClose }) => 
                             {srcObj?.name || t.sourceName || "General"}
                           </span>
                         </td>
+
+                        {/* Reimbursable Split Controller */}
+                        {isReimbursable && (
+                          <td className="py-2 px-4 text-center whitespace-nowrap">
+                            <div className="flex flex-col items-center gap-1">
+                              <div className="inline-flex items-center gap-1 bg-base-200/80 p-0.5 rounded-xl border border-base-300">
+                                <button
+                                  type="button"
+                                  disabled={breakdown.splitCount <= 1}
+                                  onClick={() => onUpdateSplit && onUpdateSplit(t._id || t.id, breakdown.splitCount - 1)}
+                                  className="btn btn-xs btn-square btn-ghost h-6 w-6 min-h-0 disabled:opacity-20 hover:bg-base-300 rounded-lg cursor-pointer"
+                                  title="Decrease people count"
+                                >
+                                  <Minus size={11} />
+                                </button>
+
+                                <div className="dropdown dropdown-bottom dropdown-end">
+                                  <button
+                                    tabIndex={0}
+                                    type="button"
+                                    className={`btn btn-xs h-6 min-h-0 font-mono font-bold rounded-lg px-2 gap-1 text-[11px] cursor-pointer ${breakdown.splitCount > 1 ? 'btn-warning btn-outline shadow-2xs' : 'btn-ghost text-base-content/70'}`}
+                                    title="Click to select number of people to split with"
+                                  >
+                                    <Users size={11} />
+                                    <span>{breakdown.splitCount === 1 ? '1 (No Split)' : `${breakdown.splitCount} People`}</span>
+                                  </button>
+                                  <ul tabIndex={0} className="dropdown-content z-[99999] menu p-1.5 bg-base-100 rounded-2xl shadow-2xl border border-base-300 w-44 mt-1 font-medium text-xs max-h-56 overflow-y-auto">
+                                    <li className="menu-title text-[10px] uppercase font-bold text-base-content/50">Split Bill Among</li>
+                                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 15, 20].map((num) => (
+                                      <li key={num}>
+                                        <a
+                                          onClick={() => onUpdateSplit && onUpdateSplit(t._id || t.id, num)}
+                                          className={`flex justify-between items-center ${breakdown.splitCount === num ? 'active font-bold' : ''}`}
+                                        >
+                                          <span>{num === 1 ? '1 (100% Mine/Collect)' : `${num} People`}</span>
+                                          <span className="text-[10px] opacity-60 font-mono">
+                                            {num === 1 ? 'Full' : `${num - 1}/${num}`}
+                                          </span>
+                                        </a>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+
+                                <button
+                                  type="button"
+                                  disabled={breakdown.splitCount >= 50}
+                                  onClick={() => onUpdateSplit && onUpdateSplit(t._id || t.id, breakdown.splitCount + 1)}
+                                  className="btn btn-xs btn-square btn-ghost h-6 w-6 min-h-0 hover:bg-base-300 rounded-lg cursor-pointer"
+                                  title="Increase people count"
+                                >
+                                  <Plus size={11} />
+                                </button>
+                              </div>
+
+                              {breakdown.splitCount > 1 && (
+                                <span className="text-[10px] font-mono text-base-content/50">
+                                  1 part self: ₹{breakdown.myShare.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                        )}
+
                         <td className="py-3 px-4 text-right font-mono font-extrabold whitespace-nowrap">
-                          <span className={isTrf ? "text-amber-500 dark:text-amber-400" : (isDebit ? "text-error" : "text-success")}>
-                            {isTrf ? "" : (isDebit ? "-" : "+")}₹{Number(t.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                          </span>
+                          {isReimbursable ? (
+                            <div className="flex flex-col items-end">
+                              <span className="text-warning font-black text-sm">
+                                +₹{breakdown.toCollect.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </span>
+                              {breakdown.splitCount > 1 ? (
+                                <span className="text-[10px] font-mono font-semibold text-base-content/50">
+                                  {breakdown.splitCount - 1}/{breakdown.splitCount} of ₹{breakdown.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </span>
+                              ) : (
+                                <span className="text-[10px] font-sans font-medium text-base-content/40">
+                                  Full ₹{breakdown.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <span className={isTrf ? "text-amber-500 dark:text-amber-400" : (isDebit ? "text-error" : "text-success")}>
+                              {isTrf ? "" : (t.type === 'Credit' ? "+" : "-")}₹{Number(t.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </span>
+                          )}
                         </td>
                         <td className="py-3 px-4 text-center">
                           <button
@@ -1564,11 +1806,11 @@ const TransactionListModal = ({ type, transactions, currentMonth, onClose }) => 
         </div>
 
         {/* Footer Summary */}
-        <div className="p-4 border-t border-base-200 bg-base-200/50 flex justify-between items-center text-xs">
+        <div className="p-4 border-t border-base-200 bg-base-200/50 flex justify-between items-center text-xs flex-wrap gap-2">
           <span className="font-semibold text-base-content/70">
-            Showing <strong className="font-mono">{filteredTransactions.length}</strong> transactions | Total {isDebit ? 'Debited' : 'Credited'}: <strong className={`font-mono font-bold ${accentColor}`}>₹{totalSum.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+            Showing <strong className="font-mono">{filteredTransactions.length}</strong> transactions | {isReimbursable ? 'Net Pending To Collect' : (isDebit ? 'Total Debited' : 'Total Credited')}: <strong className={`font-mono font-bold ${accentColor}`}>₹{totalToCollect.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
           </span>
-          <button onClick={onClose} className="btn btn-sm btn-primary rounded-xl font-bold px-5">
+          <button onClick={onClose} className="btn btn-sm btn-primary rounded-xl font-bold px-5 cursor-pointer">
             Close
           </button>
         </div>
