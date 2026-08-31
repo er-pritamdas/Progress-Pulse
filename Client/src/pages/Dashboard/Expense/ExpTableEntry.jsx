@@ -110,6 +110,14 @@ const ExpTableEntry = () => {
     });
   };
 
+  // Always default to current month on page mount
+  useEffect(() => {
+    const actualCurrentMonth = dayjs().format("YYYY-MM");
+    if (currentMonth !== actualCurrentMonth) {
+      dispatch(setMonth(actualCurrentMonth));
+    }
+  }, [dispatch]);
+
   useEffect(() => {
     dispatch(fetchDashboardData(currentMonth));
   }, [currentMonth, user, dispatch]);

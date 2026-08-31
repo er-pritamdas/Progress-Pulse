@@ -96,10 +96,18 @@ const getUsedPercentageStyle = (pct) => {
   };
 };
 
+const formatCurrency2Dec = (val) => {
+  const num = Number(val) || 0;
+  return num.toLocaleString("en-IN", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+};
+
 const ExpDashboard = () => {
   TitleChanger("Progress Pulse | Detailed Category Analysis");
   const dispatch = useDispatch();
-  const { categories, transactions, salary, loading } = useSelector((state) => state.expense);
+  const { categories, transactions, salary, salariesByMonth, loading } = useSelector((state) => state.expense);
   const { user } = useAuth();
 
   // Default Selection: Current Year January to December
@@ -110,6 +118,15 @@ const ExpDashboard = () => {
 
   const [toYear, setToYear] = useState(currentYearStr);
   const [toMonth, setToMonth] = useState("12"); // December
+
+  // Ensure default is always current year Jan to Dec on mount
+  useEffect(() => {
+    const currentY = dayjs().format("YYYY");
+    setFromYear(currentY);
+    setFromMonth("01");
+    setToYear(currentY);
+    setToMonth("12");
+  }, []);
 
   // Selected Category ID or "SALARY"
   const [selectedCatId, setSelectedCatId] = useState("");
@@ -225,6 +242,14 @@ const ExpDashboard = () => {
   // Clean name for selected category
   const categoryCleanName = isSalaryMode ? "Salary" : (selectedCategory ? selectedCategory.name : "Category");
 
+  // Helper to resolve salary entered in Table View for month m (strictly 0 if not entered)
+  const getSalaryForMonth = (m) => {
+    if (salariesByMonth && salariesByMonth[m] !== undefined) {
+      return Number(salariesByMonth[m]) || 0;
+    }
+    return 0;
+  };
+
   // Build Main Category / Salary Plot Data for each month in date range
   const monthlyPlotData = useMemo(() => {
     if (rangeMonths.length === 0) return [];
@@ -234,28 +259,16 @@ const ExpDashboard = () => {
       return rangeMonths.map((m) => {
         const monthLabel = dayjs(`${m}-01`).format("MMM YYYY");
 
-        // Total Budget across all categories for month m
-        let totalBudget = 0;
-        categories.forEach((c) => {
-          (c.subCategories || []).forEach((sub) => {
-            if (!sub.month || sub.month === m) {
-              totalBudget += Number(sub.budget) || 0;
-            }
-          });
-        });
+        // Exact salary entered for month m from Table View (strictly 0 if not entered)
+        const allotted = getSalaryForMonth(m);
 
-        // Use salary from store if available, otherwise total budget
-        const allotted = Number(salary) > 0 ? Number(salary) : totalBudget;
-
-        // Total spent across all valid categories in month m
-        const allCategoryIds = new Set(categories.map((c) => String(c._id)));
+        // Total spent across all categories in month m (exact match to Table View logic)
         const used = transactions
           .filter((t) => {
-            if (t.type === "Credit" || t.type === "Transfer") return false;
+            if (t.type === "Credit" || t.type === "Transfer" || t.type !== "Debit") return false;
             const tMonth = dayjs(t.date).format("YYYY-MM");
             if (tMonth !== m) return false;
-            const catId = String(t.categoryId?._id || t.categoryId || "");
-            return allCategoryIds.has(catId);
+            return Boolean(t.categoryId?._id || t.categoryId);
           })
           .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
 
@@ -310,7 +323,7 @@ const ExpDashboard = () => {
         percentage
       };
     });
-  }, [isSalaryMode, selectedCategory, rangeMonths, categories, transactions, salary]);
+  }, [isSalaryMode, selectedCategory, rangeMonths, categories, transactions, salary, salariesByMonth]);
 
   // Total range aggregates for selected category / salary
   const rangeTotals = useMemo(() => {
@@ -389,6 +402,9 @@ const ExpDashboard = () => {
           row.totalSpent += catSpent;
         });
 
+        // Exact Total Salary for month m from Table View
+        row.totalSalary = getSalaryForMonth(m, row.totalAllotted);
+
         return row;
       });
     }
@@ -415,7 +431,7 @@ const ExpDashboard = () => {
 
         const subSpent = transactions
           .filter((t) => {
-            if (t.type === "Credit" || t.type === "Transfer") return false;
+            if (t.type === "Credit" || t.type === "Transfer" || t.type !== "Debit") return false;
             const tMonth = dayjs(t.date).format("YYYY-MM");
             if (tMonth !== m) return false;
 
@@ -442,9 +458,9 @@ const ExpDashboard = () => {
 
       return row;
     });
-  }, [isSalaryMode, availableCategories, selectedCategory, rangeMonths, subCategoryNames, categories, transactions]);
+  }, [isSalaryMode, availableCategories, selectedCategory, rangeMonths, subCategoryNames, categories, transactions, salary, salariesByMonth]);
 
-  // Sub-Category / Category Split ApexChart Series (Stacked bars per sub-category + Total Used Line)
+  // Sub-Category / Category Split ApexChart Series (Stacked bars per sub-category + Total Used Line + Total Salary Line in Salary Mode)
   const subCatApexSeries = useMemo(() => {
     if (!subCatDualStackedPlotData.length || !subCategoryNames.length) return [];
 
@@ -460,16 +476,27 @@ const ExpDashboard = () => {
       data: subCatDualStackedPlotData.map((m) => m.totalSpent || 0),
     });
 
+    if (isSalaryMode) {
+      series.push({
+        name: "Total Salary",
+        type: "line",
+        data: subCatDualStackedPlotData.map((m) => m.totalSalary || 0),
+      });
+    }
+
     return series;
-  }, [subCatDualStackedPlotData, subCategoryNames]);
+  }, [subCatDualStackedPlotData, subCategoryNames, isSalaryMode]);
 
   // Sub-Category / Category Split ApexChart Options mirroring Habit Dashboard Calorie chart
   const subCatApexOptions = useMemo(() => {
     const numSubs = subCategoryNames.length;
     const colors = [
       ...subCategoryNames.map((_, i) => subCatSpentPalette[i % subCatSpentPalette.length]),
-      "#38bdf8", // Total Used line color
+      "#38bdf8", // Total Used line color (Sky Blue)
+      ...(isSalaryMode ? ["#10b981"] : []), // Total Salary line color (Emerald Green)
     ];
+
+    const totalSeriesCount = numSubs + (isSalaryMode ? 2 : 1);
 
     return {
       chart: {
@@ -482,32 +509,40 @@ const ExpDashboard = () => {
         zoom: { enabled: false },
       },
       stroke: {
-        width: [...subCategoryNames.map(() => 0), 1.25],
+        width: [
+          ...subCategoryNames.map(() => 0), 
+          2, // Total Used line width
+          ...(isSalaryMode ? [2.5] : []) // Total Salary line width
+        ],
         curve: "smooth",
-        dashArray: [...subCategoryNames.map(() => 0), 0],
+        dashArray: [
+          ...subCategoryNames.map(() => 0), 
+          0,
+          ...(isSalaryMode ? [0] : [])
+        ],
       },
       fill: {
-        opacity: [...subCategoryNames.map(() => 0.5), 1],
+        opacity: [
+          ...subCategoryNames.map(() => 0.65), 
+          1,
+          ...(isSalaryMode ? [1] : [])
+        ],
       },
       colors: colors,
       plotOptions: {
         bar: {
-          columnWidth: "75%",
-          borderRadius: 0,
+          columnWidth: "72%",
+          borderRadius: 3,
           dataLabels: { position: "top" },
           distributed: false,
         },
       },
       dataLabels: {
         enabled: true,
-        enabledOnSeries: [...Array(numSubs + 1).keys()],
+        enabledOnSeries: [...Array(totalSeriesCount).keys()],
         formatter: (val) =>
           val > 0
-            ? val >= 100000
-              ? `₹${(val / 100000).toFixed(1)}L`
-              : val >= 1000
-              ? `₹${(val / 1000).toFixed(1)}k`
-              : `₹${val}`
+            ? `₹${formatCurrency2Dec(val)}`
             : "",
         style: {
           fontSize: "10px",
@@ -520,10 +555,14 @@ const ExpDashboard = () => {
         offsetY: -2,
       },
       markers: {
-        size: [...subCategoryNames.map(() => 0), 3.5],
+        size: [
+          ...subCategoryNames.map(() => 0), 
+          4, // Total Used point size
+          ...(isSalaryMode ? [4.5] : []) // Total Salary point size
+        ],
         strokeColor: "#1e293b",
-        strokeWidth: 1.5,
-        hover: { size: 5.5 },
+        strokeWidth: 2,
+        hover: { size: 6.5 },
       },
       legend: {
         show: true,
@@ -562,12 +601,7 @@ const ExpDashboard = () => {
           },
           labels: {
             style: { colors: "#FFFFFF", fontSize: "11px" },
-            formatter: (v) =>
-              v >= 100000
-                ? `₹${(v / 100000).toFixed(1)}L`
-                : v >= 1000
-                ? `₹${(v / 1000).toFixed(0)}k`
-                : `₹${v}`,
+            formatter: (v) => `₹${formatCurrency2Dec(v)}`,
           },
         },
       ],
@@ -579,6 +613,8 @@ const ExpDashboard = () => {
           const monthLabel = subCatDualStackedPlotData[dataPointIndex]?.monthLabel || "";
           const dataItem = subCatDualStackedPlotData[dataPointIndex] || {};
           const totalSpent = dataItem.totalSpent || 0;
+          const totalSalary = dataItem.totalSalary || 0;
+          const netSavings = totalSalary - totalSpent;
 
           const rowsHtml = subCategoryNames.map((name, idx) => {
             const color = subCatSpentPalette[idx % subCatSpentPalette.length];
@@ -589,13 +625,13 @@ const ExpDashboard = () => {
                   <span class="w-2.5 h-2.5 rounded-full inline-block shrink-0" style="width: 10px; height: 10px; border-radius: 50%; background-color: ${color}; display: inline-block; flex-shrink: 0;"></span>
                   <span class="truncate">${name}:</span>
                 </span>
-                <span class="font-mono font-bold" style="font-family: monospace; font-weight: 700; color: ${color}; font-size: 11px; white-space: nowrap;">₹${Number(amount).toLocaleString("en-IN")}</span>
+                <span class="font-mono font-bold" style="font-family: monospace; font-weight: 700; color: ${color}; font-size: 11px; white-space: nowrap;">₹${formatCurrency2Dec(amount)}</span>
               </div>
             `;
           }).join("");
 
           return `
-            <div class="bg-base-100/80 backdrop-blur-md border border-base-300 p-4 rounded-2xl shadow-xl space-y-3 min-w-[220px] text-xs text-base-content" style="background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.15); padding: 14px 16px; border-radius: 16px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5); min-width: 220px; font-size: 12px; font-family: inherit;">
+            <div class="bg-base-100/90 backdrop-blur-md border border-base-300 p-4 rounded-2xl shadow-xl space-y-3 min-w-[240px] text-xs text-base-content" style="background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.15); padding: 14px 16px; border-radius: 16px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5); min-width: 240px; font-size: 12px; font-family: inherit;">
               <p class="font-extrabold text-sm border-b border-base-200 pb-1.5 flex justify-between items-center" style="font-weight: 800; font-size: 13px; border-bottom: 1px solid rgba(255, 255, 255, 0.1); padding-bottom: 6px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
                 <span>${monthLabel}</span>
                 <span class="text-[11px] opacity-60 font-mono" style="font-size: 10px; opacity: 0.6; font-family: monospace;">${isSalaryMode ? "Category Split" : categoryCleanName}</span>
@@ -607,8 +643,25 @@ const ExpDashboard = () => {
                     <span class="w-2.5 h-2.5 rounded-full inline-block shrink-0" style="width: 10px; height: 10px; border-radius: 50%; background-color: #38bdf8; display: inline-block; flex-shrink: 0;"></span>
                     Total Used:
                   </span>
-                  <span class="font-mono font-bold" style="font-family: monospace; color: #38bdf8; font-size: 12px; font-weight: 800;">₹${Number(totalSpent).toLocaleString("en-IN")}</span>
+                  <span class="font-mono font-bold" style="font-family: monospace; color: #38bdf8; font-size: 12px; font-weight: 800;">₹${formatCurrency2Dec(totalSpent)}</span>
                 </div>
+                ${isSalaryMode ? `
+                <div class="flex justify-between items-center gap-4" style="display: flex; justify-content: space-between; align-items: center; gap: 16px; font-weight: 800;">
+                  <span class="text-base-content/80 flex items-center gap-1.5" style="display: flex; align-items: center; gap: 6px; color: #10b981; font-size: 11px;">
+                    <span class="w-2.5 h-2.5 rounded-full inline-block shrink-0" style="width: 10px; height: 10px; border-radius: 50%; background-color: #10b981; display: inline-block; flex-shrink: 0;"></span>
+                    Total Salary:
+                  </span>
+                  <span class="font-mono font-bold" style="font-family: monospace; color: #10b981; font-size: 12px; font-weight: 800;">₹${formatCurrency2Dec(totalSalary)}</span>
+                </div>
+                <div class="flex justify-between items-center gap-4 pt-1 border-t border-dashed border-base-200/50" style="display: flex; justify-content: space-between; align-items: center; gap: 16px; font-weight: 800; border-top: 1px dashed rgba(255, 255, 255, 0.1); padding-top: 4px;">
+                  <span class="text-base-content/60 flex items-center gap-1.5" style="font-size: 10.5px; opacity: 0.75;">
+                    Net Savings:
+                  </span>
+                  <span class="font-mono font-bold" style="font-family: monospace; font-size: 11px; color: ${netSavings >= 0 ? '#34d399' : '#f87171'};">
+                    ${netSavings >= 0 ? '+' : '-'}₹${formatCurrency2Dec(Math.abs(netSavings))}
+                  </span>
+                </div>
+                ` : ''}
               </div>
             </div>
           `;
@@ -689,7 +742,8 @@ const ExpDashboard = () => {
           };
         });
 
-        const salaryForMonth = Number(salary) > 0 ? Number(salary) : monthTotalAllotted;
+        const salaryForMonth = getSalaryForMonth(m, monthTotalAllotted);
+
         const monthRemaining = Math.max(0, salaryForMonth - monthTotalUsed);
         const monthPct = salaryForMonth > 0 ? Number(((monthTotalUsed / salaryForMonth) * 100).toFixed(2)) : (monthTotalUsed > 0 ? 100 : 0);
 
@@ -776,7 +830,7 @@ const ExpDashboard = () => {
         subRows
       };
     });
-  }, [isSalaryMode, availableCategories, selectedCategory, rangeMonths, subCategoryNames, categories, transactions, salary]);
+  }, [isSalaryMode, availableCategories, selectedCategory, rangeMonths, subCategoryNames, categories, transactions, salary, salariesByMonth]);
 
   // Range aggregate totals for Sub-Category Table View
   const subCatRangeTotals = useMemo(() => {
@@ -839,14 +893,14 @@ const ExpDashboard = () => {
           <div className="space-y-1.5 font-medium">
             <div className="flex justify-between items-center gap-4">
               <span className="text-base-content/70">Allotted Budget:</span>
-              <span className="font-mono font-bold text-primary">₹{(dataItem.allotted || 0).toLocaleString()}</span>
+              <span className="font-mono font-bold text-primary">₹{formatCurrency2Dec(dataItem.allotted)}</span>
             </div>
             <div className="flex justify-between items-center gap-4">
               <span className="text-base-content/70 flex items-center gap-1.5">
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block"></span> Left:
               </span>
               <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                ₹{(dataItem.left || 0).toLocaleString()}
+                ₹{formatCurrency2Dec(dataItem.left)}
               </span>
             </div>
             <div className="flex justify-between items-center gap-4">
@@ -854,13 +908,13 @@ const ExpDashboard = () => {
                 <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ backgroundColor: "rgba(16, 185, 129, 0.35)" }}></span> Used:
               </span>
               <span className="font-mono font-bold text-emerald-600/50 dark:text-emerald-400/50">
-                ₹{(dataItem.used || 0).toLocaleString()}
+                ₹{formatCurrency2Dec(dataItem.used)}
               </span>
             </div>
             <div className="flex justify-between items-center gap-4 pt-1.5 border-t border-base-200">
               <span className="text-base-content/70">% Utilized:</span>
               <span className={`font-mono font-extrabold ${dataItem.percentage > 100 ? 'text-error' : 'text-info'}`}>
-                {dataItem.percentage || 0}%
+                {Number(dataItem.percentage || 0).toFixed(2)}%
               </span>
             </div>
           </div>
@@ -901,13 +955,13 @@ const ExpDashboard = () => {
                   <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: item.color }}></span>
                   <span className="truncate">{item.name}:</span>
                 </span>
-                <span className="font-mono font-bold text-rose-500">₹{item.amount.toLocaleString()}</span>
+                <span className="font-mono font-bold text-rose-500">₹{formatCurrency2Dec(item.amount)}</span>
               </div>
             ))}
 
             <div className="flex justify-between items-center gap-4 pt-2 border-t border-base-200 font-extrabold text-sm">
               <span>Total Spent:</span>
-              <span className="font-mono text-rose-500">₹{totalSpentVisible.toLocaleString()}</span>
+              <span className="font-mono text-rose-500">₹{formatCurrency2Dec(totalSpentVisible)}</span>
             </div>
           </div>
         </div>
@@ -927,24 +981,24 @@ const ExpDashboard = () => {
           <p className="font-extrabold text-sm border-b border-base-200 pb-1.5 flex justify-between items-center">
             <span>{label}</span>
             <span className={`badge badge-xs font-bold ${dataItem.percentage > 100 ? 'badge-error' : 'badge-info'}`}>
-              {dataItem.percentage}% Spent
+              {Number(dataItem.percentage || 0).toFixed(2)}% Spent
             </span>
           </p>
           <div className="space-y-1.5 font-medium">
             <div className="flex justify-between items-center gap-4">
               <span className="text-primary font-bold">Expected Allotted:</span>
-              <span className="font-mono font-bold text-primary">₹{(dataItem.totalAllotted || 0).toLocaleString()}</span>
+              <span className="font-mono font-bold text-primary">₹{formatCurrency2Dec(dataItem.totalAllotted)}</span>
             </div>
             <div className="flex justify-between items-center gap-4">
               <span className="text-rose-500 font-bold">Actual Spent:</span>
-              <span className="font-mono font-bold text-rose-500">₹{(dataItem.totalSpent || 0).toLocaleString()}</span>
+              <span className="font-mono font-bold text-rose-500">₹{formatCurrency2Dec(dataItem.totalSpent)}</span>
             </div>
             <div className="flex justify-between items-center gap-4 pt-1.5 border-t border-base-200">
               <span className={dataItem.overspent > 0 ? "text-error font-bold" : "text-emerald-600 dark:text-emerald-400 font-bold"}>
                 {dataItem.overspent > 0 ? "Overspent:" : "Remaining:"}
               </span>
               <span className={`font-mono font-bold ${dataItem.overspent > 0 ? "text-error" : "text-emerald-600 dark:text-emerald-400"}`}>
-                ₹{(dataItem.overspent > 0 ? dataItem.overspent : dataItem.remaining).toLocaleString()}
+                ₹{formatCurrency2Dec(dataItem.overspent > 0 ? dataItem.overspent : dataItem.remaining)}
               </span>
             </div>
           </div>
@@ -1140,7 +1194,7 @@ const ExpDashboard = () => {
             {isSalaryMode ? "Total Salary" : "Total Allotted"}
           </span>
           <span className="text-2xl font-black font-mono text-primary mt-1 block">
-            ₹{rangeTotals.totalAllotted.toLocaleString()}
+            ₹{formatCurrency2Dec(rangeTotals.totalAllotted)}
           </span>
           <span className="text-[11px] opacity-60 mt-2 block">
             Across {rangeMonths.length} Months
@@ -1150,7 +1204,7 @@ const ExpDashboard = () => {
         <div className="card bg-base-100 shadow-md border border-base-200 p-5">
           <span className="text-xs font-bold uppercase tracking-wider text-base-content/50">Total Used</span>
           <span className="text-2xl font-black font-mono text-rose-500 mt-1 block">
-            ₹{rangeTotals.totalUsed.toLocaleString()}
+            ₹{formatCurrency2Dec(rangeTotals.totalUsed)}
           </span>
           <span className="text-[11px] opacity-60 mt-2 block">
             {isSalaryMode ? "Total Expenses across Categories" : `Total Spent in ${categoryCleanName}`}
@@ -1162,7 +1216,7 @@ const ExpDashboard = () => {
             {isSalaryMode ? "Net Savings" : "Total Left"}
           </span>
           <span className="text-2xl font-black font-mono text-emerald-600 dark:text-emerald-400 mt-1 block">
-            ₹{rangeTotals.totalLeft.toLocaleString()}
+            ₹{formatCurrency2Dec(rangeTotals.totalLeft)}
           </span>
           <span className="text-[11px] opacity-60 mt-2 block">
             {isSalaryMode ? "Remaining Unspent Salary" : "Remaining Unspent Budget"}
@@ -1252,7 +1306,7 @@ const ExpDashboard = () => {
                   </div>
                 ) : (
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
+                    <ComposedChart
                       data={monthlyPlotData}
                       margin={{ top: 20, right: 30, left: 15, bottom: 25 }}
                     >
@@ -1263,7 +1317,7 @@ const ExpDashboard = () => {
                       />
                       <YAxis
                         tick={{ fill: 'currentColor', fontSize: 11, opacity: 0.7 }}
-                        tickFormatter={(v) => `₹${v >= 1000 ? (v / 1000).toFixed(0) + 'k' : v}`}
+                        tickFormatter={(v) => `₹${formatCurrency2Dec(v)}`}
                       />
                       <Tooltip content={<MainCategoryTooltip />} cursor={{ fill: 'rgba(255, 255, 255, 0.05)', rx: 8 }} />
                       <Legend formatter={(value) => <span style={{ color: '#ffffff' }}>{value}</span>} />
@@ -1278,7 +1332,7 @@ const ExpDashboard = () => {
                         <LabelList
                           dataKey="left"
                           position="center"
-                          formatter={(v) => (v > 0 ? `₹${v >= 1000 ? (v / 1000).toFixed(1) + 'k' : v}` : '')}
+                          formatter={(v) => (v > 0 ? `₹${formatCurrency2Dec(v)}` : '')}
                           style={{ fill: '#ffffff', fontSize: 11, fontWeight: 800 }}
                         />
                       </Bar>
@@ -1293,11 +1347,22 @@ const ExpDashboard = () => {
                         <LabelList
                           dataKey="used"
                           position="center"
-                          formatter={(v) => (v > 0 ? `₹${v >= 1000 ? (v / 1000).toFixed(1) + 'k' : v}` : '')}
+                          formatter={(v) => (v > 0 ? `₹${formatCurrency2Dec(v)}` : '')}
                           style={{ fill: '#ffffff', fontSize: 11, fontWeight: 800 }}
                         />
                       </Bar>
-                    </BarChart>
+                      {isSalaryMode && (
+                        <Line
+                          type="monotone"
+                          dataKey="allotted"
+                          name="Total Salary"
+                          stroke="#10b981"
+                          strokeWidth={2.5}
+                          dot={{ r: 4.5, fill: "#10b981", stroke: "#1e293b", strokeWidth: 1.5 }}
+                          activeDot={{ r: 7, fill: "#10b981", stroke: "#ffffff", strokeWidth: 2 }}
+                        />
+                      )}
+                    </ComposedChart>
                   </ResponsiveContainer>
                 )}
               </div>
@@ -1334,13 +1399,13 @@ const ExpDashboard = () => {
                               {d.monthLabel}
                             </td>
                             <td className="py-3 px-4 text-right font-mono font-bold text-primary whitespace-nowrap">
-                              ₹{(d.allotted || 0).toLocaleString()}
+                              ₹{formatCurrency2Dec(d.allotted)}
                             </td>
                             <td className="py-3 px-4 text-right font-mono font-bold text-rose-500 whitespace-nowrap">
-                              ₹{(d.used || 0).toLocaleString()}
+                              ₹{formatCurrency2Dec(d.used)}
                             </td>
                             <td className="py-3 px-4 text-right font-mono font-bold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
-                              ₹{(d.left || 0).toLocaleString()}
+                              ₹{formatCurrency2Dec(d.left)}
                             </td>
                             <td className="py-3 px-4 text-center">
                               <div className="flex items-center justify-center gap-2">
@@ -1370,9 +1435,9 @@ const ExpDashboard = () => {
                     <tfoot className="bg-base-200/90 font-black text-sm text-base-content border-t-2 border-base-300">
                       <tr>
                         <td className="py-3.5 px-4 uppercase tracking-wider text-xs">Total / Range Aggregate</td>
-                        <td className="py-3.5 px-4 text-right font-mono text-primary">₹{rangeTotals.totalAllotted.toLocaleString()}</td>
-                        <td className="py-3.5 px-4 text-right font-mono text-rose-500">₹{rangeTotals.totalUsed.toLocaleString()}</td>
-                        <td className="py-3.5 px-4 text-right font-mono text-emerald-600 dark:text-emerald-400">₹{rangeTotals.totalLeft.toLocaleString()}</td>
+                        <td className="py-3.5 px-4 text-right font-mono text-primary">₹{formatCurrency2Dec(rangeTotals.totalAllotted)}</td>
+                        <td className="py-3.5 px-4 text-right font-mono text-rose-500">₹{formatCurrency2Dec(rangeTotals.totalUsed)}</td>
+                        <td className="py-3.5 px-4 text-right font-mono text-emerald-600 dark:text-emerald-400">₹{formatCurrency2Dec(rangeTotals.totalLeft)}</td>
                         <td className="py-3.5 px-4 text-center font-mono">
                           {(() => {
                             const footerStyle = getUsedPercentageStyle(rangeTotals.overallPct);
@@ -1524,13 +1589,13 @@ const ExpDashboard = () => {
                                 </div>
                               </td>
                               <td className="py-3 px-4 text-right font-mono font-extrabold text-primary">
-                                ₹{mRow.totalAllotted.toLocaleString()}
+                                ₹{formatCurrency2Dec(mRow.totalAllotted)}
                               </td>
                               <td className="py-3 px-4 text-right font-mono font-extrabold text-rose-500">
-                                ₹{mRow.totalUsed.toLocaleString()}
+                                ₹{formatCurrency2Dec(mRow.totalUsed)}
                               </td>
                               <td className="py-3 px-4 text-right font-mono font-extrabold text-emerald-600 dark:text-emerald-400">
-                                ₹{mRow.totalRemaining.toLocaleString()}
+                                ₹{formatCurrency2Dec(mRow.totalRemaining)}
                               </td>
                               <td className="py-3 px-4 text-center">
                                 {(() => {
@@ -1572,13 +1637,13 @@ const ExpDashboard = () => {
                                       </div>
                                     </td>
                                     <td className="py-2.5 px-4 text-right font-mono text-base-content/80 whitespace-nowrap">
-                                      ₹{sub.allotted.toLocaleString()}
+                                      ₹{formatCurrency2Dec(sub.allotted)}
                                     </td>
                                     <td className="py-2.5 px-4 text-right font-mono font-bold text-rose-500 whitespace-nowrap">
-                                      ₹{sub.used.toLocaleString()}
+                                      ₹{formatCurrency2Dec(sub.used)}
                                     </td>
                                     <td className="py-2.5 px-4 text-right font-mono text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
-                                      ₹{sub.remaining.toLocaleString()}
+                                      ₹{formatCurrency2Dec(sub.remaining)}
                                     </td>
                                     <td className="py-2.5 px-4 text-center">
                                       <div className="flex items-center justify-center gap-2">
@@ -1613,9 +1678,9 @@ const ExpDashboard = () => {
                     <tfoot className="bg-base-200/90 font-black text-sm text-base-content border-t-2 border-base-300">
                       <tr>
                         <td className="py-3.5 px-4 uppercase tracking-wider text-xs">Total / Range Aggregate</td>
-                        <td className="py-3.5 px-4 text-right font-mono text-primary">₹{subCatRangeTotals.allotted.toLocaleString()}</td>
-                        <td className="py-3.5 px-4 text-right font-mono text-rose-500">₹{subCatRangeTotals.used.toLocaleString()}</td>
-                        <td className="py-3.5 px-4 text-right font-mono text-emerald-600 dark:text-emerald-400">₹{subCatRangeTotals.remaining.toLocaleString()}</td>
+                        <td className="py-3.5 px-4 text-right font-mono text-primary">₹{formatCurrency2Dec(subCatRangeTotals.allotted)}</td>
+                        <td className="py-3.5 px-4 text-right font-mono text-rose-500">₹{formatCurrency2Dec(subCatRangeTotals.used)}</td>
+                        <td className="py-3.5 px-4 text-right font-mono text-emerald-600 dark:text-emerald-400">₹{formatCurrency2Dec(subCatRangeTotals.remaining)}</td>
                         <td className="py-3.5 px-4 text-center font-mono">
                           {(() => {
                             const subFooterStyle = getUsedPercentageStyle(subCatRangeTotals.overallPct);

@@ -100,8 +100,9 @@ const HeaderSection = () => {
         .slice(0, 4);
 
     const handleSalarySubmit = () => {
-        if (tempSalary !== salary) {
-            dispatch(updateSalary({ month: currentMonth, salary: Number(tempSalary) }));
+        const val = Number(tempSalary) || 0;
+        if (val !== salary) {
+            dispatch(updateSalary({ month: currentMonth, salary: val }));
         }
         setIsEditingSalary(false);
     };
@@ -247,7 +248,7 @@ const HeaderSection = () => {
                                     className="stat-value text-primary text-3xl cursor-pointer hover:opacity-80 transition-opacity relative z-10"
                                     title="Click to edit monthly salary"
                                 >
-                                    {showBalance ? `₹${salary?.toLocaleString()}` : "••••••••"}
+                                    {showBalance ? `₹${(Number(salary) || 0).toLocaleString()}` : "••••••••"}
                                 </div>
                             )}
 

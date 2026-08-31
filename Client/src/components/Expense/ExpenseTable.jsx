@@ -255,6 +255,29 @@ const ExpenseTable = ({
     // Modal Popup State for Transaction Info / Notes
     const [infoModalTx, setInfoModalTx] = useState(null);
 
+    // Interactive Month & Year Dropdown Picker State
+    const [isMonthPickerOpen, setIsMonthPickerOpen] = useState(false);
+    const [pickerYear, setPickerYear] = useState(() => dayjs(currentMonth).year());
+    const monthPickerRef = useRef(null);
+
+    useEffect(() => {
+        const handleClickOutside = (e) => {
+            if (monthPickerRef.current && !monthPickerRef.current.contains(e.target)) {
+                setIsMonthPickerOpen(false);
+            }
+        };
+        if (isMonthPickerOpen) {
+            document.addEventListener("mousedown", handleClickOutside);
+        }
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, [isMonthPickerOpen]);
+
+    useEffect(() => {
+        if (currentMonth) {
+            setPickerYear(dayjs(currentMonth).year());
+        }
+    }, [currentMonth]);
+
     // Fixed Floating Column Filter Popover State
     const [activeFilterMenu, setActiveFilterMenu] = useState(null);
 
@@ -914,7 +937,7 @@ const ExpenseTable = ({
                             <Calendar size={20} />
                         </div>
                         <div>
-                            <div className="flex items-center gap-1.5">
+                            <div className="flex items-center gap-1.5 mb-0.5">
                                 <h3 className="text-xs font-bold text-base-content/50 uppercase tracking-widest">
                                     Current Period
                                 </h3>
@@ -926,50 +949,136 @@ const ExpenseTable = ({
                                     {hideNumbers ? <EyeOff size={13} className="text-primary font-bold" /> : <Eye size={13} />}
                                 </button>
                             </div>
-                            <span
-                                onClick={onOpenHeatmap}
-                                className={`text-xl font-extrabold text-base-content font-sans tracking-wide ${
-                                    onOpenHeatmap ? 'cursor-pointer hover:text-primary transition-colors inline-flex items-center gap-1.5 group' : ''
-                                }`}
-                                title={onOpenHeatmap ? "Click to open Spending Calendar" : ""}
-                            >
-                                {dayjs(currentMonth).format("MMMM YYYY")}
+                            <div className="flex items-center gap-1 relative" ref={monthPickerRef}>
+                                <button
+                                    type="button"
+                                    onClick={() => dispatch(setMonth(dayjs(currentMonth).subtract(1, 'month').format("YYYY-MM")))}
+                                    className="btn btn-xs btn-ghost btn-square rounded-lg text-base-content/70 hover:text-primary hover:bg-base-200 cursor-pointer"
+                                    title="Previous Month"
+                                >
+                                    <ChevronLeft size={16} />
+                                </button>
+
+                                {/* Interactive Month & Year Dropdown Trigger */}
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setPickerYear(dayjs(currentMonth).year());
+                                        setIsMonthPickerOpen((prev) => !prev);
+                                    }}
+                                    className="flex items-center gap-1.5 px-2 py-0.5 rounded-xl hover:bg-base-200 text-base-content font-sans text-xl font-extrabold tracking-wide transition-all group cursor-pointer select-none"
+                                    title="Click to choose Month & Year"
+                                >
+                                    <span>{dayjs(currentMonth).format("MMMM YYYY")}</span>
+                                    <ChevronDown size={15} className={`text-primary/70 transition-transform duration-200 ${isMonthPickerOpen ? 'rotate-180 text-primary' : 'group-hover:text-primary'}`} />
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={() => dispatch(setMonth(dayjs(currentMonth).add(1, 'month').format("YYYY-MM")))}
+                                    className="btn btn-xs btn-ghost btn-square rounded-lg text-base-content/70 hover:text-primary hover:bg-base-200 cursor-pointer"
+                                    title="Next Month"
+                                >
+                                    <ChevronRight size={16} />
+                                </button>
+
                                 {onOpenHeatmap && (
-                                    <ArrowUpRight size={17} className="text-primary opacity-70 group-hover:opacity-100 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all stroke-[2.5]" />
+                                    <button
+                                        type="button"
+                                        onClick={onOpenHeatmap}
+                                        className="btn btn-xs btn-ghost btn-circle text-primary/70 hover:text-primary hover:bg-primary/10 ml-0.5 cursor-pointer"
+                                        title="Open Spending Calendar Heatmap"
+                                    >
+                                        <ArrowUpRight size={15} />
+                                    </button>
                                 )}
-                            </span>
+
+                                {/* Interactive Month & Year Dropdown Popover */}
+                                {isMonthPickerOpen && (
+                                    <div className="absolute top-full left-0 mt-2 z-[999] w-72 bg-base-100 rounded-2xl shadow-2xl border border-base-300 p-3.5 animate-in fade-in zoom-in-95 duration-150">
+                                        {/* Year Selector with Side Arrows */}
+                                        <div className="flex items-center justify-between pb-2 mb-2.5 border-b border-base-200">
+                                            <button
+                                                type="button"
+                                                onClick={() => setPickerYear((y) => y - 1)}
+                                                className="btn btn-xs btn-ghost btn-square rounded-lg hover:bg-base-200 cursor-pointer text-base-content/70 hover:text-primary"
+                                                title="Previous Year"
+                                            >
+                                                <ChevronLeft size={15} />
+                                            </button>
+
+                                            <span className="font-mono font-extrabold text-sm text-base-content tracking-wider select-none">
+                                                {pickerYear}
+                                            </span>
+
+                                            <button
+                                                type="button"
+                                                onClick={() => setPickerYear((y) => y + 1)}
+                                                className="btn btn-xs btn-ghost btn-square rounded-lg hover:bg-base-200 cursor-pointer text-base-content/70 hover:text-primary"
+                                                title="Next Year"
+                                            >
+                                                <ChevronRight size={15} />
+                                            </button>
+                                        </div>
+
+                                        {/* 12 Months Grid */}
+                                        <div className="grid grid-cols-3 gap-1.5">
+                                            {Array.from({ length: 12 }, (_, i) => {
+                                                const monthDate = dayjs().year(pickerYear).month(i);
+                                                const monthKey = monthDate.format("YYYY-MM");
+                                                const isSelected = currentMonth === monthKey;
+                                                const isCurrentActualMonth = dayjs().format("YYYY-MM") === monthKey;
+
+                                                return (
+                                                    <button
+                                                        key={i}
+                                                        type="button"
+                                                        onClick={() => {
+                                                            dispatch(setMonth(monthKey));
+                                                            setIsMonthPickerOpen(false);
+                                                        }}
+                                                        className={`py-2 px-1 rounded-xl text-xs font-bold transition-all text-center cursor-pointer ${
+                                                            isSelected
+                                                                ? "bg-primary text-primary-content shadow-xs scale-102 font-extrabold"
+                                                                : isCurrentActualMonth
+                                                                ? "bg-primary/15 text-primary border border-primary/30 hover:bg-primary/25"
+                                                                : "hover:bg-base-200 text-base-content/80"
+                                                        }`}
+                                                    >
+                                                        {monthDate.format("MMM")}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+
+                                        {/* Quick Jump to This Month */}
+                                        <div className="mt-2.5 pt-2 border-t border-base-200 flex justify-between items-center text-xs">
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    const thisMonth = dayjs().format("YYYY-MM");
+                                                    dispatch(setMonth(thisMonth));
+                                                    setPickerYear(dayjs().year());
+                                                    setIsMonthPickerOpen(false);
+                                                }}
+                                                className="btn btn-xs btn-ghost text-primary font-bold hover:bg-primary/10 w-full cursor-pointer"
+                                            >
+                                                Jump to Current Month ({dayjs().format("MMM YYYY")})
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
 
                     <div className="flex items-center gap-3 flex-wrap">
-                        {/* Month Navigation */}
-                        <div className="flex items-center gap-2 bg-base-100 p-1.5 rounded-xl border border-base-200 shadow-2xs">
-                            <button
-                                onClick={() => dispatch(setMonth(dayjs(currentMonth).subtract(1, 'month').format("YYYY-MM")))}
-                                className="btn btn-xs btn-ghost btn-square font-bold"
-                                title="Previous Month"
-                            >
-                                <ChevronLeft size={16} />
-                            </button>
-
-                            <span className="text-xs font-extrabold font-mono px-3 text-primary">
-                                {dayjs(currentMonth).format("MMM YYYY")}
-                            </span>
-
-                            <button
-                                onClick={() => dispatch(setMonth(dayjs(currentMonth).add(1, 'month').format("YYYY-MM")))}
-                                className="btn btn-xs btn-ghost btn-square font-bold"
-                                title="Next Month"
-                            >
-                                <ChevronRight size={16} />
-                            </button>
-                        </div>
                         {/* Undo & Redo Action Controls */}
-                        <div className="flex items-center gap-1 bg-base-100 p-1.5 rounded-xl border border-base-200 shadow-2xs">
+                        <div className="flex items-center gap-0.5 bg-base-100 p-1 rounded-xl border border-base-200 shadow-2xs">
                             <button
                                 onClick={() => dispatch(performUndo())}
                                 disabled={!undoStack || undoStack.length === 0}
-                                className={`btn btn-xs btn-ghost gap-1.5 font-bold rounded-lg transition-all ${
+                                className={`btn btn-xs btn-square btn-ghost font-bold rounded-lg transition-all ${
                                     undoStack && undoStack.length > 0
                                         ? 'text-primary hover:bg-primary/10'
                                         : 'opacity-40 cursor-not-allowed text-base-content/40'
@@ -981,18 +1090,12 @@ const ExpenseTable = ({
                                 }
                             >
                                 <Undo2 size={14} />
-                                <span className="hidden sm:inline">Undo</span>
-                                {undoStack && undoStack.length > 0 && (
-                                    <span className="badge badge-primary badge-xs px-1 font-mono font-bold text-[9px]">
-                                        {undoStack.length}
-                                    </span>
-                                )}
                             </button>
 
                             <button
                                 onClick={() => dispatch(performRedo())}
                                 disabled={!redoStack || redoStack.length === 0}
-                                className={`btn btn-xs btn-ghost gap-1.5 font-bold rounded-lg transition-all ${
+                                className={`btn btn-xs btn-square btn-ghost font-bold rounded-lg transition-all ${
                                     redoStack && redoStack.length > 0
                                         ? 'text-primary hover:bg-primary/10'
                                         : 'opacity-40 cursor-not-allowed text-base-content/40'
@@ -1004,46 +1107,20 @@ const ExpenseTable = ({
                                 }
                             >
                                 <Redo2 size={14} />
-                                <span className="hidden sm:inline">Redo</span>
-                                {redoStack && redoStack.length > 0 && (
-                                    <span className="badge badge-secondary badge-xs px-1 font-mono font-bold text-[9px]">
-                                        {redoStack.length}
-                                    </span>
-                                )}
-                            </button>
-
-                            {groupedTransactions.length > 0 && (
-                                <button
-                                    onClick={toggleCollapseAll}
-                                    className="btn btn-xs btn-ghost gap-1.5 font-bold rounded-lg text-base-content/70 hover:bg-base-200 transition-all"
-                                    title={isAllCollapsed ? "Expand All Days" : "Collapse All Days"}
-                                >
-                                    {isAllCollapsed ? <ChevronRight size={14} className="text-primary" /> : <ChevronDown size={14} className="text-primary" />}
-                                    <span className="hidden sm:inline">{isAllCollapsed ? "Expand All" : "Collapse All"}</span>
-                                </button>
-                            )}
-
-                            {/* Day Header Display Customization Modal Trigger */}
-                            <button
-                                onClick={() => setShowHeaderSettingsModal(true)}
-                                className="btn btn-xs btn-ghost gap-1.5 font-bold rounded-lg text-base-content/70 hover:bg-base-200 transition-all"
-                                title="Configure Day Header Display Metrics"
-                            >
-                                <SlidersHorizontal size={14} className="text-primary" />
-                                <span className="hidden sm:inline">Header Display</span>
                             </button>
                         </div>
 
-                        {/* Primary Action Button: Add Transaction Modal (Icon only) */}
+                        {/* Primary Action Button: Add Transaction Modal */}
                         <button
                             onClick={() => {
                                 if (setIsAddModalOpen) setIsAddModalOpen(true);
                                 else setInternalIsAddModalOpen(true);
                             }}
-                            className="btn btn-outline btn-primary btn-sm btn-square rounded-xl shadow-xs"
-                            title="Quick Add Transaction (M)"
+                            className="btn btn-primary btn-sm rounded-xl font-bold gap-1.5 shadow-xs transition-all hover:scale-[1.02] active:scale-95 text-primary-content cursor-pointer"
+                            title="Add Transaction (M)"
                         >
-                            <Zap size={17} className="text-primary fill-primary/20" />
+                            <Plus size={16} />
+                            <span className="hidden sm:inline">Add Transaction</span>
                         </button>
                     </div>
                 </div>
@@ -1054,6 +1131,18 @@ const ExpenseTable = ({
                     
                     {/* 1. Date Header + Dropdown & Sort Order Toggle */}
                     <div className="w-[160px] shrink-0 flex items-center gap-1 relative whitespace-nowrap">
+                        {/* Expand / Collapse All Icon on the left of Date */}
+                        {groupedTransactions.length > 0 && (
+                            <button
+                                type="button"
+                                onClick={toggleCollapseAll}
+                                className="btn btn-xs btn-square btn-ghost text-base-content/70 hover:text-primary hover:bg-base-300/50 -ml-1 mr-0.5"
+                                title={isAllCollapsed ? "Expand All Days" : "Collapse All Days"}
+                            >
+                                {isAllCollapsed ? <ChevronRight size={14} className="text-primary" /> : <ChevronDown size={14} className="text-primary" />}
+                            </button>
+                        )}
+
                         <span>Date</span>
 
                         {/* Sort Order Toggle Icon */}
@@ -1317,7 +1406,7 @@ const ExpenseTable = ({
                                         }}
                                         className="btn btn-ghost btn-xs text-primary font-bold gap-1 hover:bg-primary/10 rounded-xl px-4"
                                     >
-                                        <Plus size={15} /> + Inline Add Transaction
+                                        <Plus size={15} /> Inline Add Transaction
                                     </button>
                                 </div>
                             )}
@@ -1338,66 +1427,84 @@ const ExpenseTable = ({
                                     <div key={group.dateKey} className="border-b border-base-200">
                                         <div
                                             onClick={() => toggleDayCollapse(group.dateKey)}
-                                            className="flex items-center gap-3.5 px-6 py-2 bg-base-200/50 hover:bg-base-200/90 cursor-pointer select-none transition-colors min-w-[980px] whitespace-nowrap border-y border-base-300/60 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+                                            className="flex items-center justify-between gap-3 px-6 py-2 bg-base-200/50 hover:bg-base-200/90 cursor-pointer select-none transition-colors min-w-[980px] whitespace-nowrap border-y border-base-300/60 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
                                         >
-                                            <button
-                                                type="button"
-                                                className="btn btn-xs btn-square btn-ghost text-base-content/70 hover:bg-base-300/50 shrink-0"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    toggleDayCollapse(group.dateKey);
-                                                }}
-                                                title={isCollapsed ? "Expand Day" : "Collapse Day"}
-                                            >
-                                                {isCollapsed ? <ChevronRight size={15} className="text-primary" /> : <ChevronDown size={15} className="text-primary" />}
-                                            </button>
+                                            {/* Left Side: Collapse Button, Date & Active Summary Metrics */}
+                                            <div className="flex items-center gap-3.5 flex-1 min-w-0">
+                                                <button
+                                                    type="button"
+                                                    className="btn btn-xs btn-square btn-ghost text-base-content/70 hover:bg-base-300/50 shrink-0"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        toggleDayCollapse(group.dateKey);
+                                                    }}
+                                                    title={isCollapsed ? "Expand Day" : "Collapse Day"}
+                                                >
+                                                    {isCollapsed ? <ChevronRight size={15} className="text-primary" /> : <ChevronDown size={15} className="text-primary" />}
+                                                </button>
 
-                                            <span className="font-extrabold text-xs text-base-content whitespace-nowrap shrink-0">
-                                                {formattedGroupDate}
-                                            </span>
-
-                                            {headerSettings.showTotalTxn && (
-                                                <span className="badge badge-sm badge-neutral font-bold text-[10px] opacity-80 px-2 py-0.5 whitespace-nowrap shrink-0">
-                                                    {group.transactions.length} {group.transactions.length === 1 ? 'transaction' : 'transactions'}
+                                                <span className="font-extrabold text-xs text-base-content whitespace-nowrap shrink-0">
+                                                    {formattedGroupDate}
                                                 </span>
-                                            )}
 
-                                            {headerSettings.showCreditCount && (
-                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 whitespace-nowrap shrink-0">
-                                                    <TrendingUp size={11} /> {group.creditCount} Credit{group.creditCount === 1 ? '' : 's'}
-                                                </span>
-                                            )}
-
-                                            {headerSettings.showDebitCount && (
-                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 whitespace-nowrap shrink-0">
-                                                    <TrendingDown size={11} /> {group.debitCount} Debit{group.debitCount === 1 ? '' : 's'}
-                                                </span>
-                                            )}
-
-                                            {headerSettings.showCreditAmt && (
-                                                <div className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 whitespace-nowrap font-mono font-bold text-xs shrink-0">
-                                                    <span className="text-base-content/40 text-[10px] font-sans uppercase font-semibold">Credited:</span>
-                                                    <span>{hideNumbers ? "••••••••" : `+₹${group.totalCredit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}</span>
-                                                </div>
-                                            )}
-
-                                            {headerSettings.showDebitAmt && (
-                                                <div className="flex items-center gap-1 text-rose-600 dark:text-rose-400 whitespace-nowrap font-mono font-bold text-xs shrink-0">
-                                                    <span className="text-base-content/40 text-[10px] font-sans uppercase font-semibold">Debited:</span>
-                                                    <span>{hideNumbers ? "••••••••" : `-₹${group.totalDebit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}</span>
-                                                </div>
-                                            )}
-
-                                            {headerSettings.showNet && (
-                                                <div className="flex items-center gap-1 whitespace-nowrap font-mono font-bold text-xs shrink-0">
-                                                    <span className="text-base-content/50 text-[10px] font-sans uppercase font-semibold">Net:</span>
-                                                    <span className={group.netAmount > 0 ? 'text-success' : (group.netAmount < 0 ? 'text-error' : 'text-base-content/60')}>
-                                                        {hideNumbers
-                                                            ? "••••••••"
-                                                            : `${group.netAmount > 0 ? '+' : (group.netAmount < 0 ? '-' : '')}₹${Math.abs(group.netAmount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                                                {headerSettings.showTotalTxn && (
+                                                    <span className="badge badge-sm badge-neutral font-bold text-[10px] opacity-80 px-2 py-0.5 whitespace-nowrap shrink-0">
+                                                        {group.transactions.length} {group.transactions.length === 1 ? 'transaction' : 'transactions'}
                                                     </span>
-                                                </div>
-                                            )}
+                                                )}
+
+                                                {headerSettings.showCreditCount && (
+                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 whitespace-nowrap shrink-0">
+                                                        <TrendingUp size={11} /> {group.creditCount} Credit{group.creditCount === 1 ? '' : 's'}
+                                                    </span>
+                                                )}
+
+                                                {headerSettings.showDebitCount && (
+                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 whitespace-nowrap shrink-0">
+                                                        <TrendingDown size={11} /> {group.debitCount} Debit{group.debitCount === 1 ? '' : 's'}
+                                                    </span>
+                                                )}
+
+                                                {headerSettings.showCreditAmt && (
+                                                    <div className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 whitespace-nowrap font-mono font-bold text-xs shrink-0">
+                                                        <span className="text-base-content/40 text-[10px] font-sans uppercase font-semibold">Credited:</span>
+                                                        <span>{hideNumbers ? "••••••••" : `+₹${group.totalCredit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}</span>
+                                                    </div>
+                                                )}
+
+                                                {headerSettings.showDebitAmt && (
+                                                    <div className="flex items-center gap-1 text-rose-600 dark:text-rose-400 whitespace-nowrap font-mono font-bold text-xs shrink-0">
+                                                        <span className="text-base-content/40 text-[10px] font-sans uppercase font-semibold">Debited:</span>
+                                                        <span>{hideNumbers ? "••••••••" : `-₹${group.totalDebit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}</span>
+                                                    </div>
+                                                )}
+
+                                                {headerSettings.showNet && (
+                                                    <div className="flex items-center gap-1 whitespace-nowrap font-mono font-bold text-xs shrink-0">
+                                                        <span className="text-base-content/50 text-[10px] font-sans uppercase font-semibold">Net:</span>
+                                                        <span className={group.netAmount > 0 ? 'text-success' : (group.netAmount < 0 ? 'text-error' : 'text-base-content/60')}>
+                                                            {hideNumbers
+                                                                ? "••••••••"
+                                                                : `${group.netAmount > 0 ? '+' : (group.netAmount < 0 ? '-' : '')}₹${Math.abs(group.netAmount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                                                        </span>
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {/* Right Side: Header Display Setting Button Aligned with Action Column */}
+                                            <div className="w-[85px] shrink-0 flex items-center justify-center">
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setShowHeaderSettingsModal(true);
+                                                    }}
+                                                    className="btn btn-xs btn-ghost btn-square text-base-content/60 hover:text-primary hover:bg-primary/10 transition-all rounded-lg"
+                                                    title="Configure Day Header Display Metrics"
+                                                >
+                                                    <SlidersHorizontal size={13} className="text-primary" />
+                                                </button>
+                                            </div>
                                         </div>
 
                                         {/* Day Group Transactions (Visible when not collapsed) */}

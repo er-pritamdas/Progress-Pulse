@@ -51,11 +51,11 @@ export const getDashboardData = async (req, res) => {
         }
 
         // Fetch all data in parallel
-        let [categories, sources, salaryData, transactions] = await Promise.all([
+        let [categories, sources, allMonthlyBudgets, transactions] = await Promise.all([
             // Find all categories for user
             ExpenseCategory.find({ userId }).sort({ order: 1, createdAt: 1 }).lean(),
             PaymentSource.find({ userId }).sort({ createdAt: 1 }),
-            MonthlyBudget.findOne({ userId, month: monthsList[monthsList.length - 1] }),
+            MonthlyBudget.find({ userId }).sort({ month: 1 }).lean(),
             ExpenseTransaction.find({
                 userId,
                 date: { $gte: startDate, $lte: endDate }
@@ -75,30 +75,16 @@ export const getDashboardData = async (req, res) => {
             return source.toObject(); // Bank/Wallet show native balance
         });
 
+        // Build map of salaries by month exclusively from saved DB records
+        const salariesByMonth = {};
+        (allMonthlyBudgets || []).forEach(b => {
+            if (b.month && b.salary !== undefined) {
+                salariesByMonth[b.month] = Number(b.salary);
+            }
+        });
+
         const targetMonth = monthsList[monthsList.length - 1];
-        let effectiveSalary = 0;
-
-        // Check if there is a previous month budget for this user
-        const prevBudget = await MonthlyBudget.findOne({
-            userId,
-            month: { $lt: targetMonth }
-        }).sort({ month: -1 });
-
-        if (salaryData && salaryData.salary !== 86500) {
-            effectiveSalary = salaryData.salary;
-        } else if (prevBudget) {
-            // Inherit from most recent previous month (overriding stale 86500 default)
-            effectiveSalary = prevBudget.salary;
-            await MonthlyBudget.findOneAndUpdate(
-                { userId, month: targetMonth },
-                { salary: effectiveSalary },
-                { upsert: true, new: true }
-            );
-        } else if (salaryData) {
-            effectiveSalary = salaryData.salary;
-        } else {
-            effectiveSalary = 0;
-        }
+        const effectiveSalary = salariesByMonth[targetMonth] !== undefined ? salariesByMonth[targetMonth] : 0;
 
         res.status(200).json({
             success: true,
@@ -106,6 +92,7 @@ export const getDashboardData = async (req, res) => {
                 categories,
                 sources: updatedSources,
                 salary: effectiveSalary,
+                salariesByMonth,
                 transactions,
                 months: monthsList
             }
@@ -126,21 +113,38 @@ export const updateSalary = async (req, res) => {
             return res.status(400).json({ success: false, message: "Month and Salary are required" });
         }
 
-        const newSalary = Number(salary);
+        const newSalary = Number(salary) || 0;
 
-        const budget = await MonthlyBudget.findOneAndUpdate(
-            { userId, month },
-            { salary: newSalary },
-            { new: true, upsert: true }
-        );
-
-        // Update any future month documents in DB that carry the stale 86500 default
-        await MonthlyBudget.updateMany(
-            { userId, month: { $gt: month }, salary: 86500 },
-            { salary: newSalary }
-        );
+        let budget;
+        if (newSalary <= 0) {
+            await MonthlyBudget.findOneAndDelete({ userId, month });
+            budget = { userId, month, salary: 0 };
+        } else {
+            budget = await MonthlyBudget.findOneAndUpdate(
+                { userId, month },
+                { salary: newSalary },
+                { new: true, upsert: true }
+            );
+        }
 
         res.status(200).json({ success: true, data: budget });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+export const deleteSalary = async (req, res) => {
+    try {
+        const { _id: userId } = req.user;
+        const { month } = req.params;
+
+        if (!month) {
+            return res.status(400).json({ success: false, message: "Month is required" });
+        }
+
+        await MonthlyBudget.findOneAndDelete({ userId, month });
+
+        res.status(200).json({ success: true, data: { month, salary: 0 } });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }

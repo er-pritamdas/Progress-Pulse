@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import dayjs from "dayjs";
 import { addTransaction } from "../../services/redux/slice/ExpenseSlice";
@@ -17,7 +17,10 @@ import {
   Wallet,
   Layers,
   Sparkles,
-  Zap
+  Plus,
+  Calendar,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react";
 import { message } from "antd";
 import { evaluateMathExpression } from "../../utils/mathExpression";
@@ -29,6 +32,7 @@ const AddTransactionModal = ({ isOpen, onClose }) => {
   // Form State
   const [transactionType, setTransactionType] = useState("Debit"); // "Debit" | "DebitMoney" | "Credit" | "Transfer"
   const [date, setDate] = useState(dayjs().format("YYYY-MM-DD"));
+  const [viewMonth, setViewMonth] = useState(dayjs().format("YYYY-MM-DD"));
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
   const [sourceId, setSourceId] = useState("");
@@ -37,6 +41,15 @@ const AddTransactionModal = ({ isOpen, onClose }) => {
   const [subCategoryId, setSubCategoryId] = useState("");
   const [isReimbursable, setIsReimbursable] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Reset / Sync viewMonth when opening modal
+  useEffect(() => {
+    if (isOpen) {
+      const todayStr = dayjs().format("YYYY-MM-DD");
+      setDate(todayStr);
+      setViewMonth(todayStr);
+    }
+  }, [isOpen]);
 
   // Close on Escape key
   useEffect(() => {
@@ -48,8 +61,6 @@ const AddTransactionModal = ({ isOpen, onClose }) => {
   }, [isOpen, onClose]);
 
   const calculatedAmount = evaluateMathExpression(amount);
-
-  if (!isOpen) return null;
 
   // Filter Categories for Current Month
   const currentMonthCategories = categories.filter(c => !c.month || c.month === currentMonth);
@@ -80,6 +91,74 @@ const AddTransactionModal = ({ isOpen, onClose }) => {
     setCategoryId("");
     setSubCategoryId("");
     setTargetSourceId("");
+  };
+
+  // Calendar Days calculation for the current viewMonth
+  const calendarDays = useMemo(() => {
+    const startOfMonth = dayjs(viewMonth).startOf("month");
+    const daysInCurrentMonth = startOfMonth.daysInMonth();
+    const startDayOfWeek = startOfMonth.day(); // 0 = Sun, 1 = Mon, ...
+
+    const prevMonth = startOfMonth.subtract(1, "month");
+    const daysInPrevMonth = prevMonth.daysInMonth();
+
+    const days = [];
+
+    // Previous month padding
+    for (let i = startDayOfWeek - 1; i >= 0; i--) {
+      const d = daysInPrevMonth - i;
+      const dateStr = prevMonth.date(d).format("YYYY-MM-DD");
+      days.push({
+        dateStr,
+        dayNum: d,
+        isCurrentMonth: false,
+      });
+    }
+
+    // Current month days
+    for (let i = 1; i <= daysInCurrentMonth; i++) {
+      const dateStr = startOfMonth.date(i).format("YYYY-MM-DD");
+      days.push({
+        dateStr,
+        dayNum: i,
+        isCurrentMonth: true,
+      });
+    }
+
+    // Next month padding to fill grid
+    const remainingCells = (7 - (days.length % 7)) % 7;
+    const nextMonth = startOfMonth.add(1, "month");
+    for (let i = 1; i <= remainingCells; i++) {
+      const dateStr = nextMonth.date(i).format("YYYY-MM-DD");
+      days.push({
+        dateStr,
+        dayNum: i,
+        isCurrentMonth: false,
+      });
+    }
+
+    return days;
+  }, [viewMonth]);
+
+  const handlePrevMonth = () => {
+    setViewMonth((prev) => dayjs(prev).subtract(1, "month").format("YYYY-MM-DD"));
+  };
+
+  const handleNextMonth = () => {
+    setViewMonth((prev) => dayjs(prev).add(1, "month").format("YYYY-MM-DD"));
+  };
+
+  const handleSelectDay = (cell) => {
+    setDate(cell.dateStr);
+    if (!cell.isCurrentMonth) {
+      setViewMonth(cell.dateStr);
+    }
+  };
+
+  const handleQuickToday = () => {
+    const todayStr = dayjs().format("YYYY-MM-DD");
+    setDate(todayStr);
+    setViewMonth(todayStr);
   };
 
   const handleSubmit = async (e) => {
@@ -138,20 +217,22 @@ const AddTransactionModal = ({ isOpen, onClose }) => {
     }
   };
 
+  if (!isOpen) return null;
+
   return (
     <div className="fixed inset-0 z-[99999] bg-black/70 backdrop-blur-md overflow-y-auto overflow-x-hidden flex items-center justify-center p-3 sm:p-5 animate-in fade-in duration-200">
       
-      <div className="w-full max-w-[1480px] my-auto flex flex-col items-center justify-center">
+      <div className="w-full max-w-[1540px] my-auto flex flex-col items-center justify-center">
         
         {/* Top Floating Control Bar */}
         <div className="w-full mb-3 flex items-center justify-between bg-base-100/95 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-base-300 shadow-xl shrink-0">
           <div className="flex items-center gap-3 flex-wrap min-w-0">
-            <div className="p-1.5 rounded-xl bg-amber-500/15 text-amber-500 shrink-0">
-              <Zap size={18} className="fill-amber-500/30" />
+            <div className="p-1.5 rounded-xl bg-primary/15 text-primary shrink-0">
+              <Plus size={18} />
             </div>
             <div>
               <h3 className="font-extrabold text-sm flex items-center gap-2 leading-none">
-                <span>Quick Add Transaction</span>
+                <span>Add Transaction</span>
               </h3>
               <p className="text-[10px] opacity-60 font-medium mt-0.5">5 Standalone Popups — Select from left to right</p>
             </div>
@@ -226,12 +307,12 @@ const AddTransactionModal = ({ isOpen, onClose }) => {
           </button>
         </div>
 
-        {/* 5 Distinct Popups Grid (Definite Locked Height 480px, No Shrink, No Collapse, No Horizontal Scrollbar) */}
+        {/* 5 Distinct Popups Grid (Comfortable Height 540px) */}
         <form onSubmit={handleSubmit} className="w-full">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5 items-stretch">
 
             {/* POPUP 1: Transaction Type with Tags (Extreme Left) */}
-            <div className="bg-base-100 rounded-3xl shadow-2xl border border-base-300 p-3.5 flex flex-col justify-between h-[480px] w-full min-w-0">
+            <div className="bg-base-100 rounded-3xl shadow-2xl border border-base-300 p-4 flex flex-col justify-between h-[540px] w-full min-w-0">
               <div className="flex items-center justify-between pb-2 mb-2 border-b border-base-200 shrink-0">
                 <div className="flex items-center gap-2">
                   <span className="w-5 h-5 rounded-full bg-rose-500/15 text-rose-600 dark:text-rose-400 flex items-center justify-center text-[10px] font-black">1</span>
@@ -248,19 +329,19 @@ const AddTransactionModal = ({ isOpen, onClose }) => {
                   className={`p-3 rounded-2xl text-left transition-all flex items-center justify-between border-transparent ${
                     transactionType === "Debit"
                       ? "bg-rose-500/15 text-rose-600 dark:text-rose-400 font-bold shadow-xs"
-                      : "bg-transparent hover:bg-base-200/50 text-base-content/80"
+                      : "bg-base-200/50 hover:bg-base-200 text-base-content/80"
                   }`}
                 >
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <div className={`p-1.5 rounded-xl ${transactionType === "Debit" ? "bg-rose-500/20 text-rose-600 dark:text-rose-300" : "bg-base-200/60 text-base-content/60"}`}>
-                      <TrendingDown size={14} />
+                  <div className="flex items-center gap-2.5">
+                    <div className={`p-2 rounded-xl ${transactionType === "Debit" ? "bg-rose-500/20 text-rose-600 dark:text-rose-400" : "bg-base-300 text-base-content/60"}`}>
+                      <TrendingDown size={16} />
                     </div>
                     <div>
-                      <div className="font-bold text-xs">Expense</div>
-                      <div className="text-[10px] opacity-60 font-normal">Standard Expense</div>
+                      <span className="font-extrabold text-xs block">Expense</span>
+                      <span className="text-[10px] opacity-60">Standard Category Spend</span>
                     </div>
                   </div>
-                  {transactionType === "Debit" && <CheckCircle2 size={14} className="text-rose-600 dark:text-rose-400 shrink-0" />}
+                  {transactionType === "Debit" && <CheckCircle2 size={16} className="text-rose-600 dark:text-rose-400" />}
                 </button>
 
                 {/* 2. Debit Money */}
@@ -270,19 +351,19 @@ const AddTransactionModal = ({ isOpen, onClose }) => {
                   className={`p-3 rounded-2xl text-left transition-all flex items-center justify-between border-transparent ${
                     transactionType === "DebitMoney"
                       ? "bg-rose-500/15 text-rose-600 dark:text-rose-400 font-bold shadow-xs"
-                      : "bg-transparent hover:bg-base-200/50 text-base-content/80"
+                      : "bg-base-200/50 hover:bg-base-200 text-base-content/80"
                   }`}
                 >
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <div className={`p-1.5 rounded-xl ${transactionType === "DebitMoney" ? "bg-rose-500/20 text-rose-600 dark:text-rose-300" : "bg-base-200/60 text-base-content/60"}`}>
-                      <TrendingDown size={14} />
+                  <div className="flex items-center gap-2.5">
+                    <div className={`p-2 rounded-xl ${transactionType === "DebitMoney" ? "bg-rose-500/20 text-rose-600 dark:text-rose-400" : "bg-base-300 text-base-content/60"}`}>
+                      <Wallet size={16} />
                     </div>
                     <div>
-                      <div className="font-bold text-xs">Debit Money</div>
-                      <div className="text-[10px] opacity-60 font-normal">Direct Cash / Debit</div>
+                      <span className="font-extrabold text-xs block">Debit Money</span>
+                      <span className="text-[10px] opacity-60">Account deduction (No category)</span>
                     </div>
                   </div>
-                  {transactionType === "DebitMoney" && <CheckCircle2 size={14} className="text-rose-600 dark:text-rose-400 shrink-0" />}
+                  {transactionType === "DebitMoney" && <CheckCircle2 size={16} className="text-rose-600 dark:text-rose-400" />}
                 </button>
 
                 {/* 3. Add Money */}
@@ -292,130 +373,86 @@ const AddTransactionModal = ({ isOpen, onClose }) => {
                   className={`p-3 rounded-2xl text-left transition-all flex items-center justify-between border-transparent ${
                     transactionType === "Credit"
                       ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-bold shadow-xs"
-                      : "bg-transparent hover:bg-base-200/50 text-base-content/80"
+                      : "bg-base-200/50 hover:bg-base-200 text-base-content/80"
                   }`}
                 >
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <div className={`p-1.5 rounded-xl ${transactionType === "Credit" ? "bg-emerald-500/20 text-emerald-600 dark:text-emerald-300" : "bg-base-200/60 text-base-content/60"}`}>
-                      <TrendingUp size={14} />
+                  <div className="flex items-center gap-2.5">
+                    <div className={`p-2 rounded-xl ${transactionType === "Credit" ? "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400" : "bg-base-300 text-base-content/60"}`}>
+                      <TrendingUp size={16} />
                     </div>
                     <div>
-                      <div className="font-bold text-xs">Add Money</div>
-                      <div className="text-[10px] opacity-60 font-normal">Income / Deposit</div>
+                      <span className="font-extrabold text-xs block">Add Money</span>
+                      <span className="text-[10px] opacity-60">Income / Balance Top-up</span>
                     </div>
                   </div>
-                  {transactionType === "Credit" && <CheckCircle2 size={14} className="text-emerald-600 dark:text-emerald-400 shrink-0" />}
+                  {transactionType === "Credit" && <CheckCircle2 size={16} className="text-emerald-600 dark:text-emerald-400" />}
                 </button>
 
-                {/* 4. Bank Transfer */}
+                {/* 4. Transfer */}
                 <button
                   type="button"
                   onClick={() => handleTypeSelect("Transfer")}
                   className={`p-3 rounded-2xl text-left transition-all flex items-center justify-between border-transparent ${
                     transactionType === "Transfer"
-                      ? "bg-amber-500/15 text-amber-600 dark:text-amber-400 font-bold shadow-xs"
-                      : "bg-transparent hover:bg-base-200/50 text-base-content/80"
+                      ? "bg-blue-500/15 text-blue-600 dark:text-blue-400 font-bold shadow-xs"
+                      : "bg-base-200/50 hover:bg-base-200 text-base-content/80"
                   }`}
                 >
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <div className={`p-1.5 rounded-xl ${transactionType === "Transfer" ? "bg-amber-500/20 text-amber-600 dark:text-amber-300" : "bg-base-200/60 text-base-content/60"}`}>
-                      <ArrowRightLeft size={14} />
+                  <div className="flex items-center gap-2.5">
+                    <div className={`p-2 rounded-xl ${transactionType === "Transfer" ? "bg-blue-500/20 text-blue-600 dark:text-blue-400" : "bg-base-300 text-base-content/60"}`}>
+                      <ArrowRightLeft size={16} />
                     </div>
                     <div>
-                      <div className="font-bold text-xs">Bank Transfer</div>
-                      <div className="text-[10px] opacity-60 font-normal">Account to Account</div>
+                      <span className="font-extrabold text-xs block">Transfer</span>
+                      <span className="text-[10px] opacity-60">Between your bank accounts</span>
                     </div>
                   </div>
-                  {transactionType === "Transfer" && <CheckCircle2 size={14} className="text-amber-600 dark:text-amber-400 shrink-0" />}
+                  {transactionType === "Transfer" && <CheckCircle2 size={16} className="text-blue-600 dark:text-blue-400" />}
                 </button>
               </div>
 
               {/* Status Hint */}
               <div className="pt-2 border-t border-base-200 text-center text-[10px] opacity-50 shrink-0">
-                Step 1 of 5
+                Selected: {transactionType === "Debit" ? "Expense" : (transactionType === "DebitMoney" ? "Debit Money" : (transactionType === "Credit" ? "Add Money" : "Transfer"))}
               </div>
             </div>
 
-            {/* POPUP 2: From Account */}
-            <div className="bg-base-100 rounded-3xl shadow-2xl border border-base-300 p-3.5 flex flex-col justify-between h-[480px] w-full min-w-0">
+            {/* POPUP 2: From Source / Bank Account with Individual Source Color Tags */}
+            <div className="bg-base-100 rounded-3xl shadow-2xl border border-base-300 p-4 flex flex-col justify-between h-[540px] w-full min-w-0">
               <div className="flex items-center justify-between pb-2 mb-2 border-b border-base-200 shrink-0">
                 <div className="flex items-center gap-2">
                   <span className="w-5 h-5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-400 flex items-center justify-center text-[10px] font-black">2</span>
-                  <span className="font-extrabold text-xs uppercase tracking-wider">From Account</span>
+                  <span className="font-extrabold text-xs uppercase tracking-wider">
+                    {transactionType === "Credit" ? "To Account" : "From Account"}
+                  </span>
                 </div>
                 <Wallet size={14} className="text-base-content/40" />
               </div>
 
               <div className="flex flex-col gap-1.5 overflow-y-auto flex-1 min-h-0 pr-0.5">
-                {sources.map((s) => {
-                  const isSelected = String(s._id) === String(sourceId);
-                  const style = getSourceTagStyle(s, sources);
-                  const amt = s.type === 'Card' && !s.balance && s.limit ? s.limit : (s.balance || 0);
-
-                  return (
-                    <button
-                      key={s._id}
-                      type="button"
-                      onClick={() => setSourceId(s._id)}
-                      className={`p-2.5 rounded-2xl text-left transition-all flex items-center justify-between gap-1.5 border-transparent ${
-                        isSelected
-                          ? `${style.bg} ${style.text} font-bold shadow-xs`
-                          : "bg-transparent hover:bg-base-200/50 text-base-content/80"
-                      }`}
-                    >
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${style.swatch}`}></span>
-                        <span className="font-bold text-xs truncate">{s.name}</span>
-                      </div>
-                      <div className="flex items-center gap-1 shrink-0">
-                        <span className="text-[10px] opacity-75 font-mono font-semibold">
-                          ₹{amt.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                        </span>
-                        {isSelected && <CheckCircle2 size={14} className="shrink-0" />}
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Status Hint */}
-              <div className="pt-2 border-t border-base-200 text-center text-[10px] opacity-50 shrink-0">
-                {sourceId ? "Account Selected" : "Select Source Account"}
-              </div>
-            </div>
-
-            {/* POPUP 3: Expense Category / Target Bank */}
-            <div className="bg-base-100 rounded-3xl shadow-2xl border border-base-300 p-3.5 flex flex-col justify-between h-[480px] w-full min-w-0">
-              <div className="flex items-center justify-between pb-2 mb-2 border-b border-base-200 shrink-0">
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className="w-5 h-5 rounded-full bg-purple-500/15 text-purple-600 dark:text-purple-400 flex items-center justify-center text-[10px] font-black shrink-0">3</span>
-                  <span className="font-extrabold text-xs uppercase tracking-wider truncate">
-                    {transactionType === "Transfer" ? "Target Bank (To)" : "Category"}
-                  </span>
-                </div>
-                {transactionType === "Transfer" ? <ArrowRightLeft size={14} className="text-base-content/40 shrink-0" /> : <Folder size={14} className="text-base-content/40 shrink-0" />}
-              </div>
-
-              <div className="flex flex-col gap-1.5 overflow-y-auto flex-1 min-h-0 pr-0.5">
-                {transactionType === "Transfer" ? (
-                  sources.filter(s => s.type !== 'Card' && String(s._id) !== String(sourceId)).map((s) => {
-                    const isSelected = String(s._id) === String(targetSourceId);
-                    const style = getSourceTagStyle(s, sources);
+                {sources.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-full text-center p-4 opacity-50">
+                    <span className="text-xs font-bold">No Accounts Found</span>
+                    <span className="text-[10px] opacity-75 mt-1">Add accounts in Settings</span>
+                  </div>
+                ) : (
+                  sources.map((s) => {
+                    const isSelected = String(s._id) === String(sourceId);
+                    const tagStyle = getSourceTagStyle(s, sources);
 
                     return (
                       <button
                         key={s._id}
                         type="button"
-                        onClick={() => setTargetSourceId(s._id)}
+                        onClick={() => setSourceId(s._id)}
                         className={`p-2.5 rounded-2xl text-left transition-all flex items-center justify-between gap-1.5 border-transparent ${
                           isSelected
-                            ? `${style.bg} ${style.text} font-bold shadow-xs`
+                            ? `${tagStyle.bg} ${tagStyle.text} font-bold shadow-xs`
                             : "bg-transparent hover:bg-base-200/50 text-base-content/80"
                         }`}
                       >
                         <div className="flex items-center gap-2 min-w-0">
-                          <ArrowRightLeft size={13} className="shrink-0" />
-                          <span className="font-bold text-xs truncate">{s.name}</span>
+                          <span className="text-xs truncate">{s.name}</span>
                         </div>
                         <div className="flex items-center gap-1 shrink-0">
                           <span className="text-[10px] opacity-75 font-mono font-semibold">
@@ -426,20 +463,78 @@ const AddTransactionModal = ({ isOpen, onClose }) => {
                       </button>
                     );
                   })
+                )}
+              </div>
+
+              {/* Status Hint */}
+              <div className="pt-2 border-t border-base-200 text-center text-[10px] opacity-50 shrink-0">
+                {sourceId ? "Account Selected" : "Select Source Account"}
+              </div>
+            </div>
+
+            {/* POPUP 3: Expense Category / Target Source (for Transfer) with Category Color Tags */}
+            <div className="bg-base-100 rounded-3xl shadow-2xl border border-base-300 p-4 flex flex-col justify-between h-[540px] w-full min-w-0">
+              <div className="flex items-center justify-between pb-2 mb-2 border-b border-base-200 shrink-0">
+                <div className="flex items-center gap-2">
+                  <span className="w-5 h-5 rounded-full bg-purple-500/15 text-purple-600 dark:text-purple-400 flex items-center justify-center text-[10px] font-black">3</span>
+                  <span className="font-extrabold text-xs uppercase tracking-wider">
+                    {transactionType === "Transfer" ? "Target Account" : "Category"}
+                  </span>
+                </div>
+                <Folder size={14} className="text-base-content/40" />
+              </div>
+
+              <div className="flex flex-col gap-1.5 overflow-y-auto flex-1 min-h-0 pr-0.5">
+                {transactionType === "Transfer" ? (
+                  // Transfer Mode: Select Target Bank Account
+                  sources
+                    .filter(s => String(s._id) !== String(sourceId))
+                    .map((s) => {
+                      const isSelected = String(s._id) === String(targetSourceId);
+                      const tagStyle = getSourceTagStyle(s, sources);
+
+                      return (
+                        <button
+                          key={s._id}
+                          type="button"
+                          onClick={() => setTargetSourceId(s._id)}
+                          className={`p-2.5 rounded-2xl text-left transition-all flex items-center justify-between gap-1.5 border-transparent ${
+                            isSelected
+                              ? `${tagStyle.bg} ${tagStyle.text} font-bold shadow-xs`
+                              : "bg-transparent hover:bg-base-200/50 text-base-content/80"
+                          }`}
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="text-xs truncate">{s.name}</span>
+                          </div>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <span className="text-[10px] opacity-75 font-mono font-semibold">
+                              ₹{(s.balance || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                            </span>
+                            {isSelected && <CheckCircle2 size={14} className="shrink-0" />}
+                          </div>
+                        </button>
+                      );
+                    })
                 ) : (transactionType === "DebitMoney" || transactionType === "Credit") ? (
-                  <div className="flex flex-col items-center justify-center h-full text-center p-4 opacity-60">
-                    <CheckCircle2 size={32} className="mb-2 text-primary/70" />
-                    <span className="font-bold text-xs">No Category Required</span>
-                    <span className="text-[10px] opacity-75 mt-1">Direct entry for {transactionType === "Credit" ? "Income / Credit" : "Debit Money"}</span>
+                  <div className="flex flex-col items-center justify-center h-full text-center p-4 opacity-50">
+                    <span className="text-xs font-bold">No Category Needed</span>
+                    <span className="text-[10px] opacity-75 mt-1">Category is optional for {transactionType === "Credit" ? "Income" : "Debit Money"}</span>
+                  </div>
+                ) : currentMonthCategories.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-full text-center p-4 opacity-50">
+                    <span className="text-xs font-bold">No Categories Found</span>
+                    <span className="text-[10px] opacity-75 mt-1">Configure categories for this month</span>
                   </div>
                 ) : (
                   currentMonthCategories.map((c) => {
                     const isSelected = String(c._id) === String(categoryId);
                     const style = getCategoryTagStyle(c, currentMonthCategories);
 
-                    const catBudget = (c.subCategories || []).reduce((sum, sub) => sum + (Number(sub.budget) || 0), 0);
+                    // Dynamic Remaining Calculation for Category
+                    const catBudget = Number(c.budget) || 0;
                     const catUsed = currentMonthTxns
-                      .filter(t => t.type !== 'Credit' && t.type !== 'Transfer' && (String(t.categoryId?._id || t.categoryId) === String(c._id)))
+                      .filter(t => t.type !== 'Credit' && t.type !== 'Transfer' && (t.categoryId?._id === c._id || t.categoryId === c._id))
                       .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
                     const rem = catBudget - catUsed;
                     const formattedRem = rem >= 0 ? `₹${rem.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}` : `-₹${Math.abs(rem).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
@@ -478,7 +573,7 @@ const AddTransactionModal = ({ isOpen, onClose }) => {
             </div>
 
             {/* POPUP 4: Expense Sub Category */}
-            <div className="bg-base-100 rounded-3xl shadow-2xl border border-base-300 p-3.5 flex flex-col justify-between h-[480px] w-full min-w-0">
+            <div className="bg-base-100 rounded-3xl shadow-2xl border border-base-300 p-4 flex flex-col justify-between h-[540px] w-full min-w-0">
               <div className="flex items-center justify-between pb-2 mb-2 border-b border-base-200 shrink-0">
                 <div className="flex items-center gap-2">
                   <span className="w-5 h-5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center text-[10px] font-black">4</span>
@@ -549,10 +644,10 @@ const AddTransactionModal = ({ isOpen, onClose }) => {
               </div>
             </div>
 
-            {/* POPUP 5: Input Fields & Save (Extreme Right) */}
-            <div className="bg-base-100 rounded-3xl shadow-2xl border border-base-300 p-3.5 flex flex-col justify-between h-[480px] w-full min-w-0">
-              <div className="space-y-2.5">
-                <div className="flex items-center justify-between pb-2 border-b border-base-200 shrink-0">
+            {/* POPUP 5: Input Fields & Save (Extreme Right) with Integrated Month Calendar */}
+            <div className="bg-base-100 rounded-3xl shadow-2xl border border-base-300 p-4 flex flex-col justify-between h-[540px] w-full min-w-0">
+              <div className="flex flex-col gap-2 flex-1 min-h-0 overflow-y-auto pr-0.5 [scrollbar-width:thin]">
+                <div className="flex items-center justify-between pb-1.5 border-b border-base-200 shrink-0">
                   <div className="flex items-center gap-2">
                     <span className="w-5 h-5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-[10px] font-black">5</span>
                     <span className="font-extrabold text-xs uppercase tracking-wider">Details & Save</span>
@@ -574,7 +669,7 @@ const AddTransactionModal = ({ isOpen, onClose }) => {
                         placeholder="e.g. 23-8-4"
                         value={amount}
                         onChange={(e) => setAmount(e.target.value)}
-                        className="input input-sm input-bordered w-full text-xs font-bold font-mono focus:input-primary text-left px-2"
+                        className="input input-xs input-bordered w-full text-xs font-bold font-mono focus:input-primary text-left px-2 h-8"
                         autoFocus
                       />
                     </div>
@@ -584,7 +679,7 @@ const AddTransactionModal = ({ isOpen, onClose }) => {
 
                     {/* Dynamic Calculation Total Field */}
                     <div
-                      className={`w-20 sm:w-24 shrink-0 input input-sm input-bordered bg-base-200/80 flex items-center justify-end px-1.5 font-mono font-extrabold text-xs select-none truncate ${
+                      className={`w-20 sm:w-24 shrink-0 input input-xs input-bordered bg-base-200/80 flex items-center justify-end px-1.5 font-mono font-extrabold text-xs select-none truncate h-8 ${
                         calculatedAmount !== null ? 'text-primary font-black' : 'text-base-content/40'
                       }`}
                       title={calculatedAmount !== null ? `Calculated: ₹${calculatedAmount.toLocaleString()}` : "0.00"}
@@ -598,7 +693,7 @@ const AddTransactionModal = ({ isOpen, onClose }) => {
 
                 {/* Description */}
                 <div>
-                  <label className="block font-extrabold text-base-content/70 text-[10px] uppercase tracking-wider mb-1">
+                  <label className="block font-extrabold text-base-content/70 text-[10px] uppercase tracking-wider mb-0.5">
                     Description
                   </label>
                   <input
@@ -606,32 +701,109 @@ const AddTransactionModal = ({ isOpen, onClose }) => {
                     placeholder="e.g. Grocery, Fuel, Dinner..."
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
-                    className="input input-sm input-bordered w-full text-xs font-semibold focus:input-primary"
+                    className="input input-xs input-bordered w-full text-xs font-semibold focus:input-primary h-8"
                   />
                 </div>
 
-                {/* Date */}
-                <div>
-                  <label className="block font-extrabold text-base-content/70 text-[10px] uppercase tracking-wider mb-1">
-                    Date
-                  </label>
-                  <input
-                    type="date"
-                    value={date}
-                    onChange={(e) => setDate(e.target.value)}
-                    className="input input-sm input-bordered w-full text-xs font-semibold focus:input-primary"
-                  />
+                {/* Interactive Month Calendar Date Selector */}
+                <div className="bg-base-200/50 p-2 rounded-2xl border border-base-200 flex flex-col gap-1">
+                  
+                  {/* Month Navigation Header */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={handlePrevMonth}
+                        className="btn btn-ghost btn-xs btn-square rounded-lg hover:bg-base-300 text-base-content/70 cursor-pointer h-5 w-5 min-h-0"
+                        title="Previous Month"
+                      >
+                        <ChevronLeft size={12} />
+                      </button>
+                      <span className="font-extrabold text-[11px] text-base-content tracking-tight px-1 select-none whitespace-nowrap">
+                        {dayjs(viewMonth).format("MMMM YYYY")}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleNextMonth}
+                        className="btn btn-ghost btn-xs btn-square rounded-lg hover:bg-base-300 text-base-content/70 cursor-pointer h-5 w-5 min-h-0"
+                        title="Next Month"
+                      >
+                        <ChevronRight size={12} />
+                      </button>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleQuickToday}
+                      className={`btn btn-xs rounded-lg px-2 text-[9.5px] font-extrabold h-5 min-h-0 cursor-pointer transition-colors ${
+                        date === dayjs().format("YYYY-MM-DD")
+                          ? "btn-primary text-primary-content"
+                          : "btn-ghost text-primary hover:bg-primary/10"
+                      }`}
+                      title="Jump to Today"
+                    >
+                      Today
+                    </button>
+                  </div>
+
+                  {/* Weekday Names Header */}
+                  <div className="grid grid-cols-7 text-center text-[8.5px] font-black text-base-content/40 select-none">
+                    {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((d, idx) => (
+                      <div key={idx} className={idx === 0 || idx === 6 ? "text-rose-500/70" : ""}>
+                        {d}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Calendar Days Matrix */}
+                  <div className="grid grid-cols-7 gap-0.5 text-center">
+                    {calendarDays.map((cell, idx) => {
+                      const isSelected = cell.dateStr === date;
+                      const isToday = cell.dateStr === dayjs().format("YYYY-MM-DD");
+
+                      return (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => handleSelectDay(cell)}
+                          className={`h-5.5 w-full flex items-center justify-center rounded-md text-[10px] font-bold transition-all cursor-pointer select-none ${
+                            isSelected
+                              ? "bg-primary text-primary-content font-black shadow-xs scale-105"
+                              : cell.isCurrentMonth
+                              ? isToday
+                                ? "bg-primary/15 text-primary font-black border border-primary/30"
+                                : "text-base-content hover:bg-base-300/70"
+                              : "text-base-content/25 hover:text-base-content/60"
+                          }`}
+                        >
+                          {cell.dayNum}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Selected Date Indicator */}
+                  <div className="flex items-center justify-between text-[9.5px] font-medium pt-1 border-t border-base-300/50 text-base-content/60">
+                    <span className="flex items-center gap-1">
+                      <Calendar size={10} className="text-primary" />
+                      <span>Selected:</span>
+                    </span>
+                    <span className="font-bold text-primary font-mono text-[10px]">
+                      {dayjs(date).format("ddd, DD MMM YYYY")}
+                    </span>
+                  </div>
+
                 </div>
 
                 {/* Reimbursable Toggle */}
-                <div className="flex items-center justify-between bg-base-200/50 p-2.5 rounded-2xl border border-base-200">
-                  <div className="flex items-center gap-2">
-                    <div className={`p-1.5 rounded-xl ${isReimbursable ? 'bg-warning/20 text-warning' : 'bg-base-300 text-base-content/50'}`}>
-                      <Handshake size={14} />
+                <div className="flex items-center justify-between bg-base-200/50 px-2.5 py-1.5 rounded-xl border border-base-200">
+                  <div className="flex items-center gap-1.5">
+                    <div className={`p-1 rounded-lg ${isReimbursable ? 'bg-warning/20 text-warning' : 'bg-base-300 text-base-content/50'}`}>
+                      <Handshake size={12} />
                     </div>
                     <div>
-                      <span className="font-bold text-[11px] block leading-tight">Reimbursable</span>
-                      <span className="text-[9px] opacity-60">To collect back later</span>
+                      <span className="font-bold text-[10px] block leading-tight">Reimbursable</span>
+                      <span className="text-[8.5px] opacity-60">To collect back later</span>
                     </div>
                   </div>
                   <input
@@ -644,29 +816,20 @@ const AddTransactionModal = ({ isOpen, onClose }) => {
               </div>
 
               {/* Actions */}
-              <div className="flex flex-col gap-1.5 pt-2 border-t border-base-200 shrink-0">
+              <div className="pt-2 border-t border-base-200 shrink-0">
                 <button
                   type="submit"
-                  className="btn btn-sm bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white font-black gap-2 border-0 shadow-lg shadow-emerald-600/30 w-full transition-all text-xs tracking-wide cursor-pointer"
+                  className="btn btn-sm bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white font-black gap-2 border-0 shadow-lg shadow-emerald-600/30 w-full transition-all text-xs tracking-wide cursor-pointer h-9"
                   disabled={isSubmitting}
                 >
                   {isSubmitting ? (
                     <span className="loading loading-spinner loading-xs text-white"></span>
                   ) : (
                     <>
-                      <Save size={15} className="text-white shrink-0" />
+                      <Save size={14} className="text-white shrink-0" />
                       <span>Save Transaction</span>
                     </>
                   )}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="btn btn-xs btn-ghost font-bold text-base-content/60 hover:text-base-content hover:bg-base-200"
-                  disabled={isSubmitting}
-                >
-                  Cancel
                 </button>
               </div>
 

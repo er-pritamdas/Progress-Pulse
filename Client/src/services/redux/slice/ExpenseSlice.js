@@ -53,6 +53,18 @@ export const updateSalary = createAsyncThunk(
     }
 );
 
+export const deleteSalary = createAsyncThunk(
+    "expense/deleteSalary",
+    async ({ month }, { rejectWithValue }) => {
+        try {
+            const response = await axiosInstance.delete(`${BASE_URL}/salary/${month}`);
+            return response.data.data;
+        } catch (error) {
+            return rejectWithValue(error.response?.data?.message || "Failed to delete salary");
+        }
+    }
+);
+
 // Categories
 export const createCategory = createAsyncThunk(
     "expense/createCategory",
@@ -396,6 +408,7 @@ const initialState = {
     sources: [],
     transactions: [],
     salary: 0,
+    salariesByMonth: {},
     currentMonth: dayjs().format("YYYY-MM"),
     loading: false,
     error: null,
@@ -461,6 +474,7 @@ const expenseSlice = createSlice({
                 state.categories = action.payload.categories;
                 state.sources = action.payload.sources;
                 state.salary = action.payload.salary;
+                state.salariesByMonth = action.payload.salariesByMonth || { [state.currentMonth]: action.payload.salary };
                 state.transactions = action.payload.transactions;
             })
             .addCase(fetchDashboardData.rejected, (state, action) => {
@@ -478,6 +492,7 @@ const expenseSlice = createSlice({
                 state.categories = action.payload.categories;
                 state.sources = action.payload.sources;
                 state.salary = action.payload.salary;
+                state.salariesByMonth = action.payload.salariesByMonth || {};
                 state.transactions = action.payload.transactions;
             })
             .addCase(fetchRangeData.rejected, (state, action) => {
@@ -487,7 +502,25 @@ const expenseSlice = createSlice({
 
             // Salary
             .addCase(updateSalary.fulfilled, (state, action) => {
-                state.salary = action.payload.salary;
+                const updatedSal = Number(action.payload.salary) || 0;
+                if (state.currentMonth === action.payload.month) {
+                    state.salary = updatedSal;
+                }
+                const updated = { ...(state.salariesByMonth || {}) };
+                if (updatedSal <= 0) {
+                    delete updated[action.payload.month];
+                } else {
+                    updated[action.payload.month] = updatedSal;
+                }
+                state.salariesByMonth = updated;
+            })
+            .addCase(deleteSalary.fulfilled, (state, action) => {
+                if (state.currentMonth === action.payload.month) {
+                    state.salary = 0;
+                }
+                const updated = { ...(state.salariesByMonth || {}) };
+                delete updated[action.payload.month];
+                state.salariesByMonth = updated;
             })
 
             // Categories
