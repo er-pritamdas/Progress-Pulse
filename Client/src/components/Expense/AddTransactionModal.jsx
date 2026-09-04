@@ -20,7 +20,9 @@ import {
   Plus,
   Calendar,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  CreditCard,
+  Building2
 } from "lucide-react";
 import { message } from "antd";
 import { evaluateMathExpression } from "../../utils/mathExpression";
@@ -62,23 +64,109 @@ const AddTransactionModal = ({ isOpen, onClose }) => {
 
   const calculatedAmount = evaluateMathExpression(amount);
 
-  // Filter Categories for Current Month
-  const currentMonthCategories = categories.filter(c => !c.month || c.month === currentMonth);
+  // Selected Month based strictly on chosen transaction date (defaults to currentMonth)
+  const selectedMonth = useMemo(() => {
+    return date ? dayjs(date).format("YYYY-MM") : (currentMonth || dayjs().format("YYYY-MM"));
+  }, [date, currentMonth]);
 
-  // Transactions in current month for budget calculations
-  const currentMonthTxns = transactions.filter(t => {
-    if (!currentMonth || !t.date) return true;
-    return dayjs(t.date).format("YYYY-MM") === currentMonth;
-  });
+  // Filter Categories for the Selected Month
+  const selectedMonthCategories = useMemo(() => {
+    return categories.filter(c => !c.month || c.month === selectedMonth);
+  }, [categories, selectedMonth]);
 
-  // Get selected Category Object
-  const selectedCategoryObj = currentMonthCategories.find(c => String(c._id) === String(categoryId));
+  // Transactions in selected month for accurate budget & spent calculations
+  const selectedMonthTxns = useMemo(() => {
+    return transactions.filter(t => {
+      if (!t.date) return false;
+      return dayjs(t.date).format("YYYY-MM") === selectedMonth;
+    });
+  }, [transactions, selectedMonth]);
+
+  // Card due amount calculation across transactions
+  const getCardDueAmount = (source) => {
+    if (!source) return 0;
+    const cardDebits = transactions
+      .filter(t => t.type === 'Debit' && String(t.sourceId?._id || t.sourceId) === String(source._id))
+      .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+
+    const cardCredits = transactions
+      .filter(t => (t.type === 'Credit' || t.type === 'Transfer') && (
+        String(t.targetSourceId?._id || t.targetSourceId) === String(source._id) ||
+        String(t.sourceId?._id || t.sourceId) === String(source._id)
+      ))
+      .reduce((sum, t) => {
+        if (t.type === 'Credit' && String(t.sourceId?._id || t.sourceId) === String(source._id)) {
+          return sum + (Number(t.amount) || 0);
+        }
+        if (t.type === 'Transfer' && String(t.targetSourceId?._id || t.targetSourceId) === String(source._id)) {
+          return sum + (Number(t.amount) || 0);
+        }
+        return sum;
+      }, 0);
+
+    const due = cardDebits - cardCredits;
+    return due > 0 ? due : 0;
+  };
+
+  // Get selected Category Object in selectedMonthCategories or matching by name
+  const selectedCategoryObj = useMemo(() => {
+    if (!categoryId) return null;
+    const directMatch = selectedMonthCategories.find(c => String(c._id) === String(categoryId));
+    if (directMatch) return directMatch;
+    const anyCat = categories.find(c => String(c._id) === String(categoryId));
+    if (anyCat) {
+      const nameMatch = selectedMonthCategories.find(c => c.name === anyCat.name);
+      if (nameMatch) return nameMatch;
+      return anyCat;
+    }
+    return null;
+  }, [categoryId, selectedMonthCategories, categories]);
 
   // Get Category Tag Style for subcategories
-  const selectedCategoryStyle = selectedCategoryObj ? getCategoryTagStyle(selectedCategoryObj, currentMonthCategories) : null;
+  const selectedCategoryStyle = selectedCategoryObj ? getCategoryTagStyle(selectedCategoryObj, selectedMonthCategories) : null;
 
   // Get Subcategories for Selected Category
-  const subCategoriesList = selectedCategoryObj?.subCategories || [];
+  const subCategoriesList = useMemo(() => {
+    return selectedCategoryObj?.subCategories || [];
+  }, [selectedCategoryObj]);
+
+  const selectedSubCategoryObj = useMemo(() => {
+    if (!subCategoryId) return null;
+    return subCategoriesList.find(s => String(s._id) === String(subCategoryId)) || null;
+  }, [subCategoryId, subCategoriesList]);
+
+  // Dynamic Category Budget, Spent, and Balance for selectedMonth
+  const { catBudget, catSpent, catBalance } = useMemo(() => {
+    if (!selectedCategoryObj) return { catBudget: 0, catSpent: 0, catBalance: 0 };
+    const budget = (selectedCategoryObj.subCategories || []).reduce(
+      (sum, sub) => sum + (Number(sub.budget) || 0),
+      Number(selectedCategoryObj.budget) || 0
+    );
+    const spent = selectedMonthTxns
+      .filter(t => t.type !== 'Credit' && t.type !== 'Transfer' && (
+        String(t.categoryId?._id || t.categoryId) === String(selectedCategoryObj._id) ||
+        (t.categoryId?.name && t.categoryId.name === selectedCategoryObj.name)
+      ))
+      .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+    return { catBudget: budget, catSpent: spent, catBalance: budget - spent };
+  }, [selectedCategoryObj, selectedMonthTxns]);
+
+  // Dynamic Subcategory Budget, Spent, and Balance for selectedMonth
+  const { subBudget, subSpent, subBalance } = useMemo(() => {
+    if (!selectedSubCategoryObj) return { subBudget: 0, subSpent: 0, subBalance: 0 };
+    const budget = Number(selectedSubCategoryObj.budget) || 0;
+    const spent = selectedMonthTxns
+      .filter(t => t.type !== 'Credit' && t.type !== 'Transfer' && (
+        String(t.subCategoryId?._id || t.subCategoryId) === String(selectedSubCategoryObj._id) ||
+        ((String(t.categoryId?._id || t.categoryId) === String(selectedCategoryObj?._id) || t.categoryId?.name === selectedCategoryObj?.name) &&
+         t.description?.toLowerCase().includes(selectedSubCategoryObj.name.toLowerCase()))
+      ))
+      .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+    return { subBudget: budget, subSpent: spent, subBalance: budget - spent };
+  }, [selectedSubCategoryObj, selectedCategoryObj, selectedMonthTxns]);
+
+  const catAfter = catBalance - (calculatedAmount || 0);
+  const subAfter = subBalance - (calculatedAmount || 0);
 
   // Reset SubCategory when Category changes
   const handleCategorySelect = (catId) => {
@@ -179,18 +267,24 @@ const AddTransactionModal = ({ isOpen, onClose }) => {
 
     if (transactionType === "Transfer") {
       if (!targetSourceId) {
-        message.error("Please select a Target Bank to transfer money to");
+        message.error("Please select a Target Account (Bank or Card) to transfer money to");
         return;
       }
       if (sourceId === targetSourceId) {
-        message.error("Source bank and Target bank cannot be the same account");
+        message.error("Source account and Target account cannot be the same account");
         return;
       }
     }
 
-    if (transactionType === "Debit" && !categoryId) {
-      message.error("Please select a Category for this expense");
-      return;
+    if (transactionType === "Debit") {
+      if (!categoryId) {
+        message.error("Please select a Category for this expense");
+        return;
+      }
+      if (!subCategoryId) {
+        message.error("Please select a Sub Category for the selected category");
+        return;
+      }
     }
 
     setIsSubmitting(true);
@@ -439,26 +533,36 @@ const AddTransactionModal = ({ isOpen, onClose }) => {
                   sources.map((s) => {
                     const isSelected = String(s._id) === String(sourceId);
                     const tagStyle = getSourceTagStyle(s, sources);
+                    const isCard = s.type === "Card";
+                    const cardDue = isCard ? getCardDueAmount(s) : 0;
 
                     return (
                       <button
                         key={s._id}
                         type="button"
                         onClick={() => setSourceId(s._id)}
-                        className={`p-2.5 rounded-2xl text-left transition-all flex items-center justify-between gap-1.5 border-transparent ${
+                        className={`p-2.5 rounded-2xl text-left transition-all flex items-center justify-between gap-1.5 border-transparent cursor-pointer ${
                           isSelected
                             ? `${tagStyle.bg} ${tagStyle.text} font-bold shadow-xs`
                             : "bg-transparent hover:bg-base-200/50 text-base-content/80"
                         }`}
                       >
                         <div className="flex items-center gap-2 min-w-0">
-                          <span className="text-xs truncate">{s.name}</span>
+                          {isCard ? (
+                            <CreditCard size={13} className="shrink-0 text-rose-500" />
+                          ) : (
+                            <Building2 size={13} className="shrink-0 opacity-70" />
+                          )}
+                          <span className="text-xs truncate font-semibold">{s.name}</span>
+                          {isCard && <span className="badge badge-xs badge-error font-extrabold scale-75">Card</span>}
                         </div>
                         <div className="flex items-center gap-1 shrink-0">
                           <span className="text-[10px] opacity-75 font-mono font-semibold">
-                            ₹{(s.balance || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                            {isCard
+                              ? `Due: ₹${cardDue.toLocaleString()}`
+                              : `₹${(s.balance || 0).toLocaleString()}`}
                           </span>
-                          {isSelected && <CheckCircle2 size={14} className="shrink-0" />}
+                          {isSelected && <CheckCircle2 size={14} className="shrink-0 text-primary" />}
                         </div>
                       </button>
                     );
@@ -486,57 +590,137 @@ const AddTransactionModal = ({ isOpen, onClose }) => {
 
               <div className="flex flex-col gap-1.5 overflow-y-auto flex-1 min-h-0 pr-0.5">
                 {transactionType === "Transfer" ? (
-                  // Transfer Mode: Select Target Bank Account
-                  sources
-                    .filter(s => String(s._id) !== String(sourceId))
-                    .map((s) => {
-                      const isSelected = String(s._id) === String(targetSourceId);
-                      const tagStyle = getSourceTagStyle(s, sources);
+                  // Transfer Mode: Select Target Bank Account or Credit Card
+                  (() => {
+                    const availableSources = sources.filter(s => String(s._id) !== String(sourceId));
+                    const bankTargets = availableSources.filter(s => s.type !== "Card");
+                    const cardTargets = availableSources.filter(s => s.type === "Card");
 
+                    if (availableSources.length === 0) {
                       return (
-                        <button
-                          key={s._id}
-                          type="button"
-                          onClick={() => setTargetSourceId(s._id)}
-                          className={`p-2.5 rounded-2xl text-left transition-all flex items-center justify-between gap-1.5 border-transparent ${
-                            isSelected
-                              ? `${tagStyle.bg} ${tagStyle.text} font-bold shadow-xs`
-                              : "bg-transparent hover:bg-base-200/50 text-base-content/80"
-                          }`}
-                        >
-                          <div className="flex items-center gap-2 min-w-0">
-                            <span className="text-xs truncate">{s.name}</span>
-                          </div>
-                          <div className="flex items-center gap-1 shrink-0">
-                            <span className="text-[10px] opacity-75 font-mono font-semibold">
-                              ₹{(s.balance || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                            </span>
-                            {isSelected && <CheckCircle2 size={14} className="shrink-0" />}
-                          </div>
-                        </button>
+                        <div className="flex flex-col items-center justify-center h-full text-center p-4 opacity-50">
+                          <span className="text-xs font-bold">No Other Accounts</span>
+                          <span className="text-[10px] opacity-75 mt-1">Add another bank or card in Settings</span>
+                        </div>
                       );
-                    })
+                    }
+
+                    return (
+                      <div className="flex flex-col gap-2">
+                        {/* Bank Accounts & Wallets Section */}
+                        {bankTargets.length > 0 && (
+                          <div className="space-y-1">
+                            <div className="text-[10px] font-extrabold text-base-content/50 uppercase tracking-wider px-2 py-0.5 flex items-center gap-1.5">
+                              <Building2 size={11} className="text-primary" />
+                              <span>Bank Accounts & Wallets</span>
+                            </div>
+                            {bankTargets.map((s) => {
+                              const isSelected = String(s._id) === String(targetSourceId);
+                              const tagStyle = getSourceTagStyle(s, sources);
+
+                              return (
+                                <button
+                                  key={s._id}
+                                  type="button"
+                                  onClick={() => setTargetSourceId(s._id)}
+                                  className={`p-2.5 rounded-2xl text-left transition-all flex items-center justify-between gap-1.5 border-transparent cursor-pointer w-full ${
+                                    isSelected
+                                      ? `${tagStyle.bg} ${tagStyle.text} font-bold shadow-xs`
+                                      : "bg-transparent hover:bg-base-200/50 text-base-content/80"
+                                  }`}
+                                >
+                                  <div className="flex items-center gap-2 min-w-0">
+                                    <Building2 size={13} className="shrink-0 opacity-70" />
+                                    <span className="text-xs truncate font-semibold">{s.name}</span>
+                                  </div>
+                                  <div className="flex items-center gap-1 shrink-0">
+                                    <span className="text-[10px] opacity-75 font-mono font-semibold">
+                                      ₹{(s.balance || 0).toLocaleString()}
+                                    </span>
+                                    {isSelected && <CheckCircle2 size={14} className="shrink-0 text-primary" />}
+                                  </div>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+
+                        {/* Credit Cards Section */}
+                        {cardTargets.length > 0 && (
+                          <div className="space-y-1 pt-1.5 border-t border-base-200/80">
+                            <div className="text-[10px] font-extrabold text-base-content/50 uppercase tracking-wider px-2 py-0.5 flex items-center justify-between">
+                              <span className="flex items-center gap-1.5">
+                                <CreditCard size={11} className="text-rose-500" />
+                                <span>Credit Cards (Bill Payment / Transfer)</span>
+                              </span>
+                              <span className="badge badge-xs badge-error font-extrabold scale-75">Card</span>
+                            </div>
+                            {cardTargets.map((s) => {
+                              const isSelected = String(s._id) === String(targetSourceId);
+                              const tagStyle = getSourceTagStyle(s, sources);
+                              const cardDue = getCardDueAmount(s);
+
+                              return (
+                                <button
+                                  key={s._id}
+                                  type="button"
+                                  onClick={() => setTargetSourceId(s._id)}
+                                  className={`p-2.5 rounded-2xl text-left transition-all flex items-center justify-between gap-1.5 border-transparent cursor-pointer w-full ${
+                                    isSelected
+                                      ? `${tagStyle.bg} ${tagStyle.text} font-bold shadow-xs`
+                                      : "bg-transparent hover:bg-base-200/50 text-base-content/80"
+                                  }`}
+                                >
+                                  <div className="flex items-center gap-2 min-w-0">
+                                    <CreditCard size={13} className="shrink-0 text-rose-500" />
+                                    <div className="min-w-0 flex flex-col">
+                                      <span className="text-xs truncate font-semibold">{s.name}</span>
+                                      {s.limit > 0 && (
+                                        <span className="text-[9px] opacity-50 font-mono">Limit: ₹{s.limit.toLocaleString()}</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-1 shrink-0">
+                                    <span className="text-[10px] font-bold font-mono text-rose-500">
+                                      Due: ₹{cardDue.toLocaleString()}
+                                    </span>
+                                    {isSelected && <CheckCircle2 size={14} className="shrink-0 text-primary" />}
+                                  </div>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()
                 ) : (transactionType === "DebitMoney" || transactionType === "Credit") ? (
                   <div className="flex flex-col items-center justify-center h-full text-center p-4 opacity-50">
                     <span className="text-xs font-bold">No Category Needed</span>
                     <span className="text-[10px] opacity-75 mt-1">Category is optional for {transactionType === "Credit" ? "Income" : "Debit Money"}</span>
                   </div>
-                ) : currentMonthCategories.length === 0 ? (
+                ) : selectedMonthCategories.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-full text-center p-4 opacity-50">
                     <span className="text-xs font-bold">No Categories Found</span>
-                    <span className="text-[10px] opacity-75 mt-1">Configure categories for this month</span>
+                    <span className="text-[10px] opacity-75 mt-1">Configure categories for {dayjs(date).format("MMMM YYYY")}</span>
                   </div>
                 ) : (
-                  currentMonthCategories.map((c) => {
+                  selectedMonthCategories.map((c) => {
                     const isSelected = String(c._id) === String(categoryId);
-                    const style = getCategoryTagStyle(c, currentMonthCategories);
+                    const style = getCategoryTagStyle(c, selectedMonthCategories);
 
-                    // Dynamic Remaining Calculation for Category
-                    const catBudget = Number(c.budget) || 0;
-                    const catUsed = currentMonthTxns
-                      .filter(t => t.type !== 'Credit' && t.type !== 'Transfer' && (t.categoryId?._id === c._id || t.categoryId === c._id))
+                    // Dynamic Remaining Calculation for Category in selectedMonth
+                    const cBudget = (c.subCategories || []).reduce(
+                      (sum, sub) => sum + (Number(sub.budget) || 0),
+                      Number(c.budget) || 0
+                    );
+                    const cUsed = selectedMonthTxns
+                      .filter(t => t.type !== 'Credit' && t.type !== 'Transfer' && (
+                        String(t.categoryId?._id || t.categoryId) === String(c._id) ||
+                        (t.categoryId?.name && t.categoryId.name === c.name)
+                      ))
                       .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
-                    const rem = catBudget - catUsed;
+                    const rem = cBudget - cUsed;
                     const formattedRem = rem >= 0 ? `₹${rem.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}` : `-₹${Math.abs(rem).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 
                     return (
@@ -544,7 +728,7 @@ const AddTransactionModal = ({ isOpen, onClose }) => {
                         key={c._id}
                         type="button"
                         onClick={() => handleCategorySelect(c._id)}
-                        className={`p-2.5 rounded-2xl text-left transition-all flex items-center justify-between gap-1.5 border-transparent ${
+                        className={`p-2.5 rounded-2xl text-left transition-all flex items-center justify-between gap-1.5 border-transparent cursor-pointer ${
                           isSelected
                             ? `${style.bg} ${style.text} font-bold shadow-xs`
                             : "bg-transparent hover:bg-base-200/50 text-base-content/80"
@@ -568,7 +752,7 @@ const AddTransactionModal = ({ isOpen, onClose }) => {
 
               {/* Status Hint */}
               <div className="pt-2 border-t border-base-200 text-center text-[10px] opacity-50 shrink-0">
-                {categoryId ? "Category Selected" : (transactionType === "Transfer" ? "Select Target Bank" : "Select Category")}
+                {categoryId ? "Category Selected" : (transactionType === "Transfer" ? (targetSourceId ? "Target Selected" : "Select Target Bank or Card") : "Select Category")}
               </div>
             </div>
 
@@ -602,14 +786,15 @@ const AddTransactionModal = ({ isOpen, onClose }) => {
                 ) : (
                   subCategoriesList.map((sub) => {
                     const isSelected = String(sub._id) === String(subCategoryId);
-                    const subBudget = Number(sub.budget) || 0;
-                    const subUsed = currentMonthTxns
+                    const sBudget = Number(sub.budget) || 0;
+                    const sUsed = selectedMonthTxns
                       .filter(t => t.type !== 'Credit' && t.type !== 'Transfer' && (
                         String(t.subCategoryId?._id || t.subCategoryId) === String(sub._id) ||
-                        (String(t.categoryId?._id || t.categoryId) === String(categoryId) && t.description?.includes(sub.name))
+                        ((String(t.categoryId?._id || t.categoryId) === String(categoryId) || t.categoryId?.name === selectedCategoryObj?.name) &&
+                         t.description?.toLowerCase().includes(sub.name.toLowerCase()))
                       ))
                       .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
-                    const rem = subBudget - subUsed;
+                    const rem = sBudget - sUsed;
                     const formattedRem = rem >= 0 ? `₹${rem.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}` : `-₹${Math.abs(rem).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 
                     const activeStyle = selectedCategoryStyle || { bg: "bg-amber-500/15", text: "text-amber-600 dark:text-amber-400" };
@@ -619,7 +804,7 @@ const AddTransactionModal = ({ isOpen, onClose }) => {
                         key={sub._id}
                         type="button"
                         onClick={() => setSubCategoryId(prev => prev === sub._id ? "" : sub._id)}
-                        className={`p-2.5 rounded-2xl text-left transition-all flex items-center justify-between gap-1.5 border-transparent ${
+                        className={`p-2.5 rounded-2xl text-left transition-all flex items-center justify-between gap-1.5 border-transparent cursor-pointer ${
                           isSelected
                             ? `${activeStyle.bg} ${activeStyle.text} font-bold shadow-xs`
                             : "bg-transparent hover:bg-base-200/50 text-base-content/80"
@@ -630,7 +815,7 @@ const AddTransactionModal = ({ isOpen, onClose }) => {
                           <span className="text-[10px] opacity-75 font-mono font-semibold">
                             {formattedRem}
                           </span>
-                          {isSelected && <CheckCircle2 size={14} className="shrink-0" />}
+                          {isSelected && <CheckCircle2 size={14} className="shrink-0 text-primary" />}
                         </div>
                       </button>
                     );

@@ -654,14 +654,6 @@ function FoodLoggingTab() {
             </button>
           </div>
 
-          {/* All Nutrients Modal Button */}
-          <button
-            className="btn btn-sm btn-info gap-1"
-            onClick={() => setIsNutrientsModalOpen(true)}
-          >
-            <BarChart3 size={16} /> All Nutrients
-          </button>
-
           <button
             className="btn btn-sm btn-secondary gap-1"
             onClick={() => setIsCustomModalOpen(true)}
@@ -722,6 +714,15 @@ function FoodLoggingTab() {
                 >
                   <PieChart size={14} className="text-info" />
                   <span>Edit Macros (Habit Profile)</span>
+                </button>
+
+                <button
+                  className="btn btn-sm btn-ghost border border-base-300 gap-1.5 hover:bg-base-300 transition-all rounded-xl shadow-xs text-info"
+                  onClick={() => setIsNutrientsModalOpen(true)}
+                  title="View All Nutrients Summary"
+                >
+                  <BarChart3 size={15} className="text-info" />
+                  <span>All Nutrients</span>
                 </button>
 
                 <button

@@ -19,7 +19,7 @@ import { useLoading } from "../../../Context/LoadingContext";
 import Refresh from "../../../utils/Icons/Refresh";
 import { TitleChanger } from "../../../utils/TitleChanger";
 import { useSelector, useDispatch } from "react-redux";
-import { setHabitFilters, resetHabitFilters } from "../../../services/redux/slice/habitSlice";
+import { setHabitFilters, resetHabitFilters, fetchHabitSettings } from "../../../services/redux/slice/habitSlice";
 import {
   AlertTriangle,
   CheckCircle,
@@ -51,6 +51,10 @@ function HabitTableEntry() {
   const [searchParams] = useSearchParams();
   const initialTab = location.state?.tab || searchParams.get("tab") || "habit";
   const [activeMainTab, setActiveMainTab] = useState(initialTab); // "habit" or "food"
+
+  useEffect(() => {
+    dispatch(fetchHabitSettings());
+  }, [dispatch]);
 
   useEffect(() => {
     const tabFromUrl = searchParams.get("tab") || location.state?.tab;
@@ -1567,6 +1571,7 @@ function HabitTableEntry() {
         initialMood={currentJournalItem?.mood}
         date={currentJournalItem?.date}
         onSave={handleJournalSave}
+        moodList={settings?.mood}
       />
         </>
       )}

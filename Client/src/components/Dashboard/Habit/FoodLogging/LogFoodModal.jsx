@@ -1,7 +1,46 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import axiosInstance from "../../../../Context/AxiosInstance";
-import { Search, Plus, Utensils, Check, Sparkles, AlertCircle, Info, History, RotateCcw, ChevronLeft, ChevronRight, Trash2, ShoppingBag, CheckCheck, Edit3 } from "lucide-react";
+import { 
+  Search, 
+  Plus, 
+  Utensils, 
+  Check, 
+  Sparkles, 
+  AlertCircle, 
+  Info, 
+  History, 
+  RotateCcw, 
+  ChevronLeft, 
+  ChevronRight, 
+  Trash2, 
+  ShoppingBag, 
+  CheckCheck, 
+  Edit3,
+  Layers,
+  Apple,
+  Carrot,
+  Beef,
+  Fish,
+  Milk,
+  Wheat,
+  Cookie,
+  CupSoda
+} from "lucide-react";
 import FoodItemNutrientsModal from "./FoodItemNutrientsModal";
+
+const getCategoryIcon = (catName) => {
+  if (!catName || catName === "All") return <Sparkles size={15} className="text-amber-500 shrink-0" />;
+  const lower = catName.toLowerCase();
+  if (lower.includes("fruit")) return <Apple size={15} className="text-rose-500 shrink-0" />;
+  if (lower.includes("veg")) return <Carrot size={15} className="text-emerald-500 shrink-0" />;
+  if (lower.includes("meat") || lower.includes("poultry") || lower.includes("chicken")) return <Beef size={15} className="text-red-500 shrink-0" />;
+  if (lower.includes("fish") || lower.includes("seafood")) return <Fish size={15} className="text-cyan-500 shrink-0" />;
+  if (lower.includes("dairy") || lower.includes("milk") || lower.includes("cheese")) return <Milk size={15} className="text-blue-500 shrink-0" />;
+  if (lower.includes("grain") || lower.includes("cereal") || lower.includes("bread") || lower.includes("rice")) return <Wheat size={15} className="text-amber-600 shrink-0" />;
+  if (lower.includes("snack") || lower.includes("sweet") || lower.includes("dessert")) return <Cookie size={15} className="text-orange-500 shrink-0" />;
+  if (lower.includes("beverage") || lower.includes("drink") || lower.includes("tea") || lower.includes("coffee") || lower.includes("juice")) return <CupSoda size={15} className="text-purple-500 shrink-0" />;
+  return <Utensils size={15} className="text-primary shrink-0" />;
+};
 
 const getYesterdayDateStr = (dateStr) => {
   if (!dateStr || typeof dateStr !== "string") return "";
@@ -74,6 +113,7 @@ function LogFoodModal({ isOpen, onClose, selectedDate, initialMeal = "Breakfast"
   const categoryListRef = useRef(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
+  const [categorySearchQuery, setCategorySearchQuery] = useState("");
   const [categories, setCategories] = useState([]);
   const [foods, setFoods] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -95,6 +135,13 @@ function LogFoodModal({ isOpen, onClose, selectedDate, initialMeal = "Breakfast"
 
   const yesterdayDate = getYesterdayDateStr(selectedDate);
 
+  const filteredCategories = useMemo(() => {
+    if (!categorySearchQuery.trim()) return categories;
+    return categories.filter((cat) =>
+      cat.toLowerCase().includes(categorySearchQuery.toLowerCase().trim())
+    );
+  }, [categories, categorySearchQuery]);
+
   const scrollCategories = (direction) => {
     if (categoryListRef.current) {
       const amount = direction === "left" ? -160 : 160;
@@ -114,6 +161,7 @@ function LogFoodModal({ isOpen, onClose, selectedDate, initialMeal = "Breakfast"
       setServings(1);
       setSearchQuery("");
       setSelectedCategory("All");
+      setCategorySearchQuery("");
       setError("");
       setStagedItems([]);
       setSourceTab("database");
@@ -335,106 +383,178 @@ function LogFoodModal({ isOpen, onClose, selectedDate, initialMeal = "Breakfast"
 
   return (
     <>
-      <div className="fixed inset-0 z-[99999] bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
-        <div className="bg-base-200 rounded-3xl max-w-5xl w-full h-[680px] border border-base-300 shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-          {/* Header */}
-          <div className="p-4 border-b border-base-300 flex justify-between items-center shrink-0">
-            <div>
-              <h3 className="font-extrabold text-xl flex items-center gap-2">
-                <Utensils size={22} className="text-primary" /> Log Food
-              </h3>
-              <p className="text-xs text-base-content/70">
-                Search food database or pick from history to log into your daily intake.
-              </p>
+      <div className="fixed inset-0 z-[99999] bg-black/60 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 overflow-x-auto">
+        <div className="flex items-stretch justify-center gap-3 sm:gap-4 max-w-[1440px] w-full h-[680px]">
+          
+          {/* Left Popup: Food Categories */}
+          <div className="bg-base-100 rounded-3xl border border-base-300 shadow-2xl h-[680px] w-60 sm:w-68 flex flex-col overflow-hidden shrink-0 animate-in fade-in zoom-in-95 duration-200">
+            {/* Header */}
+            <div className="p-4 border-b border-base-300 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2">
+                <Layers size={17} className="text-primary" />
+                <h4 className="font-bold text-sm text-base-content leading-tight">Categories</h4>
+              </div>
+              <span className="badge badge-sm badge-ghost font-mono opacity-70">
+                {categories.length > 0 ? categories.length : 1}
+              </span>
             </div>
-            <button className="btn btn-sm btn-circle btn-ghost" onClick={onClose}>
-              ✕
-            </button>
+
+            {/* Quick Search inside Categories */}
+            <div className="p-2.5 border-b border-base-200 shrink-0">
+              <div className="relative">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 opacity-40" size={13} />
+                <input
+                  type="text"
+                  className="input input-xs input-bordered w-full pl-8 rounded-lg text-xs bg-transparent"
+                  placeholder="Filter categories..."
+                  value={categorySearchQuery}
+                  onChange={(e) => setCategorySearchQuery(e.target.value)}
+                />
+                {categorySearchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setCategorySearchQuery("")}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-xs opacity-50 hover:opacity-100"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Vertical Categories List */}
+            <div className="flex-1 overflow-y-auto p-2 space-y-0.5 custom-scrollbar">
+              {filteredCategories.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-40 text-center p-4 text-xs opacity-60">
+                  <Layers size={24} className="opacity-40 mb-1.5" />
+                  <span>No categories found</span>
+                </div>
+              ) : (
+                filteredCategories.map((cat) => {
+                  const isSelected = selectedCategory === cat;
+                  return (
+                    <button
+                      key={cat}
+                      type="button"
+                      onClick={() => {
+                        setSelectedCategory(cat);
+                        if (sourceTab !== "database") setSourceTab("database");
+                      }}
+                      className={`w-full px-3 py-2 rounded-xl text-left transition-all flex items-center justify-between group cursor-pointer ${
+                        isSelected
+                          ? "text-primary font-bold"
+                          : "text-base-content/70 hover:text-base-content font-medium"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5 truncate min-w-0">
+                        <span className="shrink-0">{getCategoryIcon(cat)}</span>
+                        <span className="truncate text-xs">{cat === "All" ? "All Categories" : cat}</span>
+                      </div>
+                      {isSelected && (
+                        <Check size={14} className="shrink-0 ml-1 text-primary" />
+                      )}
+                    </button>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Bottom Status */}
+            <div className="p-3 border-t border-base-200 text-[11px] text-base-content/70 flex items-center justify-between shrink-0">
+              <span className="truncate max-w-[160px]">
+                Selected: <span className="font-bold text-primary">{selectedCategory === "All" ? "All" : selectedCategory}</span>
+              </span>
+              {selectedCategory !== "All" && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedCategory("All")}
+                  className="btn btn-ghost btn-xs text-[10px] text-primary hover:underline px-1 h-5 min-h-0"
+                >
+                  Reset
+                </button>
+              )}
+            </div>
           </div>
 
-          {/* Modal Body */}
-          <div className="p-4 flex-1 min-h-0 flex flex-col overflow-hidden">
-            {error && (
-              <div className="alert alert-error text-xs py-2 px-3 mb-3 flex items-center gap-2 shrink-0">
-                <AlertCircle size={14} />
-                <span>{error}</span>
+          {/* Main Popup: Log Food Modal */}
+          <div className="bg-base-200 rounded-3xl flex-1 h-[680px] border border-base-300 shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200 min-w-0 max-w-5xl">
+            {/* Header */}
+            <div className="p-4 border-b border-base-300 flex justify-between items-center shrink-0">
+              <div>
+                <h3 className="font-extrabold text-xl flex items-center gap-2">
+                  <Utensils size={22} className="text-primary" /> Log Food
+                </h3>
+                <p className="text-xs text-base-content/70">
+                  Search food database or pick from history to log into your daily intake.
+                </p>
               </div>
-            )}
+              <button className="btn btn-sm btn-circle btn-ghost" onClick={onClose}>
+                ✕
+              </button>
+            </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-4 flex-1 min-h-0 overflow-hidden">
-              {/* Left Column: Search, Filter & List (6 cols) */}
-              <div className="md:col-span-6 flex flex-col gap-3 h-full min-h-0 overflow-hidden">
-                {/* Source Selection Tabs: Database vs Logged History */}
-                <div className="tabs tabs-boxed bg-base-100 p-1 rounded-xl border border-base-300 shrink-0">
-                  <button
-                    className={`tab tab-sm flex-1 font-bold text-xs gap-1.5 transition-all ${
-                      sourceTab === "database" ? "tab-active bg-primary text-primary-content shadow-xs" : ""
-                    }`}
-                    onClick={() => setSourceTab("database")}
-                  >
-                    <Search size={14} /> Food Database
-                  </button>
-                  <button
-                    className={`tab tab-sm flex-1 font-bold text-xs gap-1.5 transition-all ${
-                      sourceTab === "history" ? "tab-active bg-primary text-primary-content shadow-xs" : ""
-                    }`}
-                    onClick={() => setSourceTab("history")}
-                  >
-                    <History size={14} /> Logged History
-                  </button>
+            {/* Modal Body */}
+            <div className="p-4 flex-1 min-h-0 flex flex-col overflow-hidden">
+              {error && (
+                <div className="alert alert-error text-xs py-2 px-3 mb-3 flex items-center gap-2 shrink-0">
+                  <AlertCircle size={14} />
+                  <span>{error}</span>
                 </div>
+              )}
 
-                {sourceTab === "database" ? (
-                  <>
-                    {/* Search Bar */}
-                    <div className="relative shrink-0">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 opacity-50" size={16} />
-                      <input
-                        type="text"
-                        className="input input-sm input-bordered w-full pl-9"
-                        placeholder="Search food by name, brand, or category..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                      />
-                    </div>
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-4 flex-1 min-h-0 overflow-hidden">
+                {/* Left Column: Search, Filter & List (6 cols) */}
+                <div className="md:col-span-6 flex flex-col gap-3 h-full min-h-0 overflow-hidden">
+                  {/* Source Selection Tabs: Database vs Logged History */}
+                  <div className="tabs tabs-boxed bg-base-100 p-1 rounded-xl border border-base-300 shrink-0">
+                    <button
+                      className={`tab tab-sm flex-1 font-bold text-xs gap-1.5 transition-all ${
+                        sourceTab === "database" ? "tab-active bg-primary text-primary-content shadow-xs" : ""
+                      }`}
+                      onClick={() => setSourceTab("database")}
+                    >
+                      <Search size={14} /> Food Database
+                    </button>
+                    <button
+                      className={`tab tab-sm flex-1 font-bold text-xs gap-1.5 transition-all ${
+                        sourceTab === "history" ? "tab-active bg-primary text-primary-content shadow-xs" : ""
+                      }`}
+                      onClick={() => setSourceTab("history")}
+                    >
+                      <History size={14} /> Logged History
+                    </button>
+                  </div>
 
-                    {/* Category Scroll Container */}
-                    <div className="relative shrink-0 flex items-center group">
-                      <button
-                        type="button"
-                        className="absolute left-0 z-10 btn btn-xs btn-circle btn-neutral shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={() => scrollCategories("left")}
-                        title="Scroll Left"
-                      >
-                        <ChevronLeft size={14} />
-                      </button>
-
-                      <div
-                        ref={categoryListRef}
-                        className="flex gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden scroll-smooth w-full px-1"
-                      >
-                        {categories.map((cat) => (
-                          <button
-                            key={cat}
-                            className={`btn btn-xs rounded-lg whitespace-nowrap border-none transition-all ${
-                              selectedCategory === cat ? "btn-primary shadow-xs font-bold" : "btn-ghost bg-base-100 opacity-70"
-                            }`}
-                            onClick={() => setSelectedCategory(cat)}
-                          >
-                            {cat}
-                          </button>
-                        ))}
+                  {sourceTab === "database" ? (
+                    <>
+                      {/* Search Bar */}
+                      <div className="relative shrink-0">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 opacity-50" size={16} />
+                        <input
+                          type="text"
+                          className="input input-sm input-bordered w-full pl-9"
+                          placeholder="Search food by name, brand, or category..."
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                        />
                       </div>
 
-                      <button
-                        type="button"
-                        className="absolute right-0 z-10 btn btn-xs btn-circle btn-neutral shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={() => scrollCategories("right")}
-                        title="Scroll Right"
-                      >
-                        <ChevronRight size={14} />
-                      </button>
-                    </div>
+                      {/* Active Category Filter Tag if not All */}
+                      {selectedCategory !== "All" && (
+                        <div className="flex items-center justify-between px-3 py-1.5 rounded-xl border border-base-300 text-xs shrink-0">
+                          <span className="text-base-content/80 flex items-center gap-1.5">
+                            <Layers size={13} className="text-primary" />
+                            Category: <span className="font-bold text-primary">{selectedCategory}</span>
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setSelectedCategory("All")}
+                            className="btn btn-ghost btn-xs text-[10px] text-primary hover:underline h-5 min-h-0 px-1.5 rounded-md font-semibold"
+                          >
+                            Show All Foods
+                          </button>
+                        </div>
+                      )}
 
                     {/* Food Items List */}
                     <div className="flex-1 min-h-0 overflow-y-auto bg-base-100 rounded-xl p-2 border border-base-300 space-y-1.5">
@@ -1009,6 +1129,7 @@ function LogFoodModal({ isOpen, onClose, selectedDate, initialMeal = "Breakfast"
           </div>
         </div>
       </div>
+    </div>
 
       {/* Nutrients Details Sub-Modal */}
       <FoodItemNutrientsModal

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
+import { useSelector } from "react-redux";
 import dayjs from "dayjs";
 import { 
   Bold, 
@@ -14,26 +15,92 @@ import {
   Clock 
 } from "lucide-react";
 
+const FALLBACK_STYLES = [
+  "bg-teal-500/10 text-teal-600 dark:text-teal-400 border-teal-500/30 ring-teal-500/40",
+  "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/30 ring-indigo-500/40",
+  "bg-violet-500/10 text-violet-600 dark:text-violet-400 border-violet-500/30 ring-violet-500/40",
+  "bg-fuchsia-500/10 text-fuchsia-600 dark:text-fuchsia-400 border-fuchsia-500/30 ring-fuchsia-500/40",
+  "bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/30 ring-cyan-500/40",
+  "bg-lime-500/10 text-lime-600 dark:text-lime-400 border-lime-500/30 ring-lime-500/40"
+];
+
+const getMoodMeta = (moodName, index = 0) => {
+  if (!moodName) return { label: "", emoji: "✨", color: "bg-primary/10 text-primary border-primary/30 ring-primary/40" };
+  const lower = moodName.toLowerCase();
+
+  let emoji = "✨";
+  let color = FALLBACK_STYLES[index % FALLBACK_STYLES.length];
+
+  if (lower.includes("amazing") || lower.includes("great")) {
+    emoji = "🤩";
+    color = "bg-blue-500/10 text-blue-500 border-blue-500/30 ring-blue-500/40";
+  } else if (lower.includes("good") || lower.includes("happy")) {
+    emoji = "🙂";
+    color = "bg-emerald-500/10 text-emerald-500 border-emerald-500/30 ring-emerald-500/40";
+  } else if (lower.includes("average") || lower.includes("okay") || lower.includes("neutral")) {
+    emoji = "😐";
+    color = "bg-amber-500/10 text-amber-500 border-amber-500/30 ring-amber-500/40";
+  } else if (lower.includes("product")) {
+    emoji = "🚀";
+    color = "bg-purple-500/10 text-purple-500 border-purple-500/30 ring-purple-500/40";
+  } else if (lower.includes("sad") || lower.includes("bad")) {
+    emoji = "😔";
+    color = "bg-red-500/10 text-red-500 border-red-500/30 ring-red-500/40";
+  } else if (lower.includes("depress")) {
+    emoji = "😞";
+    color = "bg-rose-900/15 text-rose-700 dark:text-rose-400 border-rose-700/30 ring-rose-700/40";
+  } else if (lower.includes("tir") || lower.includes("exhaust")) {
+    emoji = "😫";
+    color = "bg-orange-500/10 text-orange-500 border-orange-500/30 ring-orange-500/40";
+  } else if (lower.includes("excit")) {
+    emoji = "😃";
+    color = "bg-pink-500/10 text-pink-500 border-pink-500/30 ring-pink-500/40";
+  } else if (lower.includes("calm") || lower.includes("relax")) {
+    emoji = "😌";
+    color = "bg-cyan-500/10 text-cyan-500 border-cyan-500/30 ring-cyan-500/40";
+  } else if (lower.includes("stress") || lower.includes("anxious")) {
+    emoji = "😰";
+    color = "bg-amber-600/10 text-amber-600 border-amber-600/30 ring-amber-600/40";
+  } else if (lower.includes("angry")) {
+    emoji = "😡";
+    color = "bg-red-600/10 text-red-600 border-red-600/30 ring-red-600/40";
+  }
+
+  return { label: moodName, emoji, color };
+};
+
 const JournalPopUp = ({
   isOpen,
   onClose,
   initialData,
   initialMood,
   date,
-  onSave
+  onSave,
+  moodList
 }) => {
   const [journalText, setJournalText] = useState("");
   const [selectedMood, setSelectedMood] = useState("");
   const textareaRef = useRef(null);
 
-  const moodOptions = [
-    { label: "Amazing", emoji: "🤩", color: "bg-blue-500/10 text-blue-500 border-blue-500/30 ring-blue-500/40" },
-    { label: "Happy", emoji: "🙂", color: "bg-emerald-500/10 text-emerald-500 border-emerald-500/30 ring-emerald-500/40" },
-    { label: "Okay", emoji: "😐", color: "bg-amber-500/10 text-amber-500 border-amber-500/30 ring-amber-500/40" },
-    { label: "Productive", emoji: "🚀", color: "bg-purple-500/10 text-purple-500 border-purple-500/30 ring-purple-500/40" },
-    { label: "Sad", emoji: "😔", color: "bg-red-500/10 text-red-500 border-red-500/30 ring-red-500/40" },
-    { label: "Tired", emoji: "😫", color: "bg-orange-500/10 text-orange-500 border-orange-500/30 ring-orange-500/40" },
-  ];
+  const reduxMoodList = useSelector((state) => state.habit?.settings?.mood);
+
+  const activeMoodList = useMemo(() => {
+    const list = (moodList && Array.isArray(moodList) && moodList.length > 0)
+      ? moodList
+      : (reduxMoodList && Array.isArray(reduxMoodList) && reduxMoodList.length > 0)
+        ? reduxMoodList
+        : ["Amazing", "Good", "Average", "Sad", "Depressed", "Productive"];
+
+    // If initialMood is already set on the entry and not in the list, keep it accessible
+    if (initialMood && initialMood.trim() && !list.includes(initialMood.trim())) {
+      return [...list, initialMood.trim()];
+    }
+    return list;
+  }, [moodList, reduxMoodList, initialMood]);
+
+  const moodOptions = useMemo(() => {
+    return activeMoodList.map((m, idx) => getMoodMeta(m, idx));
+  }, [activeMoodList]);
 
   useEffect(() => {
     if (isOpen) {
@@ -171,7 +238,7 @@ const JournalPopUp = ({
                   key={m.label}
                   type="button"
                   onClick={() => setSelectedMood(isSelected ? "" : m.label)}
-                  className={`px-3 py-1 rounded-xl text-xs font-semibold border transition-all duration-150 flex items-center gap-1.5 ${
+                  className={`px-3 py-1 rounded-xl text-xs font-semibold border transition-all duration-150 flex items-center gap-1.5 cursor-pointer ${
                     isSelected
                       ? `${m.color} ring-2 font-bold scale-105 shadow-2xs`
                       : "bg-base-200/50 border-base-300 text-base-content/70 hover:bg-base-200 hover:text-base-content"
