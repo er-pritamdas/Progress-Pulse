@@ -1,24 +1,21 @@
-
 import React, { useState, useEffect, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import dayjs from "dayjs";
 import { updateSalary } from "../../services/redux/slice/ExpenseSlice";
-import { Eye, EyeOff, Wallet, Banknote, Calculator, PiggyBank, Flame, ChevronLeft, ChevronRight } from "lucide-react";
+import { Eye, EyeOff, Wallet, Banknote, Calculator, PiggyBank, Flame, ChevronLeft, ChevronRight, Pencil } from "lucide-react";
+import EditSalaryModal from "./EditSalaryModal";
+import { message } from "antd";
 
 const HeaderSection = () => {
     const dispatch = useDispatch();
     const { salary, sources, transactions, categories, currentMonth } = useSelector((state) => state.expense);
 
-    const [isEditingSalary, setIsEditingSalary] = useState(false);
-    const [tempSalary, setTempSalary] = useState(salary);
+    const [showSalaryModal, setShowSalaryModal] = useState(false);
 
     // Privacy State
     const [showBalance, setShowBalance] = useState(true);
     const headerScrollRef = useRef(null);
 
-    // Sync tempSalary when salary updates from store
-    useEffect(() => {
-        setTempSalary(salary);
-    }, [salary]);
 
     // Excluded Sources State (persisted in localStorage and synced across components)
     const [excludedSourceIds, setExcludedSourceIds] = useState(() => {
@@ -99,12 +96,17 @@ const HeaderSection = () => {
         .filter(s => s.type === 'Bank' || s.type === 'Card')
         .slice(0, 4);
 
-    const handleSalarySubmit = () => {
-        const val = Number(tempSalary) || 0;
-        if (val !== salary) {
-            dispatch(updateSalary({ month: currentMonth, salary: val }));
+    const handleSaveSalaryModal = async (newSalary) => {
+        const val = Number(newSalary) || 0;
+        try {
+            await dispatch(updateSalary({ month: currentMonth, salary: val })).unwrap();
+            message.success(
+                `Salary for ${dayjs(currentMonth).format("MMMM YYYY")} updated to ₹${val.toLocaleString("en-IN")}`
+            );
+        } catch (err) {
+            message.error(typeof err === "string" ? err : "Failed to update salary");
+            throw err;
         }
-        setIsEditingSalary(false);
     };
 
     return (
@@ -231,26 +233,28 @@ const HeaderSection = () => {
 
                     return (
                         <div className="stat place-items-center border-t md:border-t-0 md:border-l border-base-300 relative overflow-hidden p-5">
-                            <div className="stat-title text-base-content/60 font-medium uppercase tracking-wide text-xs relative z-10">Salary & Budget</div>
-                            {isEditingSalary ? (
-                                <input
-                                    type="number"
-                                    value={tempSalary}
-                                    onChange={(e) => setTempSalary(e.target.value)}
-                                    onBlur={handleSalarySubmit}
-                                    onKeyDown={(e) => e.key === 'Enter' && handleSalarySubmit()}
-                                    autoFocus
-                                    className="input input-xs input-bordered w-full max-w-[120px] text-center mt-1 relative z-10 font-mono font-bold"
-                                />
-                            ) : (
-                                <div
-                                    onClick={() => setIsEditingSalary(true)}
-                                    className="stat-value text-primary text-3xl cursor-pointer hover:opacity-80 transition-opacity relative z-10"
-                                    title="Click to edit monthly salary"
+                            <div className="stat-title text-base-content/60 font-medium uppercase tracking-wide text-xs relative z-10 flex items-center justify-between w-full">
+                                <span>Salary & Budget</span>
+                                <button
+                                    type="button"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setShowSalaryModal(true);
+                                    }}
+                                    className="btn btn-ghost btn-xs btn-circle text-primary hover:bg-primary/10 transition-colors cursor-pointer"
+                                    title="Edit Monthly Salary or Get from Salary Slip"
                                 >
-                                    {showBalance ? `₹${(Number(salary) || 0).toLocaleString()}` : "••••••••"}
-                                </div>
-                            )}
+                                    <Pencil size={12} />
+                                </button>
+                            </div>
+                            <div
+                                onClick={() => setShowSalaryModal(true)}
+                                className="stat-value text-primary text-3xl cursor-pointer hover:opacity-80 transition-opacity relative z-10 group/sal flex items-center gap-1.5"
+                                title="Click to edit monthly salary"
+                            >
+                                <span>{showBalance ? `₹${(Number(salary) || 0).toLocaleString()}` : "••••••••"}</span>
+                                <Pencil size={14} className="opacity-0 group-hover/sal:opacity-70 transition-opacity text-primary" />
+                            </div>
 
                             <div className="w-full mt-2 pt-2 border-t border-base-300/60 relative z-10 flex flex-col gap-1">
                                 <div className="flex justify-between items-center text-xs">
@@ -358,6 +362,15 @@ const HeaderSection = () => {
                 })()}
 
             </div>
+
+            {/* Edit Salary & Import from Slip Modal */}
+            <EditSalaryModal
+                isOpen={showSalaryModal}
+                onClose={() => setShowSalaryModal(false)}
+                currentMonth={currentMonth}
+                currentSalary={salary}
+                onSaveSalary={handleSaveSalaryModal}
+            />
         </div>
     );
 };

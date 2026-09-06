@@ -8,9 +8,9 @@
 
 [![React](https://img.shields.io/badge/React-19.0.0-61DAFB?logo=react&logoColor=white)](https://reactjs.org/)
 [![Node.js](https://img.shields.io/badge/Node.js-Latest-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
-[![MongoDB](https://img.shields.io/badge/MongoDB-Latest-47A248?logo=mongodb&logoColor=white)](https://www.mongodb.com/)
+[![MongoDB](https://img.shields.io/badge/MongoDB-7.x-47A248?logo=mongodb&logoColor=white)](https://www.mongodb.com/)
 [![Docker](https://img.shields.io/badge/Docker-Containerized-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
-[![CI/CD](https://img.shields.io/badge/CI%2FCD-Automated-4285F4?logo=github-actions&logoColor=white)](https://github.com/features/actions)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](./LICENSE)
 
 </div>
 
@@ -18,1254 +18,577 @@
 
 ## 🚀 Overview
 
-**Progress Pulse** is a comprehensive personal productivity and finance management platform that helps users track their habits, manage expenses, and monitor investments all in one place. Built with modern technologies and following industry best practices, it offers a seamless experience across all aspects of personal development and financial wellness.
+**Progress Pulse** is a comprehensive personal productivity and finance management platform that helps users track their daily habits, manage expenses, and monitor investments — all in one place. Built with the MERN stack, it features JWT-based authentication, 14+ DaisyUI themes, a detailed food nutrition database, and full Docker-based deployment with CI/CD.
 
-### ✨ Key Features
+### ✨ Key Highlights
 
-🎯 **Habit Tracking** - Build and maintain positive daily habits
-💰 **Expense Management** - Track and categorize your spending
-📈 **Investment Portfolio** - Monitor your investment performance
-🔐 **Secure Authentication** - JWT-based auth with refresh tokens
-📱 **Responsive Design** - Works perfectly on all devices
-🐳 **Containerized Deployment** - Docker-ready for any environment
-⚡ **CI/CD Pipeline** - Automated testing, building, and deployment
-
----
-
-## 🏗️ Architecture Overview
-
-Progress Pulse follows a modern **MERN Stack** architecture with a **microservices-inspired** design pattern:
-
-### 🎨 Frontend Architecture (Client)
-
-```
-Client/
-├── 📁 src/
-│   ├── 🎨 components/          # Reusable UI components
-│   │   ├── Authentication/     # Login/Signup components
-│   │   ├── Dashboard/         # Main dashboard modules
-│   │   │   ├── Habit/         # Habit tracking components
-│   │   │   ├── Expense/       # Expense management components
-│   │   │   └── Investment/    # Investment tracking components
-│   │   └── Homepage/          # Landing page components
-│   ├── 🧠 Context/            # React Context providers
-│   │   ├── JwtAuthContext.jsx # Authentication context
-│   │   ├── AxiosInstance.jsx  # API client configuration
-│   │   └── LoadingContext.jsx # Loading state management
-│   ├── 🎭 pages/              # Page components
-│   ├── 🔄 services/           # Redux store and slices
-│   ├── 🎯 layouts/            # Layout components
-│   └── 🛠️ utils/              # Utility functions and helpers
-├── 📋 public/                 # Static assets
-└── ⚙️ Configuration Files     # Vite, ESLint, Tailwind configs
-```
-
-### 🔧 Backend Architecture (Server)
-
-```
-Server/
-├── 🎮 controllers/            # Business logic handlers
-│   ├── User-controllers/      # User authentication & management
-│   ├── Habit-controllers/     # Habit tracking logic
-│   └── Expense-controllers/   # Expense management logic
-├── 🗄️ models/                # MongoDB schemas
-│   ├── User-models/          # User data models
-│   ├── Habit-models/         # Habit tracking models
-│   └── Expense-models/       # Expense data models
-├── 🔒 middlewares/           # Authentication & validation
-│   ├── JwtAuthorization.middleware.js
-│   ├── JwtRefreshTokenValidation.middleware.js
-│   └── OtpVerification.middleware.js
-├── 🛤️ routes/                # API endpoints
-├── 🗃️ db/                    # Database configuration
-└── 🛠️ utils/                 # Utility functions
-```
+🎯 **Habit Tracking** — Calorie, water, sleep, reading, mood, self-care & food logging with nutrition breakdowns
+💰 **Expense Management** — Categories, subcategories, payment sources, transfers & 5-step undo/redo
+📈 **Investment Portfolio** — Stocks, Mutual Funds, Fixed Deposits & Recurring Deposits with group management
+🔐 **Secure Authentication** — Dual JWT (access + refresh tokens) with OTP email verification
+🎨 **14+ Themes** — DaisyUI themes with persistent selection (dark, retro, dracula, night, coffee, and more)
+🍎 **Food Nutrition DB** — 46+ nutritional columns per food item with text search
+🐳 **Production Ready** — Docker, Nginx, Jenkins CI/CD & Prometheus monitoring
 
 ---
 
-## 🔄 Application Flow Diagrams
+## 🏗️ Architecture
 
-### 🔐 Authentication & JWT Token Flow
-
-The authentication system uses a **dual-token approach** with access and refresh tokens for enhanced security:
-
-- **Access Token**: Short-lived (15 minutes), stored in localStorage
-- **Refresh Token**: Long-lived (7 days), stored in httpOnly cookies
-- **Auto-refresh**: Seamless token renewal without user intervention
-
-```mermaid
-sequenceDiagram
-    participant U as "🔐 User"
-    participant C as "⚛️ Client (React)"
-    participant S as "🔧 Server (Express)"
-    participant DB as "🍃 MongoDB"
-    participant E as "📧 Email Service"
-
-    Note over U,E: User Registration Flow
-    U->>C: Enter registration details
-    C->>S: POST /api/v1/users/registered
-    S->>DB: Check if user exists
-    alt User not exists
-        S->>DB: Create new user (unverified)
-        S->>E: Send OTP email
-        S->>C: Registration successful, verify OTP
-        C->>U: Show OTP verification page
-        U->>C: Enter OTP
-        C->>S: POST /verify-otp
-        S->>DB: Verify OTP & activate user
-        S->>C: User activated
-    else User exists
-        S->>C: User already exists error
-    end
-
-    Note over U,E: Login Flow
-    U->>C: Enter login credentials
-    C->>S: POST /api/v1/users/loggedin
-    S->>DB: Validate credentials
-    alt Valid credentials
-        S->>S: Generate Access & Refresh Tokens
-        S->>C: Return tokens
-        C->>C: Store tokens (localStorage + cookies)
-        C->>U: Redirect to dashboard
-    else Invalid credentials
-        S->>C: Authentication error
-    end
-
-    Note over U,E: Token Refresh Flow
-    C->>S: API request with expired token
-    S->>C: 401 Unauthorized
-    C->>S: POST /refresh-token (with refresh token)
-    S->>S: Validate refresh token
-    S->>S: Generate new access token
-    S->>C: New access token
-    C->>S: Retry original request
-    S->>C: Success response
-```
-
-### 📊 System Architecture Flow
-
-Our architecture follows a **separation of concerns** principle with clear data flow:
-
-1. **Frontend Layer**: React components handle UI interactions
-2. **API Layer**: Express.js manages HTTP requests and routing
-3. **Business Logic**: Controllers process application logic
-4. **Data Layer**: Mongoose models interact with MongoDB
-5. **External Services**: Email notifications and logging
+Progress Pulse follows a **MERN Stack** architecture with four isolated MongoDB databases accessed through a single connection:
 
 ```mermaid
 flowchart TD
-    A["🌐 User Interface<br/>(React Components)"] --> B["⚛️ React Frontend<br/>(Vite Dev Server)"]
-    B --> C["🔄 Axios Instance<br/>(HTTP Client)"]
-    C --> D["🔒 JWT Middleware<br/>(Token Validation)"]
-    D --> E["🛤️ Express Routes<br/>(API Endpoints)"]
-    E --> F["🎮 Controllers<br/>(Business Logic)"]
-    F --> G["🗄️ Mongoose Models<br/>(Data Layer)"]
-    G --> H["📊 MongoDB Database<br/>(Data Storage)"]
-    
-    B --> I["🏪 Redux Store<br/>(Global State)"]
-    I --> J["📱 Local State<br/>(Component State)"]
-    
-    F --> K["📧 Nodemailer<br/>(Email Service)"]
-    F --> L["📝 Winston Logger<br/>(Application Logs)"]
-    
-    M["🐳 Docker Container<br/>(Containerization)"] --> B
-    M --> E
-    
-    N["⚙️ CI/CD Pipeline<br/>(GitHub Actions)"] --> O["🏗️ Build Process"]
-    O --> P["📦 Docker Images"]
-    P --> Q["🚀 Production Deployment"]
-    
+    A["🌐 React Frontend<br/>(Vite + Tailwind + DaisyUI)"] --> B["🔄 Axios Instance<br/>(JWT Interceptors)"]
+    B --> C["🔒 JWT Middleware<br/>(Access + Refresh Token)"]
+    C --> D["🛤️ Express Routes<br/>(REST API)"]
+    D --> E["🎮 Controllers<br/>(Business Logic)"]
+    E --> F["🗄️ Mongoose Models<br/>(4 Databases)"]
+    F --> G["📊 MongoDB<br/>User | Habit | Expense | Investment"]
+
+    E --> K["📧 Nodemailer<br/>(OTP Emails)"]
+    E --> L["📝 Winston Logger<br/>(Daily Rotation)"]
+    E --> M["📊 Prometheus<br/>(/metrics)"]
+
     style A fill:#e1f5fe,stroke:#01579b,stroke-width:2px
-    style B fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
-    style H fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px
+    style G fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px
     style K fill:#fff3e0,stroke:#e65100,stroke-width:2px
-    style M fill:#e3f2fd,stroke:#0d47a1,stroke-width:2px
-    style Q fill:#f1f8e9,stroke:#33691e,stroke-width:2px
+```
+
+### 📁 Project Structure
+
+```
+Progress-Pulse/
+├── Client/                          # React 19 + Vite 6 Frontend
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── Authentication/      # Login, Signup, OTP, Forgot Password
+│   │   │   ├── Dashboard/
+│   │   │   │   ├── Habit/           # 60+ components (tracking, charts, food logging, analysis)
+│   │   │   │   ├── Expense/         # Categories, transactions, charts, quick calculator
+│   │   │   │   └── Investment/      # Stocks, MF, FD, RD cards, modals, groups
+│   │   │   └── Homepage/            # Landing page (Banner, What, Why, How)
+│   │   ├── Context/                 # JwtAuthContext, AxiosInstance, LoadingContext
+│   │   ├── pages/                   # Route-level page components
+│   │   ├── services/redux/          # Redux Toolkit store (habit + expense slices)
+│   │   ├── layouts/                 # Layout, DashboardLayout, Habit/Expense/InvestmentLayout
+│   │   └── utils/                   # ThemeSwitches, Alerts, Icons, mathExpression
+│   └── public/                      # Screenshots, video, favicons, PWA assets
+│
+├── Server/                          # Express 4.21 + Mongoose 8.12 Backend
+│   ├── src/
+│   │   ├── controllers/             # User, Habit, Expense, Investment controllers
+│   │   ├── models/                  # 17 Mongoose models across 4 databases
+│   │   ├── middlewares/             # JWT auth, OTP generation/verification, refresh tokens
+│   │   ├── routes/                  # REST API route definitions
+│   │   ├── db/                      # Multi-database MongoDB connection
+│   │   └── utils/                   # ApiError, ApiResponse, asyncHandler, Logging, seedFoodDatabase
+│   └── .env                         # Environment configuration
+│
+├── DevOps/
+│   ├── 00.CICD/                     # Jenkins pipeline
+│   ├── 01.Build/
+│   │   ├── Development/             # Dev docker-compose (Node 18)
+│   │   └── Production/              # Prod docker-compose (Nginx + Node 18)
+│   ├── 02.Test/                     # Test environment
+│   └── 05.Monitoring/               # Prometheus setup
+│
+├── Scripts/                         # Utility scripts (backup, data population, food upload)
+└── bin/                             # Food CSV database, import scripts, drafts
 ```
 
 ---
 
 ## 💼 Technology Stack
 
-### 🎨 Frontend Technologies
+### Frontend
 
-| Technology                  | Version | Purpose                     |
-| --------------------------- | ------- | --------------------------- |
-| ⚛️**React**         | 19.0.0  | UI Framework                |
-| ⚡**Vite**            | 6.2.0   | Build Tool & Dev Server     |
-| 🎨**Tailwind CSS**    | 4.0.14  | Utility-First CSS Framework |
-| 🌸**DaisyUI**         | 5.0.6   | UI Component Library        |
-| 🎭**Material-UI**     | 7.0.1   | React Components            |
-| 🔄**Redux Toolkit**   | 2.8.1   | State Management            |
-| 📡**Axios**           | 1.8.4   | HTTP Client                 |
-| 🎯**React Router**    | 7.3.0   | Client-side Routing         |
-| 📊**Chart Libraries** | Latest  | Data Visualization          |
-| 🎬**Framer Motion**   | 12.9.2  | Animations                  |
+| Technology | Version | Purpose |
+|---|---|---|
+| React | 19.0.0 | UI Framework |
+| Vite | 6.2.0 | Build Tool & Dev Server |
+| Tailwind CSS | 4.0.14 | Utility-First CSS |
+| DaisyUI | 5.0.6 | Component Library (14+ themes) |
+| Material UI | 7.0.1 | Additional Components |
+| Ant Design | 5.24.4 | UI Components |
+| Redux Toolkit | 2.8.1 | State Management |
+| React Router | 7.3.0 | Client-side Routing |
+| Axios | 1.8.4 | HTTP Client |
+| ApexCharts | 4.7.0 | Radial, Heatmap & Mixed Charts |
+| Recharts | 2.15.2 | Line/Area Charts |
+| Framer Motion | 12.9.2 | Animations |
+| Spline | 4.0.0 | 3D Animations |
+| Day.js | 1.11.13 | Date Manipulation |
 
-### 🔧 Backend Technologies
+### Backend
 
-| Technology                 | Version | Purpose               |
-| -------------------------- | ------- | --------------------- |
-| 🟢**Node.js**        | Latest  | Runtime Environment   |
-| 🚂**Express.js**     | 4.21.2  | Web Framework         |
-| 🍃**MongoDB**        | Latest  | NoSQL Database        |
-| 📦**Mongoose**       | 8.12.1  | MongoDB ODM           |
-| 🔑**JSON Web Token** | 9.0.2   | Authentication        |
-| 🔒**bcryptjs**       | 3.0.2   | Password Hashing      |
-| 📧**Nodemailer**     | 6.10.0  | Email Service         |
-| 📝**Winston**        | 3.17.0  | Logging               |
-| 🍪**Cookie Parser**  | 1.4.7   | Cookie Handling       |
-| 🌐**CORS**           | 2.8.5   | Cross-Origin Requests |
+| Technology | Version | Purpose |
+|---|---|---|
+| Node.js | 18+ | Runtime |
+| Express.js | 4.21.2 | Web Framework |
+| Mongoose | 8.12.1 | MongoDB ODM |
+| JSON Web Token | 9.0.2 | Authentication |
+| bcryptjs | 3.0.2 | Password Hashing |
+| Nodemailer | 7.0.11 | OTP Email Service |
+| Winston | 3.17.0 | Logging (daily rotation) |
+| prom-client | 15.1.3 | Prometheus Metrics |
+| xlsx | 0.18.5 | Excel Export |
+| cookie-parser | 1.4.7 | Cookie Handling |
 
-### 🐳 DevOps & Deployment
+### DevOps & Infrastructure
 
-| Technology                   | Purpose                        |
-| ---------------------------- | ------------------------------ |
-| 🐳**Docker**           | Containerization               |
-| 🐙**Docker Compose**   | Multi-container Management     |
-| 🌐**Nginx**            | Reverse Proxy & Load Balancing |
-| ⚙️**GitHub Actions** | CI/CD Pipeline                 |
-| 📊**Monitoring Tools** | Application Monitoring         |
-
----
-
-## 🔐 Authentication & Security
-
-### JWT Token Management System
-
-Progress Pulse implements a **robust dual-token authentication system** for enhanced security:
-
-#### 🎯 Access Token Workflow
-
-- **Lifespan**: 15 minutes (short-lived for security)
-- **Storage**: localStorage (easily accessible for API calls)
-- **Usage**: Sent with every API request in Authorization header
-- **Auto-renewal**: Automatically refreshed when expired
-
-#### 🔄 Refresh Token Workflow
-
-- **Lifespan**: 7 days (long-lived for convenience)
-- **Storage**: httpOnly cookies (XSS protection)
-- **Usage**: Used only to generate new access tokens
-- **Rotation**: New refresh token issued on each renewal
-
-### 🛡️ Security Features Implemented
-
-✅ **Password Security**
-
-- bcryptjs hashing with salt rounds
-- Strong password policy enforcement
-- Password reset with OTP verification
-
-✅ **Token Security**
-
-- JWT with RS256 algorithm
-- Token expiration and rotation
-- Secure cookie settings (httpOnly, secure, sameSite)
-
-✅ **API Security**
-
-- CORS configuration for trusted domains
-- Rate limiting middleware
-- Input validation and sanitization
-- SQL injection prevention
-
-✅ **Authentication Flow**
-
-- OTP-based email verification
-- Multi-step authentication process
-- Automatic token refresh mechanism
-- Secure session management
+| Technology | Purpose |
+|---|---|
+| Docker + Docker Compose | Containerization |
+| Nginx | Reverse Proxy & Static Serving |
+| Jenkins | CI/CD Pipeline |
+| Prometheus | Metrics Monitoring |
+| MongoDB 7 | Database |
 
 ---
 
-## 🐳 CI/CD Pipeline & Docker Architecture
+## 🔐 Authentication System
 
-<div align="center">
+Progress Pulse uses a **dual JWT token** architecture:
 
-![DevOps Architecture](Client/public/DevOps_Architecture.png)
-
-</div>
-
-### 🔄 Continuous Integration/Continuous Deployment
-
-Our project implements a **streamlined CI/CD pipeline** using Docker containerization for consistent deployments across environments.
+- **Access Token** — 15-minute lifetime, stored in `localStorage`, sent via `Authorization: Bearer` header
+- **Refresh Token** — 7-day lifetime, stored in `httpOnly` cookie (XSS-resistant)
+- **Auto-refresh** — Axios interceptors automatically renew expired access tokens without user intervention
 
 ```mermaid
-flowchart LR
-    A["👨‍💻 Developer<br/>(Code Changes)"] --> B["📚 Git Repository<br/>(Version Control)"]
-    B --> C["🔄 GitHub Actions<br/>(CI/CD Pipeline)"]
-    C --> D["🧪 Automated Tests<br/>(Unit & Integration)"]
-    D --> E["🏗️ Build Docker Images<br/>(Frontend & Backend)"]
-    E --> F["📦 Container Registry<br/>(Docker Hub)"]
-    F --> G["🚀 Production Deploy<br/>(Container Orchestration)"]
-    
-    H["🐳 Development Environment<br/>(Docker Compose)"] --> I["🔧 Backend Container<br/>(Node.js + Express)"]
-    H --> J["🎨 Frontend Container<br/>(React + Vite)"]
-    I --> K["🗄️ Database<br/>(MongoDB)"]
-    
-    L["🏭 Production Environment<br/>(Docker Compose)"] --> M["🔧 Backend Container<br/>(Production Build)"]
-    L --> N["🎨 Frontend Container<br/>(Nginx + React)"]
-    M --> O["🗄️ Production Database<br/>(MongoDB Cloud)"]
-    
-    style A fill:#e3f2fd,stroke:#0d47a1,stroke-width:2px
-    style C fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
-    style G fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px
-    style H fill:#fff8e1,stroke:#e65100,stroke-width:2px
-    style L fill:#f1f8e9,stroke:#33691e,stroke-width:2px
-```
+sequenceDiagram
+    participant U as User
+    participant C as React Client
+    participant S as Express Server
+    participant DB as MongoDB
+    participant E as Email (SMTP)
 
-### 🐳 Docker Configuration
+    Note over U,E: Registration
+    U->>C: Enter username, email, password
+    C->>S: POST /api/v1/users/registered
+    S->>DB: Create user (unverified)
+    S->>E: Send 6-digit OTP
+    S-->>C: Verify OTP
+    U->>C: Enter OTP
+    C->>S: POST /verify-otp
+    S->>DB: Mark isVerified = true
 
-#### 📁 Development Environment
+    Note over U,E: Login
+    U->>C: Enter credentials
+    C->>S: POST /api/v1/users/loggedin
+    S->>S: Verify password (bcrypt)
+    S->>S: Generate access + refresh tokens
+    S-->>C: Access token (body) + Refresh token (httpOnly cookie)
+    C->>U: Redirect to /dashboard
 
-```yaml
-# DevOps/01.Build/Development/docker-compose.yml
-version: "3.9"
-
-services:
-  backend:
-    build:
-      context: ../../../Server
-      dockerfile: ../DevOps/01.Build/Development/backend.Dockerfile
-    container_name: backend
-    networks:
-      - mern-network
-    volumes:
-      - backend_data:/app
-    env_file:
-      - ../../../Server/.env
-
-  frontend:
-    build:
-      context: ../../../Client
-      dockerfile: ../DevOps/01.Build/Development/frontend.Dockerfile
-    container_name: frontend
-    ports:
-      - "5173:5173"
-    networks:
-      - mern-network
-    volumes:
-      - frontend_data:/app
-    depends_on:
-      - backend
-
-networks:
-  mern-network:
-    driver: bridge
-
-volumes:
-  backend_data:
-  frontend_data:
-```
-
-#### 🚀 Production Environment
-
-```yaml
-# DevOps/01.Build/Production/docker-compose.yml
-version: "3.9"
-
-services:
-  backend:
-    build:
-      context: ../../../Server
-      dockerfile: ../DevOps/01.Build/Production/backend.Dockerfile
-    container_name: backend
-    networks:
-      - mern-network
-    ports:
-      - "3000:3000"
-    env_file:
-      - ../../../Server/.env
-
-  frontend:
-    build:
-      context: ../../../Client
-      dockerfile: ../DevOps/01.Build/Production/frontend.Dockerfile
-    container_name: frontend
-    ports:
-      - "80:80"  # Nginx serves on port 80
-    networks:
-      - mern-network
-    depends_on:
-      - backend
-
-networks:
-  mern-network:
-    driver: bridge
-```
-
-### 🏗️ Build Process Pipeline
-
-1. **🔍 Code Analysis** - ESLint and code quality checks
-2. **🧪 Test Phase** - Unit and integration tests
-3. **🏗️ Build Phase** - Create optimized Docker images
-4. **📦 Release Phase** - Tag and push to container registry
-5. **🚀 Deploy Phase** - Deploy to target environment
-
-### 🛠️ DevOps Directory Structure
-
-```
-DevOps/
-├── 01.Build/              # Build configurations
-│   ├── Development/       # Development environment
-│   │   ├── backend.Dockerfile
-│   │   ├── frontend.Dockerfile
-│   │   ├── docker-compose.yml
-│   │   └── Steps.md
-│   └── Production/        # Production environment
-│       ├── backend.Dockerfile
-│       ├── frontend.Dockerfile
-│       ├── docker-compose.yml
-│       └── nginx.conf
-├── 02.Test/              # Testing configurations
-├── 03.Release/           # Release management
-└── 04.Deploy/            # Deployment scripts
+    Note over U,E: Auto Token Refresh
+    C->>S: API call with expired token
+    S-->>C: 401 Unauthorized
+    C->>S: POST /refresh-token (cookie)
+    S->>S: Validate refresh token
+    S-->>C: New access token
+    C->>S: Retry original request
 ```
 
 ---
 
-## 📊 Feature Modules Deep Dive
+## 📊 Feature Modules
 
-### 🎯 Habit Tracking Module
+### 🎯 Habit Tracking
 
-**Comprehensive habit management system** to build positive daily routines:
+A comprehensive daily habit tracker with food nutrition logging:
 
-#### 🔧 Core Features
+| Feature | Description |
+|---|---|
+| **Daily Entry Table** | Log burned calories, water intake, sleep hours, reading minutes, intake calories, mood & self-care |
+| **Food Logging** | Search a 46-nutrient food database, log meals by type (Breakfast/Lunch/Dinner/Snacks), track macros |
+| **Calorie Dashboard** | Calorie chart, nutrient breakdown, macro overview, food item details |
+| **Water Dashboard** | Water intake tracking with visual charts and score cards |
+| **Sleep Dashboard** | Sleep quality monitoring and analysis |
+| **Reading Dashboard** | Reading time tracking and streak visualization |
+| **Mood & Journal** | Daily mood selection with journal entries and calendar view |
+| **Self-Care Tracking** | Custom self-care habits with completion tracking |
+| **Physical Logs** | Track weight, height, BMI over time |
+| **Score System** | Daily habit score (0-7) with consistency status and progress % |
+| **Streak Tracking** | Current streak, longest streak, and goal progress |
+| **Export** | Export habit and food data via email |
+| **Customizable Settings** | Set min/max ranges for all habits, manage mood lists, self-care items |
 
-- **📝 Custom Habit Creation** - Set personalized habits with specific goals
-- **✅ Daily Progress Tracking** - Mark habits complete with streak counters
-- **📊 Visual Analytics** - Interactive charts showing progress over time
-- **🎖️ Streak Management** - Track consistency and build momentum
-- **📈 Performance Insights** - Weekly, monthly, and yearly reports
-- **🔔 Smart Reminders** - Customizable notification system
-- **🏆 Achievement System** - Milestone rewards and badges
+### 💰 Expense Management
 
-#### 🛤️ API Endpoints
+Full-featured personal finance tracker:
 
-```javascript
-// Habit Management Routes
-GET    /api/v1/dashboard/habit              // Get all user habits
-POST   /api/v1/dashboard/habit/table-entry  // Create new habit
-PUT    /api/v1/dashboard/habit/settings     // Update habit settings
-DELETE /api/v1/dashboard/habit/:id          // Delete specific habit
-GET    /api/v1/dashboard/habit/dashboard    // Get habit analytics
-GET    /api/v1/dashboard/habit/table-view   // Get habit history
+| Feature | Description |
+|---|---|
+| **Categories & Subcategories** | Hierarchical expense categories with monthly budgets and custom colors |
+| **Payment Sources** | Bank accounts, wallets, and credit cards with balance/limit tracking |
+| **Transactions** | Credit, Debit, and Transfer types with description, source, category, and amount |
+| **Monthly Salary** | Track salary per month with net savings calculation |
+| **Copy Previous Month** | Clone categories from the previous month for quick setup |
+| **Reorder** | Drag-to-reorder categories and subcategories |
+| **Undo/Redo** | 5-step undo/redo stack for all transaction operations (add, edit, delete) |
+| **Quick Calculator** | Built-in calculator for quick expense math |
+| **Line Charts** | Spending trend visualizations |
+| **Table View** | Sortable transaction table with date range filtering |
+| **Bank Balances Modal** | Overview of all payment source balances |
+| **Card Due Tracking** | Credit card due amount calculations |
+
+### 📈 Investment Portfolio
+
+Track four types of investments with detailed analytics:
+
+#### Stocks
+- Buy/sell tracking with brokerage, STT, and net calculations
+- Support for Delivery & Intraday across NSE/BSE
+- Large/Mid/Small cap classification
+- Gain/loss calculation (Rs and %)
+
+#### Mutual Funds
+- SIP, Lumpsum, SWP, Redemption & Withdrawal transaction types
+- NAV-based unit tracking with expense ratio
+- Fund groups for organization
+- Folio number and AMC tracking
+- Direct/Regular plan, Growth option
+
+#### Fixed Deposits
+- Interest rate, tenure, compounding frequency tracking
+- Maturity amount calculation
+- Withdrawal handling with penalty and realized gain/loss
+- Status: Active / Matured / Withdrawn / Closed
+- FD groups for organization
+
+#### Recurring Deposits
+- Monthly installment tracking with transaction history
+- Withdrawal settlement with profit/loss calculation
+- RD groups for organization
+
+**All investment types support**: privacy mode (hide numbers), organized groups, detailed info modals with timeline and cumulative metrics.
+
+---
+
+## 🗄️ Database Architecture
+
+Four isolated MongoDB databases accessed via `mongoose.connection.useDb()`:
+
+```
+MongoDB Instance
+├── User Database
+│   └── RegisteredUsers          # username, email, passwordHash, OTP, isVerified
+│
+├── Habit-Tracker Database
+│   ├── HabitTracker             # Daily habits (burned, water, sleep, read, intake, mood, journal)
+│   ├── HabitSettings            # User preferences, ranges, mood list, self-care items
+│   ├── PhysicalLog              # Weight, height, BMI records
+│   ├── FoodDatabase             # 46+ nutritional columns per food item (text-indexed)
+│   └── FoodLog                  # Daily food logs by meal type
+│
+├── Expense-Tracker Database
+│   ├── ExpenseCategory          # Categories with embedded subcategories, budgets, colors
+│   ├── ExpenseTransaction       # Credit/Debit/Transfer transactions
+│   ├── MonthlyBudget            # Monthly salary records
+│   └── PaymentSource            # Bank/Wallet/Card with balance and limit
+│
+└── Investment-Tracker Database
+    ├── StockTrade               # Buy/sell with brokerage and gain calculations
+    ├── MutualFund               # Transactions (SIP/Lumpsum/SWP/Redemption/Withdrawal)
+    ├── MutualFundGroup          # User-defined fund groupings
+    ├── FixedDeposit             # FD details with withdrawal handling
+    ├── FixedDepositGroup        # User-defined FD groupings
+    ├── RecurringDeposit         # RD with installment transactions
+    └── RecurringDepositGroup    # User-defined RD groupings
 ```
 
-### 💰 Expense Management Module
+---
 
-**Complete financial tracking system** for personal expense management:
+## 📡 API Reference
 
-#### 🔧 Core Features
+### Authentication (Public)
 
-- **💳 Quick Expense Entry** - Fast expense logging with categories
-- **🏷️ Smart Categorization** - Custom categories with auto-suggestions
-- **📊 Spending Analysis** - Detailed spending patterns and trends
-- **💹 Budget Management** - Set monthly/weekly budgets with alerts
-- **📱 Receipt Management** - Digital receipt storage and OCR
-- **🔍 Advanced Filtering** - Search and filter by date, category, amount
-- **📈 Financial Insights** - Cash flow analysis and forecasting
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/api/v1/users/registered` | Register new user |
+| `POST` | `/api/v1/users/registered/verify-otp` | Verify registration OTP |
+| `POST` | `/api/v1/users/registered/resend-otp` | Resend registration OTP |
+| `POST` | `/api/v1/users/loggedin` | Login |
+| `POST` | `/api/v1/users/loggedin/refresh-token` | Refresh access token (httpOnly cookie) |
+| `POST` | `/api/v1/users/loggedin/generate-otp` | Generate OTP for existing user |
+| `POST` | `/api/v1/users/logout` | Logout |
+| `POST` | `/api/v1/users/forgot-password-verification` | Request password reset OTP |
+| `POST` | `/api/v1/users/forgot-password-verification/verify-otp` | Verify reset OTP |
+| `POST` | `/api/v1/users/forgot-password-verification/reset-password` | Set new password |
 
-#### 🛤️ API Endpoints
+### Dashboard (Protected)
 
-```javascript
-// Expense Management Routes
-GET    /api/v1/dashboard/expense              // Get all expenses
-POST   /api/v1/dashboard/expense/table-entry  // Add new expense
-PUT    /api/v1/dashboard/expense/:id          // Update expense
-DELETE /api/v1/dashboard/expense/:id          // Delete expense
-GET    /api/v1/dashboard/expense/dashboard    // Get expense analytics
-GET    /api/v1/dashboard/expense/categories   // Get expense categories
-```
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/v1/dashboard/auto-login` | Validate token & return user data |
+| `GET` | `/api/v1/dashboard` | Get dashboard summary |
 
-### 📈 Investment Portfolio Module
+### Habit Tracker (Protected)
 
-**Advanced investment tracking and portfolio management**:
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/v1/dashboard/habit/table-entry` | Get habit entries |
+| `POST` | `/api/v1/dashboard/habit/table-entry` | Create habit entry |
+| `PUT` | `/api/v1/dashboard/habit/table-entry/:id` | Update habit entry |
+| `DELETE` | `/api/v1/dashboard/habit/table-entry/:id` | Delete habit entry |
+| `POST` | `/api/v1/dashboard/habit/table-entry/sync-intake` | Sync calorie intake with food logs |
+| `GET` | `/api/v1/dashboard/habit/settings` | Get habit settings |
+| `PUT` | `/api/v1/dashboard/habit/settings` | Update habit settings |
+| `DELETE` | `/api/v1/dashboard/habit/settings` | Reset habit settings |
+| `GET` | `/api/v1/dashboard/habit/logging` | Get physical logs |
+| `POST` | `/api/v1/dashboard/habit/logging` | Add physical log |
+| `DELETE` | `/api/v1/dashboard/habit/logging/:logId` | Delete physical log |
+| `POST` | `/api/v1/dashboard/habit/export` | Export habit data via email |
+| `GET` | `/api/v1/dashboard/habit/food/database` | Search food database |
+| `POST` | `/api/v1/dashboard/habit/food/database` | Create custom food item |
+| `GET` | `/api/v1/dashboard/habit/food/log` | Get daily food logs |
+| `POST` | `/api/v1/dashboard/habit/food/log` | Add food log entry |
+| `GET` | `/api/v1/dashboard/habit/food/range-logs` | Get food logs for date range |
+| `PUT` | `/api/v1/dashboard/habit/food/log/:id` | Update food log |
+| `DELETE` | `/api/v1/dashboard/habit/food/log/:id` | Delete food log |
+| `DELETE` | `/api/v1/dashboard/habit/food/meal-category` | Delete all logs for a meal type |
+| `POST` | `/api/v1/dashboard/habit/food/export` | Export food data via email |
 
-#### 🔧 Core Features
+### Expense Tracker (Protected)
 
-- **📊 Portfolio Overview** - Real-time portfolio valuation
-- **📈 Performance Tracking** - ROI calculations and performance metrics
-- **🔔 Price Alerts** - Automated notifications for price changes
-- **📱 Market Integration** - Real-time market data and updates
-- **📋 Transaction History** - Complete investment transaction log
-- **📊 Asset Allocation** - Visual portfolio distribution
-- **💹 Risk Analysis** - Portfolio risk assessment and recommendations
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/v1/dashboard/expense/get-all-data` | Get all expense data (supports `month`, `fromMonth`/`toMonth`, `all`) |
+| `POST` | `/api/v1/dashboard/expense/salary` | Set monthly salary |
+| `DELETE` | `/api/v1/dashboard/expense/salary/:month` | Delete salary for month |
+| `POST` | `/api/v1/dashboard/expense/category` | Create category |
+| `PATCH` | `/api/v1/dashboard/expense/category/:id` | Update category |
+| `DELETE` | `/api/v1/dashboard/expense/category/:id` | Delete category |
+| `PUT` | `/api/v1/dashboard/expense/category/reorder` | Reorder categories |
+| `POST` | `/api/v1/dashboard/expense/category/copy-previous` | Copy categories from previous month |
+| `POST` | `/api/v1/dashboard/expense/category/:id/subcategory` | Add subcategory |
+| `PATCH` | `/api/v1/dashboard/expense/category/:id/subcategory/:subId` | Update subcategory |
+| `DELETE` | `/api/v1/dashboard/expense/category/:id/subcategory/:subId` | Delete subcategory |
+| `PUT` | `/api/v1/dashboard/expense/category/:id/subcategory/reorder` | Reorder subcategories |
+| `POST` | `/api/v1/dashboard/expense/source` | Create payment source |
+| `PATCH` | `/api/v1/dashboard/expense/source/:id` | Update payment source |
+| `DELETE` | `/api/v1/dashboard/expense/source/:id` | Delete payment source |
+| `POST` | `/api/v1/dashboard/expense/transaction` | Create transaction |
+| `PATCH` | `/api/v1/dashboard/expense/transaction/:id` | Update transaction |
+| `DELETE` | `/api/v1/dashboard/expense/transaction/:id` | Delete transaction |
 
-#### 🛤️ API Endpoints
+### Investment Tracker (Protected)
 
-```javascript
-// Investment Management Routes
-GET    /api/v1/dashboard/investment              // Get portfolio overview
-POST   /api/v1/dashboard/investment/table-entry  // Add investment
-PUT    /api/v1/dashboard/investment/:id          // Update investment
-DELETE /api/v1/dashboard/investment/:id          // Delete investment
-GET    /api/v1/dashboard/investment/performance  // Get performance data
-GET    /api/v1/dashboard/investment/alerts       // Manage price alerts
-```
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/v1/dashboard/investment/stocks` | Get all stock trades |
+| `POST` | `/api/v1/dashboard/investment/stocks` | Add stock trade |
+| `PUT` | `/api/v1/dashboard/investment/stocks/:id` | Update stock trade |
+| `DELETE` | `/api/v1/dashboard/investment/stocks/:id` | Delete stock trade |
+| `GET` | `/api/v1/dashboard/investment/mf` | Get all mutual funds |
+| `POST` | `/api/v1/dashboard/investment/mf` | Add mutual fund |
+| `PUT` | `/api/v1/dashboard/investment/mf/:id` | Update mutual fund |
+| `DELETE` | `/api/v1/dashboard/investment/mf/:id` | Delete mutual fund |
+| `POST` | `/api/v1/dashboard/investment/mf/:id/transactions` | Add MF transaction |
+| `PUT` | `/api/v1/dashboard/investment/mf/:id/transactions/:txnId` | Update MF transaction |
+| `DELETE` | `/api/v1/dashboard/investment/mf/:id/transactions/:txnId` | Delete MF transaction |
+| `GET` | `/api/v1/dashboard/investment/mf-groups` | Get MF groups |
+| `PUT` | `/api/v1/dashboard/investment/mf-groups` | Update MF groups |
+| `GET` | `/api/v1/dashboard/investment/fd` | Get all fixed deposits |
+| `POST` | `/api/v1/dashboard/investment/fd` | Add fixed deposit |
+| `PUT` | `/api/v1/dashboard/investment/fd/:id` | Update fixed deposit |
+| `DELETE` | `/api/v1/dashboard/investment/fd/:id` | Delete fixed deposit |
+| `GET` | `/api/v1/dashboard/investment/fd-groups` | Get FD groups |
+| `PUT` | `/api/v1/dashboard/investment/fd-groups` | Update FD groups |
+| `GET` | `/api/v1/dashboard/investment/rd` | Get all recurring deposits |
+| `POST` | `/api/v1/dashboard/investment/rd` | Add recurring deposit |
+| `PUT` | `/api/v1/dashboard/investment/rd/:id` | Update recurring deposit |
+| `DELETE` | `/api/v1/dashboard/investment/rd/:id` | Delete recurring deposit |
+| `POST` | `/api/v1/dashboard/investment/rd/:id/transactions` | Add RD transaction |
+| `PUT` | `/api/v1/dashboard/investment/rd/:id/transactions/:txnId` | Update RD transaction |
+| `DELETE` | `/api/v1/dashboard/investment/rd/:id/transactions/:txnId` | Delete RD transaction |
+| `GET` | `/api/v1/dashboard/investment/rd-groups` | Get RD groups |
+| `PUT` | `/api/v1/dashboard/investment/rd-groups` | Update RD groups |
 
 ---
 
 ## 🚀 Getting Started
 
-### 📋 Prerequisites
+### Prerequisites
 
-Before running Progress Pulse, ensure you have:
+- **Node.js** v18+
+- **MongoDB** 7.x (local or Docker)
+- **Gmail** account with App Password (for OTP emails)
 
-- 🟢 **Node.js** (v18 or higher)
-- 🐳 **Docker** & Docker Compose
-- 🍃 **MongoDB** (local or cloud instance)
-- 📧 **Email Service** configuration (Gmail/SendGrid)
-
-### 🔧 Installation & Setup
-
-#### 1️⃣ Clone the Repository
+### 1. Clone & Install
 
 ```bash
-git clone https://github.com/your-username/Progress-Pulse.git
+git clone https://github.com/er-pritamdas/Progress-Pulse.git
 cd Progress-Pulse
+
+# Install dependencies
+cd Client && npm install
+cd ../Server && npm install
 ```
 
-#### 2️⃣ Environment Configuration
+### 2. Configure Environment
 
-**Server Environment Variables** (Server/.env)
+Create `Server/.env`:
 
 ```env
-# Database Configuration
-MONGODB_URI=mongodb://localhost:27017/progress-pulse
-DB_NAME=progress_pulse
+PORT=8000
+MONGO_URI=mongodb://localhost:27017/
 
-# JWT Configuration
-JWT_SECRET_KEY=your-super-secure-jwt-secret-key-here
-REFRESH_TOKEN_SECRET_KEY=your-super-secure-refresh-secret-key
-JWT_ACCESS_TOKEN_EXPIRY=15m
-JWT_REFRESH_TOKEN_EXPIRY=7d
+# Database Names
+USER_DB=User
+HABIT_DB=Habit-Tracker
+EXPENSE_DB=Expense-Tracker
+INVESTMENT_DB=Investment-Tracker
 
-# Email Service Configuration
-EMAIL_HOST=smtp.gmail.com
-EMAIL_PORT=587
+# JWT Secrets (generate strong random values)
+JWT_SECRET_KEY=your-access-token-secret
+REFRESH_TOKEN_SECRET_KEY=your-refresh-token-secret
+ACCESS_TOKEN_EXPIRY=15m
+REFRESH_TOKEN_EXPIRY=7d
+
+# Email (Gmail App Password)
 EMAIL_USER=your-email@gmail.com
 EMAIL_PASS=your-app-specific-password
 
-# Server Configuration
-PORT=3000
 NODE_ENV=development
-CORS_ORIGIN=http://localhost:5173
 ```
 
-**Client Environment Variables** (Client/.env)
+> **Note:** The frontend proxies `/api` to `http://localhost:8000` via Vite config — no client-side `.env` needed.
 
-```env
-# API Configuration
-VITE_API_BASE_URL=http://localhost:3000/api
-VITE_APP_NAME=Progress Pulse
-VITE_APP_VERSION=1.0.0
+### 3. Start Development
 
-# Feature Flags
-VITE_ENABLE_ANALYTICS=false
-VITE_ENABLE_NOTIFICATIONS=true
-```
-
-#### 3️⃣ Development Setup Options
-
-**🖥️ Manual Setup (Traditional Development)**
+**Option A — Manual:**
 
 ```bash
-# Install server dependencies
+# Terminal 1: Backend
 cd Server
-npm install
-
-# Install client dependencies
-cd ../Client
-npm install
-
-# Start MongoDB (if running locally)
-mongod
-
-# Start the backend server (in Server directory)
 npm run dev
 
-# Start the frontend development server (in Client directory)
+# Terminal 2: Frontend
+cd Client
 npm run dev
 ```
 
-**🐳 Docker Setup (Recommended)**
+**Option B — Docker (Development):**
 
 ```bash
-# Development Environment
 cd DevOps/01.Build/Development
 docker-compose up --build
+```
 
-# Production Environment  
+### 4. Access the App
+
+| Service | URL |
+|---|---|
+| Frontend | `http://localhost:5173` |
+| Backend API | `http://localhost:8000` |
+| Prometheus Metrics | `http://localhost:8000/metrics` |
+
+> The food database auto-seeds from `bin/FOOD TRACKER - Food_Database.csv` on first server start.
+
+---
+
+## 🐳 Deployment
+
+### Production Docker Setup
+
+```bash
 cd DevOps/01.Build/Production
 docker-compose up --build -d
 ```
 
-#### 4️⃣ Access the Application
+**Production architecture:**
 
-- **🎨 Frontend (Development)**: http://localhost:5173
-- **🎨 Frontend (Production)**: http://localhost
-- **🔧 Backend API**: http://localhost:3000
-- **📚 API Health Check**: http://localhost:3000/api/health
+```
+Client (Nginx:80) ──proxy /api/──> Backend (Node:3000) ──> MongoDB (27017)
+      │                                    │
+      └── static SPA (dist/)              └── /metrics ──> Prometheus
+```
+
+- **Nginx** serves the built React SPA with SPA fallback (`try_files`) and proxies `/api/` to the backend
+- **Static assets** cached for 6 months
+- **Backend** runs in production mode with `npm start`
+
+### Jenkins CI/CD
+
+The pipeline (`DevOps/00.CICD/jenkinsfile`) automates:
+
+1. **Setup** — Install prerequisites, clone repo, configure `.env` from Jenkins credentials
+2. **Build** — Build 4 Docker images (backend, frontend, database, prometheus), push to Docker Hub
+3. **Test** — Pull built images and start the test environment
+
+### Monitoring
+
+Prometheus scrapes the backend `/metrics` endpoint every 5 seconds, tracking:
+- Default Node.js metrics (CPU, memory, event loop)
+- HTTP request duration and count
 
 ---
 
-## 📱 Application Screenshots & Demo
+## 🎨 Theming
 
-<div align="center">
+Progress Pulse includes **14+ DaisyUI themes** with persistent selection:
 
-### 🏠 Homepage & Landing
+| Theme | Theme | Theme | Theme |
+|---|---|---|---|
+| 🌙 Night (default) | 🌑 Dark | 🎃 Halloween | 🌲 Forest |
+| 🌊 Aqua | 🖤 Black | 🧛 Dracula | 💼 Business |
+| 🌅 Sunset | 🕰️ Retro | ☕ Coffee | 🌑 Dim |
+| 🌌 Abyss | 💡 Light | | |
 
-![Homepage Demo](Client/public/Main_Dashboard.png)
-*Clean and modern landing page with feature highlights*
-
-### 📊 Dashboard Overview (Light Theme)
-
-![Dashboard Light](Client/public/Main_Dashboard.png)
-*Comprehensive dashboard with habit, expense, and investment widgets*
-
-### � Dashboard Overview (Sunset Theme)
-
-![Dashboard Sunset](Client/public/Main_Dashboard_SunsetTheme.png)
-*Beautiful sunset theme for a warm aesthetic*
-
-### 🎯 Habit Tracking
-
-![Habit Tracker Table Entry](Client/public/HabitTracker_TableEntry.png)
-*Detailed habit logging interface*
-
-![Habit Tracker Dark Mode](Client/public/HabitTracker_TableEntry_DimTheme.png)
-*Habit tracking in dark mode*
-
-![Habit Logging](Client/public/HabitTracker_Logging.png)
-*Quick habit logging interface*
-
-![Habit Settings](Client/public/HabitTracker_Settings.png)
-*Customizable habit settings*
-
-#### Specific Dashboards
-
-| Water Tracking | Sleep Tracking |
-| :---: | :---: |
-| ![Water](Client/public/HabitTracker_Water_Dashboard.png) | ![Sleep](Client/public/HabitTracker_Sleep_Dashboard.png) |
-
-| Read Tracking | Calorie Tracking |
-| :---: | :---: |
-| ![Read](Client/public/HabitTracker_Read_Dashboard.png) | ![Calorie](Client/public/HabitTracker_Calorie_Dashboard.png) |
-
-### 💰 Expense Management
-
-![Expense Table View](Client/public/ExpenseTracker_TableView.png)
-*Overview of all expenses in a sortable table*
-
-![Expense Entry](Client/public/ExpenseTracker_TableEntry.png)
-*Detailed expense entry view*
-
-### 🎥 Video Demo
-
-![Progress Pulse Demo](Client/public/Video/ProgressPulse.mp4)
-*Complete application walkthrough and feature demonstration*
-
-</div>
+Theme preference is saved to `localStorage` and restored on page load.
 
 ---
 
-## 📄 Comprehensive API Documentation
+## 📜 Scripts
 
-### 🔐 Authentication Endpoints
-
-| Method         | Endpoint                                       | Description                  | Auth Required |
-| -------------- | ---------------------------------------------- | ---------------------------- | ------------- |
-| **POST** | `/api/v1/users/registered`                   | User registration with email | ❌            |
-| **POST** | `/api/v1/users/registered/verify-otp`        | OTP verification             | ❌            |
-| **POST** | `/api/v1/users/loggedin`                     | User login                   | ❌            |
-| **POST** | `/api/v1/users/loggedin/refresh-token`       | Refresh access token         | 🍪            |
-| **GET**  | `/api/v1/dashboard/auto-login`               | Token validation             | ✅            |
-| **POST** | `/api/v1/users/logout`                       | User logout                  | ✅            |
-| **POST** | `/api/v1/users/forgot-password-verification` | Password reset request       | ❌            |
-
-### 🎯 Dashboard & User Management
-
-| Method        | Endpoint                      | Description             | Auth Required |
-| ------------- | ----------------------------- | ----------------------- | ------------- |
-| **GET** | `/api/v1/dashboard`         | Get user dashboard data | ✅            |
-| **PUT** | `/api/v1/dashboard/profile` | Update user profile     | ✅            |
-| **GET** | `/api/v1/dashboard/stats`   | Get user statistics     | ✅            |
-
-### 📊 Feature-Specific API Routes
-
-**Habit Tracking Routes**
-
-- `GET /api/v1/dashboard/habit` - Retrieve all habits
-- `POST /api/v1/dashboard/habit/table-entry` - Create new habit
-- `PUT /api/v1/dashboard/habit/settings` - Update habit configuration
-- `GET /api/v1/dashboard/habit/table-view` - Get habit history
-- `GET /api/v1/dashboard/habit/dashboard` - Habit analytics
-
-**Expense Management Routes**
-
-- `GET /api/v1/dashboard/expense` - Retrieve all expenses
-- `POST /api/v1/dashboard/expense/table-entry` - Add expense
-- `PUT /api/v1/dashboard/expense/:id` - Update expense
-- `DELETE /api/v1/dashboard/expense/:id` - Delete expense
-
-**Investment Portfolio Routes**
-
-- `GET /api/v1/dashboard/investment` - Portfolio overview
-- `POST /api/v1/dashboard/investment/table-entry` - Add investment
-- `PUT /api/v1/dashboard/investment/:id` - Update investment
-- `DELETE /api/v1/dashboard/investment/:id` - Remove investment
+| Script | Language | Purpose |
+|---|---|---|
+| `Scripts/mongodb_backup.sh` | Bash | Interactive MongoDB backup with `mongodump --gzip` |
+| `Scripts/SyncWithGit.sh` | Bash | Quick git add + commit + push |
+| `Scripts/jenkinsInstallation.sh` | Bash | Automated Jenkins installation on Ubuntu |
+| `Scripts/populateHabitEntries.py` | Python | Generate 30 days of random habit data via API |
+| `Scripts/deleteHabitEntries.py` | Python | Delete habit entries for a date range |
+| `Scripts/upload_food.py` | Python | Upload food items to MongoDB directly |
 
 ---
 
-## 🛠️ Development Guidelines & Best Practices
+## 🤝 Contributing
 
-### 📁 Project Structure Standards
+1. **Fork** the repository
+2. **Create** a feature branch: `git checkout -b feature/your-feature-name`
+3. **Install** dependencies: `cd Client && npm install && cd ../Server && npm install`
+4. **Make** your changes following the existing code style
+5. **Commit** with a descriptive message: `feat(habit): add streak counter functionality`
+6. **Push** and create a **Pull Request**
+
+### Commit Convention
 
 ```
-Progress-Pulse/
-├── 📁 Client/                    # Frontend React Application
-│   ├── src/
-│   │   ├── components/           # Reusable UI Components
-│   │   │   ├── Authentication/   # Auth-related components
-│   │   │   ├── Dashboard/        # Dashboard modules
-│   │   │   └── Homepage/         # Landing page components
-│   │   ├── Context/              # React Context Providers
-│   │   ├── pages/                # Route-based page components
-│   │   ├── services/             # Redux store & API services
-│   │   ├── layouts/              # Layout wrapper components
-│   │   └── utils/                # Utility functions & helpers
-│   ├── public/                   # Static assets & media
-│   └── DevOps configs            # Vite, ESLint, Tailwind
-├── 📁 Server/                    # Backend Node.js Application
-│   ├── controllers/              # Route handler logic
-│   ├── models/                   # MongoDB schema models
-│   ├── middlewares/              # Express middleware functions
-│   ├── routes/                   # API endpoint definitions
-│   ├── db/                       # Database connection setup
-│   └── utils/                    # Server utility functions
-├── 📁 DevOps/                    # Deployment & CI/CD
-│   ├── 01.Build/                 # Docker configurations
-│   ├── 02.Test/                  # Testing setup
-│   ├── 03.Release/               # Release management
-│   └── 04.Deploy/                # Deployment scripts
-└── 📁 Scripts/                   # Database utility scripts
-```
-
-### 🧪 Testing Strategy
-
-```bash
-# Frontend Testing
-cd Client
-npm run test              # Run unit tests
-npm run test:coverage     # Generate coverage report
-npm run test:e2e          # End-to-end tests
-
-# Backend Testing  
-cd Server
-npm run test              # Run unit tests
-npm run test:integration  # Integration tests
-npm run test:watch        # Watch mode for development
-
-# Full Application Testing
-npm run test:full         # Run all test suites
-```
-
-### 🏗️ Build & Deployment
-
-```bash
-# Development Build
-npm run dev               # Start development servers
-
-# Production Build
-npm run build            # Build both client and server
-npm run build:client     # Build frontend only
-npm run build:server     # Build backend only
-
-# Docker Commands
-docker-compose up         # Start development environment
-docker-compose -f DevOps/01.Build/Production/docker-compose.yml up -d
+feat(scope): add new feature
+fix(scope): resolve bug
+docs(scope): update documentation
+refactor(scope): improve code structure
 ```
 
 ---
 
-## 🐛 Troubleshooting Guide
+## 📄 License
 
-### 🔧 Common Issues & Solutions
-
-#### 🐳 Docker-Related Issues
-
-**Issue: Port Already in Use**
-
-```bash
-# Find and kill processes using required ports
-lsof -ti:3000 | xargs kill -9  # Kill backend processes
-lsof -ti:5173 | xargs kill -9  # Kill frontend processes
-
-# Alternative: Use different ports
-export PORT=3001  # For backend
-export VITE_PORT=5174  # For frontend
-```
-
-**Issue: Container Won't Start**
-
-```bash
-# Check container logs for errors
-docker logs backend
-docker logs frontend
-
-# Rebuild containers from scratch
-docker-compose down
-docker-compose build --no-cache
-docker-compose up
-```
-
-**Issue: Volume Permission Problems**
-
-```bash
-# Fix volume permissions (Linux/macOS)
-sudo chown -R $USER:$USER .
-docker-compose down
-docker volume prune  # Remove unused volumes
-docker-compose up --build
-```
-
-#### 🔌 Database Connection Issues
-
-**Issue: MongoDB Connection Failed**
-
-```bash
-# Check MongoDB service status
-sudo systemctl status mongod
-
-# Start MongoDB service
-sudo systemctl start mongod
-
-# Verify connection string in .env
-MONGODB_URI=mongodb://localhost:27017/progress-pulse
-
-# Test connection manually
-mongosh mongodb://localhost:27017/progress-pulse
-```
-
-**Issue: Database Authentication Error**
-
-```javascript
-// Update connection string with credentials
-MONGODB_URI=mongodb://username:password@localhost:27017/progress-pulse?authSource=admin
-```
-
-#### 🌐 API & Network Issues
-
-**Issue: Frontend Can't Reach Backend**
-
-```javascript
-// Check Vite proxy configuration (vite.config.js)
-export default defineConfig({
-  plugins: [react()],
-  server: {
-    proxy: {
-      '/api': {
-        target: 'http://localhost:3000',
-        changeOrigin: true
-      }
-    }
-  }
-})
-```
-
-**Issue: CORS Errors**
-
-```javascript
-// Server CORS configuration (Server/src/app.js)
-app.use(cors({
-  origin: ["http://localhost:5173", "http://localhost:3000"],
-  credentials: true
-}));
-```
-
-#### 🔐 Authentication Problems
-
-**Issue: JWT Token Errors**
-
-```bash
-# Clear localStorage and cookies
-localStorage.clear()
-document.cookie.split(";").forEach(cookie => {
-  document.cookie = cookie.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
-});
-
-# Verify JWT secrets match between client and server
-# Check .env files for consistency
-```
-
-**Issue: Email OTP Not Sending**
-
-```javascript
-// Verify email configuration in Server/.env
-EMAIL_HOST=smtp.gmail.com
-EMAIL_PORT=587
-EMAIL_USER=your-email@gmail.com
-EMAIL_PASS=your-app-password  // Not regular password!
-
-// Generate App Password for Gmail:
-// Google Account → Security → 2-Step Verification → App Passwords
-```
+This project is licensed under the **MIT License** — see the [LICENSE](./LICENSE) file for details.
 
 ---
 
-## 🤝 Contributing to Progress Pulse
+## 👤 Author
 
-We welcome contributions from developers of all skill levels! Here's how you can contribute:
-
-### 🚀 Getting Started with Contributions
-
-1. **🍴 Fork the Repository**
-
-   ```bash
-   # Fork on GitHub, then clone your fork
-   git clone https://github.com/your-username/Progress-Pulse.git
-   cd Progress-Pulse
-   ```
-2. **🌿 Create a Feature Branch**
-
-   ```bash
-   git checkout -b feature/your-feature-name
-   # or
-   git checkout -b bugfix/issue-description
-   ```
-3. **🔧 Set Up Development Environment**
-
-   ```bash
-   # Install dependencies
-   cd Client && npm install
-   cd ../Server && npm install
-
-   # Copy environment files
-   cp Server/.env.example Server/.env
-   cp Client/.env.example Client/.env
-   ```
-
-### 📋 Development Standards
-
-#### ✅ Code Quality Requirements
-
-- **ESLint**: Follow the project's ESLint configuration
-- **Prettier**: Use consistent code formatting
-- **TypeScript**: Add type definitions where applicable
-- **Comments**: Write clear, meaningful comments
-- **Tests**: Include tests for new features
-
-#### 🎯 Commit Message Convention
-
-```bash
-# Format: type(scope): description
-git commit -m "feat(habit): add streak counter functionality"
-git commit -m "fix(auth): resolve token refresh issue"
-git commit -m "docs(readme): update installation instructions"
-
-# Types: feat, fix, docs, style, refactor, test, chore
-```
-
-#### 📝 Pull Request Process
-
-1. **Update Documentation**: Update README if needed
-2. **Add Tests**: Ensure new features have appropriate tests
-3. **Run Quality Checks**:
-   ```bash
-   npm run lint      # Check code quality
-   npm run test      # Run all tests
-   npm run build     # Verify builds work
-   ```
-4. **Write Clear PR Description**: Explain what, why, and how
-
-### 🎯 Contribution Areas
-
-#### 🐛 Bug Fixes
-
-- Check [Issues](https://github.com/your-username/Progress-Pulse/issues) for bugs
-- Reproduce the issue locally
-- Create tests that demonstrate the fix
-- Submit PR with clear description
-
-#### ✨ New Features
-
-- Discuss major features in [Discussions](https://github.com/your-username/Progress-Pulse/discussions)
-- Create feature branch
-- Implement with proper tests
-- Update documentation
-- Submit PR for review
-
-#### 📚 Documentation
-
-- Improve README clarity
-- Add code comments
-- Create tutorials or guides
-- Update API documentation
-- Fix typos or formatting
-
-#### 🧪 Testing
-
-- Add unit tests
-- Improve test coverage
-- Add integration tests
-- Create end-to-end tests
-- Performance testing
-
-### 🏆 Recognition
-
-Contributors will be recognized in:
-
-- **README Contributors Section**
-- **GitHub Contributors Graph**
-- **Release Notes** for significant contributions
-- **Special Mentions** in project updates
-
----
-
-## 📊 Performance & Monitoring
-
-### 🚀 Performance Optimizations Implemented
-
-#### Frontend Optimizations
-
-- **⚡ Code Splitting**: Dynamic imports with React.lazy()
-- **🗜️ Bundle Optimization**: Vite's advanced tree-shaking
-- **📦 Caching Strategy**: Proper HTTP caching headers
-- **🖼️ Image Optimization**: WebP format with fallbacks
-- **🔄 Request Optimization**: Debouncing and request batching
-- **📱 Progressive Web App**: Service worker for offline capability
-
-#### Backend Optimizations
-
-- **🗄️ Database Indexing**: Optimized MongoDB indexes
-- **📊 Query Optimization**: Efficient aggregation pipelines
-- **🔄 Connection Pooling**: MongoDB connection pool management
-- **💾 Caching Layer**: Redis integration for frequently accessed data
-- **📈 Response Compression**: Gzip compression for API responses
-
-### 📈 Monitoring & Analytics
-
-#### Application Monitoring
-
-```javascript
-// Performance metrics tracked:
-- API response times
-- Database query performance
-- Error rates and types
-- User interaction patterns
-- Resource usage statistics
-```
-
-#### Logging Strategy
-
-```javascript
-// Winston logger configuration
-const logger = winston.createLogger({
-  level: 'info',
-  format: winston.format.combine(
-    winston.format.timestamp(),
-    winston.format.errors({stack: true}),
-    winston.format.json()
-  ),
-  transports: [
-    new winston.transports.File({filename: 'logs/error.log', level: 'error'}),
-    new winston.transports.File({filename: 'logs/combined.log'}),
-    new winston.transports.DailyRotateFile({
-      filename: 'logs/application-%DATE%.log',
-      datePattern: 'YYYY-MM-DD',
-      maxFiles: '14d'
-    })
-  ]
-});
-```
-
----
-
-## 🌟 Project Roadmap & Future Enhancements
-
-### 📅 Phase 1: Foundation (Completed ✅)
-
-- ✅ User authentication system with JWT
-- ✅ Basic habit tracking functionality
-- ✅ Expense management system
-- ✅ Investment portfolio tracking
-- ✅ Docker containerization
-- ✅ CI/CD pipeline setup
-
-### 📅 Phase 2: Enhancement (In Progress 🚧)
-
-- 🚧 Mobile responsive design improvements
-- 🚧 Advanced analytics and reporting
-- 🚧 Email notification system
-- 🚧 Export functionality (PDF, CSV)
-- 🚧 Dark mode implementation
-- 🚧 Performance optimizations
-
-### 📅 Phase 3: Advanced Features (Planned 📋)
-
-- 📋 Mobile application (React Native)
-- 📋 Real-time collaboration features
-- 📋 AI-powered insights and recommendations
-- 📋 Third-party integrations (bank APIs, fitness trackers)
-- 📋 Advanced security features (2FA, biometric auth)
-- 📋 Multi-language support
-
-### 📅 Phase 4: Scale & Optimize (Future 🔮)
-
-- 🔮 Microservices architecture
-- 🔮 Advanced caching strategies
-- 🔮 Machine learning recommendations
-- 🔮 Enterprise features
-- 🔮 API monetization
-- 🔮 White-label solutions
-
----
-
-## 📄 License & Legal
-
-### 📜 MIT License
-
-```
-MIT License
-
-Copyright (c) 2024 Progress Pulse
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-```
-
----
-
-## 👥 Team & Acknowledgments
-
-### 💼 Development Team
-
-<table>
-<tr>
-<td align="center">
-<img src="https://github.com/your-username.png" width="100px;" alt=""/><br />
-<b>Lead Developer</b><br />
-<a href="https://github.com/your-username">@your-username</a>
-</td>
-<td align="center">
-<img src="https://github.com/designer-username.png" width="100px;" alt=""/><br />
-<b>UI/UX Designer</b><br />
-<a href="https://github.com/designer-username">@designer</a>
-</td>
-<td align="center">
-<img src="https://github.com/devops-username.png" width="100px;" alt=""/><br />
-<b>DevOps Engineer</b><br />
-<a href="https://github.com/devops-username">@devops</a>
-</td>
-</tr>
-</table>
-
-### 🙏 Special Thanks & Acknowledgments
-
-- **Open Source Community** for incredible tools and libraries
-- **MERN Stack Contributors** for robust development frameworks
-- **Docker Team** for containerization excellence
-- **Modern Web Technologies** that make development enjoyable
-- **All Contributors** who helped improve Progress Pulse
-- **Beta Testers** for valuable feedback and bug reports
-
-### 🏆 Technology Credits
-
-- **⚛️ React Team** - For the amazing frontend framework
-- **🟢 Node.js Foundation** - For the powerful runtime environment
-- **🍃 MongoDB Team** - For the flexible database solution
-- **🐳 Docker Inc** - For containerization technology
-- **🎨 Tailwind CSS** - For the utility-first CSS framework
-- **📊 Chart.js & ApexCharts** - For beautiful data visualizations
-
----
-
-## 📞 Support & Community
-
-### 🆘 Getting Help & Support
-
-#### 💬 Community Channels
-
-- **💡 GitHub Discussions**: [Join the conversation](https://github.com/your-username/Progress-Pulse/discussions)
-- **🐛 Bug Reports**: [Report issues](https://github.com/your-username/Progress-Pulse/issues)
-- **🚀 Feature Requests**: [Suggest improvements](https://github.com/your-username/Progress-Pulse/issues/new?template=feature_request.md)
-- **📧 Direct Support**: support@progress-pulse.com
-
-#### 📚 Resources & Documentation
-
-- **🔗 Live Demo**: [Try Progress Pulse](https://progress-pulse-demo.com)
-- **📖 Developer Docs**: [API Documentation](https://docs.progress-pulse.com)
-- **🎥 Video Tutorials**: [YouTube Channel](https://youtube.com/progress-pulse)
-- **📝 Blog**: [Latest Updates](https://blog.progress-pulse.com)
-
-#### 🤝 Community Guidelines
-
-- **Be Respectful**: Treat all community members with respect
-- **Stay On Topic**: Keep discussions relevant to Progress Pulse
-- **Help Others**: Share knowledge and help fellow developers
-- **Follow Code of Conduct**: Maintain a positive, inclusive environment
-
-### 📈 Project Statistics
-
-<div align="center">
-
-![GitHub stars](https://img.shields.io/github/stars/your-username/Progress-Pulse?style=social)
-![GitHub forks](https://img.shields.io/github/forks/your-username/Progress-Pulse?style=social)
-![GitHub issues](https://img.shields.io/github/issues/your-username/Progress-Pulse)
-![GitHub pull requests](https://img.shields.io/github/issues-pr/your-username/Progress-Pulse)
-![GitHub license](https://img.shields.io/github/license/your-username/Progress-Pulse)
-![GitHub last commit](https://img.shields.io/github/last-commit/your-username/Progress-Pulse)
-![GitHub contributors](https://img.shields.io/github/contributors/your-username/Progress-Pulse)
-
-</div>
+**Pritam Das** — [@er-pritamdas](https://github.com/er-pritamdas)
 
 ---
 
 <div align="center">
 
-## 🌟 Star History
+**If Progress Pulse helped you stay productive, consider giving it a ⭐!**
 
-[![Star History Chart](https://api.star-history.com/svg?repos=your-username/Progress-Pulse&type=Date)](https://star-history.com/#your-username/Progress-Pulse&Date)
-
----
-
-### 💝 Show Your Support
-
-**If Progress Pulse has helped you become more productive or manage your finances better, please consider:**
-
-⭐ **Starring this repository** to show your appreciation
-🍴 **Forking and contributing** to help improve the project
-📢 **Sharing with friends** who might benefit from Progress Pulse
-☕ **Sponsoring development** to support ongoing improvements
-
----
-
-## 🎉 Thank You!
-
-**Progress Pulse** is made possible by the amazing open source community and contributors who believe in building better productivity tools for everyone.
-
-*Made with ❤️ for developers, by developers*
-
-**Happy tracking! 📊✨**
-
-
-
+Made with ❤️ for personal productivity
 
 </div>

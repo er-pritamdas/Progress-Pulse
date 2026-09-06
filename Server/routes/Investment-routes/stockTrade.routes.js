@@ -36,6 +36,18 @@ import {
   updateRdDeposit,
   deleteRdDeposit,
 } from "../../controllers/Investment-controllers/recurringDeposit.controller.js";
+import {
+  getAllSalaries,
+  createSalary,
+  updateSalary,
+  deleteSalary,
+} from "../../controllers/Investment-controllers/salary.controller.js";
+import {
+  getAllPfWithdrawals,
+  createPfWithdrawal,
+  updatePfWithdrawal,
+  deletePfWithdrawal,
+} from "../../controllers/Investment-controllers/pfWithdrawal.controller.js";
 
 const router = Router();
 
@@ -136,5 +148,27 @@ router
   .route("/rd/:id/transactions/:txnId")
   .put(updateRdDeposit)
   .delete(deleteRdDeposit);
+
+// Salary routes
+router
+  .route("/salary")
+  .get(getAllSalaries)
+  .post(createSalary);
+
+router
+  .route("/salary/:id")
+  .put(updateSalary)
+  .delete(deleteSalary);
+
+// Provident Fund (PF) Withdrawal routes
+router
+  .route("/pf/withdrawals")
+  .get(getAllPfWithdrawals)
+  .post(createPfWithdrawal);
+
+router
+  .route("/pf/withdrawals/:id")
+  .put(updatePfWithdrawal)
+  .delete(deletePfWithdrawal);
 
 export default router;

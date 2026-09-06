@@ -22,6 +22,7 @@ import {
   Briefcase,
   Table,
   Edit,
+  Wallet,
   Trash2,
   ChevronDown,
   ArrowUp,
@@ -67,6 +68,8 @@ import OrganizeRdGroupsModal from "../../../components/Dashboard/Investment/Orga
 import RecurringDepositCard from "../../../components/Dashboard/Investment/RecurringDepositCard";
 import AddRdDepositModal from "../../../components/Dashboard/Investment/AddRdDepositModal";
 import RecurringDepositTableModal from "../../../components/Dashboard/Investment/RecurringDepositTableModal";
+import AddSalaryModal from "../../../components/Dashboard/Investment/AddSalaryModal";
+import AddPfWithdrawalModal from "../../../components/Dashboard/Investment/AddPfWithdrawalModal";
 import axiosInstance from "../../../Context/AxiosInstance";
 import { formatDateDDMMMYYYY } from "../../../components/Dashboard/DatePicker";
 
@@ -122,7 +125,7 @@ export default function InvTableEntry() {
   // ----------------------------------------------------------------------
   // State Definitions
   // ----------------------------------------------------------------------
-  const [activeTab, setActiveTab] = useState("stocks"); // "stocks" | "mf" | "ef" | "fd" | "rd" | "pf"
+  const [activeTab, setActiveTab] = useState("stocks"); // "stocks" | "mf" | "ef" | "fd" | "rd" | "pf" | "salary"
   const [stocksTypeFilter, setStocksTypeFilter] = useState("all"); // "all" | "delivery" | "intraday"
   const [statusFilter, setStatusFilter] = useState("all"); // "all" | "holding" | "sold"
   const [sortBy, setSortBy] = useState("default"); // colId or "default"
@@ -133,6 +136,34 @@ export default function InvTableEntry() {
   const [columnFilters, setColumnFilters] = useState({}); // per-column filters
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+
+  // Salary State
+  const [salaryData, setSalaryData] = useState([]);
+  const [loadingSalary, setLoadingSalary] = useState(false);
+  const [salarySearchTerm, setSalarySearchTerm] = useState("");
+  const [salaryCompanyFilter, setSalaryCompanyFilter] = useState("all");
+  const [salaryYearFilter, setSalaryYearFilter] = useState("all");
+  const [isAddSalaryModalOpen, setIsAddSalaryModalOpen] = useState(false);
+  const [editingSalary, setEditingSalary] = useState(null);
+  const [salaryTableViewMode, setSalaryTableViewMode] = useState(() => {
+    return localStorage.getItem("pulse_salary_table_view_mode") || "detailed";
+  });
+  const [salaryBreakdownModal, setSalaryBreakdownModal] = useState(null);
+
+  const handleSalaryViewChange = (mode) => {
+    setSalaryTableViewMode(mode);
+    localStorage.setItem("pulse_salary_table_view_mode", mode);
+  };
+
+  // PF State (Synced from Salary + Withdrawals)
+  const [pfSearchTerm, setPfSearchTerm] = useState("");
+  const [pfCompanyFilter, setPfCompanyFilter] = useState("all");
+  const [pfYearFilter, setPfYearFilter] = useState("all");
+  const [pfSubTab, setPfSubTab] = useState("deposits"); // "deposits" | "withdrawals"
+  const [pfWithdrawals, setPfWithdrawals] = useState([]);
+  const [loadingPfWithdrawals, setLoadingPfWithdrawals] = useState(false);
+  const [isAddPfWithdrawalModalOpen, setIsAddPfWithdrawalModalOpen] = useState(false);
+  const [editingPfWithdrawal, setEditingPfWithdrawal] = useState(null);
 
   // Table View Modal Popup state
   const [isTableModalOpen, setIsTableModalOpen] = useState(false);
@@ -1426,6 +1457,20 @@ export default function InvTableEntry() {
     }
   };
 
+  const fetchSalaries = async () => {
+    try {
+      setLoadingSalary(true);
+      const res = await axiosInstance.get("/v1/dashboard/investment/salary");
+      if (res.data && res.data.success) {
+        setSalaryData(res.data.data || []);
+      }
+    } catch (error) {
+      console.error("Error fetching salaries:", error);
+    } finally {
+      setLoadingSalary(false);
+    }
+  };
+
   React.useEffect(() => {
     fetchStockTrades();
     fetchMutualFunds();
@@ -1434,7 +1479,120 @@ export default function InvTableEntry() {
     fetchFixedDepositGroups();
     fetchRecurringDeposits();
     fetchRecurringDepositGroups();
+    fetchSalaries();
+    fetchPfWithdrawals();
   }, []);
+
+  const handleOpenAddSalaryModal = () => {
+    setEditingSalary(null);
+    setIsAddSalaryModalOpen(true);
+  };
+
+  const handleEditSalary = (item) => {
+    setEditingSalary(item);
+    setIsAddSalaryModalOpen(true);
+  };
+
+  const handleSaveSalary = async (payload) => {
+    try {
+      if (editingSalary) {
+        const id = editingSalary.id || editingSalary._id;
+        const res = await axiosInstance.put(
+          `/v1/dashboard/investment/salary/${id}`,
+          payload
+        );
+        if (res.data && res.data.success) {
+          const updatedItem = {
+            ...res.data.data,
+            id: res.data.data.id || res.data.data._id,
+          };
+          setSalaryData((prev) =>
+            prev.map((s) => ((s.id || s._id) === id ? updatedItem : s))
+          );
+        }
+      } else {
+        const res = await axiosInstance.post(
+          "/v1/dashboard/investment/salary",
+          payload
+        );
+        if (res.data && res.data.success) {
+          const newItem = {
+            ...res.data.data,
+            id: res.data.data.id || res.data.data._id,
+          };
+          setSalaryData((prev) => [newItem, ...prev]);
+        }
+      }
+    } catch (error) {
+      console.error("Error saving salary:", error);
+      throw error;
+    }
+  };
+
+  const handleDeleteSalary = async (salaryId) => {
+    if (!window.confirm("Are you sure you want to delete this Salary entry?")) return;
+    try {
+      const res = await axiosInstance.delete(`/v1/dashboard/investment/salary/${salaryId}`);
+      if (res.data && res.data.success) {
+        setSalaryData((prev) => prev.filter((s) => (s.id || s._id) !== salaryId));
+      }
+    } catch (error) {
+      console.error("Error deleting salary entry:", error);
+      alert("Failed to delete salary: " + (error.response?.data?.message || error.message));
+    }
+  };
+
+  const fetchPfWithdrawals = async () => {
+    try {
+      setLoadingPfWithdrawals(true);
+      const res = await axiosInstance.get("/v1/dashboard/investment/pf/withdrawals");
+      if (res.data && res.data.success) {
+        setPfWithdrawals(res.data.data || []);
+      }
+    } catch (error) {
+      console.error("Error fetching PF withdrawals:", error);
+    } finally {
+      setLoadingPfWithdrawals(false);
+    }
+  };
+
+  const handleSavePfWithdrawal = async (payload, isEdit) => {
+    const editId = payload.id || payload._id;
+    if (isEdit && editId) {
+      const res = await axiosInstance.put(
+        `/v1/dashboard/investment/pf/withdrawals/${editId}`,
+        payload
+      );
+      if (res.data && res.data.success) {
+        setPfWithdrawals((prev) =>
+          prev.map((w) => ((w.id || w._id) === editId ? res.data.data : w))
+        );
+      }
+    } else {
+      const res = await axiosInstance.post(
+        "/v1/dashboard/investment/pf/withdrawals",
+        payload
+      );
+      if (res.data && res.data.success) {
+        setPfWithdrawals((prev) => [res.data.data, ...prev]);
+      }
+    }
+    fetchPfWithdrawals();
+  };
+
+  const handleDeletePfWithdrawal = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this PF withdrawal record?")) return;
+    try {
+      const res = await axiosInstance.delete(`/v1/dashboard/investment/pf/withdrawals/${id}`);
+      if (res.data && res.data.success) {
+        setPfWithdrawals((prev) => prev.filter((w) => (w.id || w._id) !== id));
+      }
+      fetchPfWithdrawals();
+    } catch (error) {
+      console.error("Error deleting PF withdrawal:", error);
+      alert("Failed to delete PF withdrawal.");
+    }
+  };
 
   const handleOpenAddFdModal = () => {
     setEditingFd(null);
@@ -1917,10 +2075,229 @@ export default function InvTableEntry() {
       label: "PF (Provident Fund)",
       subLabel: "EPF & PPF Retirement Funds",
       icon: Percent,
-      badge: "Tax Exempt EEE",
+      badge: `${salaryData.length} Records`,
       badgeColor: "badge-success",
     },
+    {
+      id: "salary",
+      label: "Salary",
+      subLabel: "Monthly Compensation & Payslips",
+      icon: Briefcase,
+      badge: `${salaryData.length} Records`,
+      badgeColor: "badge-accent",
+    },
   ];
+
+  // Filtered Salaries
+  const filteredSalaries = useMemo(() => {
+    return salaryData.filter((item) => {
+      // Search term: company, month
+      if (salarySearchTerm) {
+        const q = salarySearchTerm.toLowerCase();
+        const monthText = dayjs(item.month).format("MMMM YYYY").toLowerCase();
+        const comp = (item.company || "").toLowerCase();
+        if (!comp.includes(q) && !monthText.includes(q) && !item.month.includes(q)) {
+          return false;
+        }
+      }
+      // Company filter
+      if (salaryCompanyFilter !== "all") {
+        if (item.company !== salaryCompanyFilter) return false;
+      }
+      // Year filter
+      if (salaryYearFilter !== "all") {
+        const itemYear = item.month?.slice(0, 4);
+        if (itemYear !== salaryYearFilter) return false;
+      }
+      return true;
+    });
+  }, [salaryData, salarySearchTerm, salaryCompanyFilter, salaryYearFilter]);
+
+  // Unique companies and years for filter dropdowns
+  const salaryCompanies = useMemo(() => {
+    return Array.from(new Set(salaryData.map((s) => s.company).filter(Boolean)));
+  }, [salaryData]);
+
+  const salaryYears = useMemo(() => {
+    return Array.from(
+      new Set(salaryData.map((s) => s.month?.slice(0, 4)).filter(Boolean))
+    ).sort((a, b) => b.localeCompare(a));
+  }, [salaryData]);
+
+  // Latest salary entry for prefilling next month when adding new records
+  const latestSalaryEntry = useMemo(() => {
+    if (!salaryData || salaryData.length === 0) return null;
+    const sorted = [...salaryData].sort((a, b) => {
+      const monthA = a.month || "";
+      const monthB = b.month || "";
+      return monthB.localeCompare(monthA);
+    });
+    return sorted[0] || null;
+  }, [salaryData]);
+
+  // Summary stats for Salary
+  const salarySummary = useMemo(() => {
+    let totalInHand = 0;
+    let totalGross = 0;
+    let totalBasic = 0;
+    let totalHra = 0;
+    let totalFlexi = 0;
+    let totalBonus = 0;
+    let totalErPf = 0;
+    let totalTaxes = 0;
+    let totalGratuity = 0;
+    let totalVarPay = 0;
+    let totalCtc = 0;
+
+    filteredSalaries.forEach((s) => {
+      const basic = Number(s.basicSalary) || 0;
+      const hra = Number(s.hra) || 0;
+      const flexi = Number(s.flexi) || 0;
+      const bonus = Number(s.bonus) || 0;
+      const erPf = Number(s.erPf) || 0;
+      const taxes = Number(s.taxes) || 0;
+      const gratuity = Number(s.gratuity) || 0;
+      const variablePay = Number(s.variablePay) || 0;
+      const gross = Number(s.gross) || (basic + hra + flexi + bonus);
+      const rowEarnings = gross + gratuity + variablePay;
+      const inHand = Number(s.inHand) || (gross - (erPf + taxes));
+      const ctc = Number(s.ctc) || (rowEarnings + erPf);
+
+      totalInHand += inHand;
+      totalGross += gross;
+      totalBasic += basic;
+      totalHra += hra;
+      totalFlexi += flexi;
+      totalBonus += bonus;
+      totalErPf += erPf;
+      totalTaxes += taxes;
+      totalGratuity += gratuity;
+      totalVarPay += variablePay;
+      totalCtc += ctc;
+    });
+
+    const totalEarnings = totalGross + totalGratuity + totalVarPay;
+    const count = filteredSalaries.length;
+    const avgInHand = count > 0 ? Math.round(totalInHand / count) : 0;
+    const avgGross = count > 0 ? Math.round(totalGross / count) : 0;
+    const avgEarnings = count > 0 ? Math.round(totalEarnings / count) : 0;
+
+    // Experience calculation (in Years and Months, e.g. "2 Years 3 Months")
+    const uniqueMonths = new Set(
+      filteredSalaries.map((s) => s.month).filter(Boolean)
+    ).size;
+    const totalMonths = uniqueMonths || count;
+    const expYears = Math.floor(totalMonths / 12);
+    const expMonths = totalMonths % 12;
+
+    let experienceText = "0 Months";
+    if (expYears > 0 && expMonths > 0) {
+      experienceText = `${expYears} ${expYears === 1 ? "Year" : "Years"} ${expMonths} ${expMonths === 1 ? "Month" : "Months"}`;
+    } else if (expYears > 0) {
+      experienceText = `${expYears} ${expYears === 1 ? "Year" : "Years"}`;
+    } else if (expMonths > 0) {
+      experienceText = `${expMonths} ${expMonths === 1 ? "Month" : "Months"}`;
+    }
+
+    return {
+      totalInHand,
+      totalGross,
+      totalBasic,
+      totalHra,
+      totalFlexi,
+      totalBonus,
+      totalErPf,
+      totalTaxes,
+      totalGratuity,
+      totalVarPay,
+      totalEarnings,
+      totalCtc,
+      avgInHand,
+      avgGross,
+      avgEarnings,
+      count,
+      totalMonths,
+      expYears,
+      expMonths,
+      experienceText,
+    };
+  }, [filteredSalaries]);
+
+  // Filtered PF records derived directly from salaryData (auto-synced)
+  const filteredPf = useMemo(() => {
+    return salaryData.filter((item) => {
+      // Search term: company, month
+      if (pfSearchTerm) {
+        const q = pfSearchTerm.toLowerCase();
+        const monthText = dayjs(item.month).format("MMMM YYYY").toLowerCase();
+        const comp = (item.company || "").toLowerCase();
+        if (!comp.includes(q) && !monthText.includes(q) && !item.month.includes(q)) {
+          return false;
+        }
+      }
+      // Company filter
+      if (pfCompanyFilter !== "all") {
+        if (item.company !== pfCompanyFilter) return false;
+      }
+      // Year filter
+      if (pfYearFilter !== "all") {
+        const itemYear = item.month?.slice(0, 4);
+        if (itemYear !== pfYearFilter) return false;
+      }
+      return true;
+    });
+  }, [salaryData, pfSearchTerm, pfCompanyFilter, pfYearFilter]);
+
+  // Summary stats for PF
+  const pfSummary = useMemo(() => {
+    let totalEmployerShare = 0;
+    let totalEmployeeShare = 0;
+    let grandTotal = 0;
+
+    filteredPf.forEach((item) => {
+      const er = Number(item.erPf) || 0;
+      const ee =
+        item.eePf !== undefined && item.eePf !== null && item.eePf !== ""
+          ? Number(item.eePf) || 0
+          : er;
+      const total = er + ee;
+
+      totalEmployerShare += er;
+      totalEmployeeShare += ee;
+      grandTotal += total;
+    });
+
+    return {
+      totalEmployerShare,
+      totalEmployeeShare,
+      grandTotal,
+      count: filteredPf.length,
+    };
+  }, [filteredPf]);
+
+  // Total PF Withdrawn & Available PF Balance
+  const totalPfWithdrawn = useMemo(() => {
+    return pfWithdrawals.reduce(
+      (sum, item) => sum + (Number(item.amount) || 0),
+      0
+    );
+  }, [pfWithdrawals]);
+
+  const filteredPfWithdrawals = useMemo(() => {
+    if (!pfSearchTerm.trim()) return pfWithdrawals;
+    const term = pfSearchTerm.toLowerCase();
+    return pfWithdrawals.filter((item) => {
+      const reasonMatch = (item.reason || "").toLowerCase().includes(term);
+      const notesMatch = (item.notes || "").toLowerCase().includes(term);
+      const dateMatch = dayjs(item.date).format("DD MMMM YYYY").toLowerCase().includes(term);
+      const amountMatch = String(item.amount || "").includes(term);
+      return reasonMatch || notesMatch || dateMatch || amountMatch;
+    });
+  }, [pfWithdrawals, pfSearchTerm]);
+
+  const availablePfBalance = useMemo(() => {
+    return Math.max(0, pfSummary.grandTotal - totalPfWithdrawn);
+  }, [pfSummary.grandTotal, totalPfWithdrawn]);
 
   // Helper to extract raw value for sorting/filtering per column
   const getColumnValue = (stock, colId) => {
@@ -2732,7 +3109,499 @@ export default function InvTableEntry() {
               <span>Add Recurring Deposit Entry</span>
             </button>
           )}
+
+          {activeTab === "salary" && (
+            <button
+              type="button"
+              className="btn btn-primary btn-sm rounded-xl gap-2 font-medium shadow-md shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all cursor-pointer shrink-0"
+              onClick={handleOpenAddSalaryModal}
+            >
+              <Plus size={16} />
+              <span>Add Salary Entry</span>
+            </button>
+          )}
+
+          {activeTab === "pf" && (
+            <div className="flex items-center gap-2">
+              <div className="badge badge-success badge-soft gap-1.5 py-2 px-3 text-xs font-semibold rounded-xl">
+                <span className="w-2 h-2 rounded-full bg-success animate-pulse"></span>
+                Auto-synced with Salary
+              </div>
+              <button
+                type="button"
+                className="btn btn-primary btn-sm rounded-xl gap-2 font-medium shadow-md shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all cursor-pointer shrink-0"
+                onClick={handleOpenAddSalaryModal}
+                title="Add salary entry to sync new PF records"
+              >
+                <Plus size={16} />
+                <span>Add Monthly Salary</span>
+              </button>
+            </div>
+          )}
         </div>
+
+        {/* Single-Line Controls & Filters Bar for Salary */}
+        {activeTab === "salary" && (
+          <div className="bg-base-100/80 backdrop-blur-md p-2.5 rounded-2xl border border-base-200/70 shadow-sm overflow-visible">
+            <div className="flex flex-wrap lg:flex-nowrap items-center justify-between gap-2.5 w-full">
+              {/* Left Side: Search Bar */}
+              <div className="relative flex-1 min-w-[200px] max-w-sm">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-base-content/40" />
+                <input
+                  type="text"
+                  value={salarySearchTerm}
+                  onChange={(e) => setSalarySearchTerm(e.target.value)}
+                  placeholder="Search salary records by Company, Month..."
+                  className="input input-xs h-8 pl-9 pr-8 w-full rounded-xl bg-base-200/60 border border-base-300/60 focus:border-primary text-xs"
+                />
+                {salarySearchTerm && (
+                  <button
+                    type="button"
+                    onClick={() => setSalarySearchTerm("")}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-base-content/40 hover:text-base-content cursor-pointer"
+                  >
+                    <X size={12} />
+                  </button>
+                )}
+              </div>
+
+              {/* Right Side: Filters */}
+              <div className="flex items-center gap-2 flex-wrap shrink-0">
+                {/* View Switcher: Detailed vs Earnings & Deductions */}
+                <div className="flex items-center gap-1 bg-base-200 p-1 rounded-xl shrink-0 text-xs font-bold border border-base-300/60">
+                  <button
+                    type="button"
+                    onClick={() => handleSalaryViewChange("detailed")}
+                    className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+                      salaryTableViewMode === "detailed"
+                        ? "bg-base-100 text-primary shadow-sm font-black"
+                        : "text-base-content/70 hover:text-base-content"
+                    }`}
+                    title="Detailed View (All columns)"
+                  >
+                    <Columns3 size={13} />
+                    <span>Detailed</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSalaryViewChange("summary")}
+                    className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+                      salaryTableViewMode === "summary"
+                        ? "bg-base-100 text-primary shadow-sm font-black"
+                        : "text-base-content/70 hover:text-base-content"
+                    }`}
+                    title="Earnings & Deductions View"
+                  >
+                    <Columns2 size={13} />
+                    <span>Earnings & Deductions</span>
+                  </button>
+                </div>
+
+                {/* Filter by Company Dropdown */}
+                <div className="dropdown dropdown-bottom dropdown-end">
+                  <div
+                    tabIndex={0}
+                    role="button"
+                    className="btn btn-ghost btn-xs h-8 px-3 text-xs font-bold bg-base-100 border border-base-300 rounded-xl flex items-center gap-2 shadow-xs hover:bg-base-200/70 cursor-pointer min-w-max"
+                  >
+                    <Building2 size={13} className="text-primary shrink-0" />
+                    <span className="text-base-content/60 font-medium">Company:</span>
+                    <span className="text-primary font-bold whitespace-nowrap">
+                      {salaryCompanyFilter === "all" ? "All" : salaryCompanyFilter}
+                    </span>
+                    <ChevronDown size={13} className="opacity-60 shrink-0" />
+                  </div>
+                  <ul
+                    tabIndex={0}
+                    className="dropdown-content menu p-1.5 shadow-2xl bg-base-100/95 backdrop-blur-md rounded-2xl min-w-full w-max z-[100] mt-1.5 border border-base-300/50"
+                  >
+                    <li className="menu-title text-[10px] font-extrabold text-base-content/50 uppercase tracking-wider px-2 py-1">
+                      Filter Company
+                    </li>
+                    <li>
+                      <button
+                        type="button"
+                        className={`flex items-center justify-between gap-4 py-2 px-3 rounded-xl text-xs transition-all ${
+                          salaryCompanyFilter === "all"
+                            ? "bg-primary text-primary-content font-bold shadow-md"
+                            : "hover:bg-base-200"
+                        }`}
+                        onClick={() => {
+                          setSalaryCompanyFilter("all");
+                          if (document.activeElement instanceof HTMLElement) {
+                            document.activeElement.blur();
+                          }
+                        }}
+                      >
+                        <span className="whitespace-nowrap font-medium">All Companies</span>
+                        <span className="badge badge-xs badge-ghost text-[10px] opacity-70">
+                          {salaryCompanies.length}
+                        </span>
+                      </button>
+                    </li>
+                    {salaryCompanies.map((c) => (
+                      <li key={c}>
+                        <button
+                          type="button"
+                          className={`flex items-center justify-between gap-4 py-2 px-3 rounded-xl text-xs transition-all ${
+                            salaryCompanyFilter === c
+                              ? "bg-primary text-primary-content font-bold shadow-md"
+                              : "hover:bg-base-200"
+                          }`}
+                          onClick={() => {
+                            setSalaryCompanyFilter(c);
+                            if (document.activeElement instanceof HTMLElement) {
+                              document.activeElement.blur();
+                            }
+                          }}
+                        >
+                          <span className="whitespace-nowrap font-medium">{c}</span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                {/* Filter by Year Dropdown */}
+                <div className="dropdown dropdown-bottom dropdown-end">
+                  <div
+                    tabIndex={0}
+                    role="button"
+                    className="btn btn-ghost btn-xs h-8 px-3 text-xs font-bold bg-base-100 border border-base-300 rounded-xl flex items-center gap-1.5 shadow-xs hover:bg-base-200/70 cursor-pointer"
+                  >
+                    <Calendar size={13} className="text-primary shrink-0" />
+                    <span className="text-base-content/60 font-medium">Year:</span>
+                    <span className="text-primary font-mono">
+                      {salaryYearFilter === "all" ? "All" : salaryYearFilter}
+                    </span>
+                    <ChevronDown size={13} className="opacity-60 shrink-0" />
+                  </div>
+                  <ul
+                    tabIndex={0}
+                    className="dropdown-content menu p-1.5 shadow-2xl bg-base-100/95 backdrop-blur-md rounded-2xl w-40 z-[100] mt-1.5 border border-base-300/50 max-h-60 overflow-y-auto"
+                  >
+                    <li className="menu-title text-[10px] font-extrabold text-base-content/50 uppercase tracking-wider px-2 py-1">
+                      Filter Year
+                    </li>
+                    <li>
+                      <button
+                        type="button"
+                        className={`flex items-center justify-between py-1.5 px-2.5 rounded-xl text-xs transition-all ${
+                          salaryYearFilter === "all"
+                            ? "bg-primary text-primary-content font-bold shadow-md"
+                            : "hover:bg-base-200"
+                        }`}
+                        onClick={() => {
+                          setSalaryYearFilter("all");
+                          if (document.activeElement instanceof HTMLElement) {
+                            document.activeElement.blur();
+                          }
+                        }}
+                      >
+                        <span>All Years</span>
+                        <span className="badge badge-xs badge-ghost text-[10px] opacity-70">
+                          {salaryYears.length}
+                        </span>
+                      </button>
+                    </li>
+                    {salaryYears.map((y) => (
+                      <li key={y}>
+                        <button
+                          type="button"
+                          className={`flex items-center justify-between py-1.5 px-2.5 rounded-xl text-xs transition-all ${
+                            salaryYearFilter === y
+                              ? "bg-primary text-primary-content font-bold shadow-md"
+                              : "hover:bg-base-200"
+                          }`}
+                          onClick={() => {
+                            setSalaryYearFilter(y);
+                            if (document.activeElement instanceof HTMLElement) {
+                              document.activeElement.blur();
+                            }
+                          }}
+                        >
+                          <span className="font-mono">{y}</span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                {/* Reset Filters button if any filter applied */}
+                {(salarySearchTerm || salaryCompanyFilter !== "all" || salaryYearFilter !== "all") && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSalarySearchTerm("");
+                      setSalaryCompanyFilter("all");
+                      setSalaryYearFilter("all");
+                    }}
+                    className="btn btn-xs h-8 px-2.5 btn-ghost text-primary font-bold hover:bg-primary/10 rounded-xl cursor-pointer shrink-0"
+                    title="Reset all filters"
+                  >
+                    Reset
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Single-Line Controls & Filters Bar for PF */}
+        {activeTab === "pf" && (
+          <div className="bg-base-100/80 backdrop-blur-md p-2.5 rounded-2xl border border-base-200/70 shadow-sm overflow-visible">
+            <div className="flex flex-wrap lg:flex-nowrap items-center justify-between gap-2.5 w-full">
+              {/* Left Side: Search Bar */}
+              <div className="relative flex-1 min-w-[200px] max-w-sm">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-base-content/40" />
+                <input
+                  type="text"
+                  value={pfSearchTerm}
+                  onChange={(e) => setPfSearchTerm(e.target.value)}
+                  placeholder={
+                    pfSubTab === "deposits"
+                      ? "Search PF records by Company, Month..."
+                      : "Search withdrawals by Reason, Date, Notes..."
+                  }
+                  className="input input-xs h-8 pl-9 pr-8 w-full rounded-xl bg-base-200/60 border border-base-300/60 focus:border-primary text-xs"
+                />
+                {pfSearchTerm && (
+                  <button
+                    type="button"
+                    onClick={() => setPfSearchTerm("")}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-base-content/40 hover:text-base-content cursor-pointer"
+                  >
+                    <X size={12} />
+                  </button>
+                )}
+              </div>
+
+              {/* Right Side: Sub-Tabs Switcher & Filters */}
+              <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                {/* Deposited & Withdrawal Sub-Tabs Switcher */}
+                <div className="flex items-center gap-1 bg-base-200 p-1 rounded-xl shrink-0 text-xs font-bold border border-base-300/60">
+                  <button
+                    type="button"
+                    onClick={() => setPfSubTab("deposits")}
+                    className={`px-3 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+                      pfSubTab === "deposits"
+                        ? "bg-base-100 text-primary shadow-sm font-black"
+                        : "text-base-content/70 hover:text-base-content"
+                    }`}
+                    title="Deposited PF Contributions"
+                  >
+                    <Percent size={13} />
+                    <span>Deposited</span>
+                    <span
+                      className={`badge badge-xs px-1 py-0.5 rounded-md font-mono text-[10px] ${
+                        pfSubTab === "deposits"
+                          ? "badge-primary text-primary-content font-bold"
+                          : "badge-ghost opacity-70"
+                      }`}
+                    >
+                      {salaryData.length}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setPfSubTab("withdrawals")}
+                    className={`px-3 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+                      pfSubTab === "withdrawals"
+                        ? "bg-base-100 text-primary shadow-sm font-black"
+                        : "text-base-content/70 hover:text-base-content"
+                    }`}
+                    title="PF Withdrawals"
+                  >
+                    <ArrowUpRight size={13} />
+                    <span>Withdrawal</span>
+                    <span
+                      className={`badge badge-xs px-1 py-0.5 rounded-md font-mono text-[10px] ${
+                        pfSubTab === "withdrawals"
+                          ? "badge-primary text-primary-content font-bold"
+                          : "badge-ghost opacity-70"
+                      }`}
+                    >
+                      {pfWithdrawals.length}
+                    </span>
+                  </button>
+                </div>
+
+                {/* Filters for Deposited Tab */}
+                {pfSubTab === "deposits" && (
+                  <>
+                    {/* Filter by Company */}
+                    <div className="dropdown dropdown-bottom dropdown-end">
+                      <div
+                        tabIndex={0}
+                        role="button"
+                        className="btn btn-ghost btn-xs h-8 px-3 text-xs font-bold bg-base-100 border border-base-300 rounded-xl flex items-center gap-2 shadow-xs hover:bg-base-200/70 cursor-pointer min-w-max"
+                      >
+                        <Building2 size={13} className="text-primary shrink-0" />
+                        <span className="text-base-content/60 font-medium">Company:</span>
+                        <span className="text-primary font-bold whitespace-nowrap">
+                          {pfCompanyFilter === "all" ? "All" : pfCompanyFilter}
+                        </span>
+                        <ChevronDown size={13} className="opacity-60 shrink-0" />
+                      </div>
+                      <ul
+                        tabIndex={0}
+                        className="dropdown-content menu p-1.5 shadow-2xl bg-base-100/95 backdrop-blur-md rounded-2xl min-w-full w-max z-[100] mt-1.5 border border-base-300/50"
+                      >
+                        <li className="menu-title text-[10px] font-extrabold text-base-content/50 uppercase tracking-wider px-2 py-1">
+                          Filter Company
+                        </li>
+                        <li>
+                          <button
+                            type="button"
+                            className={`flex items-center justify-between gap-4 py-2 px-3 rounded-xl text-xs transition-all ${
+                              pfCompanyFilter === "all"
+                                ? "bg-primary text-primary-content font-bold shadow-md"
+                                : "hover:bg-base-200"
+                            }`}
+                            onClick={() => {
+                              setPfCompanyFilter("all");
+                              if (document.activeElement instanceof HTMLElement) {
+                                document.activeElement.blur();
+                              }
+                            }}
+                          >
+                            <span className="whitespace-nowrap font-medium">All Companies</span>
+                            <span className="badge badge-xs badge-ghost text-[10px] opacity-70">
+                              {salaryCompanies.length}
+                            </span>
+                          </button>
+                        </li>
+                        {salaryCompanies.map((c) => (
+                          <li key={c}>
+                            <button
+                              type="button"
+                              className={`flex items-center justify-between gap-4 py-2 px-3 rounded-xl text-xs transition-all ${
+                                pfCompanyFilter === c
+                                  ? "bg-primary text-primary-content font-bold shadow-md"
+                                  : "hover:bg-base-200"
+                              }`}
+                              onClick={() => {
+                                setPfCompanyFilter(c);
+                                if (document.activeElement instanceof HTMLElement) {
+                                  document.activeElement.blur();
+                                }
+                              }}
+                            >
+                              <span className="whitespace-nowrap font-medium">{c}</span>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    {/* Filter by Year */}
+                    <div className="dropdown dropdown-bottom dropdown-end">
+                      <div
+                        tabIndex={0}
+                        role="button"
+                        className="btn btn-ghost btn-xs h-8 px-3 text-xs font-bold bg-base-100 border border-base-300 rounded-xl flex items-center gap-1.5 shadow-xs hover:bg-base-200/70 cursor-pointer"
+                      >
+                        <Calendar size={13} className="text-primary shrink-0" />
+                        <span className="text-base-content/60 font-medium">Year:</span>
+                        <span className="text-primary font-mono">
+                          {pfYearFilter === "all" ? "All" : pfYearFilter}
+                        </span>
+                        <ChevronDown size={13} className="opacity-60 shrink-0" />
+                      </div>
+                      <ul
+                        tabIndex={0}
+                        className="dropdown-content menu p-1.5 shadow-2xl bg-base-100/95 backdrop-blur-md rounded-2xl w-40 z-[100] mt-1.5 border border-base-300/50 max-h-60 overflow-y-auto"
+                      >
+                        <li className="menu-title text-[10px] font-extrabold text-base-content/50 uppercase tracking-wider px-2 py-1">
+                          Filter Year
+                        </li>
+                        <li>
+                          <button
+                            type="button"
+                            className={`flex items-center justify-between py-1.5 px-2.5 rounded-xl text-xs transition-all ${
+                              pfYearFilter === "all"
+                                ? "bg-primary text-primary-content font-bold shadow-md"
+                                : "hover:bg-base-200"
+                            }`}
+                            onClick={() => {
+                              setPfYearFilter("all");
+                              if (document.activeElement instanceof HTMLElement) {
+                                document.activeElement.blur();
+                              }
+                            }}
+                          >
+                            <span>All Years</span>
+                            <span className="badge badge-xs badge-ghost text-[10px] opacity-70">
+                              {salaryYears.length}
+                            </span>
+                          </button>
+                        </li>
+                        {salaryYears.map((y) => (
+                          <li key={y}>
+                            <button
+                              type="button"
+                              className={`flex items-center justify-between py-1.5 px-2.5 rounded-xl text-xs transition-all ${
+                                pfYearFilter === y
+                                  ? "bg-primary text-primary-content font-bold shadow-md"
+                                  : "hover:bg-base-200"
+                              }`}
+                              onClick={() => {
+                                setPfYearFilter(y);
+                                if (document.activeElement instanceof HTMLElement) {
+                                  document.activeElement.blur();
+                                }
+                              }}
+                            >
+                              <span className="font-mono">{y}</span>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    {/* Reset Filters button if any filter applied */}
+                    {(pfSearchTerm || pfCompanyFilter !== "all" || pfYearFilter !== "all") && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPfSearchTerm("");
+                          setPfCompanyFilter("all");
+                          setPfYearFilter("all");
+                        }}
+                        className="btn btn-xs h-8 px-2.5 btn-ghost text-primary font-bold hover:bg-primary/10 rounded-xl cursor-pointer shrink-0"
+                        title="Reset all filters"
+                      >
+                        Reset
+                      </button>
+                    )}
+                  </>
+                )}
+
+                {/* Withdraw from PF Button when in Withdrawals Tab */}
+                {pfSubTab === "withdrawals" && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingPfWithdrawal(null);
+                      setIsAddPfWithdrawalModalOpen(true);
+                    }}
+                    disabled={availablePfBalance <= 0}
+                    className="btn btn-xs h-8 px-3 btn-primary rounded-xl gap-1.5 font-bold cursor-pointer shadow-sm disabled:opacity-50"
+                    title={
+                      availablePfBalance <= 0
+                        ? "No balance available to withdraw"
+                        : "Record a PF withdrawal"
+                    }
+                  >
+                    <Plus size={14} />
+                    <span>Withdraw from PF</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Single-Line Controls & Filters Bar for Mutual Funds */}
         {activeTab === "mf" && (
@@ -4035,14 +4904,903 @@ export default function InvTableEntry() {
       )}
 
       {/* ------------------------------------------------------------------ */}
-      {/* OTHER TABS PLACEHOLDERS (Emergency Fund, PF)                       */}
+      {/* SALARY TAB VIEW (activeTab === "salary")                           */}
       {/* ------------------------------------------------------------------ */}
-      {activeTab !== "stocks" && activeTab !== "mf" && activeTab !== "fd" && activeTab !== "rd" && (
+      {activeTab === "salary" && (
+        <div className="space-y-5 animate-in fade-in duration-300">
+          {/* Summary Stat Cards */}
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3.5">
+            <div className="bg-base-100 p-4 rounded-3xl border border-base-200 shadow-sm space-y-1">
+              <span className="text-[11px] font-semibold text-base-content/60 uppercase tracking-wider block">
+                Experience
+              </span>
+              <div className="text-xl font-black text-secondary truncate">
+                {salarySummary.experienceText}
+              </div>
+              <span className="text-[10px] text-base-content/50 block">
+                {salarySummary.totalMonths} {salarySummary.totalMonths === 1 ? "month" : "months"} recorded
+              </span>
+            </div>
+
+            <div className="bg-base-100 p-4 rounded-3xl border border-base-200 shadow-sm space-y-1">
+              <span className="text-[11px] font-semibold text-base-content/60 uppercase tracking-wider block">
+                Total In Hand Received
+              </span>
+              <div className="text-xl font-black text-success truncate">
+                ₹{salarySummary.totalInHand.toLocaleString("en-IN")}
+              </div>
+              <span className="text-[10px] text-base-content/50 block">
+                Across {salarySummary.count} {salarySummary.count === 1 ? "month" : "months"}
+              </span>
+            </div>
+
+            <div className="bg-base-100 p-4 rounded-3xl border border-base-200 shadow-sm space-y-1">
+              <span className="text-[11px] font-semibold text-base-content/60 uppercase tracking-wider block">
+                Total E6r PF
+              </span>
+              <div className="text-xl font-black text-primary truncate">
+                ₹{salarySummary.totalErPf.toLocaleString("en-IN")}
+              </div>
+              <span className="text-[10px] text-base-content/50 block">
+                Employer Provident Fund
+              </span>
+            </div>
+
+            <div className="bg-base-100 p-4 rounded-3xl border border-base-200 shadow-sm space-y-1">
+              <span className="text-[11px] font-semibold text-base-content/60 uppercase tracking-wider block">
+                Total Taxes & Deductions
+              </span>
+              <div className="text-xl font-black text-error truncate">
+                ₹{salarySummary.totalTaxes.toLocaleString("en-IN")}
+              </div>
+              <span className="text-[10px] text-base-content/50 block">
+                Tax + State Tax + Special Allowance
+              </span>
+            </div>
+
+            <div className="bg-base-100 p-4 rounded-3xl border border-base-200 shadow-sm space-y-1">
+              <span className="text-[11px] font-semibold text-base-content/60 uppercase tracking-wider block">
+                Total CTC
+              </span>
+              <div className="text-xl font-black text-info truncate">
+                ₹{salarySummary.totalCtc.toLocaleString("en-IN")}
+              </div>
+              <span className="text-[10px] text-base-content/50 block">
+                Total Earnings + E6r PF
+              </span>
+            </div>
+          </div>
+
+          {/* Salary Table */}
+          {salaryData.length === 0 ? (
+            <div className="bg-base-100 p-12 rounded-3xl border border-base-200 shadow-sm text-center">
+              <div className="max-w-md mx-auto flex flex-col items-center gap-4">
+                <div className="p-4 bg-primary/10 text-primary rounded-3xl">
+                  <Briefcase size={40} />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-base-content">
+                    No Salary Records Yet
+                  </h3>
+                  <p className="text-xs text-base-content/60 mt-1">
+                    Add your monthly salary slips to track basic salary, HRA, flexi allowances, gross earnings, PF deductions, taxes, and in-hand pay.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleOpenAddSalaryModal}
+                  className="btn btn-primary btn-sm rounded-xl gap-2 font-bold px-5 cursor-pointer shadow-md"
+                >
+                  <Plus size={16} />
+                  <span>Add First Salary Entry</span>
+                </button>
+              </div>
+            </div>
+          ) : filteredSalaries.length === 0 ? (
+            <div className="bg-base-100 p-10 rounded-3xl border border-base-200 shadow-sm text-center">
+              <div className="max-w-md mx-auto flex flex-col items-center gap-3">
+                <div className="p-3 bg-primary/10 text-primary rounded-2xl">
+                  <Search size={32} />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-base-content">
+                    No Matching Salary Records Found
+                  </h3>
+                  <p className="text-xs text-base-content/60 mt-1">
+                    No records matched your search query or filters.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSalarySearchTerm("");
+                    setSalaryCompanyFilter("all");
+                    setSalaryYearFilter("all");
+                  }}
+                  className="btn btn-ghost btn-xs text-primary font-bold hover:bg-primary/10 cursor-pointer"
+                >
+                  Clear Filters
+                </button>
+              </div>
+            </div>
+          ) : salaryTableViewMode === "detailed" ? (
+            <div className="bg-base-100 rounded-3xl border border-base-200 shadow-sm overflow-hidden animate-in fade-in duration-200">
+              <div className="overflow-x-auto max-w-full">
+                <table className="table table-sm w-full text-xs border-separate border-spacing-0">
+                  <thead className="bg-base-200 text-base-content/80 text-[11px] font-bold uppercase tracking-wider">
+                    <tr>
+                      <th className="sticky left-0 z-30 bg-base-200 py-3 px-3 text-center w-12 min-w-[48px] max-w-[48px] border-b border-base-300">
+                        #
+                      </th>
+                      <th className="sticky left-[48px] z-30 bg-base-200 py-3 px-3 min-w-[130px] max-w-[130px] border-b border-base-300">
+                        Month
+                      </th>
+                      <th className="sticky left-[178px] z-30 bg-base-200 py-3 px-3 min-w-[200px] max-w-[220px] border-b border-r border-base-300 shadow-[3px_0_5px_-2px_rgba(0,0,0,0.08)] dark:shadow-[3px_0_8px_-2px_rgba(0,0,0,0.4)]">
+                        Company
+                      </th>
+                      <th className="py-3 px-3 text-right min-w-[110px] bg-base-200/80 border-b border-base-300">Basic Salary</th>
+                      <th className="py-3 px-3 text-right min-w-[100px] bg-base-200/80 border-b border-base-300">HRA</th>
+                      <th className="py-3 px-3 text-right min-w-[130px] bg-base-200/80 border-b border-base-300">Flexi / RSA / Extras</th>
+                      <th className="py-3 px-3 text-right min-w-[100px] text-emerald-600 dark:text-emerald-400 bg-base-200/80 border-b border-base-300">Bonus</th>
+                      <th className="py-3 px-3 text-right min-w-[100px] bg-base-200/80 border-b border-base-300">Gratuity</th>
+                      <th className="py-3 px-3 text-right min-w-[105px] bg-base-200/80 border-b border-base-300">Variable Pay</th>
+                      <th className="py-3 px-3 text-right min-w-[130px] bg-primary/10 text-primary font-black border-b border-base-300" title="Basic + HRA + Flexi + Bonus + Gratuity + Variable Pay">
+                        Total Earnings
+                      </th>
+                      <th className="py-3 px-3 text-right min-w-[100px] bg-base-200/80 border-b border-base-300">E6r PF</th>
+                      <th className="py-3 px-3 text-right min-w-[105px] text-error bg-base-200/80 border-b border-base-300" title="Tax + State Tax + Special Allowance">
+                        Tax + Others
+                      </th>
+                      <th className="py-3 px-3 text-right min-w-[120px] bg-success/15 text-success font-black border-b border-base-300">
+                        In Hand
+                      </th>
+                      <th className="py-3 px-3 text-right min-w-[110px] font-black bg-base-200/80 border-b border-base-300" title="Total Earnings + E6r PF">
+                        CTC
+                      </th>
+                      <th className="sticky right-0 z-30 bg-base-200 py-3 px-3 text-center min-w-[80px] max-w-[80px] border-b border-l border-base-300 shadow-[-3px_0_5px_-2px_rgba(0,0,0,0.08)] dark:shadow-[-3px_0_8px_-2px_rgba(0,0,0,0.4)]">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredSalaries.map((item, idx) => {
+                      const basic = Number(item.basicSalary || 0);
+                      const hra = Number(item.hra || 0);
+                      const flexi = Number(item.flexi || 0);
+                      const bonus = Number(item.bonus || 0);
+                      const gratuity = Number(item.gratuity || 0);
+                      const variablePay = Number(item.variablePay || 0);
+                      const gross = Number(item.gross || 0) || (basic + hra + flexi + bonus);
+                      const rowEarnings = gross + gratuity + variablePay;
+                      const erPf = Number(item.erPf || 0);
+                      const taxes = Number(item.taxes || 0);
+                      const inHand = Number(item.inHand || 0) || (gross - (erPf + taxes));
+                      const ctc = Number(item.ctc || 0) || (rowEarnings + erPf);
+
+                      return (
+                        <tr key={item.id || item._id} className="group hover:bg-base-200/40 transition-colors">
+                          <td className="sticky left-0 z-10 bg-base-100 group-hover:bg-base-200 py-3 px-3 text-center font-mono text-base-content/50 w-12 min-w-[48px] max-w-[48px] border-b border-base-200/60 transition-colors">
+                            {idx + 1}
+                          </td>
+                          <td className="sticky left-[48px] z-10 bg-base-100 group-hover:bg-base-200 py-3 px-3 whitespace-nowrap font-bold text-base-content min-w-[130px] max-w-[130px] border-b border-base-200/60 transition-colors">
+                            <div className="flex items-center gap-1.5">
+                              <Calendar size={13} className="text-primary shrink-0" />
+                              <span>{dayjs(item.month).format("MMM YYYY")}</span>
+                            </div>
+                          </td>
+                          <td className="sticky left-[178px] z-10 bg-base-100 group-hover:bg-base-200 py-3 px-3 whitespace-nowrap font-bold text-base-content opacity-100 min-w-[200px] max-w-[220px] border-b border-r border-base-200/80 shadow-[3px_0_5px_-2px_rgba(0,0,0,0.08)] dark:shadow-[3px_0_8px_-2px_rgba(0,0,0,0.4)] transition-colors" style={{ opacity: 1 }}>
+                            <span className="font-bold text-base-content opacity-100" style={{ opacity: 1 }}>
+                              {item.company}
+                            </span>
+                          </td>
+                          <td className="py-3 px-3 text-right font-mono text-base-content/90 whitespace-nowrap border-b border-base-200/60">
+                            ₹{basic.toLocaleString("en-IN")}
+                          </td>
+                          <td className="py-3 px-3 text-right font-mono text-base-content/90 whitespace-nowrap border-b border-base-200/60">
+                            ₹{hra.toLocaleString("en-IN")}
+                          </td>
+                          <td className="py-3 px-3 text-right font-mono text-base-content/90 whitespace-nowrap border-b border-base-200/60">
+                            ₹{flexi.toLocaleString("en-IN")}
+                          </td>
+                          <td className="py-3 px-3 text-right font-mono text-emerald-600 dark:text-emerald-400 font-semibold whitespace-nowrap border-b border-base-200/60">
+                            ₹{bonus.toLocaleString("en-IN")}
+                          </td>
+                          <td className="py-3 px-3 text-right font-mono text-base-content/80 whitespace-nowrap border-b border-base-200/60">
+                            ₹{gratuity.toLocaleString("en-IN")}
+                          </td>
+                          <td className="py-3 px-3 text-right font-mono text-base-content/80 whitespace-nowrap border-b border-base-200/60">
+                            ₹{variablePay.toLocaleString("en-IN")}
+                          </td>
+                          <td className="py-3 px-3 text-right font-mono font-black text-primary bg-primary/5 whitespace-nowrap border-b border-base-200/60">
+                            ₹{rowEarnings.toLocaleString("en-IN")}
+                          </td>
+                          <td className="py-3 px-3 text-right font-mono text-base-content/80 whitespace-nowrap border-b border-base-200/60">
+                            ₹{erPf.toLocaleString("en-IN")}
+                          </td>
+                          <td className="py-3 px-3 text-right font-mono text-error font-medium whitespace-nowrap border-b border-base-200/60 min-w-[105px]">
+                            ₹{taxes.toLocaleString("en-IN")}
+                          </td>
+                          <td className="py-3 px-3 text-right font-mono font-black text-success bg-success/10 whitespace-nowrap border-b border-base-200/60">
+                            ₹{inHand.toLocaleString("en-IN")}
+                          </td>
+                          <td className="py-3 px-3 text-right font-mono font-black text-base-content whitespace-nowrap border-b border-base-200/60">
+                            ₹{ctc.toLocaleString("en-IN")}
+                          </td>
+                          <td className="sticky right-0 z-10 bg-base-100 group-hover:bg-base-200 py-3 px-3 text-center whitespace-nowrap min-w-[80px] max-w-[80px] border-b border-l border-base-200/80 shadow-[-3px_0_5px_-2px_rgba(0,0,0,0.08)] dark:shadow-[-3px_0_8px_-2px_rgba(0,0,0,0.4)] transition-colors">
+                            <div className="flex items-center justify-center gap-1">
+                              <button
+                                type="button"
+                                onClick={() => handleEditSalary(item)}
+                                className="btn btn-ghost btn-xs btn-circle text-base-content/70 hover:text-primary hover:bg-primary/10 cursor-pointer"
+                                title="Edit Salary"
+                              >
+                                <Pencil size={13} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteSalary(item.id || item._id)}
+                                className="btn btn-ghost btn-xs btn-circle text-base-content/70 hover:text-error hover:bg-error/10 cursor-pointer"
+                                title="Delete Salary"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                  {/* Totals Summary Footer */}
+                  <tfoot className="bg-base-200/90 text-xs font-bold">
+                    <tr>
+                      <td colSpan={3} className="sticky left-0 z-20 bg-base-200 py-3 px-3 font-extrabold text-base-content uppercase tracking-wider border-t-2 border-r border-base-300 shadow-[3px_0_5px_-2px_rgba(0,0,0,0.08)] dark:shadow-[3px_0_8px_-2px_rgba(0,0,0,0.4)]">
+                        Totals ({salarySummary.count} {salarySummary.count === 1 ? "Entry" : "Entries"})
+                      </td>
+                      <td className="py-3 px-3 text-right font-mono border-t-2 border-base-300">
+                        ₹{salarySummary.totalBasic.toLocaleString("en-IN")}
+                      </td>
+                      <td className="py-3 px-3 text-right font-mono border-t-2 border-base-300">
+                        ₹{salarySummary.totalHra.toLocaleString("en-IN")}
+                      </td>
+                      <td className="py-3 px-3 text-right font-mono border-t-2 border-base-300">
+                        ₹{salarySummary.totalFlexi.toLocaleString("en-IN")}
+                      </td>
+                      <td className="py-3 px-3 text-right font-mono text-emerald-600 dark:text-emerald-400 font-semibold border-t-2 border-base-300">
+                        ₹{salarySummary.totalBonus.toLocaleString("en-IN")}
+                      </td>
+                      <td className="py-3 px-3 text-right font-mono border-t-2 border-base-300">
+                        ₹{salarySummary.totalGratuity.toLocaleString("en-IN")}
+                      </td>
+                      <td className="py-3 px-3 text-right font-mono border-t-2 border-base-300">
+                        ₹{salarySummary.totalVarPay.toLocaleString("en-IN")}
+                      </td>
+                      <td className="py-3 px-3 text-right font-mono text-primary font-black bg-primary/10 border-t-2 border-base-300">
+                        ₹{salarySummary.totalEarnings.toLocaleString("en-IN")}
+                      </td>
+                      <td className="py-3 px-3 text-right font-mono border-t-2 border-base-300">
+                        ₹{salarySummary.totalErPf.toLocaleString("en-IN")}
+                      </td>
+                      <td className="py-3 px-3 text-right font-mono text-error border-t-2 border-base-300 min-w-[105px]">
+                        ₹{salarySummary.totalTaxes.toLocaleString("en-IN")}
+                      </td>
+                      <td className="py-3 px-3 text-right font-mono text-success font-black bg-success/15 text-sm border-t-2 border-base-300">
+                        ₹{salarySummary.totalInHand.toLocaleString("en-IN")}
+                      </td>
+                      <td className="py-3 px-3 text-right font-mono font-black border-t-2 border-base-300">
+                        ₹{salarySummary.totalCtc.toLocaleString("en-IN")}
+                      </td>
+                      <td className="sticky right-0 z-20 bg-base-200 py-3 px-3 border-t-2 border-l border-base-300 shadow-[-3px_0_5px_-2px_rgba(0,0,0,0.08)] dark:shadow-[-3px_0_8px_-2px_rgba(0,0,0,0.4)]"></td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </div>
+          ) : (
+            /* Earnings & Deductions View Table */
+            <div className="bg-base-100 rounded-3xl border border-base-200 shadow-sm overflow-hidden animate-in fade-in duration-200">
+              <div className="overflow-x-auto max-w-full">
+                <table className="table table-sm w-full text-xs border-separate border-spacing-0">
+                  <thead className="bg-base-200 text-base-content/80 text-[11px] font-bold uppercase tracking-wider">
+                    <tr>
+                      <th className="sticky left-0 z-30 bg-base-200 py-3.5 px-4 text-center w-12 min-w-[48px] max-w-[48px] border-b border-base-300">
+                        #
+                      </th>
+                      <th className="sticky left-[48px] z-30 bg-base-200 py-3.5 px-4 min-w-[130px] max-w-[130px] border-b border-base-300">
+                        Month
+                      </th>
+                      <th className="sticky left-[178px] z-30 bg-base-200 py-3.5 px-4 min-w-[200px] max-w-[220px] border-b border-r border-base-300 shadow-[3px_0_5px_-2px_rgba(0,0,0,0.08)] dark:shadow-[3px_0_8px_-2px_rgba(0,0,0,0.4)]">
+                        Company
+                      </th>
+                      <th className="py-3.5 px-4 text-right min-w-[170px] bg-primary/10 text-primary font-black border-b border-base-300" title="Includes Basic, HRA, Flexi, Bonus, Gratuity & Variable Pay">
+                        Total Earnings
+                      </th>
+                      <th className="py-3.5 px-4 text-right min-w-[170px] bg-error/10 text-error font-black border-b border-base-300">
+                        Deductions (PF + Taxes)
+                      </th>
+                      <th className="py-3.5 px-4 text-right min-w-[170px] bg-success/15 text-success font-black border-b border-base-300">
+                        In Hand Salary
+                      </th>
+                      <th className="py-3.5 px-4 text-right min-w-[140px] font-black border-b border-base-300" title="Total Earnings + E6r PF">
+                        CTC
+                      </th>
+                      <th className="sticky right-0 z-30 bg-base-200 py-3.5 px-4 text-center min-w-[80px] max-w-[80px] border-b border-l border-base-300 shadow-[-3px_0_5px_-2px_rgba(0,0,0,0.08)] dark:shadow-[-3px_0_8px_-2px_rgba(0,0,0,0.4)]">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredSalaries.map((item, idx) => {
+                      const basic = Number(item.basicSalary || 0);
+                      const hra = Number(item.hra || 0);
+                      const flexi = Number(item.flexi || 0);
+                      const bonus = Number(item.bonus || 0);
+                      const gratuity = Number(item.gratuity || 0);
+                      const variablePay = Number(item.variablePay || 0);
+                      const gross = Number(item.gross || 0) || (basic + hra + flexi + bonus);
+                      const rowEarnings = gross + gratuity + variablePay;
+                      const erPf = Number(item.erPf || 0);
+                      const taxes = Number(item.taxes || 0);
+                      const deductions = erPf + taxes;
+                      const inHand = Number(item.inHand || 0) || (gross - deductions);
+                      const ctc = Number(item.ctc || 0) || (rowEarnings + erPf);
+
+                      return (
+                        <tr key={item.id || item._id} className="group hover:bg-base-200/40 transition-colors">
+                          <td className="sticky left-0 z-10 bg-base-100 group-hover:bg-base-200 py-3.5 px-4 text-center font-mono text-base-content/50 w-12 min-w-[48px] max-w-[48px] border-b border-base-200/60 transition-colors">
+                            {idx + 1}
+                          </td>
+                          <td className="sticky left-[48px] z-10 bg-base-100 group-hover:bg-base-200 py-3.5 px-4 whitespace-nowrap font-bold text-base-content min-w-[130px] max-w-[130px] border-b border-base-200/60 transition-colors">
+                            <div className="flex items-center gap-1.5">
+                              <Calendar size={13} className="text-primary shrink-0" />
+                              <span>{dayjs(item.month).format("MMM YYYY")}</span>
+                            </div>
+                          </td>
+                          <td
+                            className="sticky left-[178px] z-10 bg-base-100 group-hover:bg-base-200 py-3.5 px-4 whitespace-nowrap font-bold text-base-content opacity-100 min-w-[200px] max-w-[220px] border-b border-r border-base-200/80 shadow-[3px_0_5px_-2px_rgba(0,0,0,0.08)] dark:shadow-[3px_0_8px_-2px_rgba(0,0,0,0.4)] transition-colors"
+                            style={{ opacity: 1 }}
+                          >
+                            <span className="font-bold text-base-content opacity-100" style={{ opacity: 1 }}>
+                              {item.company}
+                            </span>
+                          </td>
+                          <td className="py-3.5 px-4 text-right font-mono font-black text-primary bg-primary/5 whitespace-nowrap border-b border-base-200/60">
+                            <div className="flex items-center justify-end gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setSalaryBreakdownModal({
+                                    type: "earnings",
+                                    title: "Earnings Breakdown",
+                                    month: dayjs(item.month).format("MMMM YYYY"),
+                                    company: item.company,
+                                    items: [
+                                      { label: "Basic Salary", value: basic, note: "Core base pay" },
+                                      { label: "HRA", value: hra, note: "House Rent Allowance" },
+                                      { label: "Flexi / RSA / Extras", value: flexi, note: "Flexible benefits allowance" },
+                                      { label: "Bonus", value: bonus, note: "Performance or festive bonus", highlight: bonus > 0 },
+                                      { label: "Gratuity", value: gratuity, note: "Gratuity component" },
+                                      { label: "Variable Pay", value: variablePay, note: "Variable performance incentive" },
+                                    ],
+                                    totalLabel: "Total Earnings",
+                                    totalValue: rowEarnings,
+                                    bottomNote: `Gross Cash: ₹${gross.toLocaleString("en-IN")} + Benefits: ₹${(gratuity + variablePay).toLocaleString("en-IN")}`,
+                                  })
+                                }
+                                className="btn btn-ghost btn-circle btn-xs text-primary/70 hover:text-primary hover:bg-primary/20 cursor-pointer p-0 w-5 h-5 min-h-0"
+                                title="Click to view Earnings breakdown"
+                              >
+                                <Info size={13} />
+                              </button>
+                              <span className="text-sm">₹{rowEarnings.toLocaleString("en-IN")}</span>
+                            </div>
+                            <div className="text-[10px] text-base-content/50 font-sans font-normal">
+                              Gross + Gratuity + Var Pay
+                            </div>
+                          </td>
+                          <td className="py-3.5 px-4 text-right font-mono font-black text-error bg-error/5 whitespace-nowrap border-b border-base-200/60">
+                            <div className="flex items-center justify-end gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setSalaryBreakdownModal({
+                                    type: "deductions",
+                                    title: "Deductions Breakdown",
+                                    month: dayjs(item.month).format("MMMM YYYY"),
+                                    company: item.company,
+                                    items: [
+                                      { label: "Employer PF (E6r PF)", value: erPf, note: "Provident Fund deduction" },
+                                      { label: "Tax + Others", value: taxes, note: "Income Tax, Professional Tax & others" },
+                                    ],
+                                    totalLabel: "Total Deductions",
+                                    totalValue: deductions,
+                                    bottomNote: `Net In Hand: ₹${inHand.toLocaleString("en-IN")} (Gross ₹${gross.toLocaleString("en-IN")} − Deductions ₹${deductions.toLocaleString("en-IN")})`,
+                                  })
+                                }
+                                className="btn btn-ghost btn-circle btn-xs text-error/70 hover:text-error hover:bg-error/20 cursor-pointer p-0 w-5 h-5 min-h-0"
+                                title="Click to view Deductions breakdown"
+                              >
+                                <Info size={13} />
+                              </button>
+                              <span className="text-sm">-₹{deductions.toLocaleString("en-IN")}</span>
+                            </div>
+                            <div className="text-[10px] text-base-content/50 font-sans font-normal">
+                              PF: ₹{erPf.toLocaleString("en-IN")} + Tax: ₹{taxes.toLocaleString("en-IN")}
+                            </div>
+                          </td>
+                          <td className="py-3.5 px-4 text-right font-mono font-black text-success bg-success/15 whitespace-nowrap border-b border-base-200/60">
+                            <div className="text-sm">₹{inHand.toLocaleString("en-IN")}</div>
+                            <div className="text-[10px] text-success/80 font-sans font-normal">
+                              Net Take-Home
+                            </div>
+                          </td>
+                          <td className="py-3.5 px-4 text-right font-mono font-black text-base-content whitespace-nowrap border-b border-base-200/60">
+                            <div className="text-sm">₹{ctc.toLocaleString("en-IN")}</div>
+                            <div className="text-[10px] text-base-content/50 font-sans font-normal">
+                              Earnings + E6r PF
+                            </div>
+                          </td>
+                          <td className="sticky right-0 z-10 bg-base-100 group-hover:bg-base-200 py-3.5 px-4 text-center whitespace-nowrap min-w-[80px] max-w-[80px] border-b border-l border-base-200/80 shadow-[-3px_0_5px_-2px_rgba(0,0,0,0.08)] dark:shadow-[-3px_0_8px_-2px_rgba(0,0,0,0.4)] transition-colors">
+                            <div className="flex items-center justify-center gap-1">
+                              <button
+                                type="button"
+                                onClick={() => handleEditSalary(item)}
+                                className="btn btn-ghost btn-xs btn-circle text-base-content/70 hover:text-primary hover:bg-primary/10 cursor-pointer"
+                                title="Edit Salary"
+                              >
+                                <Pencil size={13} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteSalary(item.id || item._id)}
+                                className="btn btn-ghost btn-xs btn-circle text-base-content/70 hover:text-error hover:bg-error/10 cursor-pointer"
+                                title="Delete Salary"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                  {/* Totals Summary Footer */}
+                  <tfoot className="bg-base-200/90 text-xs font-bold">
+                    <tr>
+                      <td
+                        colSpan={3}
+                        className="sticky left-0 z-20 bg-base-200 py-3.5 px-4 font-extrabold text-base-content uppercase tracking-wider border-t-2 border-r border-base-300 shadow-[3px_0_5px_-2px_rgba(0,0,0,0.08)] dark:shadow-[3px_0_8px_-2px_rgba(0,0,0,0.4)]"
+                      >
+                        Totals ({salarySummary.count} {salarySummary.count === 1 ? "Entry" : "Entries"})
+                      </td>
+                      <td className="py-3.5 px-4 text-right font-mono font-black text-primary bg-primary/10 border-t-2 border-base-300 text-sm">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setSalaryBreakdownModal({
+                                type: "earnings",
+                                title: "Total Earnings Breakdown",
+                                month: "All Filtered Months",
+                                company: salaryCompanyFilter === "all" ? "All Companies" : salaryCompanyFilter,
+                                items: [
+                                  { label: "Total Basic Salary", value: salarySummary.totalBasic, note: "Base pay across entries" },
+                                  { label: "Total HRA", value: salarySummary.totalHra, note: "House rent allowance across entries" },
+                                  { label: "Total Flexi / RSA / Extras", value: salarySummary.totalFlexi, note: "Flexi benefits across entries" },
+                                  { label: "Total Bonus", value: salarySummary.totalBonus, note: "Bonus across entries", highlight: salarySummary.totalBonus > 0 },
+                                  { label: "Total Gratuity", value: salarySummary.totalGratuity, note: "Gratuity across entries" },
+                                  { label: "Total Variable Pay", value: salarySummary.totalVarPay, note: "Variable pay across entries" },
+                                ],
+                                totalLabel: "Grand Total Earnings",
+                                totalValue: salarySummary.totalEarnings,
+                                bottomNote: `Aggregated across ${salarySummary.count} ${salarySummary.count === 1 ? "entry" : "entries"}`,
+                              })
+                            }
+                            className="btn btn-ghost btn-circle btn-xs text-primary hover:bg-primary/20 cursor-pointer p-0 w-5 h-5 min-h-0"
+                            title="Click to view Total Earnings breakdown"
+                          >
+                            <Info size={13} />
+                          </button>
+                          <span>₹{salarySummary.totalEarnings.toLocaleString("en-IN")}</span>
+                        </div>
+                      </td>
+                      <td className="py-3.5 px-4 text-right font-mono font-black text-error bg-error/10 border-t-2 border-base-300 text-sm">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setSalaryBreakdownModal({
+                                type: "deductions",
+                                title: "Total Deductions Breakdown",
+                                month: "All Filtered Months",
+                                company: salaryCompanyFilter === "all" ? "All Companies" : salaryCompanyFilter,
+                                items: [
+                                  { label: "Total Employer PF (E6r PF)", value: salarySummary.totalErPf, note: "PF contribution across entries" },
+                                  { label: "Total Tax + Others", value: salarySummary.totalTaxes, note: "Taxes across entries" },
+                                ],
+                                totalLabel: "Grand Total Deductions",
+                                totalValue: salarySummary.totalErPf + salarySummary.totalTaxes,
+                                bottomNote: `Aggregated across ${salarySummary.count} ${salarySummary.count === 1 ? "entry" : "entries"}`,
+                              })
+                            }
+                            className="btn btn-ghost btn-circle btn-xs text-error hover:bg-error/20 cursor-pointer p-0 w-5 h-5 min-h-0"
+                            title="Click to view Total Deductions breakdown"
+                          >
+                            <Info size={13} />
+                          </button>
+                          <span>-₹{(salarySummary.totalErPf + salarySummary.totalTaxes).toLocaleString("en-IN")}</span>
+                        </div>
+                      </td>
+                      <td className="py-3.5 px-4 text-right font-mono font-black text-success bg-success/20 text-sm border-t-2 border-base-300">
+                        ₹{salarySummary.totalInHand.toLocaleString("en-IN")}
+                      </td>
+                      <td className="py-3.5 px-4 text-right font-mono font-black text-base-content border-t-2 border-base-300 text-sm">
+                        ₹{salarySummary.totalCtc.toLocaleString("en-IN")}
+                      </td>
+                      <td className="sticky right-0 z-20 bg-base-200 py-3.5 px-4 border-t-2 border-l border-base-300 shadow-[-3px_0_5px_-2px_rgba(0,0,0,0.08)] dark:shadow-[-3px_0_8px_-2px_rgba(0,0,0,0.4)]"></td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ------------------------------------------------------------------ */}
+      {/* PF TAB VIEW (activeTab === "pf") - AUTO-SYNCED WITH SALARY         */}
+      {/* ------------------------------------------------------------------ */}
+      {activeTab === "pf" && (
+        <div className="space-y-5 animate-in fade-in duration-300">
+          {/* Summary Stat Cards */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
+            <div className="bg-base-100 p-4 rounded-3xl border border-base-200 shadow-sm space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-base-content/60 uppercase tracking-wider block">
+                  Available Balance
+                </span>
+                <span className="badge badge-success badge-xs font-semibold py-1">
+                  Active
+                </span>
+              </div>
+              <div className="text-xl font-black text-success truncate">
+                ₹{availablePfBalance.toLocaleString("en-IN")}
+              </div>
+              <span className="text-[10px] text-base-content/50 block">
+                Total Deposited − Withdrawn
+              </span>
+            </div>
+
+            <div className="bg-base-100 p-4 rounded-3xl border border-base-200 shadow-sm space-y-1">
+              <span className="text-[11px] font-semibold text-base-content/60 uppercase tracking-wider block">
+                Total Deposited
+              </span>
+              <div className="text-xl font-black text-primary truncate">
+                ₹{pfSummary.grandTotal.toLocaleString("en-IN")}
+              </div>
+              <span className="text-[10px] text-base-content/50 block">
+                Employer + Employee Total
+              </span>
+            </div>
+
+            <div className="bg-base-100 p-4 rounded-3xl border border-base-200 shadow-sm space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-base-content/60 uppercase tracking-wider block">
+                  Withdrawal Amt
+                </span>
+                {totalPfWithdrawn > 0 && (
+                  <span className="badge badge-warning badge-xs font-semibold py-1">
+                    {pfWithdrawals.length} {pfWithdrawals.length === 1 ? "Txn" : "Txns"}
+                  </span>
+                )}
+              </div>
+              <div className="text-xl font-black text-amber-500 truncate">
+                ₹{totalPfWithdrawn.toLocaleString("en-IN")}
+              </div>
+              <span className="text-[10px] text-base-content/50 block">
+                Total Withdrawn Amount
+              </span>
+            </div>
+
+            <div className="bg-base-100 p-4 rounded-3xl border border-base-200 shadow-sm space-y-1">
+              <span className="text-[11px] font-semibold text-base-content/60 uppercase tracking-wider block">
+                Total Employer Share
+              </span>
+              <div className="text-xl font-black text-info truncate">
+                ₹{pfSummary.totalEmployerShare.toLocaleString("en-IN")}
+              </div>
+              <span className="text-[10px] text-base-content/50 block">
+                E6r PF Contributions
+              </span>
+            </div>
+
+            <div className="bg-base-100 p-4 rounded-3xl border border-base-200 shadow-sm space-y-1">
+              <span className="text-[11px] font-semibold text-base-content/60 uppercase tracking-wider block">
+                Total Employee Share
+              </span>
+              <div className="text-xl font-black text-secondary truncate">
+                ₹{pfSummary.totalEmployeeShare.toLocaleString("en-IN")}
+              </div>
+              <span className="text-[10px] text-base-content/50 block">
+                E6e PF Contributions
+              </span>
+            </div>
+          </div>
+
+          {/* Sub-Tab 1: Deposited (Contributions) */}
+          {pfSubTab === "deposits" && (
+            <>
+              {salaryData.length === 0 ? (
+                <div className="bg-base-100 p-12 rounded-3xl border border-base-200 shadow-sm text-center">
+                  <div className="max-w-md mx-auto flex flex-col items-center gap-4">
+                    <div className="p-4 bg-primary/10 text-primary rounded-3xl">
+                      <Percent size={40} />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-base-content">
+                        No PF Records Yet
+                      </h3>
+                      <p className="text-xs text-base-content/60 mt-1">
+                        PF contributions are automatically tracked and synchronized whenever you enter your monthly Salary slip.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleOpenAddSalaryModal}
+                      className="btn btn-primary btn-sm rounded-xl gap-2 font-bold px-5 cursor-pointer shadow-md"
+                    >
+                      <Plus size={16} />
+                      <span>Add First Salary Entry</span>
+                    </button>
+                  </div>
+                </div>
+              ) : filteredPf.length === 0 ? (
+                <div className="bg-base-100 p-10 rounded-3xl border border-base-200 shadow-sm text-center">
+                  <div className="max-w-md mx-auto flex flex-col items-center gap-3">
+                    <div className="p-3 bg-primary/10 text-primary rounded-2xl">
+                      <Search size={32} />
+                    </div>
+                    <div>
+                      <h3 className="text-base font-bold text-base-content">
+                        No Matching PF Records Found
+                      </h3>
+                      <p className="text-xs text-base-content/60 mt-1">
+                        No records matched your search query or filters.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPfSearchTerm("");
+                        setPfCompanyFilter("all");
+                        setPfYearFilter("all");
+                      }}
+                      className="btn btn-ghost btn-xs text-primary font-bold hover:bg-primary/10 cursor-pointer"
+                    >
+                      Clear Filters
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-base-100 rounded-3xl border border-base-200 shadow-sm overflow-hidden">
+                  <div className="overflow-x-auto max-w-full">
+                    <table className="table table-sm w-full text-xs">
+                      <thead className="bg-base-200/80 text-base-content/80 text-[11px] font-bold uppercase tracking-wider border-b border-base-300">
+                        <tr>
+                          <th className="py-3 px-4 text-center w-14">#</th>
+                          <th className="py-3 px-4 min-w-[150px]">Month</th>
+                          <th className="py-3 px-4 min-w-[200px]">Company Name</th>
+                          <th className="py-3 px-4 text-right min-w-[150px] text-primary">Employer Share</th>
+                          <th className="py-3 px-4 text-right min-w-[150px] text-secondary">Employee Share</th>
+                          <th className="py-3 px-4 text-right min-w-[160px] bg-success/10 text-success font-black">Total</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-base-200/60">
+                        {filteredPf.map((item, idx) => {
+                          const er = Number(item.erPf || 0);
+                          const ee =
+                            item.eePf !== undefined && item.eePf !== null && item.eePf !== ""
+                              ? Number(item.eePf) || 0
+                              : er;
+                          const total = er + ee;
+
+                          return (
+                            <tr key={item.id || item._id || idx} className="hover:bg-base-200/40 transition-colors">
+                              <td className="py-3.5 px-4 text-center font-mono text-base-content/50">
+                                {idx + 1}
+                              </td>
+                              <td className="py-3.5 px-4 whitespace-nowrap font-bold text-base-content">
+                                <div className="flex items-center gap-2">
+                                  <Calendar size={14} className="text-primary shrink-0" />
+                                  <span>{dayjs(item.month).format("MMMM YYYY")}</span>
+                                </div>
+                              </td>
+                              <td className="py-3.5 px-4 whitespace-nowrap font-bold text-base-content opacity-100" style={{ opacity: 1 }}>
+                                <span className="font-bold text-base-content opacity-100" style={{ opacity: 1 }}>
+                                  {item.company}
+                                </span>
+                              </td>
+                              <td className="py-3.5 px-4 text-right font-mono font-medium text-base-content/90 whitespace-nowrap">
+                                ₹{er.toLocaleString("en-IN")}
+                              </td>
+                              <td className="py-3.5 px-4 text-right font-mono font-medium text-base-content/90 whitespace-nowrap">
+                                ₹{ee.toLocaleString("en-IN")}
+                              </td>
+                              <td className="py-3.5 px-4 text-right font-mono font-black text-success bg-success/5 whitespace-nowrap">
+                                ₹{total.toLocaleString("en-IN")}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                      <tfoot className="bg-base-200/70 border-t-2 border-base-300 font-bold text-base-content">
+                        <tr>
+                          <td colSpan={3} className="py-3.5 px-4 text-left font-bold text-base-content uppercase tracking-wider text-[11px]">
+                            Total ({filteredPf.length} {filteredPf.length === 1 ? "Month" : "Months"})
+                          </td>
+                          <td className="py-3.5 px-4 text-right font-mono font-black text-primary">
+                            ₹{pfSummary.totalEmployerShare.toLocaleString("en-IN")}
+                          </td>
+                          <td className="py-3.5 px-4 text-right font-mono font-black text-secondary">
+                            ₹{pfSummary.totalEmployeeShare.toLocaleString("en-IN")}
+                          </td>
+                          <td className="py-3.5 px-4 text-right font-mono font-black text-success bg-success/10">
+                            ₹{pfSummary.grandTotal.toLocaleString("en-IN")}
+                          </td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Sub-Tab 2: Withdrawal */}
+          {pfSubTab === "withdrawals" && (
+            <>
+              {loadingPfWithdrawals ? (
+                <div className="bg-base-100 p-12 rounded-3xl border border-base-200 shadow-sm text-center flex flex-col items-center justify-center gap-3">
+                  <span className="loading loading-spinner loading-md text-primary"></span>
+                  <span className="text-xs text-base-content/60">Loading withdrawals...</span>
+                </div>
+              ) : pfWithdrawals.length === 0 ? (
+                <div className="bg-base-100 p-12 rounded-3xl border border-base-200 shadow-sm text-center">
+                  <div className="max-w-md mx-auto flex flex-col items-center gap-4">
+                    <div className="p-4 bg-amber-500/10 text-amber-500 rounded-3xl">
+                      <ArrowUpRight size={40} />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-base-content">
+                        No PF Withdrawals Recorded
+                      </h3>
+                      <p className="text-xs text-base-content/60 mt-1">
+                        You have not recorded any withdrawals from your Provident Fund balance yet. You can withdraw up to your available balance (₹{availablePfBalance.toLocaleString("en-IN")}).
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingPfWithdrawal(null);
+                        setIsAddPfWithdrawalModalOpen(true);
+                      }}
+                      disabled={availablePfBalance <= 0}
+                      className="btn btn-primary btn-sm rounded-xl gap-2 font-bold px-5 cursor-pointer shadow-md disabled:opacity-50"
+                    >
+                      <Plus size={16} />
+                      <span>Withdraw Money</span>
+                    </button>
+                  </div>
+                </div>
+              ) : filteredPfWithdrawals.length === 0 ? (
+                <div className="bg-base-100 p-12 rounded-3xl border border-base-200 shadow-sm text-center">
+                  <div className="max-w-md mx-auto flex flex-col items-center gap-3">
+                    <Search size={32} className="text-base-content/30" />
+                    <h3 className="text-base font-bold text-base-content">No Matching Withdrawals</h3>
+                    <p className="text-xs text-base-content/60">
+                      No withdrawal records found matching "{pfSearchTerm}".
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setPfSearchTerm("")}
+                      className="btn btn-sm btn-ghost text-primary font-bold rounded-xl cursor-pointer"
+                    >
+                      Clear Search
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-base-100 rounded-3xl border border-base-200 shadow-sm overflow-hidden">
+                  <div className="overflow-x-auto max-w-full">
+                    <table className="table table-sm w-full text-xs">
+                      <thead className="bg-base-200/80 text-base-content/80 text-[11px] font-bold uppercase tracking-wider border-b border-base-300">
+                        <tr>
+                          <th className="py-3 px-4 text-center w-14">#</th>
+                          <th className="py-3 px-4 min-w-[140px]">Withdrawal Date</th>
+                          <th className="py-3 px-4 text-right min-w-[160px] text-amber-500 font-bold">Amount Withdrawn</th>
+                          <th className="py-3 px-4 min-w-[180px]">Reason</th>
+                          <th className="py-3 px-4 min-w-[220px]">Notes / Remarks</th>
+                          <th className="py-3 px-4 text-center min-w-[100px]">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-base-200/60">
+                        {filteredPfWithdrawals.map((item, idx) => (
+                          <tr key={item.id || item._id || idx} className="hover:bg-base-200/40 transition-colors">
+                            <td className="py-3.5 px-4 text-center font-mono text-base-content/50">
+                              {idx + 1}
+                            </td>
+                            <td className="py-3.5 px-4 whitespace-nowrap font-bold text-base-content">
+                              <div className="flex items-center gap-2">
+                                <Calendar size={14} className="text-amber-500 shrink-0" />
+                                <span>{dayjs(item.date).format("DD MMMM YYYY")}</span>
+                              </div>
+                            </td>
+                            <td className="py-3.5 px-4 text-right font-mono font-black text-amber-500 bg-amber-500/5 whitespace-nowrap">
+                              ₹{Number(item.amount || 0).toLocaleString("en-IN")}
+                            </td>
+                            <td className="py-3.5 px-4 whitespace-nowrap">
+                              <span className="badge badge-sm bg-base-200 font-semibold text-base-content/80 border-base-300">
+                                {item.reason || "General"}
+                              </span>
+                            </td>
+                            <td className="py-3.5 px-4 text-base-content/70 max-w-xs truncate">
+                              {item.notes || "—"}
+                            </td>
+                            <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                              <div className="flex items-center justify-center gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setEditingPfWithdrawal(item);
+                                    setIsAddPfWithdrawalModalOpen(true);
+                                  }}
+                                  className="btn btn-ghost btn-xs btn-square text-base-content/60 hover:text-primary hover:bg-primary/10"
+                                  title="Edit PF Withdrawal"
+                                >
+                                  <Edit size={14} />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeletePfWithdrawal(item.id || item._id)}
+                                  className="btn btn-ghost btn-xs btn-square text-base-content/60 hover:text-error hover:bg-error/10"
+                                  title="Delete PF Withdrawal"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                      <tfoot className="bg-base-200/70 border-t-2 border-base-300 font-bold text-base-content">
+                        <tr>
+                          <td colSpan={2} className="py-3.5 px-4 text-left font-bold text-base-content uppercase tracking-wider text-[11px]">
+                            Total Withdrawn ({filteredPfWithdrawals.length} {filteredPfWithdrawals.length === 1 ? "Record" : "Records"})
+                          </td>
+                          <td className="py-3.5 px-4 text-right font-mono font-black text-amber-500 bg-amber-500/10">
+                            ₹{filteredPfWithdrawals.reduce((sum, item) => sum + (Number(item.amount) || 0), 0).toLocaleString("en-IN")}
+                          </td>
+                          <td colSpan={3} className="py-3.5 px-4 text-xs text-base-content/60 font-normal">
+                            Remaining Available Balance: <strong className="font-mono text-success font-bold">₹{availablePfBalance.toLocaleString("en-IN")}</strong>
+                          </td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
+
+      {/* ------------------------------------------------------------------ */}
+      {/* OTHER TABS PLACEHOLDERS (Emergency Fund)                           */}
+      {/* ------------------------------------------------------------------ */}
+      {activeTab !== "stocks" && activeTab !== "mf" && activeTab !== "fd" && activeTab !== "rd" && activeTab !== "salary" && activeTab !== "pf" && (
         <div className="bg-base-100 p-12 rounded-3xl border border-base-200 shadow-sm text-center animate-in fade-in duration-300">
           <div className="max-w-md mx-auto flex flex-col items-center gap-4">
             <div className="p-4 bg-primary/10 text-primary rounded-3xl">
               {activeTab === "ef" && <ShieldAlert size={36} />}
-              {activeTab === "pf" && <Percent size={36} />}
             </div>
 
             <div>
@@ -5547,6 +7305,168 @@ export default function InvTableEntry() {
         fund={activeSipFund}
         initialTxn={editingSipTxn}
       />
+
+      {/* Add / Edit Monthly Salary Record Popup Modal */}
+      <AddSalaryModal
+        isOpen={isAddSalaryModalOpen}
+        onClose={() => {
+          setIsAddSalaryModalOpen(false);
+          setEditingSalary(null);
+        }}
+        onSave={handleSaveSalary}
+        initialData={editingSalary}
+        lastSalaryEntry={latestSalaryEntry}
+      />
+
+      {/* Add / Edit PF Withdrawal Modal */}
+      <AddPfWithdrawalModal
+        isOpen={isAddPfWithdrawalModalOpen}
+        onClose={() => {
+          setIsAddPfWithdrawalModalOpen(false);
+          setEditingPfWithdrawal(null);
+        }}
+        onSaveWithdrawal={handleSavePfWithdrawal}
+        initialData={editingPfWithdrawal}
+        availableBalance={availablePfBalance}
+      />
+
+      {/* ------------------------------------------------------------------ */}
+      {/* Salary Breakdown Modal Popup (Earnings & Deductions View)          */}
+      {/* ------------------------------------------------------------------ */}
+      {salaryBreakdownModal && typeof document !== "undefined" && createPortal(
+        <div
+          className="fixed inset-0 w-screen h-screen z-[9999999] flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200"
+          onClick={() => setSalaryBreakdownModal(null)}
+        >
+          <div
+            className="bg-base-100 border border-base-300 rounded-3xl p-6 shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto flex flex-col gap-4 animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-base-200">
+              <div className="flex items-center gap-3">
+                <div
+                  className={`p-2.5 rounded-2xl ${
+                    salaryBreakdownModal.type === "earnings"
+                      ? "bg-primary/10 text-primary"
+                      : "bg-error/10 text-error"
+                  }`}
+                >
+                  {salaryBreakdownModal.type === "earnings" ? (
+                    <TrendingUp size={20} />
+                  ) : (
+                    <Percent size={20} />
+                  )}
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-base text-base-content leading-tight">
+                    {salaryBreakdownModal.title}
+                  </h3>
+                  <div className="flex items-center gap-1.5 text-xs text-base-content/60 mt-0.5 font-medium">
+                    <span className="text-base-content font-bold">{salaryBreakdownModal.company}</span>
+                    <span>•</span>
+                    <span>{salaryBreakdownModal.month}</span>
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                className="btn btn-sm btn-ghost btn-circle text-base-content/60 hover:text-base-content cursor-pointer"
+                onClick={() => setSalaryBreakdownModal(null)}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Breakdown List */}
+            <div className="space-y-2">
+              <div className="text-[10px] font-extrabold text-base-content/50 uppercase tracking-wider px-1">
+                Component Breakdown
+              </div>
+              <div className="divide-y divide-base-200 bg-base-200/40 rounded-2xl p-2 border border-base-200">
+                {salaryBreakdownModal.items.map((it, idx) => {
+                  const pct =
+                    salaryBreakdownModal.totalValue > 0
+                      ? ((it.value / salaryBreakdownModal.totalValue) * 100).toFixed(1)
+                      : "0.0";
+                  return (
+                    <div
+                      key={idx}
+                      className="py-2.5 px-3 flex items-center justify-between gap-3 text-xs hover:bg-base-200/70 rounded-xl transition-colors"
+                    >
+                      <div className="space-y-0.5 min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-bold text-base-content">{it.label}</span>
+                          {it.highlight && (
+                            <span className="badge badge-xs badge-success text-[9px] font-bold">
+                              Bonus
+                            </span>
+                          )}
+                        </div>
+                        {it.note && (
+                          <div className="text-[10px] text-base-content/50 truncate">
+                            {it.note}
+                          </div>
+                        )}
+                      </div>
+                      <div className="text-right shrink-0">
+                        <div
+                          className={`font-mono font-bold text-sm ${
+                            salaryBreakdownModal.type === "earnings"
+                              ? "text-primary"
+                              : "text-error"
+                          }`}
+                        >
+                          ₹{it.value.toLocaleString("en-IN")}
+                        </div>
+                        <div className="text-[10px] text-base-content/50 font-mono">
+                          {pct}%
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Total Highlight Card */}
+            <div
+              className={`p-3.5 rounded-2xl border flex items-center justify-between shadow-xs ${
+                salaryBreakdownModal.type === "earnings"
+                  ? "bg-primary/10 border-primary/20 text-primary"
+                  : "bg-error/10 border-error/20 text-error"
+              }`}
+            >
+              <div>
+                <span className="text-[11px] uppercase font-extrabold tracking-wider block opacity-75">
+                  {salaryBreakdownModal.totalLabel}
+                </span>
+                {salaryBreakdownModal.bottomNote && (
+                  <span className="text-[10px] opacity-80 font-normal block mt-0.5">
+                    {salaryBreakdownModal.bottomNote}
+                  </span>
+                )}
+              </div>
+              <div className="text-lg sm:text-xl font-black font-mono">
+                {salaryBreakdownModal.type === "deductions" ? "-" : ""}₹
+                {salaryBreakdownModal.totalValue.toLocaleString("en-IN")}
+              </div>
+            </div>
+
+            {/* Footer Close Button */}
+            <div className="pt-1">
+              <button
+                type="button"
+                onClick={() => setSalaryBreakdownModal(null)}
+                className="btn btn-sm btn-ghost w-full rounded-xl text-base-content/70 hover:text-base-content cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
 
       <style>{`
         @keyframes mfSlideDown {

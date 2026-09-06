@@ -25,17 +25,8 @@ import {
   CheckCircle,
   XCircle,
   CalendarDays,
-  Flame,
-  Droplet,
-  BedDouble,
-  BookOpen,
   Utensils,
-  Heart,
-  Smile,
-  BarChart3,
-  MoreHorizontal,
   Settings,
-  Sparkles,
   Book,
   Search,
   RefreshCw,
@@ -68,15 +59,16 @@ function HabitTableEntry() {
     (state) => state.habit.filters
   );
 
-  // Format Date Function (DD-MMM-YYYY)
+  // Format Date Function (DDD, DD-MMM-YYYY)
   const formatDate = (dateString) => {
     if (!dateString) return "";
     const date = new Date(dateString.includes("T") ? dateString : `${dateString}T00:00:00`);
     if (isNaN(date.getTime())) return dateString;
+    const weekday = date.toLocaleDateString("en-US", { weekday: "short" });
     const day = String(date.getDate()).padStart(2, "0");
     const month = date.toLocaleDateString("en-US", { month: "short" });
     const year = date.getFullYear();
-    return `${day}-${month}-${year}`;
+    return `${weekday}, ${day}-${month}-${year}`;
   };
 
   // variables
@@ -294,7 +286,7 @@ function HabitTableEntry() {
     );
   });
 
-  const renderMultiSelectHeader = (colKey, label, IconComponent, optionsList) => {
+  const renderMultiSelectHeader = (colKey, label, optionsList) => {
     const selectedOptions = columnFilters[colKey] || [];
     const isFiltered = selectedOptions.length > 0;
 
@@ -323,9 +315,8 @@ function HabitTableEntry() {
     };
 
     return (
-      <th className="px-3 py-2.5 text-center border border-base-100 whitespace-nowrap min-w-[130px] relative">
+      <th className="px-3 py-2.5 text-center whitespace-nowrap min-w-[130px] relative">
         <div className="flex items-center justify-center gap-1.5 font-bold whitespace-nowrap">
-          <IconComponent className="w-4 h-4 text-primary shrink-0" />
           <span className="whitespace-nowrap">{label}</span>
 
           <div className="dropdown dropdown-end">
@@ -401,15 +392,14 @@ function HabitTableEntry() {
     );
   };
 
-  const renderColumnHeader = (colKey, label, IconComponent, unit = "", extraAction = null) => {
+  const renderColumnHeader = (colKey, label, unit = "", extraAction = null) => {
     const filter = columnFilters[colKey] || { mode: "all", value: "" };
     const isFiltered = filter.mode !== "all";
     const colSettings = settings?.[colKey] || { min: 0, max: 0 };
 
     return (
-      <th className="px-3 py-2.5 text-center border border-base-100 whitespace-nowrap min-w-[125px] relative">
+      <th className="px-3 py-2.5 text-center whitespace-nowrap min-w-[125px] relative">
         <div className="flex items-center justify-center gap-1.5 font-bold whitespace-nowrap">
-          <IconComponent className="w-4 h-4 text-primary shrink-0" />
           <span className="whitespace-nowrap">{label}</span>
           {extraAction}
 
@@ -909,7 +899,7 @@ function HabitTableEntry() {
       ) : (
         <>
           {/* Headings */}
-          <div className="sticky top-[-20px] z-30 bg-opacity-90 backdrop-blur-md shadow-sm mb-1 p-2 pt-3">
+          <div className="sticky top-[-20px] z-30 bg-base-300 h-[60px] flex items-center px-4">
             <Heading
               handleAddEntryClick={handleAddEntryClick}
               currentPage={currentPage}
@@ -924,9 +914,9 @@ function HabitTableEntry() {
           {/* Table */}
           <div>
         <table className="bg-base-300 table table-fixed table-md">
-          <thead className="sticky top-10 z-30 bg-opacity-90 backdrop-blur-md shadow-sm mb-1 p-2 pt-3">
+          <thead className="sticky top-[40px] z-30 bg-base-300 [&_th]:bg-base-300">
             {/* ToolBar */}
-            <tr>
+            <tr className="border-b-0 border-none">
               <th colSpan="11" className="py-3 px-4">
                 <div className="flex justify-between items-center flex-wrap gap-4 text-sm font-normal">
                   {/* Left: Badges */}
@@ -982,7 +972,7 @@ function HabitTableEntry() {
                       <div
                         tabIndex={0}
                         role="button"
-                        className="input text-xs w-[125px] flex items-center justify-center font-medium"
+                        className="input text-xs w-[145px] flex items-center justify-center font-medium"
                       >
                         {formatDate(fromDate) || "-- / --- / --"}
                       </div>
@@ -1022,7 +1012,7 @@ function HabitTableEntry() {
                       <div
                         tabIndex={0}
                         role="button"
-                        className="input text-xs w-[125px] flex items-center justify-center font-medium"
+                        className="input text-xs w-[145px] flex items-center justify-center font-medium"
                       >
                         {formatDate(toDate) || "-- / --- / --"}
                       </div>
@@ -1078,18 +1068,17 @@ function HabitTableEntry() {
             </tr>
 
             {/* Heading Row */}
-            <tr>
-              <th className="px-3 py-2.5 text-center border border-base-100 whitespace-nowrap min-w-[125px]">
+            <tr className="border-t-0">
+              <th className="px-3 py-2.5 text-center whitespace-nowrap min-w-[155px]">
                 <div className="flex items-center justify-center gap-1.5 font-bold whitespace-nowrap">
-                  <CalendarDays className="w-4 h-4 text-primary shrink-0" />
                   <span className="whitespace-nowrap">Date</span>
                 </div>
               </th>
-              {renderColumnHeader("burned", "Burned", Flame, "Kcal")}
-              {renderColumnHeader("water", "Water", Droplet, "Ltr")}
-              {renderColumnHeader("sleep", "Sleep", BedDouble, "Hrs")}
-              {renderColumnHeader("read", "Read", BookOpen, "Hrs")}
-              {renderColumnHeader("intake", "Intake", Utensils, "Kcal", (
+              {renderColumnHeader("burned", "Burned", "Kcal")}
+              {renderColumnHeader("water", "Water", "Ltr")}
+              {renderColumnHeader("sleep", "Sleep", "Hrs")}
+              {renderColumnHeader("read", "Read", "Hrs")}
+              {renderColumnHeader("intake", "Intake", "Kcal", (
                 <button
                   type="button"
                   onClick={handleSyncAllIntake}
@@ -1100,20 +1089,18 @@ function HabitTableEntry() {
                   <RefreshCw className={`w-3.5 h-3.5 ${isSyncingIntake ? "animate-spin text-primary" : ""}`} />
                 </button>
               ))}
-              {renderMultiSelectHeader("selfcare", "Self Care", Heart, settings.selfcare || [])}
-              {renderMultiSelectHeader("mood", "Mood", Smile, settings.mood || [])}
-              {renderMultiSelectHeader("progress", "Progress", BarChart3, ["Inconsistent", "Uncertain", "Moderate", "Consistent"])}
+              {renderMultiSelectHeader("selfcare", "Self Care", settings.selfcare || [])}
+              {renderMultiSelectHeader("mood", "Mood", settings.mood || [])}
+              {renderMultiSelectHeader("progress", "Progress", ["Inconsistent", "Uncertain", "Moderate", "Consistent"])}
 
-              <th className="px-3 py-2.5 text-center border border-base-100 whitespace-nowrap min-w-[95px]">
+              <th className="px-3 py-2.5 text-center whitespace-nowrap min-w-[95px]">
                 <div className="flex justify-center items-center gap-1.5 font-bold whitespace-nowrap">
-                  <Sparkles className="w-4 h-4 text-warning shrink-0" />
                   <span className="whitespace-nowrap">Score</span>
                 </div>
               </th>
 
-              <th className="px-3 py-2.5 text-center border border-base-100 whitespace-nowrap min-w-[95px]">
+              <th className="px-3 py-2.5 text-center whitespace-nowrap min-w-[95px]">
                 <div className="flex justify-center items-center gap-1.5 font-bold whitespace-nowrap">
-                  <MoreHorizontal className="w-4 h-4 shrink-0" />
                   <span className="whitespace-nowrap">Actions</span>
                 </div>
               </th>
@@ -1151,7 +1138,7 @@ function HabitTableEntry() {
                   // ---------- Input Row --------
                   <tr key={item.date} className="text-center">
                     {/* Date */}
-                    <td className="text-sm">{formatDate(item.date)}</td>
+                    <td className="text-sm whitespace-nowrap">{formatDate(item.date)}</td>
 
                     {/* Burned */}
                     <td>
@@ -1402,7 +1389,7 @@ function HabitTableEntry() {
                   // ---------- Normal Row ----------
                   <tr key={item.date} className="text-center">
                     {/* Date */}
-                    <td className="border border-base-100 text-sm">
+                    <td className="border border-base-100 text-sm whitespace-nowrap">
                       {formatDate(item.date)}
                     </td>
 
