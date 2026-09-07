@@ -160,8 +160,8 @@ input[type="number"] {
 }
 
 .custom-scrollbar-thin::-webkit-scrollbar {
-  width: 1.5px;
-  height: 1.5px;
+  width: 3px;
+  height: 3px;
 }
 
 .custom-scrollbar-thin::-webkit-scrollbar-track {
@@ -169,7 +169,7 @@ input[type="number"] {
 }
 
 .custom-scrollbar-thin::-webkit-scrollbar-thumb {
-  background: rgba(156, 163, 175, 0.4);
+  background: rgba(156, 163, 175, 0.45);
   border-radius: 9999px;
 }
 

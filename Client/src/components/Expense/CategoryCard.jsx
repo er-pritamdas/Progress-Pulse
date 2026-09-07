@@ -108,8 +108,10 @@ const CategoryCard = ({ category }) => {
     // Calculations
     const subCategoryStats = (category.subCategories || []).map(sub => {
         const used = transactions
-            .filter(t => t.type !== 'Credit' && (t.subCategoryId?._id === sub._id || t.subCategoryId === sub._id || (t.categoryId === category._id && t.description?.includes(sub.name))))
-            .reduce((sum, t) => sum + t.amount, 0);
+            .filter(t => t.type !== 'Credit' && t.type !== 'Transfer' && (
+                String(t.subCategoryId?._id || t.subCategoryId || "") === String(sub._id)
+            ))
+            .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
 
         const subBudget = Number(sub.budget) || 0;
         return {

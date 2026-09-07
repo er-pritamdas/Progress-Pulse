@@ -50,8 +50,21 @@ export const getDashboardData = async (req, res) => {
             endDate = range.endDate;
         }
 
+        const targetMonth = monthsList[monthsList.length - 1];
+        const now = new Date();
+        const actualCurrentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        const isCurrentMonth = (all === 'true' || month === 'all') ? true : (targetMonth === actualCurrentMonth);
+
+        let subsequentTransactionsPromise = Promise.resolve([]);
+        if (!isCurrentMonth && endDate < now) {
+            subsequentTransactionsPromise = ExpenseTransaction.find({
+                userId,
+                date: { $gt: endDate }
+            }).lean();
+        }
+
         // Fetch all data in parallel
-        let [categories, sources, allMonthlyBudgets, transactions] = await Promise.all([
+        let [categories, sources, allMonthlyBudgets, transactions, subsequentTransactions] = await Promise.all([
             // Find all categories for user
             ExpenseCategory.find({ userId }).sort({ order: 1, createdAt: 1 }).lean(),
             PaymentSource.find({ userId }).sort({ createdAt: 1 }),
@@ -59,20 +72,61 @@ export const getDashboardData = async (req, res) => {
             ExpenseTransaction.find({
                 userId,
                 date: { $gte: startDate, $lte: endDate }
-            }).sort({ date: 1 }).populate('sourceId', 'name color type balance').populate('targetSourceId', 'name color type balance').populate('categoryId', 'name color')
+            }).sort({ date: 1 }).populate('sourceId', 'name color type balance').populate('targetSourceId', 'name color type balance').populate('categoryId', 'name color'),
+            subsequentTransactionsPromise
         ]);
 
         // Keep full subcategories data intact for month-by-month analysis
 
-        // Calculate "Spent" for Card type sources (in the date range)
+        // Calculate balances and dues (closing vs current) for all sources
         const updatedSources = sources.map(source => {
-            if (source.type === "Card") {
-                const monthlySpend = transactions
-                    .filter(t => t.sourceId?._id?.toString() === source._id?.toString() && t.type === "Debit")
-                    .reduce((sum, t) => sum + t.amount, 0);
-                return { ...source.toObject(), spent: monthlySpend };
+            const base = source.toObject ? source.toObject() : source;
+            const sId = String(base._id);
+            const isCard = base.type === "Card";
+
+            let closingBal = Number(base.balance) || 0;
+            if (!isCurrentMonth && subsequentTransactions && subsequentTransactions.length > 0) {
+                for (const t of subsequentTransactions) {
+                    const srcId = t.sourceId ? String(t.sourceId) : null;
+                    const trgId = t.targetSourceId ? String(t.targetSourceId) : null;
+                    const amt = Number(t.amount) || 0;
+
+                    if (t.type === "Debit" && srcId === sId) {
+                        closingBal += amt;
+                    } else if (t.type === "Credit" && srcId === sId) {
+                        closingBal -= amt;
+                    } else if (t.type === "Transfer") {
+                        if (srcId === sId) closingBal += amt;
+                        if (trgId === sId) closingBal -= amt;
+                    }
+                }
             }
-            return source.toObject(); // Bank/Wallet show native balance
+            closingBal = Math.round((closingBal + Number.EPSILON) * 100) / 100;
+
+            const currentBal = Math.round(((Number(base.balance) || 0) + Number.EPSILON) * 100) / 100;
+            const activeBal = isCurrentMonth ? currentBal : closingBal;
+
+            const curCardDue = isCard ? (currentBal < 0 ? Math.abs(currentBal) : 0) : 0;
+            const clsCardDue = isCard ? (closingBal < 0 ? Math.abs(closingBal) : 0) : 0;
+            const activeCardDue = isCurrentMonth ? curCardDue : clsCardDue;
+
+            const monthlySpend = isCard
+                ? transactions
+                    .filter(t => (t.sourceId?._id?.toString() || t.sourceId?.toString()) === sId && t.type === "Debit")
+                    .reduce((sum, t) => sum + (Number(t.amount) || 0), 0)
+                : 0;
+
+            return {
+                ...base,
+                balance: activeBal,
+                currentBalance: currentBal,
+                closingBalance: closingBal,
+                cardDue: activeCardDue,
+                currentCardDue: curCardDue,
+                closingCardDue: clsCardDue,
+                spent: isCard ? monthlySpend : undefined,
+                isCurrentMonth
+            };
         });
 
         // Build map of salaries by month exclusively from saved DB records
@@ -83,7 +137,6 @@ export const getDashboardData = async (req, res) => {
             }
         });
 
-        const targetMonth = monthsList[monthsList.length - 1];
         const effectiveSalary = salariesByMonth[targetMonth] !== undefined ? salariesByMonth[targetMonth] : 0;
 
         res.status(200).json({
@@ -94,7 +147,9 @@ export const getDashboardData = async (req, res) => {
                 salary: effectiveSalary,
                 salariesByMonth,
                 transactions,
-                months: monthsList
+                months: monthsList,
+                isCurrentMonth,
+                targetMonth
             }
         });
     } catch (error) {

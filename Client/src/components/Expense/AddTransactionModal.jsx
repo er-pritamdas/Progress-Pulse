@@ -148,22 +148,46 @@ const AddTransactionModal = ({ isOpen, onClose }) => {
         (t.categoryId?.name && t.categoryId.name === selectedCategoryObj.name)
       ))
       .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
-    return { catBudget: budget, catSpent: spent, catBalance: budget - spent };
+    const balance = (budget - spent) === 0 ? 0 : (budget - spent);
+    return { catBudget: budget, catSpent: spent, catBalance: balance };
   }, [selectedCategoryObj, selectedMonthTxns]);
+
+  // Helper to check if a transaction belongs strictly to a subcategory
+  const isTransactionMatchingSubCategory = (t, targetSub, targetCategory) => {
+    if (!targetSub || !targetSub._id) return false;
+    if (t.type === 'Credit' || t.type === 'Transfer') return false;
+    const tSubId = String(t.subCategoryId?._id || t.subCategoryId || "");
+    if (!tSubId) return false;
+
+    // 1. Direct ID match
+    if (tSubId === String(targetSub._id)) return true;
+
+    // 2. Name match for identical subcategory under same parent category name across cloned versions
+    const tCatId = String(t.categoryId?._id || t.categoryId || "");
+    const parentCatName = targetCategory?.name;
+    const isCatMatch = (targetCategory?._id && tCatId === String(targetCategory._id)) ||
+                       (parentCatName && t.categoryId?.name === parentCatName);
+
+    if (isCatMatch && targetSub.name) {
+      const matchCat = categories.find(c => String(c._id) === tCatId || c.name === parentCatName);
+      const matchSub = matchCat?.subCategories?.find(s => String(s._id) === tSubId);
+      if (matchSub && matchSub.name?.trim().toLowerCase() === targetSub.name?.trim().toLowerCase()) {
+        return true;
+      }
+    }
+    return false;
+  };
 
   // Dynamic Subcategory Budget, Spent, and Balance for selectedMonth
   const { subBudget, subSpent, subBalance } = useMemo(() => {
     if (!selectedSubCategoryObj) return { subBudget: 0, subSpent: 0, subBalance: 0 };
     const budget = Number(selectedSubCategoryObj.budget) || 0;
     const spent = selectedMonthTxns
-      .filter(t => t.type !== 'Credit' && t.type !== 'Transfer' && (
-        String(t.subCategoryId?._id || t.subCategoryId) === String(selectedSubCategoryObj._id) ||
-        ((String(t.categoryId?._id || t.categoryId) === String(selectedCategoryObj?._id) || t.categoryId?.name === selectedCategoryObj?.name) &&
-         t.description?.toLowerCase().includes(selectedSubCategoryObj.name.toLowerCase()))
-      ))
+      .filter(t => isTransactionMatchingSubCategory(t, selectedSubCategoryObj, selectedCategoryObj))
       .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
-    return { subBudget: budget, subSpent: spent, subBalance: budget - spent };
-  }, [selectedSubCategoryObj, selectedCategoryObj, selectedMonthTxns]);
+    const balance = (budget - spent) === 0 ? 0 : (budget - spent);
+    return { subBudget: budget, subSpent: spent, subBalance: balance };
+  }, [selectedSubCategoryObj, selectedCategoryObj, selectedMonthTxns, categories]);
 
   const catAfter = catBalance - (calculatedAmount || 0);
   const subAfter = subBalance - (calculatedAmount || 0);
@@ -788,13 +812,9 @@ const AddTransactionModal = ({ isOpen, onClose }) => {
                     const isSelected = String(sub._id) === String(subCategoryId);
                     const sBudget = Number(sub.budget) || 0;
                     const sUsed = selectedMonthTxns
-                      .filter(t => t.type !== 'Credit' && t.type !== 'Transfer' && (
-                        String(t.subCategoryId?._id || t.subCategoryId) === String(sub._id) ||
-                        ((String(t.categoryId?._id || t.categoryId) === String(categoryId) || t.categoryId?.name === selectedCategoryObj?.name) &&
-                         t.description?.toLowerCase().includes(sub.name.toLowerCase()))
-                      ))
+                      .filter(t => isTransactionMatchingSubCategory(t, sub, selectedCategoryObj))
                       .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
-                    const rem = sBudget - sUsed;
+                    const rem = (sBudget - sUsed) === 0 ? 0 : (sBudget - sUsed);
                     const formattedRem = rem >= 0 ? `₹${rem.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}` : `-₹${Math.abs(rem).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 
                     const activeStyle = selectedCategoryStyle || { bg: "bg-amber-500/15", text: "text-amber-600 dark:text-amber-400" };

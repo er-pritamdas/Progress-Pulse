@@ -36,7 +36,11 @@ import {
   AlertTriangle,
   PieChart,
   Eye,
-  EyeOff
+  EyeOff,
+  CreditCard,
+  ArrowUpRight,
+  ArrowDownLeft,
+  Receipt
 } from "lucide-react";
 
 const monthNamesList = [
@@ -105,9 +109,8 @@ const formatCurrency2Dec = (val) => {
 };
 
 const ExpDashboard = () => {
-  TitleChanger("Progress Pulse | Detailed Category Analysis");
   const dispatch = useDispatch();
-  const { categories, transactions, salary, salariesByMonth, loading } = useSelector((state) => state.expense);
+  const { categories = [], sources = [], transactions = [], salary, salariesByMonth, loading } = useSelector((state) => state.expense);
   const { user } = useAuth();
 
   // Default Selection: Current Year January to December
@@ -128,10 +131,43 @@ const ExpDashboard = () => {
     setToMonth("12");
   }, []);
 
-  // Selected Category ID or "SALARY"
+  // Selected Category ID, "SALARY", or "CREDIT_CARDS"
   const [selectedCatId, setSelectedCatId] = useState("");
 
   const isSalaryMode = selectedCatId === "SALARY";
+  const isCreditCardMode = selectedCatId === "CREDIT_CARDS";
+
+  TitleChanger(
+    isCreditCardMode
+      ? "Progress Pulse | Credit Cards Expenses"
+      : isSalaryMode
+      ? "Progress Pulse | Salary Analysis"
+      : "Progress Pulse | Detailed Category Analysis"
+  );
+
+  // Credit Card Section View Tab ("graph" | "table")
+  const [cardViewTab, setCardViewTab] = useState("graph");
+  const [expandedCardMonths, setExpandedCardMonths] = useState(new Set());
+
+  const toggleExpandCardMonth = (rawMonth) => {
+    setExpandedCardMonths((prev) => {
+      const next = new Set(prev);
+      if (next.has(rawMonth)) {
+        next.delete(rawMonth);
+      } else {
+        next.add(rawMonth);
+      }
+      return next;
+    });
+  };
+
+  const expandAllCardMonths = () => {
+    setExpandedCardMonths(new Set(rangeMonths));
+  };
+
+  const collapseAllCardMonths = () => {
+    setExpandedCardMonths(new Set());
+  };
 
   // Category Section View Tab ("graph" | "table")
   const [mainCategoryTab, setMainCategoryTab] = useState("graph");
@@ -227,20 +263,21 @@ const ExpDashboard = () => {
   // Set default selected category once categories load
   useEffect(() => {
     if (availableCategories.length > 0) {
-      if (!selectedCatId || (!isSalaryMode && !availableCategories.some((c) => String(c._id) === String(selectedCatId)))) {
+      if (!selectedCatId || (!isSalaryMode && !isCreditCardMode && !availableCategories.some((c) => String(c._id) === String(selectedCatId)))) {
         setSelectedCatId(String(availableCategories[0]._id));
       }
     }
-  }, [availableCategories, selectedCatId, isSalaryMode]);
+  }, [availableCategories, selectedCatId, isSalaryMode, isCreditCardMode]);
 
   // Selected Category object
   const selectedCategory = useMemo(() => {
     if (isSalaryMode) return { _id: "SALARY", name: "Salary" };
+    if (isCreditCardMode) return { _id: "CREDIT_CARDS", name: "Credit Cards Expenses" };
     return availableCategories.find((c) => String(c._id) === String(selectedCatId)) || availableCategories[0];
-  }, [availableCategories, selectedCatId, isSalaryMode]);
+  }, [availableCategories, selectedCatId, isSalaryMode, isCreditCardMode]);
 
   // Clean name for selected category
-  const categoryCleanName = isSalaryMode ? "Salary" : (selectedCategory ? selectedCategory.name : "Category");
+  const categoryCleanName = isSalaryMode ? "Salary" : isCreditCardMode ? "Credit Cards Expenses" : (selectedCategory ? selectedCategory.name : "Category");
 
   // Helper to resolve salary entered in Table View for month m (strictly 0 if not entered)
   const getSalaryForMonth = (m) => {
@@ -252,7 +289,7 @@ const ExpDashboard = () => {
 
   // Build Main Category / Salary Plot Data for each month in date range
   const monthlyPlotData = useMemo(() => {
-    if (rangeMonths.length === 0) return [];
+    if (rangeMonths.length === 0 || isCreditCardMode) return [];
     if (!isSalaryMode && !selectedCategory) return [];
 
     if (isSalaryMode) {
@@ -334,8 +371,343 @@ const ExpDashboard = () => {
     return { totalAllotted, totalUsed, totalLeft, overallPct };
   }, [monthlyPlotData]);
 
+  // --- Credit Cards Data Structures & Calculations ---
+  const creditCards = useMemo(() => {
+    const map = new Map();
+    (sources || []).filter((s) => s.type === "Card").forEach((s) => {
+      map.set(String(s._id), {
+        _id: String(s._id),
+        name: s.name,
+        balance: Number(s.balance) || 0,
+        currentBalance: Number(s.currentBalance !== undefined ? s.currentBalance : s.balance) || 0,
+        closingBalance: Number(s.closingBalance !== undefined ? s.closingBalance : s.balance) || 0,
+        cardDue: Number(s.cardDue) || (Number(s.balance) < 0 ? Math.abs(Number(s.balance)) : 0),
+        limit: Number(s.limit) || 0,
+        color: s.color || ""
+      });
+    });
+
+    (transactions || []).forEach((t) => {
+      const src = t.sourceId;
+      if (src && typeof src === "object" && src.type === "Card" && src._id && !map.has(String(src._id))) {
+        map.set(String(src._id), {
+          _id: String(src._id),
+          name: src.name || "Credit Card",
+          balance: Number(src.balance) || 0,
+          currentBalance: Number(src.balance) || 0,
+          closingBalance: Number(src.balance) || 0,
+          cardDue: Number(src.balance) < 0 ? Math.abs(Number(src.balance)) : 0,
+          limit: Number(src.limit) || 0,
+          color: src.color || ""
+        });
+      }
+      const trg = t.targetSourceId;
+      if (trg && typeof trg === "object" && trg.type === "Card" && trg._id && !map.has(String(trg._id))) {
+        map.set(String(trg._id), {
+          _id: String(trg._id),
+          name: trg.name || "Credit Card",
+          balance: Number(trg.balance) || 0,
+          currentBalance: Number(trg.balance) || 0,
+          closingBalance: Number(trg.balance) || 0,
+          cardDue: Number(trg.balance) < 0 ? Math.abs(Number(trg.balance)) : 0,
+          limit: Number(trg.limit) || 0,
+          color: trg.color || ""
+        });
+      }
+    });
+
+    return Array.from(map.values());
+  }, [sources, transactions]);
+
+  const cardColorPalette = useMemo(() => [
+    "#ef4444", "#8b5cf6", "#3b82f6", "#f59e0b", "#06b6d4",
+    "#ec4899", "#10b981", "#6366f1", "#14b8a6", "#e11d48"
+  ], []);
+
+  const cardColorMap = useMemo(() => {
+    const map = {};
+    creditCards.forEach((c, idx) => {
+      map[c.name] = c.color && c.color.startsWith("#") ? c.color : cardColorPalette[idx % cardColorPalette.length];
+    });
+    return map;
+  }, [creditCards, cardColorPalette]);
+
+  // Month-by-month Credit Card Spends Data (Expenses Only)
+  const creditCardMonthlyData = useMemo(() => {
+    if (rangeMonths.length === 0) return [];
+
+    const cardIdSet = new Set(creditCards.map((c) => String(c._id)));
+
+    return rangeMonths.map((m) => {
+      const monthLabel = dayjs(`${m}-01`).format("MMM YYYY");
+      const row = {
+        monthLabel,
+        rawMonth: m,
+        totalCardSpend: 0,
+        cardSpends: {},
+        transactions: []
+      };
+
+      const monthCardTxs = (transactions || []).filter((t) => {
+        if (t.type !== "Debit") return false;
+        const tMonth = dayjs(t.date).format("YYYY-MM");
+        if (tMonth !== m) return false;
+
+        const srcId = String(t.sourceId?._id || t.sourceId || "");
+        return cardIdSet.has(srcId);
+      });
+
+      row.transactions = [...monthCardTxs].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+      creditCards.forEach((c) => {
+        const cId = String(c._id);
+        const cName = c.name;
+
+        // Debits on this card
+        const spend = monthCardTxs
+          .filter((t) => String(t.sourceId?._id || t.sourceId) === cId)
+          .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+
+        row[cName] = spend;
+        row.cardSpends[cName] = spend;
+        row.totalCardSpend += spend;
+      });
+
+      return row;
+    });
+  }, [rangeMonths, creditCards, transactions]);
+
+  // Overall Range Aggregates for Credit Cards (Spends Only)
+  const creditCardRangeTotals = useMemo(() => {
+    let totalSpend = 0;
+    let highestMonth = { monthLabel: "-", amount: 0 };
+
+    creditCardMonthlyData.forEach((d) => {
+      totalSpend += d.totalCardSpend;
+      if (d.totalCardSpend > highestMonth.amount) {
+        highestMonth = { monthLabel: d.monthLabel, amount: d.totalCardSpend };
+      }
+    });
+
+    const totalDue = creditCards.reduce((sum, c) => sum + (Number(c.cardDue) || 0), 0);
+    const totalLimit = creditCards.reduce((sum, c) => sum + (Number(c.limit) || 0), 0);
+    const overallUtilization = totalLimit > 0 ? Number(((totalDue / totalLimit) * 100).toFixed(2)) : 0;
+    const avgMonthlySpend = rangeMonths.length > 0 ? totalSpend / rangeMonths.length : 0;
+    const totalTxCount = creditCardMonthlyData.reduce((sum, d) => sum + d.transactions.length, 0);
+
+    return {
+      totalSpend,
+      totalDue,
+      totalLimit,
+      overallUtilization,
+      avgMonthlySpend,
+      highestMonth,
+      totalTxCount
+    };
+  }, [creditCardMonthlyData, creditCards, rangeMonths]);
+
+  // Credit Card ApexChart Series (Stacked bars per card + Total Card Spend Line)
+  const creditCardApexSeries = useMemo(() => {
+    if (!creditCardMonthlyData.length || !creditCards.length) return [];
+
+    const series = creditCards.map((c) => ({
+      name: c.name,
+      type: "bar",
+      data: creditCardMonthlyData.map((m) => m[c.name] || 0),
+    }));
+
+    series.push({
+      name: "Total Card Spend",
+      type: "line",
+      data: creditCardMonthlyData.map((m) => m.totalCardSpend || 0),
+    });
+
+    return series;
+  }, [creditCardMonthlyData, creditCards]);
+
+  // Credit Card ApexChart Options mirroring Sub-Category ApexChart
+  const creditCardApexOptions = useMemo(() => {
+    const numCards = creditCards.length;
+    const colors = [
+      ...creditCards.map((c, i) => cardColorMap[c.name] || cardColorPalette[i % cardColorPalette.length]),
+      "#38bdf8", // Total Card Spend line color (Sky Blue)
+    ];
+
+    const totalSeriesCount = numCards + 1;
+
+    return {
+      chart: {
+        type: "line",
+        stacked: true,
+        background: "transparent",
+        toolbar: {
+          show: false,
+        },
+        zoom: { enabled: false },
+        animations: {
+          enabled: true,
+          easing: "easeinout",
+          speed: 600,
+        },
+      },
+      stroke: {
+        width: [
+          ...creditCards.map(() => 0),
+          2.5, // Total Card Spend line width
+        ],
+        curve: "smooth",
+        dashArray: [
+          ...creditCards.map(() => 0),
+          0,
+        ],
+      },
+      fill: {
+        opacity: [
+          ...creditCards.map(() => 0.7),
+          1,
+        ],
+      },
+      colors: colors,
+      plotOptions: {
+        bar: {
+          columnWidth: "65%",
+          borderRadius: 3,
+          dataLabels: { position: "top" },
+          distributed: false,
+        },
+      },
+      dataLabels: {
+        enabled: true,
+        enabledOnSeries: [...Array(totalSeriesCount).keys()],
+        formatter: (val) =>
+          val > 0
+            ? `₹${formatCurrency2Dec(val)}`
+            : "",
+        style: {
+          fontSize: "10px",
+          fontWeight: "700",
+          colors: ["#ffffffdd"],
+        },
+        background: {
+          enabled: false,
+        },
+        offsetY: -2,
+      },
+      markers: {
+        size: [
+          ...creditCards.map(() => 0),
+          4.5, // Total Card Spend point size
+        ],
+        strokeColor: "#1e293b",
+        strokeWidth: 2,
+        hover: { size: 6.5 },
+      },
+      legend: {
+        show: true,
+        position: "bottom",
+        horizontalAlign: "center",
+        labels: { colors: "#FFFFFF" },
+        markers: {
+          fillColors: colors,
+        },
+        itemMargin: { horizontal: 10, vertical: 5 },
+        onItemClick: {
+          toggleDataSeries: true,
+        },
+        onItemHover: {
+          highlightDataSeries: true,
+        },
+      },
+      xaxis: {
+        categories: creditCardMonthlyData.map((m) => m.monthLabel),
+        labels: {
+          style: { colors: "#FFFFFF", fontSize: "11px", fontWeight: "600" },
+          rotate: -45,
+        },
+        axisBorder: { color: "#888" },
+        axisTicks: { color: "#888" },
+        title: {
+          text: "Months",
+          style: { color: "#FFFFFF", fontSize: "11px" },
+        },
+      },
+      yaxis: [
+        {
+          title: {
+            text: "Amount (₹)",
+            style: { color: "#FFFFFF", fontSize: "11px" },
+          },
+          labels: {
+            style: { colors: "#FFFFFF", fontSize: "11px" },
+            formatter: (v) => `₹${formatCurrency2Dec(v)}`,
+          },
+        },
+      ],
+      tooltip: {
+        theme: "dark",
+        shared: true,
+        intersect: false,
+        custom: function({ dataPointIndex }) {
+          const monthLabel = creditCardMonthlyData[dataPointIndex]?.monthLabel || "";
+          const dataItem = creditCardMonthlyData[dataPointIndex] || {};
+          const totalCardSpend = dataItem.totalCardSpend || 0;
+
+          const rowsHtml = creditCards.map((c, idx) => {
+            const color = cardColorMap[c.name] || cardColorPalette[idx % cardColorPalette.length];
+            const amount = dataItem[c.name] || 0;
+            return `
+              <div class="flex justify-between items-center gap-4" style="display: flex; justify-content: space-between; align-items: center; gap: 16px;">
+                <span class="text-base-content/70 flex items-center gap-1.5 truncate" style="display: flex; align-items: center; gap: 6px; font-size: 11px; opacity: 0.85;">
+                  <span class="w-2.5 h-2.5 rounded-full inline-block shrink-0" style="width: 10px; height: 10px; border-radius: 50%; background-color: ${color}; display: inline-block; flex-shrink: 0;"></span>
+                  <span class="truncate">${c.name}:</span>
+                </span>
+                <span class="font-mono font-bold" style="font-family: monospace; font-weight: 700; color: ${color}; font-size: 11px; white-space: nowrap;">₹${formatCurrency2Dec(amount)}</span>
+              </div>
+            `;
+          }).join("");
+
+          return `
+            <div class="bg-base-100/90 backdrop-blur-md border border-base-300 p-4 rounded-2xl shadow-xl space-y-3 min-w-[240px] text-xs text-base-content" style="background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.15); padding: 14px 16px; border-radius: 16px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5); min-width: 240px; font-size: 12px; font-family: inherit;">
+              <p class="font-extrabold text-sm border-b border-base-200 pb-1.5 flex justify-between items-center" style="font-weight: 800; font-size: 13px; border-bottom: 1px solid rgba(255, 255, 255, 0.1); padding-bottom: 6px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+                <span>${monthLabel}</span>
+                <span class="text-[11px] opacity-60 font-mono" style="font-size: 10px; opacity: 0.6; font-family: monospace;">Credit Cards</span>
+              </p>
+              <div class="space-y-1.5 font-medium" style="display: flex; flex-direction: column; gap: 6px; font-weight: 500;">
+                ${rowsHtml}
+                <div class="flex justify-between items-center gap-4 pt-1.5 border-t border-base-200" style="display: flex; justify-content: space-between; align-items: center; gap: 16px; padding-top: 8px; margin-top: 4px; border-top: 1px solid rgba(255, 255, 255, 0.1); font-weight: 800;">
+                  <span class="text-base-content/80 flex items-center gap-1.5" style="display: flex; align-items: center; gap: 6px; color: #38bdf8; font-size: 11px;">
+                    <span class="w-2.5 h-2.5 rounded-full inline-block shrink-0" style="width: 10px; height: 10px; border-radius: 50%; background-color: #38bdf8; display: inline-block; flex-shrink: 0;"></span>
+                    Total Card Spend:
+                  </span>
+                  <span class="font-mono font-bold" style="font-family: monospace; color: #38bdf8; font-size: 12px; font-weight: 800;">₹${formatCurrency2Dec(totalCardSpend)}</span>
+                </div>
+              </div>
+            </div>
+          `;
+        },
+      },
+      grid: {
+        show: true,
+        borderColor: "#444",
+        strokeDashArray: 4,
+        xaxis: { lines: { show: true } },
+        yaxis: { lines: { show: true } },
+      },
+      responsive: [
+        {
+          breakpoint: 768,
+          options: {
+            chart: { height: 320 },
+            legend: { position: "bottom" },
+          },
+        },
+      ],
+    };
+  }, [creditCards, creditCardMonthlyData, cardColorMap, cardColorPalette]);
+
   // --- Sub-Category or Category Breakdown Names ---
   const subCategoryNames = useMemo(() => {
+    if (isCreditCardMode) return [];
     if (isSalaryMode) {
       return availableCategories.map((c) => c.name);
     }
@@ -348,7 +720,7 @@ const ExpDashboard = () => {
       });
     });
     return Array.from(namesSet);
-  }, [isSalaryMode, availableCategories, selectedCategory, categories]);
+  }, [isSalaryMode, isCreditCardMode, availableCategories, selectedCategory, categories]);
 
   // Color Palettes for Dual Stacked Bars (Stack 1 = Allotted, Stack 2 = Actual Spent)
   const subCatAllottedPalette = useMemo(() => [
@@ -363,7 +735,7 @@ const ExpDashboard = () => {
 
   // Sub-Category / Category Split Dual Stacked Plot Data per month
   const subCatDualStackedPlotData = useMemo(() => {
-    if (rangeMonths.length === 0 || subCategoryNames.length === 0) return [];
+    if (rangeMonths.length === 0 || isCreditCardMode || subCategoryNames.length === 0) return [];
     if (!isSalaryMode && !selectedCategory) return [];
 
     if (isSalaryMode) {
@@ -447,7 +819,6 @@ const ExpDashboard = () => {
             });
 
             if (tSubId && matchingSubCatIds.has(tSubId)) return true;
-            if (!tSubId && t.description && t.description.toLowerCase().includes(subName.toLowerCase())) return true;
             return false;
           })
           .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
@@ -693,7 +1064,7 @@ const ExpDashboard = () => {
 
   // Detailed Sub-Category / Category Monthly Table Data with expandable sub-rows
   const subCatMonthlyTableData = useMemo(() => {
-    if (rangeMonths.length === 0 || subCategoryNames.length === 0) return [];
+    if (rangeMonths.length === 0 || isCreditCardMode || subCategoryNames.length === 0) return [];
     if (!isSalaryMode && !selectedCategory) return [];
 
     if (isSalaryMode) {
@@ -797,7 +1168,6 @@ const ExpDashboard = () => {
             });
 
             if (tSubId && matchingSubCatIds.has(tSubId)) return true;
-            if (!tSubId && t.description && t.description.toLowerCase().includes(subName.toLowerCase())) return true;
             return false;
           })
           .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
@@ -1062,6 +1432,8 @@ const ExpDashboard = () => {
               >
                 {isSalaryMode ? (
                   <Banknote className="text-primary w-5 h-5" />
+                ) : isCreditCardMode ? (
+                  <CreditCard className="text-primary w-5 h-5" />
                 ) : (
                   <Folder className="text-primary w-5 h-5" />
                 )}
@@ -1070,7 +1442,7 @@ const ExpDashboard = () => {
               </div>
               <ul
                 tabIndex={0}
-                className="dropdown-content menu p-2 shadow-2xl bg-base-100/95 backdrop-blur-md rounded-2xl w-60 z-[100] mt-2 border border-base-300/50"
+                className="dropdown-content menu p-2 shadow-2xl bg-base-100/95 backdrop-blur-md rounded-2xl w-64 z-[100] mt-2 border border-base-300/50 max-h-96 overflow-y-auto"
               >
                 <li className="menu-title text-xs font-bold text-base-content/50 uppercase tracking-wider px-3 py-1">
                   Salary & Overview
@@ -1093,11 +1465,34 @@ const ExpDashboard = () => {
                     <span>Salary / Total Income</span>
                   </button>
                 </li>
-                <li className="menu-title text-xs font-bold text-base-content/50 uppercase tracking-wider px-3 py-1 mt-1">
+
+                <li className="menu-title text-xs font-bold text-base-content/50 uppercase tracking-wider px-3 py-1 mt-1.5">
+                  Cards & Sources
+                </li>
+                <li>
+                  <button
+                    className={`flex items-center gap-3 py-2.5 px-3 rounded-xl transition-all font-medium ${
+                      isCreditCardMode
+                        ? "bg-primary text-primary-content font-bold shadow-md"
+                        : "hover:bg-base-200"
+                    }`}
+                    onClick={() => {
+                      setSelectedCatId("CREDIT_CARDS");
+                      if (document.activeElement instanceof HTMLElement) {
+                        document.activeElement.blur();
+                      }
+                    }}
+                  >
+                    <CreditCard className={`w-4 h-4 ${isCreditCardMode ? "text-primary-content" : "text-primary"}`} />
+                    <span>Credit Cards Expenses</span>
+                  </button>
+                </li>
+
+                <li className="menu-title text-xs font-bold text-base-content/50 uppercase tracking-wider px-3 py-1 mt-1.5">
                   Categories
                 </li>
                 {availableCategories.map((cat) => {
-                  const isActive = !isSalaryMode && String(cat._id) === String(selectedCatId);
+                  const isActive = !isSalaryMode && !isCreditCardMode && String(cat._id) === String(selectedCatId);
                   return (
                     <li key={cat._id}>
                       <button
@@ -1187,8 +1582,359 @@ const ExpDashboard = () => {
         </div>
       )}
 
-      {/* 2. Range Summary Cards for Selected Category / Salary */}
-      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      {/* Conditionally Render Credit Cards Dashboard OR Category / Salary Dashboard */}
+      {isCreditCardMode ? (
+        <div className="space-y-6">
+          {/* 1. Range Summary Cards for Credit Cards */}
+          <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            <div className="card bg-base-100 shadow-md border border-base-200 p-5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wider text-base-content/50">
+                  Total Card Expenses
+                </span>
+                <div className="w-8 h-8 rounded-xl bg-rose-500/10 flex items-center justify-center text-rose-500">
+                  <CreditCard size={18} />
+                </div>
+              </div>
+              <span className="text-2xl font-black font-mono text-rose-500 mt-2 block">
+                ₹{formatCurrency2Dec(creditCardRangeTotals.totalSpend)}
+              </span>
+              <span className="text-[11px] opacity-60 mt-1.5 block">
+                Across {rangeMonths.length} Months • {creditCardRangeTotals.totalTxCount} Transactions
+              </span>
+            </div>
+
+            <div className="card bg-base-100 shadow-md border border-base-200 p-5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wider text-base-content/50">
+                  Outstanding Dues
+                </span>
+                <div className="w-8 h-8 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-500">
+                  <AlertTriangle size={18} />
+                </div>
+              </div>
+              <span className="text-2xl font-black font-mono text-amber-500 mt-2 block">
+                ₹{formatCurrency2Dec(creditCardRangeTotals.totalDue)}
+              </span>
+              <span className="text-[11px] opacity-60 mt-1.5 block">
+                Across {creditCards.length} Cards • {creditCardRangeTotals.overallUtilization}% Limit Utilized
+              </span>
+            </div>
+
+            <div className="card bg-base-100 shadow-md border border-base-200 p-5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wider text-base-content/50">
+                  Avg Monthly Spend
+                </span>
+                <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                  <TrendingUp size={18} />
+                </div>
+              </div>
+              <span className="text-2xl font-black font-mono text-primary mt-2 block">
+                ₹{formatCurrency2Dec(creditCardRangeTotals.avgMonthlySpend)}
+              </span>
+              <span className="text-[11px] opacity-60 mt-1.5 block">
+                Monthly Average Across {rangeMonths.length} Months
+              </span>
+            </div>
+
+            <div className="card bg-base-100 shadow-md border border-base-200 p-5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wider text-base-content/50">
+                  Highest Spend Month
+                </span>
+                <div className="w-8 h-8 rounded-xl bg-secondary/10 flex items-center justify-center text-secondary">
+                  <ArrowUpRight size={18} />
+                </div>
+              </div>
+              <span className="text-2xl font-black font-mono text-secondary mt-2 block">
+                ₹{formatCurrency2Dec(creditCardRangeTotals.highestMonth.amount)}
+              </span>
+              <span className="text-[11px] opacity-60 mt-1.5 block">
+                Peak: {creditCardRangeTotals.highestMonth.monthLabel}
+              </span>
+            </div>
+          </section>
+
+          {/* 2. Monthly Credit Cards Expenses Trend (Graph View & Table View) */}
+          <section className="card bg-base-100 shadow-xl border border-base-200">
+            <div className="card-body p-6 space-y-6">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-base-200 pb-4">
+                <div>
+                  <h2 className="text-xl font-bold flex items-center gap-2">
+                    <CreditCard size={22} className="text-primary" />
+                    Credit Cards Monthly Expenses Analysis
+                  </h2>
+                  <p className="text-xs text-base-content/60 mt-0.5">
+                    Interactive monthly spend breakdown per card and cumulative card spend
+                  </p>
+                </div>
+
+                {/* View Switcher: Graph View vs Table View */}
+                <div className="flex flex-wrap items-center gap-2 bg-base-200/80 p-1.5 rounded-2xl border border-base-300">
+                  <button
+                    className={`px-4 py-2 text-xs font-extrabold rounded-xl transition-all flex items-center gap-2 cursor-pointer ${
+                      cardViewTab === "graph"
+                        ? "bg-primary text-primary-content shadow-sm"
+                        : "text-base-content/70 hover:text-base-content hover:bg-base-300/50"
+                    }`}
+                    onClick={() => setCardViewTab("graph")}
+                  >
+                    <BarChart3 size={15} /> Graph View
+                  </button>
+                  <button
+                    className={`px-4 py-2 text-xs font-extrabold rounded-xl transition-all flex items-center gap-2 cursor-pointer ${
+                      cardViewTab === "table"
+                        ? "bg-primary text-primary-content shadow-sm"
+                        : "text-base-content/70 hover:text-base-content hover:bg-base-300/50"
+                    }`}
+                    onClick={() => setCardViewTab("table")}
+                  >
+                    <TableProperties size={15} /> Table View
+                  </button>
+                </div>
+              </div>
+
+              {/* TAB 1: Graph View */}
+              {cardViewTab === "graph" && (
+                <div className="space-y-4">
+                  {loading ? (
+                    <div className="h-[420px] flex items-center justify-center">
+                      <span className="loading loading-spinner loading-lg text-primary"></span>
+                    </div>
+                  ) : creditCards.length > 0 && creditCardMonthlyData.length > 0 ? (
+                    <div className="w-full">
+                      <div className="flex items-center justify-between px-2 pb-2 text-xs font-semibold text-base-content/60">
+                        <span>Click legend items below to toggle card series on/off:</span>
+                      </div>
+                      <Chart
+                        options={creditCardApexOptions}
+                        series={creditCardApexSeries}
+                        type="line"
+                        height={420}
+                      />
+                    </div>
+                  ) : (
+                    <div className="p-12 text-center text-sm opacity-50 italic">
+                      No credit card transactions available for this period.
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* TAB 2: Table View */}
+              {cardViewTab === "table" && (
+                <div className="space-y-4">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-base-200/50 p-3 rounded-2xl border border-base-300">
+                    <p className="text-xs font-semibold text-base-content/70">
+                      Month-by-month spend per credit card with expandable itemized records.
+                    </p>
+                    <div className="flex items-center gap-2 text-xs font-extrabold shrink-0">
+                      <button
+                        onClick={expandAllCardMonths}
+                        className="btn btn-xs btn-ghost text-primary hover:bg-primary/10 cursor-pointer"
+                      >
+                        Expand All
+                      </button>
+                      <span className="opacity-30">•</span>
+                      <button
+                        onClick={collapseAllCardMonths}
+                        className="btn btn-xs btn-ghost text-base-content/60 hover:bg-base-300/50 cursor-pointer"
+                      >
+                        Collapse All
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="overflow-x-auto rounded-2xl border border-base-200 bg-base-100 shadow-xs">
+                    <table className="table table-zebra w-full text-xs">
+                      <thead className="bg-base-200/80 text-base-content uppercase font-black tracking-wider text-[11px]">
+                        <tr>
+                          <th className="py-3.5 px-4 text-left">Month</th>
+                          {creditCards.map((c) => (
+                            <th key={c._id || c.name} className="py-3.5 px-4 text-right whitespace-nowrap">
+                              <span className="inline-flex items-center gap-1.5 justify-end">
+                                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: cardColorMap[c.name] }} />
+                                {c.name}
+                              </span>
+                            </th>
+                          ))}
+                          <th className="py-3.5 px-4 text-right">Total Spent</th>
+                          <th className="py-3.5 px-4 text-center">% of Total</th>
+                        </tr>
+                      </thead>
+                      <tbody className="font-medium">
+                        {creditCardMonthlyData.length > 0 ? (
+                          creditCardMonthlyData.map((d) => {
+                            const isExpanded = expandedCardMonths.has(d.rawMonth);
+                            const spendPct = creditCardRangeTotals.totalSpend > 0
+                              ? Number(((d.totalCardSpend / creditCardRangeTotals.totalSpend) * 100).toFixed(2))
+                              : 0;
+                            const pctStyle = getUsedPercentageStyle(spendPct);
+
+                            return (
+                              <React.Fragment key={d.rawMonth}>
+                                <tr
+                                  onClick={() => toggleExpandCardMonth(d.rawMonth)}
+                                  className="hover:bg-base-200/50 transition-colors cursor-pointer"
+                                >
+                                  <td className="py-3 px-4 font-bold text-sm text-base-content whitespace-nowrap">
+                                    <div className="flex items-center gap-2">
+                                      <button className="btn btn-xs btn-ghost btn-circle p-0 h-6 w-6 min-h-0 text-base-content/70">
+                                        {isExpanded ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
+                                      </button>
+                                      <span>{d.monthLabel}</span>
+                                      {d.transactions.length > 0 && (
+                                        <span className="badge badge-xs bg-base-200 text-base-content/60 font-mono">
+                                          {d.transactions.length} txs
+                                        </span>
+                                      )}
+                                    </div>
+                                  </td>
+                                  {creditCards.map((c) => {
+                                    const cardSpent = d.cardSpends[c.name] || 0;
+                                    return (
+                                      <td key={c._id || c.name} className="py-3 px-4 text-right font-mono font-bold whitespace-nowrap">
+                                        {cardSpent > 0 ? (
+                                          <span style={{ color: cardColorMap[c.name] }}>₹{formatCurrency2Dec(cardSpent)}</span>
+                                        ) : (
+                                          <span className="opacity-30 font-normal">₹0.00</span>
+                                        )}
+                                      </td>
+                                    );
+                                  })}
+                                  <td className="py-3 px-4 text-right font-mono font-bold text-rose-500 whitespace-nowrap">
+                                    ₹{formatCurrency2Dec(d.totalCardSpend)}
+                                  </td>
+                                  <td className="py-3 px-4 text-center">
+                                    <div className="flex items-center justify-center gap-2">
+                                      <span className={`font-mono font-extrabold text-xs w-14 text-right ${pctStyle.text}`}>
+                                        {Number(spendPct || 0).toFixed(2)}%
+                                      </span>
+                                      <div className="w-20 bg-base-200 h-2 rounded-full overflow-hidden hidden sm:block">
+                                        <div
+                                          className={`h-full rounded-full transition-all ${pctStyle.barBg}`}
+                                          style={{ width: `${Math.min(spendPct, 100)}%` }}
+                                        />
+                                      </div>
+                                    </div>
+                                  </td>
+                                </tr>
+
+                                {/* Expanded Itemized Transaction Details */}
+                                {isExpanded && (
+                                  <tr>
+                                    <td colSpan={creditCards.length + 3} className="p-0 bg-base-200/30">
+                                      <div className="p-4 space-y-2.5">
+                                        <div className="flex items-center justify-between">
+                                          <h4 className="font-bold text-xs uppercase tracking-wider text-base-content/70 flex items-center gap-2">
+                                            <CreditCard size={14} className="text-primary" />
+                                            Card Expense Transactions in {d.monthLabel} ({d.transactions.length})
+                                          </h4>
+                                          <span className="text-[11px] font-mono font-bold text-rose-500">
+                                            Total Spent: ₹{formatCurrency2Dec(d.totalCardSpend)}
+                                          </span>
+                                        </div>
+
+                                        {d.transactions.length > 0 ? (
+                                          <div className="overflow-x-auto rounded-xl border border-base-300 bg-base-100/80">
+                                            <table className="table table-xs w-full">
+                                              <thead className="bg-base-200/60 font-bold uppercase text-[10px]">
+                                                <tr>
+                                                  <th className="py-2 px-3">Date</th>
+                                                  <th className="py-2 px-3">Card</th>
+                                                  <th className="py-2 px-3">Category</th>
+                                                  <th className="py-2 px-3">Description</th>
+                                                  <th className="py-2 px-3 text-right">Amount</th>
+                                                </tr>
+                                              </thead>
+                                              <tbody className="divide-y divide-base-200/60">
+                                                {d.transactions.map((tx) => {
+                                                  const cardName = tx.sourceId?.name || "Credit Card";
+                                                  const catName = tx.categoryId?.name || "General";
+                                                  const tagStyle = getCategoryTagStyle(catName);
+
+                                                  return (
+                                                    <tr key={tx._id} className="hover:bg-base-200/40">
+                                                      <td className="py-2 px-3 font-mono text-[11px] whitespace-nowrap">
+                                                        {dayjs(tx.date).format("DD MMM YYYY")}
+                                                      </td>
+                                                      <td className="py-2 px-3 font-semibold whitespace-nowrap">
+                                                        <span className="inline-flex items-center gap-1.5">
+                                                          <span
+                                                            className="w-2 h-2 rounded-full shrink-0"
+                                                            style={{ backgroundColor: cardColorMap[cardName] || "#888" }}
+                                                          />
+                                                          {cardName}
+                                                        </span>
+                                                      </td>
+                                                      <td className="py-2 px-3 whitespace-nowrap">
+                                                        <span className={`badge badge-xs font-bold ${tagStyle.badge}`}>
+                                                          {catName}
+                                                        </span>
+                                                      </td>
+                                                      <td className="py-2 px-3 text-base-content/80 max-w-[220px] truncate">
+                                                        {tx.note || tx.description || "—"}
+                                                      </td>
+                                                      <td className="py-2 px-3 text-right font-mono font-bold text-rose-500 whitespace-nowrap">
+                                                        -₹{formatCurrency2Dec(tx.amount)}
+                                                      </td>
+                                                    </tr>
+                                                  );
+                                                })}
+                                              </tbody>
+                                            </table>
+                                          </div>
+                                        ) : (
+                                          <p className="text-xs italic opacity-50 py-2">No transactions recorded for this month.</p>
+                                        )}
+                                      </div>
+                                    </td>
+                                  </tr>
+                                )}
+                              </React.Fragment>
+                            );
+                          })
+                        ) : (
+                          <tr>
+                            <td colSpan={creditCards.length + 3} className="py-8 text-center opacity-50 italic">
+                              No credit card data available for the selected date range.
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                      {creditCardMonthlyData.length > 0 && (
+                        <tfoot className="bg-base-200/90 font-black text-sm text-base-content border-t-2 border-base-300">
+                          <tr>
+                            <td className="py-3.5 px-4 uppercase tracking-wider text-xs">Total / Range Aggregate</td>
+                            {creditCards.map((c) => {
+                              const cardTotal = creditCardMonthlyData.reduce((sum, d) => sum + (d.cardSpends[c.name] || 0), 0);
+                              return (
+                                <td key={`foot-${c._id || c.name}`} className="py-3.5 px-4 text-right font-mono" style={{ color: cardColorMap[c.name] }}>
+                                  ₹{formatCurrency2Dec(cardTotal)}
+                                </td>
+                              );
+                            })}
+                            <td className="py-3.5 px-4 text-right font-mono text-rose-500">₹{formatCurrency2Dec(creditCardRangeTotals.totalSpend)}</td>
+                            <td className="py-3.5 px-4 text-center font-mono">
+                              <span className="badge badge-sm font-extrabold px-2.5 py-1.5 shadow-xs bg-rose-500 text-white">
+                                100.00%
+                              </span>
+                            </td>
+                          </tr>
+                        </tfoot>
+                      )}
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+          </section>
+        </div>
+      ) : (
+        <>
+          {/* 2. Range Summary Cards for Selected Category / Salary */}
+          <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         <div className="card bg-base-100 shadow-md border border-base-200 p-5">
           <span className="text-xs font-bold uppercase tracking-wider text-base-content/50">
             {isSalaryMode ? "Total Salary" : "Total Allotted"}
@@ -1700,6 +2446,8 @@ const ExpDashboard = () => {
           )}
         </div>
       </section>
+        </>
+      )}
       </div>
     </div>
   );

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useSelector } from "react-redux";
+import dayjs from "dayjs";
 import { getSourceTagStyle } from "../../utils/expenseTheme";
 import {
   X,
@@ -13,10 +14,17 @@ import {
   EyeOff
 } from "lucide-react";
 
-const BankBalancesModal = ({ isOpen, onClose }) => {
-  const { sources, transactions } = useSelector((state) => state.expense);
+const BankBalancesModal = ({ isOpen, onClose, initialTypeFilter = "all" }) => {
+  const { sources, transactions, currentMonth } = useSelector((state) => state.expense);
+  const isCurrentMonth = !currentMonth || currentMonth === dayjs().format("YYYY-MM");
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState("all"); // "all" | "Bank" | "Card" | "Wallet"
+
+  useEffect(() => {
+    if (isOpen) {
+      setTypeFilter(initialTypeFilter || "all");
+    }
+  }, [isOpen, initialTypeFilter]);
 
   // Excluded Sources State (persisted in localStorage and synced across components)
   const [excludedSourceIds, setExcludedSourceIds] = useState(() => {
@@ -53,6 +61,9 @@ const BankBalancesModal = ({ isOpen, onClose }) => {
 
   const getCardDueAmount = (source, txList = []) => {
     if (!source || source.type !== 'Card') return 0;
+    if (source.cardDue !== undefined) return source.cardDue;
+    const bal = Number(source.balance) || 0;
+    if (bal < 0) return Math.abs(bal);
     const cardDebits = txList
       .filter(t => t.type === 'Debit' && String(t.sourceId?._id || t.sourceId) === String(source._id))
       .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
@@ -108,15 +119,29 @@ const BankBalancesModal = ({ isOpen, onClose }) => {
               <Building2 size={22} />
             </div>
             <div>
-              <h3 className="font-extrabold text-lg flex items-center gap-2">
+              <h3 className="font-extrabold text-lg flex items-center gap-2 flex-wrap">
                 <span>Bank Accounts & Balances</span>
+                {!isCurrentMonth && (
+                  <span className="text-xs font-bold text-amber-500 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-md">
+                    {dayjs(currentMonth).format("MMMM YYYY")} Closing
+                  </span>
+                )}
+                {isCurrentMonth && (
+                  <span className="text-xs font-bold text-emerald-500 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-md">
+                    Current Live
+                  </span>
+                )}
                 {excludedSourceIds.length > 0 && (
                   <span className="text-xs font-bold text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-md">
                     {excludedSourceIds.length} Excluded
                   </span>
                 )}
               </h3>
-              <p className="text-xs opacity-60 font-medium">Click any account card below to exclude it from Total Net Assets</p>
+              <p className="text-xs opacity-60 font-medium">
+                {isCurrentMonth
+                  ? "Showing current live balances. Click any account card below to exclude it from Total Net Assets."
+                  : `Showing closing balances as of the end of ${dayjs(currentMonth).format("MMMM YYYY")}. Click any account card to exclude.`}
+              </p>
             </div>
           </div>
 
@@ -128,21 +153,27 @@ const BankBalancesModal = ({ isOpen, onClose }) => {
         {/* Top Summary Banner */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-5 bg-base-200/30 border-b border-base-200 text-xs">
           <div className="p-3.5 rounded-2xl bg-base-100 border border-base-200 shadow-2xs">
-            <span className="text-[10px] font-bold text-base-content/50 uppercase block tracking-wider mb-1">Total Net Assets</span>
+            <span className="text-[10px] font-bold text-base-content/50 uppercase block tracking-wider mb-1">
+              {isCurrentMonth ? "Total Net Assets" : `Net Closing Assets (${dayjs(currentMonth).format("MMM 'YY")})`}
+            </span>
             <span className={`text-xl font-extrabold font-mono ${netAssets < 0 ? 'text-error' : 'text-emerald-600 dark:text-emerald-400'}`}>
               {netAssets < 0 ? `-₹${Math.abs(netAssets).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : `₹${netAssets.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
             </span>
           </div>
 
           <div className="p-3.5 rounded-2xl bg-base-100 border border-base-200 shadow-2xs">
-            <span className="text-[10px] font-bold text-base-content/50 uppercase block tracking-wider mb-1">Bank Balances</span>
+            <span className="text-[10px] font-bold text-base-content/50 uppercase block tracking-wider mb-1">
+              {isCurrentMonth ? "Bank Balances" : `Bank Balances (${dayjs(currentMonth).format("MMM 'YY")})`}
+            </span>
             <span className="text-xl font-extrabold font-mono text-primary">
               ₹{totalBankBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
           </div>
 
           <div className="p-3.5 rounded-2xl bg-base-100 border border-base-200 shadow-2xs">
-            <span className="text-[10px] font-bold text-base-content/50 uppercase block tracking-wider mb-1">Card Liabilities</span>
+            <span className="text-[10px] font-bold text-base-content/50 uppercase block tracking-wider mb-1">
+              {isCurrentMonth ? "Card Liabilities" : `Card Liabilities (${dayjs(currentMonth).format("MMM 'YY")})`}
+            </span>
             <span className="text-xl font-extrabold font-mono text-error">
               -₹{totalCardSpent.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
@@ -222,7 +253,9 @@ const BankBalancesModal = ({ isOpen, onClose }) => {
                 <div className="flex items-end justify-between pt-1">
                   <div>
                     <span className="text-[10px] opacity-70 font-semibold block uppercase tracking-wider">
-                      {isCard ? "Card Balance / Due" : "Current Balance"}
+                      {isCard
+                        ? (isCurrentMonth ? "Card Balance / Due" : "Closing Due")
+                        : (isCurrentMonth ? "Current Balance" : "Closing Balance")}
                     </span>
                     <span className={`text-xl font-extrabold font-mono tracking-tight ${isExcluded ? 'line-through opacity-60' : (isErrorColor ? 'text-error' : '')}`}>
                       {isCard ? `-₹${Math.abs(rawAmt).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : (rawAmt < 0 ? `-₹${Math.abs(rawAmt).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : `₹${rawAmt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`)}

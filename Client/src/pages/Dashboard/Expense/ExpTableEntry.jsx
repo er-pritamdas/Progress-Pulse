@@ -5,7 +5,7 @@ import { useAuth } from "../../../Context/JwtAuthContext";
 import ExpenseTable from "../../../components/Expense/ExpenseTable";
 import BankBalancesModal from "../../../components/Expense/BankBalancesModal";
 import dayjs from "dayjs";
-import { ChevronLeft, ChevronRight, TrendingUp, TrendingDown, Eye, EyeOff, Calendar, X, Wallet, Search, Folder, ExternalLink, ArrowUp, ArrowDown, ArrowUpDown, ArrowRightLeft, Sparkles, Filter, ChevronDown, ChevronUp, Building2, Info, Handshake, Users, Plus, Minus } from "lucide-react";
+import { ChevronLeft, ChevronRight, TrendingUp, TrendingDown, Eye, EyeOff, Calendar, X, Wallet, Search, Folder, ExternalLink, ArrowUp, ArrowDown, ArrowUpDown, ArrowRightLeft, Sparkles, Filter, ChevronDown, ChevronUp, Building2, CreditCard, Info, Handshake, Users, Plus, Minus } from "lucide-react";
 import { getSourceTagStyle, getCategoryTagStyle } from "../../../utils/expenseTheme";
 import TransactionInfoModal from "../../../components/Expense/TransactionInfoModal";
 
@@ -36,6 +36,7 @@ const ExpTableEntry = () => {
   const { transactions, loading, currentMonth, salary, sources, categories } = useSelector((state) => state.expense);
   const { user } = useAuth();
   const sidebarScrollRef = useRef(null);
+  const cardScrollRef = useRef(null);
 
   const [showDebit, setShowDebit] = useState(true);
   const [showCredit, setShowCredit] = useState(true);
@@ -43,6 +44,7 @@ const ExpTableEntry = () => {
   const [showHeatmapModal, setShowHeatmapModal] = useState(false);
   const [showTransactionModal, setShowTransactionModal] = useState(null); // 'debit' | 'credit' | 'reimbursable' | null
   const [showBankBalancesModal, setShowBankBalancesModal] = useState(false);
+  const [bankModalTypeFilter, setBankModalTypeFilter] = useState("all");
 
   // Reimbursable Splits Map (txId -> splitCount)
   const [reimbursableSplits, setReimbursableSplits] = useState(() => {
@@ -196,6 +198,9 @@ const ExpTableEntry = () => {
 
   const getCardDueAmount = (source, txList = []) => {
     if (!source || source.type !== 'Card') return 0;
+    if (source.cardDue !== undefined) return source.cardDue;
+    const bal = Number(source.balance) || 0;
+    if (bal < 0) return Math.abs(bal);
     const cardDebits = txList
       .filter(t => t.type === 'Debit' && String(t.sourceId?._id || t.sourceId) === String(source._id))
       .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
@@ -219,24 +224,25 @@ const ExpTableEntry = () => {
     return due > 0 ? due : 0;
   };
 
-  const sortedSources = useMemo(() => {
-    return [...sources].sort((a, b) => {
-      const isABank = a.type === 'Bank';
-      const isBBank = b.type === 'Bank';
+  const isCurrentMonth = currentMonth === dayjs().format("YYYY-MM");
 
-      if (isABank && !isBBank) return -1;
-      if (!isABank && isBBank) return 1;
+  const bankSources = useMemo(() => {
+    return sources.filter(s => s.type === 'Bank' || !s.type);
+  }, [sources]);
 
-      const getAmt = (s) => {
-        if (s.type === 'Card') {
-          return getCardDueAmount(s, transactions);
-        }
-        return s.balance || 0;
-      };
+  const cardSources = useMemo(() => {
+    return sources.filter(s => s.type === 'Card');
+  }, [sources]);
 
-      return getAmt(b) - getAmt(a);
+  const sortedBankSources = useMemo(() => {
+    return [...bankSources].sort((a, b) => (b.balance || 0) - (a.balance || 0));
+  }, [bankSources]);
+
+  const sortedCardSources = useMemo(() => {
+    return [...cardSources].sort((a, b) => {
+      return getCardDueAmount(b, transactions) - getCardDueAmount(a, transactions);
     });
-  }, [sources, transactions]);
+  }, [cardSources, transactions]);
 
   const totalBankBalance = sources
     .filter(s => (s.type === 'Bank' || !s.type) && !excludedSourceIds.includes(String(s._id)))
@@ -251,31 +257,43 @@ const ExpTableEntry = () => {
   return (
     <div className="p-4 md:p-2 w-full max-w-[1600px] mx-auto pb-20">
 
-      <div className="flex flex-col lg:flex-row gap-6">
+      <div className="flex flex-col lg:flex-row gap-6 items-start">
 
-        {/* Sidebar Controls (Left) - Sticky */}
-        <div className="w-full lg:w-72 shrink-0 space-y-6 lg:sticky lg:top-6 lg:h-fit">
+        {/* Sidebar Controls (Left) - Sticky & Scrollable (Hidden scrollbar) */}
+        <div className="w-full lg:w-72 shrink-0 space-y-4 lg:sticky lg:top-2 lg:max-h-[calc(100vh-9.5rem)] lg:overflow-y-auto lg:overflow-x-hidden overscroll-contain scroll-hidden [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden p-1 pb-8">
 
           {/* Bank Balances Card - Clickable to open Popup */}
           <div
-            onClick={() => setShowBankBalancesModal(true)}
+            onClick={() => {
+              setBankModalTypeFilter("Bank");
+              setShowBankBalancesModal(true);
+            }}
             className="card bg-gradient-to-br from-base-100 to-base-200 shadow-xl overflow-hidden relative group cursor-pointer hover:scale-[1.02] transition-all border border-transparent hover:border-primary/40"
           >
             <div className="card-body p-4 relative z-10 space-y-2">
               <div className="flex items-center justify-between">
-                <h3 className="text-xs font-extrabold text-base-content/70 uppercase tracking-wider flex items-center gap-1.5">
+                <h3 className="text-xs font-extrabold text-base-content/70 uppercase tracking-wider flex items-center gap-1.5 flex-wrap">
                   <Building2 size={14} className="text-primary" />
                   <span>Bank Balances</span>
+                  {!isCurrentMonth ? (
+                    <span className="text-[9px] font-extrabold text-amber-500 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded uppercase tracking-wider">
+                      {dayjs(currentMonth).format("MMM 'YY")} Closing
+                    </span>
+                  ) : (
+                    <span className="text-[9px] font-extrabold text-emerald-500 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded uppercase tracking-wider">
+                      Current
+                    </span>
+                  )}
                 </h3>
-                <span className="text-[10px] font-extrabold text-primary bg-primary/10 px-2 py-0.5 rounded-md flex items-center gap-1 group-hover:scale-105 transition-transform">
-                  View All <ExternalLink size={10} />
+                <span className="text-primary bg-primary/10 p-1 rounded-md flex items-center justify-center group-hover:scale-110 transition-transform" title="View All">
+                  <ExternalLink size={12} />
                 </span>
               </div>
 
-              {/* Scrollable Bank & Card Balances List (Side arrows) */}
+              {/* Scrollable Bank Balances List (Side arrows) */}
               <div className="w-full pt-1 border-t border-base-300/30 flex items-center gap-1">
-                {/* Left Arrow Button */}
-                {sortedSources.length > 3 ? (
+                {/* Up Arrow Button */}
+                {sortedBankSources.length > 3 ? (
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -284,7 +302,7 @@ const ExpTableEntry = () => {
                     className="opacity-30 hover:opacity-90 transition-opacity p-0.5 text-base-content hover:scale-110 shrink-0"
                     title="Scroll Up"
                   >
-                    <ChevronLeft size={14} />
+                    <ChevronUp size={14} />
                   </button>
                 ) : <div className="w-3 shrink-0" />}
 
@@ -293,12 +311,9 @@ const ExpTableEntry = () => {
                   ref={sidebarScrollRef}
                   className="flex-1 max-h-[72px] overflow-y-auto space-y-1 px-0.5 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
                 >
-                  {sortedSources.map((source) => {
-                    const isCard = source.type === 'Card';
-                    const cardSpent = isCard ? getCardDueAmount(source, transactions) : 0;
-                    const rawAmt = isCard ? cardSpent : (source.balance || 0);
-                    const isNegativeBank = !isCard && rawAmt < 0;
-                    const isErrorColor = isCard || isNegativeBank;
+                  {sortedBankSources.map((source) => {
+                    const rawAmt = source.balance || 0;
+                    const isNegativeBank = rawAmt < 0;
                     const isExcluded = excludedSourceIds.includes(String(source._id));
 
                     return (
@@ -311,22 +326,22 @@ const ExpTableEntry = () => {
                         className={`flex items-center justify-between text-xs py-0.5 border-b border-base-300/20 last:border-0 gap-1.5 cursor-pointer hover:bg-base-300/30 px-1 rounded transition-all ${
                           isExcluded ? 'opacity-40 line-through select-none' : ''
                         }`}
-                        title={isExcluded ? "Click to include in Total Net Balance" : "Click to exclude from Total Net Balance"}
+                        title={isExcluded ? "Click to include in Total calculation" : "Click to exclude from Total calculation"}
                       >
                         <span className="font-semibold text-base-content/80 truncate text-xs text-left flex items-center gap-1">
                           {isExcluded && <EyeOff size={10} className="shrink-0 text-amber-500" />}
                           {source.name}
                         </span>
-                        <span className={`font-mono font-extrabold text-xs shrink-0 text-right ${isExcluded ? 'text-base-content/40' : (isErrorColor ? 'text-error' : 'text-success')}`}>
-                          {hideNumbers ? "••••••••" : (isCard ? `-₹${Math.abs(rawAmt).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : (rawAmt < 0 ? `-₹${Math.abs(rawAmt).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : `₹${rawAmt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`))}
+                        <span className={`font-mono font-extrabold text-xs shrink-0 text-right ${isExcluded ? 'text-base-content/40' : (isNegativeBank ? 'text-error' : 'text-success')}`}>
+                          {hideNumbers ? "••••••••" : (rawAmt < 0 ? `-₹${Math.abs(rawAmt).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : `₹${rawAmt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`)}
                         </span>
                       </div>
                     );
                   })}
                 </div>
 
-                {/* Right Arrow Button */}
-                {sortedSources.length > 3 ? (
+                {/* Down Arrow Button */}
+                {sortedBankSources.length > 3 ? (
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -335,20 +350,143 @@ const ExpTableEntry = () => {
                     className="opacity-30 hover:opacity-90 transition-opacity p-0.5 text-base-content hover:scale-110 shrink-0"
                     title="Scroll Down"
                   >
-                    <ChevronRight size={14} />
+                    <ChevronDown size={14} />
                   </button>
                 ) : <div className="w-3 shrink-0" />}
               </div>
 
-              {/* Total Net Balance Line */}
+              {/* Total Bank Balance Line */}
               <div className="pt-2 border-t border-base-300/40 flex justify-between items-center text-xs font-bold">
-                <span className="text-[10px] uppercase font-extrabold text-base-content/60 tracking-wider">Total Net Balance</span>
-                <span className={`font-mono text-xs font-extrabold ${totalNetBalance < 0 ? 'text-error' : 'text-success'}`}>
-                  {hideNumbers ? "••••••••" : (totalNetBalance < 0 ? `-₹${Math.abs(totalNetBalance).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : `₹${totalNetBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`)}
+                <span className="text-[10px] uppercase font-extrabold text-base-content/60 tracking-wider">
+                  {isCurrentMonth ? "Total Bank Balance" : `${dayjs(currentMonth).format("MMM 'YY")} Closing Bank Balance`}
+                </span>
+                <span className={`font-mono text-xs font-extrabold ${totalBankBalance < 0 ? 'text-error' : 'text-success'}`}>
+                  {hideNumbers ? "••••••••" : (totalBankBalance < 0 ? `-₹${Math.abs(totalBankBalance).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : `₹${totalBankBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`)}
                 </span>
               </div>
+              {cardSources.length > 0 && (
+                <div className="pt-0.5 flex justify-between items-center text-[11px] font-semibold text-base-content/60">
+                  <span className="text-[9.5px] uppercase font-bold text-base-content/50 tracking-wider">
+                    {isCurrentMonth ? "Net (Banks - Cards)" : `Net Closing (${dayjs(currentMonth).format("MMM")})`}
+                  </span>
+                  <span className={`font-mono text-[11px] font-extrabold ${totalNetBalance < 0 ? 'text-error' : 'text-success'}`}>
+                    {hideNumbers ? "••••••••" : (totalNetBalance < 0 ? `-₹${Math.abs(totalNetBalance).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : `₹${totalNetBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`)}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
+
+          {/* Credit Cards Card - Dedicated Card for Credit Cards */}
+          {cardSources.length > 0 && (
+            <div
+              onClick={() => {
+                setBankModalTypeFilter("Card");
+                setShowBankBalancesModal(true);
+              }}
+              className="card bg-gradient-to-br from-base-100 to-base-200 shadow-xl overflow-hidden relative group cursor-pointer hover:scale-[1.02] transition-all border border-transparent hover:border-error/40"
+            >
+              {/* Background Icon */}
+              <div className="absolute -right-6 -bottom-6 opacity-5 group-hover:scale-110 transition-transform duration-500">
+                <CreditCard size={120} className="text-error" />
+              </div>
+
+              <div className="card-body p-4 relative z-10 space-y-2">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-extrabold text-base-content/70 uppercase tracking-wider flex items-center gap-1.5 flex-wrap">
+                    <CreditCard size={14} className="text-error" />
+                    <span>Credit Cards</span>
+                    {!isCurrentMonth ? (
+                      <span className="text-[9px] font-extrabold text-amber-500 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded uppercase tracking-wider">
+                        {dayjs(currentMonth).format("MMM 'YY")} Closing
+                      </span>
+                    ) : (
+                      <span className="text-[9px] font-extrabold text-emerald-500 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded uppercase tracking-wider">
+                        Current
+                      </span>
+                    )}
+                  </h3>
+                  <span className="text-error bg-error/10 p-1 rounded-md flex items-center justify-center group-hover:scale-110 transition-transform" title="View All">
+                    <ExternalLink size={12} />
+                  </span>
+                </div>
+
+                {/* Scrollable Credit Cards Balances List */}
+                <div className="w-full pt-1 border-t border-base-300/30 flex items-center gap-1">
+                  {/* Up Arrow Button */}
+                  {sortedCardSources.length > 3 ? (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        cardScrollRef.current?.scrollBy({ top: -38, behavior: 'smooth' });
+                      }}
+                      className="opacity-30 hover:opacity-90 transition-opacity p-0.5 text-base-content hover:scale-110 shrink-0"
+                      title="Scroll Up"
+                    >
+                      <ChevronUp size={14} />
+                    </button>
+                  ) : <div className="w-3 shrink-0" />}
+
+                  {/* List Container (Scrollable, 3 items height) */}
+                  <div
+                    ref={cardScrollRef}
+                    className="flex-1 max-h-[72px] overflow-y-auto space-y-1 px-0.5 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+                  >
+                    {sortedCardSources.map((source) => {
+                      const cardSpent = getCardDueAmount(source, transactions);
+                      const isExcluded = excludedSourceIds.includes(String(source._id));
+
+                      return (
+                        <div
+                          key={source._id}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleExcludeSource(source._id);
+                          }}
+                          className={`flex items-center justify-between text-xs py-0.5 border-b border-base-300/20 last:border-0 gap-1.5 cursor-pointer hover:bg-base-300/30 px-1 rounded transition-all ${
+                            isExcluded ? 'opacity-40 line-through select-none' : ''
+                          }`}
+                          title={isExcluded ? "Click to include in Total calculation" : "Click to exclude from Total calculation"}
+                        >
+                          <span className="font-semibold text-base-content/80 truncate text-xs text-left flex items-center gap-1">
+                            {isExcluded && <EyeOff size={10} className="shrink-0 text-amber-500" />}
+                            {source.name}
+                          </span>
+                          <span className={`font-mono font-extrabold text-xs shrink-0 text-right ${isExcluded ? 'text-base-content/40' : 'text-error'}`}>
+                            {hideNumbers ? "••••••••" : `-₹${Math.abs(cardSpent).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Down Arrow Button */}
+                  {sortedCardSources.length > 3 ? (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        cardScrollRef.current?.scrollBy({ top: 38, behavior: 'smooth' });
+                      }}
+                      className="opacity-30 hover:opacity-90 transition-opacity p-0.5 text-base-content hover:scale-110 shrink-0"
+                      title="Scroll Down"
+                    >
+                      <ChevronDown size={14} />
+                    </button>
+                  ) : <div className="w-3 shrink-0" />}
+                </div>
+
+                {/* Total Outstanding Due Line */}
+                <div className="pt-2 border-t border-base-300/40 flex justify-between items-center text-xs font-bold">
+                  <span className="text-[10px] uppercase font-extrabold text-base-content/60 tracking-wider">
+                    {isCurrentMonth ? "Total Outstanding Due" : `${dayjs(currentMonth).format("MMM 'YY")} Closing Due`}
+                  </span>
+                  <span className="font-mono text-xs font-extrabold text-error">
+                    {hideNumbers ? "••••••••" : `-₹${totalCardSpent.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Debited Card */}
           <div
@@ -359,7 +497,7 @@ const ExpTableEntry = () => {
             <div className="absolute -right-6 -bottom-6 opacity-5 group-hover:scale-110 transition-transform duration-500">
               <TrendingDown size={120} className="text-error" />
             </div>
-            <div className="card-body p-6 relative z-10">
+            <div className="card-body p-4 sm:p-5 relative z-10">
               <div className="flex justify-between items-start">
                 <h3 className="text-xs font-bold text-base-content/50 uppercase tracking-widest mb-1 flex items-center gap-1.5">
                   Total Debited <ExternalLink size={12} className="opacity-0 group-hover:opacity-100 transition-opacity text-error" />
@@ -398,7 +536,7 @@ const ExpTableEntry = () => {
             <div className="absolute -right-6 -bottom-6 opacity-5 group-hover:scale-110 transition-transform duration-500">
               <TrendingUp size={120} className="text-success" />
             </div>
-            <div className="card-body p-6 relative z-10">
+            <div className="card-body p-4 sm:p-5 relative z-10">
               <div className="flex justify-between items-start">
                 <h3 className="text-xs font-bold text-base-content/50 uppercase tracking-widest mb-1 flex items-center gap-1.5">
                   Total Credited <ExternalLink size={12} className="opacity-0 group-hover:opacity-100 transition-opacity text-success" />
@@ -437,7 +575,7 @@ const ExpTableEntry = () => {
             <div className="absolute -right-6 -bottom-6 opacity-5 group-hover:scale-110 transition-transform duration-500">
               <Handshake size={120} className="text-warning" />
             </div>
-            <div className="card-body p-6 relative z-10">
+            <div className="card-body p-4 sm:p-5 relative z-10">
               <div className="flex justify-between items-start">
                 <h3 className="text-xs font-bold text-base-content/50 uppercase tracking-widest mb-1 flex items-center gap-1.5">
                   Total Reimbursable <ExternalLink size={12} className="opacity-0 group-hover:opacity-100 transition-opacity text-warning" />
@@ -520,6 +658,7 @@ const ExpTableEntry = () => {
       <BankBalancesModal
         isOpen={showBankBalancesModal}
         onClose={() => setShowBankBalancesModal(false)}
+        initialTypeFilter={bankModalTypeFilter}
       />
     </div>
   );

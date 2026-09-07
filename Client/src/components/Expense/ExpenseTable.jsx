@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from "react-redux";
 import dayjs from "dayjs";
 import { addTransaction, updateTransaction, deleteTransaction, setMonth, performUndo, performRedo } from "../../services/redux/slice/ExpenseSlice";
 import { getSourceTagStyle, getCategoryTagStyle } from "../../utils/expenseTheme";
-import { Trash2, Save, X, Edit2, Plus, PlusCircle, Handshake, AlertTriangle, Wallet, Tag, Folder, TrendingUp, TrendingDown, ArrowUp, ArrowDown, Calendar, ArrowRightLeft, Sparkles, ChevronDown, ChevronLeft, ChevronRight, Filter, Search, Undo2, Redo2, Eye, EyeOff, SlidersHorizontal, Info, ArrowUpRight, Zap } from "lucide-react";
+import { Trash2, Save, X, Edit2, Plus, PlusCircle, Handshake, AlertTriangle, Wallet, CreditCard, Tag, Folder, TrendingUp, TrendingDown, ArrowUp, ArrowDown, Calendar, ArrowRightLeft, Sparkles, ChevronDown, ChevronLeft, ChevronRight, Filter, Search, Undo2, Redo2, Eye, EyeOff, SlidersHorizontal, Info, ArrowUpRight, Zap } from "lucide-react";
 import AddTransactionModal from "./AddTransactionModal";
 import TransactionInfoModal from "./TransactionInfoModal";
 import { evaluateMathExpression } from "../../utils/mathExpression";
@@ -30,7 +30,7 @@ const DaisySelect = ({ value, onChange, options, placeholder, disabled, classNam
                 <span className="truncate flex items-center gap-1.5 font-bold">
                     {selectedStyle && <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${selectedStyle.swatch}`}></span>}
                     {!selectedStyle && selectedItem?.catObj && <Folder size={12} className="shrink-0" />}
-                    {!selectedStyle && selectedItem?.sourceObj && <Wallet size={12} className="shrink-0" />}
+                    {!selectedStyle && selectedItem?.sourceObj && (selectedItem?.sourceObj?.type === 'Card' ? <CreditCard size={12} className="shrink-0 text-rose-500" /> : <Wallet size={12} className="shrink-0" />)}
                     {selectedItem?.isBank && <ArrowRightLeft size={12} className="shrink-0 text-amber-500" />}
                     <span className="truncate">{displayLabel}</span>
                 </span>
@@ -69,7 +69,7 @@ const DaisySelect = ({ value, onChange, options, placeholder, disabled, classNam
                                         ) : (
                                             <>
                                                 {opt.catObj && <Folder size={13} className="shrink-0" />}
-                                                {opt.sourceObj && <Wallet size={13} className="shrink-0" />}
+                                                {opt.sourceObj && (opt.sourceObj.type === 'Card' ? <CreditCard size={13} className="shrink-0 text-rose-500" /> : <Wallet size={13} className="shrink-0" />)}
                                                 {opt.isBank && <ArrowRightLeft size={13} className="shrink-0 text-amber-500" />}
                                             </>
                                         )}
@@ -364,9 +364,10 @@ const ExpenseTable = ({
         const sourceObj = t.sourceId;
         const sourceName = sourceObj?.name || (typeof sourceObj === 'string' ? sourceObj : 'Unknown');
         const style = getSourceTagStyle(sourceObj || sourceName, sources);
+        const isCard = sourceObj?.type === 'Card';
         return (
             <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold ${style.bg} ${style.text} border ${style.border} truncate max-w-full`} title={sourceName}>
-                <Wallet size={12} className="shrink-0" />
+                {isCard ? <CreditCard size={12} className="shrink-0 text-rose-500" /> : <Wallet size={12} className="shrink-0" />}
                 <span className="truncate">{sourceName}</span>
             </span>
         );
@@ -595,13 +596,11 @@ const ExpenseTable = ({
             const subBudget = Number(sub.budget) || 0;
             const subUsed = currentMonthTxns
                 .filter(t => t.type !== 'Credit' && t.type !== 'Transfer' && (
-                    t.subCategoryId?._id === sub._id ||
-                    t.subCategoryId === sub._id ||
-                    (t.categoryId === cat._id && t.description?.includes(sub.name))
+                    String(t.subCategoryId?._id || t.subCategoryId || "") === String(sub._id)
                 ))
                 .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
-            const rem = subBudget - subUsed;
-            const formattedRem = rem >= 0 ? `₹${rem.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : `-₹${Math.abs(rem).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            const rem = (subBudget - subUsed) === 0 ? 0 : (subBudget - subUsed);
+            const formattedRem = rem >= 0 ? `₹${rem.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}` : `-₹${Math.abs(rem).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
             return {
                 value: sub._id,
                 label: `${sub.name} (${formattedRem} Left)`,
@@ -613,33 +612,79 @@ const ExpenseTable = ({
     };
 
     // --- Options Builders ---
+    // Helper to calculate card due amount
+    const getCardDueAmount = (source, txList = []) => {
+        if (!source || source.type !== 'Card') return 0;
+        if (source.cardDue !== undefined) return source.cardDue;
+        const bal = Number(source.balance) || 0;
+        if (bal < 0) return Math.abs(bal);
+        const cardDebits = txList
+            .filter(t => t.type === 'Debit' && String(t.sourceId?._id || t.sourceId) === String(source._id))
+            .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+
+        const cardCredits = txList
+            .filter(t => (t.type === 'Credit' || t.type === 'Transfer') && (
+                String(t.targetSourceId?._id || t.targetSourceId) === String(source._id) ||
+                String(t.sourceId?._id || t.sourceId) === String(source._id)
+            ))
+            .reduce((sum, t) => {
+                if (t.type === 'Credit' && String(t.sourceId?._id || t.sourceId) === String(source._id)) {
+                    return sum + (Number(t.amount) || 0);
+                }
+                if (t.type === 'Transfer' && String(t.targetSourceId?._id || t.targetSourceId) === String(source._id)) {
+                    return sum + (Number(t.amount) || 0);
+                }
+                return sum;
+            }, 0);
+
+        const due = cardDebits - cardCredits;
+        return due > 0 ? due : 0;
+    };
+
     const sourceOptions = [
         { value: "", label: "Select Source", disabled: true }, // Placeholder
         { value: "add_money", label: "+ Add Money", className: "text-success font-bold" },
         { value: "debit_money", label: "- Debit Money", className: "text-error font-bold" },
         { value: "divider", disabled: true },
         ...sources.map(s => {
-            const amt = s.type === 'Card' && !s.balance && s.limit ? s.limit : (s.balance || 0);
+            const isCard = s.type === 'Card';
+            const cardDue = isCard ? getCardDueAmount(s, transactions) : 0;
+            const amt = isCard ? cardDue : (s.balance || 0);
             const tagStyle = getSourceTagStyle(s, sources);
+            const formattedAmt = isCard
+                ? `Due: ₹${cardDue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                : (amt < 0
+                    ? `-₹${Math.abs(amt).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                    : `₹${amt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
             return {
                 value: s._id,
-                label: `${s.name} (₹${amt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })})`,
+                label: `${s.name} (${formattedAmt})`,
                 key: s._id,
                 tagStyle,
-                sourceObj: s
+                sourceObj: s,
+                isCard
             };
         })
     ];
 
     const targetOptions = [
         ...sources.map(s => {
+            const isCard = s.type === 'Card';
+            const cardDue = isCard ? getCardDueAmount(s, transactions) : 0;
+            const amt = isCard ? cardDue : (s.balance || 0);
             const tagStyle = getSourceTagStyle(s, sources);
+            const formattedAmt = isCard
+                ? `Due: ₹${cardDue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                : (amt < 0
+                    ? `-₹${Math.abs(amt).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                    : `₹${amt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
             return {
                 value: s._id,
-                label: s.name,
+                label: `${s.name} (${formattedAmt})`,
                 key: s._id,
                 tagStyle,
-                sourceObj: s
+                sourceObj: s,
+                isCard
             };
         })
     ];
@@ -665,15 +710,23 @@ const ExpenseTable = ({
         { value: "divider", key: "divider_cats", disabled: true },
         { value: "header_banks", label: "── Transfer to Bank ──", disabled: true },
         ...sources.map(s => {
-            const amt = s.type === 'Card' && !s.balance && s.limit ? s.limit : (s.balance || 0);
+            const isCard = s.type === 'Card';
+            const cardDue = isCard ? getCardDueAmount(s, transactions) : 0;
+            const amt = isCard ? cardDue : (s.balance || 0);
             const tagStyle = getSourceTagStyle(s, sources);
+            const formattedAmt = isCard
+                ? `Due: ₹${cardDue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                : (amt < 0
+                    ? `-₹${Math.abs(amt).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                    : `₹${amt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
             return {
                 value: `bank_${s._id}`,
-                label: `↔ Transfer to: ${s.name} (₹${amt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })})`,
+                label: `↔ Transfer to: ${s.name} (${formattedAmt})`,
                 key: `bank_${s._id}`,
                 isBank: true,
                 sourceObj: s,
-                tagStyle
+                tagStyle,
+                isCard
             };
         })
     ];
@@ -1827,20 +1880,29 @@ const ExpenseTable = ({
                     )}
 
                     {activeFilterMenu.type === 'sourceId' && (
-                        <ul className="menu p-1.5 w-52 font-medium text-xs max-h-60 overflow-y-auto">
+                        <ul className="menu p-1.5 w-64 font-medium text-xs max-h-60 overflow-y-auto">
                             <li className="menu-title text-[10px] uppercase font-bold text-base-content/50">Filter Account</li>
                             <li>
                                 <a onClick={() => { setFilters({ ...filters, sourceId: "" }); setActiveFilterMenu(null); }} className={!filters.sourceId ? "font-bold text-primary" : ""}>
                                     All Accounts
                                 </a>
                             </li>
-                            {sources.map((s) => (
-                                <li key={s._id}>
-                                    <a onClick={() => { setFilters({ ...filters, sourceId: s._id }); setActiveFilterMenu(null); }} className={String(filters.sourceId) === String(s._id) ? "font-bold text-primary" : ""}>
-                                        {s.name}
-                                    </a>
-                                </li>
-                            ))}
+                            {sources.map((s) => {
+                                const isCard = s.type === 'Card';
+                                const cardDue = isCard ? getCardDueAmount(s, transactions) : 0;
+                                const amt = isCard ? cardDue : (s.balance || 0);
+                                const formattedAmt = isCard
+                                    ? `Due: ₹${cardDue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                                    : (amt < 0 ? `-₹${Math.abs(amt).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : `₹${amt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
+                                return (
+                                    <li key={s._id}>
+                                        <a onClick={() => { setFilters({ ...filters, sourceId: s._id }); setActiveFilterMenu(null); }} className={`flex items-center justify-between gap-2 ${String(filters.sourceId) === String(s._id) ? "font-bold text-primary" : ""}`}>
+                                            <span className="truncate">{s.name}</span>
+                                            <span className={`text-[10px] font-mono font-bold shrink-0 ${isCard ? 'text-error' : (amt < 0 ? 'text-error' : 'text-success')}`}>{formattedAmt}</span>
+                                        </a>
+                                    </li>
+                                );
+                            })}
                         </ul>
                     )}
 
