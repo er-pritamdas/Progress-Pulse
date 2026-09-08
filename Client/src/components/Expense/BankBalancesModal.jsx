@@ -61,9 +61,10 @@ const BankBalancesModal = ({ isOpen, onClose, initialTypeFilter = "all" }) => {
 
   const getCardDueAmount = (source, txList = []) => {
     if (!source || source.type !== 'Card') return 0;
-    if (source.cardDue !== undefined) return source.cardDue;
+    if (source.cardDue !== undefined && source.cardDue !== null && Number(source.cardDue) > 0) return Number(source.cardDue);
     const bal = Number(source.balance) || 0;
     if (bal < 0) return Math.abs(bal);
+    if (source.cardDue !== undefined && source.cardDue !== null) return Number(source.cardDue);
     const cardDebits = txList
       .filter(t => t.type === 'Debit' && String(t.sourceId?._id || t.sourceId) === String(source._id))
       .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);

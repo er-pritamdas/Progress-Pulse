@@ -12,6 +12,24 @@ const getMonthDateRange = (monthStr) => {
     return { startDate, endDate };
 };
 
+const mapPaymentSources = (sources) => {
+    return (sources || []).map(s => {
+        const base = s.toObject ? s.toObject() : s;
+        const isCard = base.type === "Card";
+        const bal = Math.round(((Number(base.balance) || 0) + Number.EPSILON) * 100) / 100;
+        const curDue = isCard ? (bal < 0 ? Math.abs(bal) : 0) : 0;
+        return {
+            ...base,
+            balance: bal,
+            currentBalance: bal,
+            closingBalance: bal,
+            cardDue: curDue,
+            currentCardDue: curDue,
+            closingCardDue: curDue
+        };
+    });
+};
+
 // ---------------------- Dashboard Data ----------------------
 
 export const getDashboardData = async (req, res) => {
@@ -398,7 +416,8 @@ export const createSource = async (req, res) => {
             limit: limit ? Number(limit) : 0,
             color: color || ""
         });
-        res.status(201).json({ success: true, data: source });
+        const mapped = mapPaymentSources([source])[0];
+        res.status(201).json({ success: true, data: mapped });
     } catch (error) {
         if (error.code === 11000) {
             return res.status(400).json({ success: false, message: "Source already exists" });
@@ -424,7 +443,8 @@ export const updateSource = async (req, res) => {
             updateData,
             { new: true }
         );
-        res.status(200).json({ success: true, data: source });
+        const mapped = mapPaymentSources([source])[0];
+        res.status(200).json({ success: true, data: mapped });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
@@ -489,8 +509,9 @@ export const addTransaction = async (req, res) => {
         }
 
         const sources = await PaymentSource.find({ userId }).sort({ createdAt: 1 });
+        const mappedSources = mapPaymentSources(sources);
 
-        res.status(201).json({ success: true, data: transaction, sources });
+        res.status(201).json({ success: true, data: transaction, sources: mappedSources });
     } catch (error) {
         console.error("Add Transaction Error:", error);
         res.status(500).json({ success: false, message: error.message });
@@ -575,8 +596,9 @@ export const updateTransaction = async (req, res) => {
 
         const userId = oldTransaction.userId;
         const sources = await PaymentSource.find({ userId }).sort({ createdAt: 1 });
+        const mappedSources = mapPaymentSources(sources);
 
-        res.status(200).json({ success: true, data: transaction, sources });
+        res.status(200).json({ success: true, data: transaction, sources: mappedSources });
     } catch (error) {
         console.error("Update Transaction Error:", error);
         res.status(500).json({ success: false, message: error.message });
@@ -609,8 +631,9 @@ export const deleteTransaction = async (req, res) => {
         await ExpenseTransaction.findByIdAndDelete(id);
 
         const sources = await PaymentSource.find({ userId: transaction.userId }).sort({ createdAt: 1 });
+        const mappedSources = mapPaymentSources(sources);
 
-        res.status(200).json({ success: true, message: "Transaction deleted", data: { id, sources } });
+        res.status(200).json({ success: true, message: "Transaction deleted", data: { id, sources: mappedSources } });
     } catch (error) {
         console.error("Delete Transaction Error:", error);
         res.status(500).json({ success: false, message: error.message });

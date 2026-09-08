@@ -5,6 +5,27 @@ import { message } from "antd";
 
 const BASE_URL = "/v1/dashboard/expense";
 
+export const enrichSourceWithCardDue = (s) => {
+    if (!s) return s;
+    const isCard = s.type === "Card";
+    const bal = Number(s.balance) || 0;
+    const cardDue = s.cardDue !== undefined && s.cardDue !== null
+        ? Number(s.cardDue)
+        : (isCard ? (bal < 0 ? Math.abs(bal) : 0) : 0);
+    return {
+        ...s,
+        balance: bal,
+        cardDue,
+        currentBalance: s.currentBalance !== undefined ? s.currentBalance : bal,
+        currentCardDue: s.currentCardDue !== undefined ? s.currentCardDue : cardDue,
+    };
+};
+
+export const enrichSourcesList = (sources) => {
+    if (!Array.isArray(sources)) return sources;
+    return sources.map(enrichSourceWithCardDue);
+};
+
 // Async Thunks
 
 export const fetchDashboardData = createAsyncThunk(
@@ -472,7 +493,7 @@ const expenseSlice = createSlice({
             .addCase(fetchDashboardData.fulfilled, (state, action) => {
                 state.loading = false;
                 state.categories = action.payload.categories;
-                state.sources = action.payload.sources;
+                state.sources = enrichSourcesList(action.payload.sources);
                 state.salary = action.payload.salary;
                 state.salariesByMonth = action.payload.salariesByMonth || { [state.currentMonth]: action.payload.salary };
                 state.transactions = action.payload.transactions;
@@ -490,7 +511,7 @@ const expenseSlice = createSlice({
             .addCase(fetchRangeData.fulfilled, (state, action) => {
                 state.loading = false;
                 state.categories = action.payload.categories;
-                state.sources = action.payload.sources;
+                state.sources = enrichSourcesList(action.payload.sources);
                 state.salary = action.payload.salary;
                 state.salariesByMonth = action.payload.salariesByMonth || {};
                 state.transactions = action.payload.transactions;
@@ -560,11 +581,11 @@ const expenseSlice = createSlice({
 
             // Sources
             .addCase(createSource.fulfilled, (state, action) => {
-                state.sources.push(action.payload);
+                state.sources.push(enrichSourceWithCardDue(action.payload));
             })
             .addCase(updateSource.fulfilled, (state, action) => {
                 const index = state.sources.findIndex(s => s._id === action.payload._id);
-                if (index !== -1) state.sources[index] = action.payload;
+                if (index !== -1) state.sources[index] = enrichSourceWithCardDue(action.payload);
             })
             .addCase(deleteSource.fulfilled, (state, action) => {
                 state.sources = state.sources.filter(s => s._id !== action.payload);
@@ -583,7 +604,7 @@ const expenseSlice = createSlice({
                 }
 
                 if (action.payload.sources && Array.isArray(action.payload.sources)) {
-                    state.sources = action.payload.sources;
+                    state.sources = enrichSourcesList(action.payload.sources);
                 }
 
                 if (!action.payload.isUndoRedo && transactionData?._id) {
@@ -606,7 +627,7 @@ const expenseSlice = createSlice({
                 if (index !== -1) state.transactions[index] = transactionData;
 
                 if (action.payload.sources && Array.isArray(action.payload.sources)) {
-                    state.sources = action.payload.sources;
+                    state.sources = enrichSourcesList(action.payload.sources);
                 }
 
                 if (!action.payload.isUndoRedo && oldTx && transactionData?._id) {
@@ -631,7 +652,7 @@ const expenseSlice = createSlice({
                 }
                 const sources = action.payload.sources || action.payload.data?.sources;
                 if (sources && Array.isArray(sources)) {
-                    state.sources = sources;
+                    state.sources = enrichSourcesList(sources);
                 }
 
                 if (!action.payload.isUndoRedo && oldTx) {

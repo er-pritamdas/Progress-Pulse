@@ -41,63 +41,7 @@ COLLECTION_NAME = "fooddatabases"
 # PASTE YOUR RAW JSON HERE (Copy & Paste directly with "null" / "false")
 # ==============================================================================
 RAW_JSON_DATA = """
-[
-{
-"foodId": "",
-"name": "Chicken White Sauce Pasta",
-"brand": "Generic",
-"category": "Pasta and Italian Foods",
-"subCategory": "Chicken Pasta",
-"unitType": "100 g",
-"servingSize": 100,
-"source": "USDA FoodData Central + IFCT 2017 (Estimated Home-style Recipe)",
-"notes": "Homemade chicken white sauce pasta prepared with pasta, boneless chicken, milk, a small amount of butter or oil, flour, garlic and common seasonings. Home-style preparation with moderate sauce and without restaurant-style excess cheese or cream.",
-"calories": 168,
-"protein": 8.20,
-"carbohydrates": 20.50,
-"netCarbs": 19.20,
-"fat": 5.90,
-"fiber": 1.30,
-"sugar": 2.10,
-"addedSugar": 0.00,
-"vitaminA": "48.00 mcg",
-"vitaminB1": "0.16 mg",
-"vitaminB2": "0.13 mg",
-"vitaminB3": "2.85 mg",
-"vitaminB5": "0.55 mg",
-"vitaminB6": "0.18 mg",
-"vitaminB7": "N/A",
-"vitaminB9": "42.00 mcg",
-"vitaminB12": "0.32 mcg",
-"vitaminC": "1.20 mg",
-"vitaminD": "0.08 mcg",
-"vitaminE": "0.45 mg",
-"vitaminK": "2.10 mcg",
-"iron": "1.25 mg",
-"zinc": "0.95 mg",
-"copper": "0.12 mg",
-"manganese": "0.32 mg",
-"selenium": "18.00 mcg",
-"iodine": "N/A",
-"saturatedFat": "2.45 g",
-"monounsaturatedFat": "1.85 g",
-"polyunsaturatedFat": "0.65 g",
-"omega3": "0.06 g",
-"omega6": "0.52 g",
-"transFat": "0.08 g",
-"cholesterol": "32.00 mg",
-"glycemicIndex": "50",
-"glycemicLoad": "10",
-"water": "63.00 g",
-"calcium": "82.00 mg",
-"magnesium": "22.00 mg",
-"phosphorus": "132.00 mg",
-"potassium": "175.00 mg",
-"sodium": "220.00 mg",
-"userId": null,
-"isCustom": false
-}
-]
+
 """
 
 def sync_to_csv(item):

@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { createPortal } from "react-dom";
 import dayjs from "dayjs";
 import {
@@ -125,7 +126,15 @@ export default function InvTableEntry() {
   // ----------------------------------------------------------------------
   // State Definitions
   // ----------------------------------------------------------------------
-  const [activeTab, setActiveTab] = useState("stocks"); // "stocks" | "mf" | "ef" | "fd" | "rd" | "pf" | "salary"
+  const [searchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState(() => searchParams.get("tab") || "stocks"); // "stocks" | "mf" | "ef" | "fd" | "rd" | "pf" | "salary"
+
+  useEffect(() => {
+    const tabParam = searchParams.get("tab");
+    if (tabParam && ["stocks", "mf", "ef", "fd", "rd", "pf", "salary"].includes(tabParam)) {
+      setActiveTab(tabParam);
+    }
+  }, [searchParams]);
   const [stocksTypeFilter, setStocksTypeFilter] = useState("all"); // "all" | "delivery" | "intraday"
   const [statusFilter, setStatusFilter] = useState("all"); // "all" | "holding" | "sold"
   const [sortBy, setSortBy] = useState("default"); // colId or "default"

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import dayjs from "dayjs";
-import { Trash2, Edit2, Plus, X, Save, Info, Home, Utensils, Car, Zap, HeartPulse, Gamepad2, ShoppingBag, PiggyBank, Folder, GripVertical, Palette, Check, Search, ArrowDown, ArrowUp, Wallet } from "lucide-react";
+import { Trash2, Edit2, Plus, X, Save, Info, Home, Utensils, Car, Zap, HeartPulse, Gamepad2, ShoppingBag, PiggyBank, Folder, GripVertical, Palette, Check, Search, ArrowDown, ArrowUp, Wallet, Filter } from "lucide-react";
 import { addSubCategory, updateSubCategory, deleteSubCategory, deleteCategory, updateCategory, reorderSubCategories, setLocalSubCategoriesOrder } from "../../services/redux/slice/ExpenseSlice";
 import { COLOR_OPTIONS, getCategoryTagStyle, getSourceTagStyle } from "../../utils/expenseTheme";
 

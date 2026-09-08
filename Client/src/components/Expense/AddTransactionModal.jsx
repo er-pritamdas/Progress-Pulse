@@ -82,14 +82,22 @@ const AddTransactionModal = ({ isOpen, onClose }) => {
     });
   }, [transactions, selectedMonth]);
 
-  // Card due amount calculation across transactions
+  // Card due amount calculation across transactions & source balance
   const getCardDueAmount = (source) => {
-    if (!source) return 0;
-    const cardDebits = transactions
+    if (!source || source.type !== 'Card') return 0;
+    if (source.cardDue !== undefined && source.cardDue !== null && Number(source.cardDue) > 0) {
+      return Number(source.cardDue);
+    }
+    const bal = Number(source.balance) || 0;
+    if (bal < 0) return Math.abs(bal);
+    if (source.cardDue !== undefined && source.cardDue !== null) {
+      return Number(source.cardDue);
+    }
+    const cardDebits = (transactions || [])
       .filter(t => t.type === 'Debit' && String(t.sourceId?._id || t.sourceId) === String(source._id))
       .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
 
-    const cardCredits = transactions
+    const cardCredits = (transactions || [])
       .filter(t => (t.type === 'Credit' || t.type === 'Transfer') && (
         String(t.targetSourceId?._id || t.targetSourceId) === String(source._id) ||
         String(t.sourceId?._id || t.sourceId) === String(source._id)
@@ -366,9 +374,12 @@ const AddTransactionModal = ({ isOpen, onClose }) => {
                   {(() => {
                     const src = sources.find(s => String(s._id) === String(sourceId));
                     const sStyle = getSourceTagStyle(src, sources);
+                    const isCard = src?.type === "Card";
+                    const cardDue = isCard ? getCardDueAmount(src) : null;
                     return (
-                      <span className={`badge badge-sm font-bold ${sStyle.bg} ${sStyle.text} border-transparent`}>
-                        {src?.name || "From Account"}
+                      <span className={`badge badge-sm font-bold ${sStyle.bg} ${sStyle.text} border-transparent flex items-center gap-1`}>
+                        <span>{src?.name || "From Account"}</span>
+                        {isCard && <span className="opacity-80 font-mono text-[9px] font-extrabold">(Due: ₹{cardDue.toLocaleString()})</span>}
                       </span>
                     );
                   })()}
@@ -380,9 +391,12 @@ const AddTransactionModal = ({ isOpen, onClose }) => {
                   {(() => {
                     const trg = sources.find(s => String(s._id) === String(targetSourceId));
                     const tStyle = getSourceTagStyle(trg, sources);
+                    const isCard = trg?.type === "Card";
+                    const cardDue = isCard ? getCardDueAmount(trg) : null;
                     return (
-                      <span className={`badge badge-sm font-bold ${tStyle.bg} ${tStyle.text} border-transparent`}>
-                        To {trg?.name}
+                      <span className={`badge badge-sm font-bold ${tStyle.bg} ${tStyle.text} border-transparent flex items-center gap-1`}>
+                        <span>To {trg?.name}</span>
+                        {isCard && <span className="opacity-80 font-mono text-[9px] font-extrabold">(Due: ₹{cardDue.toLocaleString()})</span>}
                       </span>
                     );
                   })()}
@@ -560,6 +574,24 @@ const AddTransactionModal = ({ isOpen, onClose }) => {
                     const isCard = s.type === "Card";
                     const cardDue = isCard ? getCardDueAmount(s) : 0;
 
+                    let displayAmtText = "";
+                    if (isCard) {
+                      if (isSelected && calculatedAmount && calculatedAmount > 0 && (transactionType === "Debit" || transactionType === "DebitMoney")) {
+                        const nextDue = cardDue + calculatedAmount;
+                        displayAmtText = `Due: ₹${cardDue.toLocaleString()} → ₹${nextDue.toLocaleString()}`;
+                      } else {
+                        displayAmtText = `Due: ₹${cardDue.toLocaleString()}`;
+                      }
+                    } else {
+                      const curBal = Number(s.balance) || 0;
+                      if (isSelected && calculatedAmount && calculatedAmount > 0) {
+                        const nextBal = transactionType === "Credit" ? (curBal + calculatedAmount) : (curBal - calculatedAmount);
+                        displayAmtText = `₹${curBal.toLocaleString()} → ₹${nextBal.toLocaleString()}`;
+                      } else {
+                        displayAmtText = `₹${curBal.toLocaleString()}`;
+                      }
+                    }
+
                     return (
                       <button
                         key={s._id}
@@ -582,9 +614,7 @@ const AddTransactionModal = ({ isOpen, onClose }) => {
                         </div>
                         <div className="flex items-center gap-1 shrink-0">
                           <span className="text-[10px] opacity-75 font-mono font-semibold">
-                            {isCard
-                              ? `Due: ₹${cardDue.toLocaleString()}`
-                              : `₹${(s.balance || 0).toLocaleString()}`}
+                            {displayAmtText}
                           </span>
                           {isSelected && <CheckCircle2 size={14} className="shrink-0 text-primary" />}
                         </div>
@@ -641,6 +671,11 @@ const AddTransactionModal = ({ isOpen, onClose }) => {
                             {bankTargets.map((s) => {
                               const isSelected = String(s._id) === String(targetSourceId);
                               const tagStyle = getSourceTagStyle(s, sources);
+                              const curBal = Number(s.balance) || 0;
+                              let displayTargetBal = `₹${curBal.toLocaleString()}`;
+                              if (isSelected && calculatedAmount && calculatedAmount > 0) {
+                                displayTargetBal = `₹${curBal.toLocaleString()} → ₹${(curBal + calculatedAmount).toLocaleString()}`;
+                              }
 
                               return (
                                 <button
@@ -659,7 +694,7 @@ const AddTransactionModal = ({ isOpen, onClose }) => {
                                   </div>
                                   <div className="flex items-center gap-1 shrink-0">
                                     <span className="text-[10px] opacity-75 font-mono font-semibold">
-                                      ₹{(s.balance || 0).toLocaleString()}
+                                      {displayTargetBal}
                                     </span>
                                     {isSelected && <CheckCircle2 size={14} className="shrink-0 text-primary" />}
                                   </div>
@@ -684,6 +719,12 @@ const AddTransactionModal = ({ isOpen, onClose }) => {
                               const tagStyle = getSourceTagStyle(s, sources);
                               const cardDue = getCardDueAmount(s);
 
+                              let displayTargetDue = `Due: ₹${cardDue.toLocaleString()}`;
+                              if (isSelected && calculatedAmount && calculatedAmount > 0) {
+                                const nextDue = Math.max(0, cardDue - calculatedAmount);
+                                displayTargetDue = `Due: ₹${cardDue.toLocaleString()} → ₹${nextDue.toLocaleString()}`;
+                              }
+
                               return (
                                 <button
                                   key={s._id}
@@ -706,7 +747,7 @@ const AddTransactionModal = ({ isOpen, onClose }) => {
                                   </div>
                                   <div className="flex items-center gap-1 shrink-0">
                                     <span className="text-[10px] font-bold font-mono text-rose-500">
-                                      Due: ₹{cardDue.toLocaleString()}
+                                      {displayTargetDue}
                                     </span>
                                     {isSelected && <CheckCircle2 size={14} className="shrink-0 text-primary" />}
                                   </div>

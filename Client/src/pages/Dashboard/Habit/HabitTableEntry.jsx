@@ -29,7 +29,6 @@ import {
   Settings,
   Book,
   Search,
-  RefreshCw,
   Filter,
 } from "lucide-react";
 
@@ -1078,17 +1077,7 @@ function HabitTableEntry() {
               {renderColumnHeader("water", "Water", "Ltr")}
               {renderColumnHeader("sleep", "Sleep", "Hrs")}
               {renderColumnHeader("read", "Read", "Hrs")}
-              {renderColumnHeader("intake", "Intake", "Kcal", (
-                <button
-                  type="button"
-                  onClick={handleSyncAllIntake}
-                  disabled={isSyncingIntake}
-                  className="p-1 hover:bg-base-200/80 rounded-full transition-all text-base-content/70 hover:text-primary active:scale-95 disabled:opacity-50 cursor-pointer flex items-center justify-center ml-0.5"
-                  title="Sync with Food Logging"
-                >
-                  <RefreshCw className={`w-3.5 h-3.5 ${isSyncingIntake ? "animate-spin text-primary" : ""}`} />
-                </button>
-              ))}
+              {renderColumnHeader("intake", "Intake", "Kcal")}
               {renderMultiSelectHeader("selfcare", "Self Care", settings.selfcare || [])}
               {renderMultiSelectHeader("mood", "Mood", settings.mood || [])}
               {renderMultiSelectHeader("progress", "Progress", ["Inconsistent", "Uncertain", "Moderate", "Consistent"])}
