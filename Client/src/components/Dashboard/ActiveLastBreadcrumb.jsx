@@ -17,6 +17,7 @@ export default function ThemedBreadcrumbs() {
     'Table Entry': <Grid2x2Plus className="w-4 h-4" />,
     'Dashboard': <Dashboard />,
     'Table View': <Grid2x2Check className="w-4 h-4" />,
+    'Portfolio': <Grid2x2Check className="w-4 h-4" />,
     'Settings': <Settings2 className="w-4 h-4" />,
     'Logging': <Grid2x2Check className="w-4 h-4" />,
   };
@@ -30,12 +31,16 @@ export default function ThemedBreadcrumbs() {
     ? mainCategoryRaw.charAt(0).toUpperCase() + mainCategoryRaw.slice(1)
     : null;
 
-  const subCategory = subCategoryRaw
+  let subCategory = subCategoryRaw
     ? subCategoryRaw
       .split('-')
       .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
       .join(' ')
     : null;
+
+  if (mainCategoryRaw === 'investment' && (subCategoryRaw === 'table-view' || subCategoryRaw === 'portfolio')) {
+    subCategory = 'Portfolio';
+  }
 
   return (
     <>

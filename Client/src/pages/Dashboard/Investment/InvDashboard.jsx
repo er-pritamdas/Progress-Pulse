@@ -4,6 +4,11 @@ import dayjs from "dayjs";
 import axiosInstance from "../../../Context/AxiosInstance";
 import { TitleChanger } from "../../../utils/TitleChanger";
 import Chart from "react-apexcharts";
+import StocksDashboard from "../../../components/Dashboard/Investment/StocksDashboard";
+import FixedDepositDashboard from "../../../components/Dashboard/Investment/FixedDepositDashboard";
+import SelectDashboardModal, {
+  DASHBOARDS_LIST,
+} from "../../../components/Dashboard/Investment/SelectDashboardModal";
 import {
   Banknote,
   TrendingUp,
@@ -12,6 +17,7 @@ import {
   ChevronDown,
   ChevronRight,
   Calendar,
+  LayoutGrid,
   Sparkles,
   RefreshCw,
   Building2,
@@ -35,7 +41,10 @@ import {
   ArrowDownRight,
   FolderKanban,
   X,
-  Search
+  Search,
+  Clock,
+  Zap,
+  PackageCheck
 } from "lucide-react";
 
 const monthNamesList = [
@@ -87,15 +96,38 @@ const formatCurrencyCompact = (val) => {
 export default function InvDashboard() {
   TitleChanger("Progress Pulse | Investment Dashboard");
 
-  // Raw salary data, PF withdrawals, and Mutual Funds from backend
+  // Raw salary data, PF withdrawals, Mutual Funds, Stock Trades, and Fixed Deposits from backend
   const [salaryData, setSalaryData] = useState([]);
   const [pfWithdrawals, setPfWithdrawals] = useState([]);
   const [mfData, setMfData] = useState([]);
+  const [stocksData, setStocksData] = useState([]);
+  const [fdData, setFdData] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Active dashboard view: "SALARY" | "PF" | "MF" (persisted in localStorage)
+  // Active dashboard view: "SALARY" | "PF" | "MF" | "STOCKS" | "FD" | "RD" (persisted in localStorage)
   const [activeDashboard, setActiveDashboard] = useState(() => {
     return localStorage.getItem("pulse_inv_dash_active_view") || "SALARY";
+  });
+
+  // Dashboard Selection Modal Popup state
+  const [isDashboardModalOpen, setIsDashboardModalOpen] = useState(false);
+
+  const handleSelectDashboard = (id) => {
+    setActiveDashboard(id);
+    localStorage.setItem("pulse_inv_dash_active_view", id);
+    setIsDashboardModalOpen(false);
+  };
+
+  const currentDashboardMeta = useMemo(() => {
+    return (
+      DASHBOARDS_LIST.find((d) => d.id === activeDashboard) ||
+      DASHBOARDS_LIST[0]
+    );
+  }, [activeDashboard]);
+
+  // Active stock sub-view: "demat" | "delivery" | "intraday" (persisted in localStorage)
+  const [stockSubView, setStockSubView] = useState(() => {
+    return localStorage.getItem("pulse_inv_dash_stock_view") || "demat";
   });
 
   // Selected Mutual Fund for filtering: "all", "group:<id>", or specific fund id (persisted in localStorage)
@@ -195,6 +227,10 @@ export default function InvDashboard() {
   }, [activeDashboard]);
 
   useEffect(() => {
+    if (stockSubView) localStorage.setItem("pulse_inv_dash_stock_view", stockSubView);
+  }, [stockSubView]);
+
+  useEffect(() => {
     if (selectedMfFund) localStorage.setItem("pulse_inv_dash_mf_fund", selectedMfFund);
   }, [selectedMfFund]);
 
@@ -234,15 +270,17 @@ export default function InvDashboard() {
   const [expandedMonths, setExpandedMonths] = useState(new Set());
   const [expandedPfMonths, setExpandedPfMonths] = useState(new Set());
 
-  // Fetch Salaries, PF Withdrawals, Mutual Funds, and Groups from API
+  // Fetch Salaries, PF Withdrawals, Mutual Funds, Groups, Stocks, and Fixed Deposits from API
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [salaryRes, pfRes, mfRes, mfGroupsRes] = await Promise.allSettled([
+      const [salaryRes, pfRes, mfRes, mfGroupsRes, stocksRes, fdRes] = await Promise.allSettled([
         axiosInstance.get("/v1/dashboard/investment/salary"),
         axiosInstance.get("/v1/dashboard/investment/pf/withdrawals"),
         axiosInstance.get("/v1/dashboard/investment/mf"),
         axiosInstance.get("/v1/dashboard/investment/mf-groups"),
+        axiosInstance.get("/v1/dashboard/investment/stocks"),
+        axiosInstance.get("/v1/dashboard/investment/fd"),
       ]);
 
       if (salaryRes.status === "fulfilled" && salaryRes.value.data?.success) {
@@ -259,6 +297,12 @@ export default function InvDashboard() {
         if (dbGroups.length > 0) {
           setMfGroups(dbGroups);
         }
+      }
+      if (stocksRes.status === "fulfilled" && stocksRes.value.data?.success) {
+        setStocksData(stocksRes.value.data.data || []);
+      }
+      if (fdRes.status === "fulfilled" && fdRes.value.data?.success) {
+        setFdData(fdRes.value.data.data || []);
       }
     } catch (error) {
       console.error("Failed to fetch investment dashboard data:", error);
@@ -287,12 +331,16 @@ export default function InvDashboard() {
         if (t.date) yearsSet.add(dayjs(t.date).format("YYYY"));
       });
     });
+    stocksData.forEach((s) => {
+      if (s.bDate) yearsSet.add(dayjs(s.bDate).format("YYYY"));
+      if (s.sDate && s.sDate !== "-") yearsSet.add(dayjs(s.sDate).format("YYYY"));
+    });
     const currentYear = dayjs().format("YYYY");
     yearsSet.add(currentYear);
     if (fromYear) yearsSet.add(fromYear);
     if (toYear) yearsSet.add(toYear);
     return Array.from(yearsSet).sort((a, b) => b.localeCompare(a));
-  }, [salaryData, pfWithdrawals, mfData, fromYear, toYear]);
+  }, [salaryData, pfWithdrawals, mfData, stocksData, fromYear, toYear]);
 
   // Quick Range Selection Handlers
   const handleQuickRange = (type) => {
@@ -310,6 +358,8 @@ export default function InvDashboard() {
         ...mfData.flatMap((f) =>
           (f.transactions || []).map((t) => (t.date ? dayjs(t.date).format("YYYY-MM") : null))
         ).filter(Boolean),
+        ...stocksData.map((s) => (s.bDate ? dayjs(s.bDate).format("YYYY-MM") : null)).filter(Boolean),
+        ...stocksData.map((s) => (s.sDate && s.sDate !== "-" ? dayjs(s.sDate).format("YYYY-MM") : null)).filter(Boolean),
       ].sort();
       if (allMonths.length > 0) {
         const startY = allMonths[0].slice(0, 4);
@@ -1847,141 +1897,36 @@ export default function InvDashboard() {
         <div className="flex items-center justify-between p-3 flex-wrap gap-3 max-w-[1600px] mx-auto px-4 md:px-6">
           {/* Left: Investment Category Selector Dropdown */}
           <div className="flex items-center gap-2 flex-wrap">
-            <div className="dropdown dropdown-bottom">
+            {/* Dashboard Selector Modal Trigger Button */}
+            <button
+              type="button"
+              onClick={() => setIsDashboardModalOpen(true)}
+              className="btn btn-ghost text-lg font-bold p-0 min-h-0 h-auto hover:bg-base-200/80 px-2.5 py-1.5 rounded-2xl flex items-center gap-2.5 transition-all border border-base-300/50 shadow-xs group"
+              title="Click to switch dashboard view"
+            >
               <div
-                tabIndex={0}
-                role="button"
-                className="btn btn-ghost text-lg font-bold p-0 min-h-0 h-auto hover:bg-base-200/70 px-2.5 py-1.5 rounded-xl flex items-center gap-2 transition-all border border-base-300/40 shadow-xs"
+                className={`w-8 h-8 rounded-xl flex items-center justify-center font-black transition-transform group-hover:scale-105 border ${currentDashboardMeta.bgClass}`}
               >
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black ${
-                  activeDashboard === "PF"
-                    ? "bg-teal-500/15 text-teal-600 dark:text-teal-400"
-                    : activeDashboard === "MF"
-                    ? "bg-purple-500/15 text-purple-600 dark:text-purple-400"
-                    : "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
-                }`}>
-                  {activeDashboard === "PF" ? (
-                    <ShieldCheck className="w-4 h-4" />
-                  ) : activeDashboard === "MF" ? (
-                    <PieChart className="w-4 h-4" />
-                  ) : (
-                    <Banknote className="w-4 h-4" />
-                  )}
-                </div>
-                <span>
-                  {activeDashboard === "SALARY"
-                    ? "Salary & Income Dashboard"
-                    : activeDashboard === "PF"
-                    ? "Provident Fund (PF) Dashboard"
-                    : activeDashboard === "MF"
-                    ? "Mutual Funds Dashboard"
-                    : "Investment Dashboard"}
-                </span>
-                <ChevronDown className="w-4 h-4 opacity-60 ml-0.5" />
+                {React.createElement(currentDashboardMeta.icon, {
+                  className: "w-4 h-4",
+                })}
               </div>
-
-              <ul
-                tabIndex={0}
-                className="dropdown-content menu p-2 shadow-2xl bg-base-100/95 backdrop-blur-md rounded-2xl w-64 z-[100] mt-2 border border-base-300/50 max-h-96 overflow-y-auto"
-              >
-                <li className="menu-title text-xs font-bold text-base-content/50 uppercase tracking-wider px-3 py-1">
-                  Active Dashboards
-                </li>
-                <li>
-                  <button
-                    className={`flex items-center gap-3 py-2.5 px-3 rounded-xl transition-all font-medium ${
-                      activeDashboard === "SALARY"
-                        ? "bg-primary text-primary-content font-bold shadow-md"
-                        : "hover:bg-base-200"
-                    }`}
-                    onClick={() => {
-                      setActiveDashboard("SALARY");
-                      if (document.activeElement instanceof HTMLElement) {
-                        document.activeElement.blur();
-                      }
-                    }}
-                  >
-                    <Banknote className="w-4 h-4 text-emerald-500" />
-                    <span className="flex-1 text-left">Salary / Income</span>
-                    {activeDashboard === "SALARY" && (
-                      <span className="badge badge-xs badge-success font-bold">Active</span>
-                    )}
-                  </button>
-                </li>
-
-                <li>
-                  <button
-                    className={`flex items-center gap-3 py-2.5 px-3 rounded-xl transition-all font-medium ${
-                      activeDashboard === "PF"
-                        ? "bg-primary text-primary-content font-bold shadow-md"
-                        : "hover:bg-base-200"
-                    }`}
-                    onClick={() => {
-                      setActiveDashboard("PF");
-                      if (document.activeElement instanceof HTMLElement) {
-                        document.activeElement.blur();
-                      }
-                    }}
-                  >
-                    <ShieldCheck className="w-4 h-4 text-teal-500" />
-                    <span className="flex-1 text-left">Provident Fund (PF)</span>
-                    {activeDashboard === "PF" ? (
-                      <span className="badge badge-xs badge-success font-bold">Active</span>
-                    ) : (
-                      <span className="badge badge-xs badge-info font-bold">Ready</span>
-                    )}
-                  </button>
-                </li>
-
-                <li>
-                  <button
-                    className={`flex items-center gap-3 py-2.5 px-3 rounded-xl transition-all font-medium ${
-                      activeDashboard === "MF"
-                        ? "bg-primary text-primary-content font-bold shadow-md"
-                        : "hover:bg-base-200"
-                    }`}
-                    onClick={() => {
-                      setActiveDashboard("MF");
-                      if (document.activeElement instanceof HTMLElement) {
-                        document.activeElement.blur();
-                      }
-                    }}
-                  >
-                    <PieChart className="w-4 h-4 text-purple-500" />
-                    <span className="flex-1 text-left">Mutual Funds</span>
-                    {activeDashboard === "MF" ? (
-                      <span className="badge badge-xs badge-success font-bold">Active</span>
-                    ) : (
-                      <span className="badge badge-xs badge-info font-bold">Ready</span>
-                    )}
-                  </button>
-                </li>
-
-                <li className="menu-title text-xs font-bold text-base-content/50 uppercase tracking-wider px-3 py-1 mt-2">
-                  Upcoming Investments
-                </li>
-                <li>
-                  <button
-                    className="flex items-center gap-3 py-2.5 px-3 rounded-xl hover:bg-base-200 opacity-60 font-medium cursor-not-allowed"
-                    disabled
-                  >
-                    <TrendingUp className="w-4 h-4 text-blue-500" />
-                    <span className="flex-1 text-left">Stocks & Equity</span>
-                    <span className="badge badge-xs badge-ghost">Soon</span>
-                  </button>
-                </li>
-                <li>
-                  <button
-                    className="flex items-center gap-3 py-2.5 px-3 rounded-xl hover:bg-base-200 opacity-60 font-medium cursor-not-allowed"
-                    disabled
-                  >
-                    <Coins className="w-4 h-4 text-amber-500" />
-                    <span className="flex-1 text-left">Fixed Deposits</span>
-                    <span className="badge badge-xs badge-ghost">Soon</span>
-                  </button>
-                </li>
-              </ul>
-            </div>
+              <div className="flex flex-col text-left">
+                <span className="font-extrabold text-sm sm:text-base leading-tight tracking-tight text-base-content group-hover:text-primary transition-colors">
+                  {currentDashboardMeta.title}
+                </span>
+                <span className="text-[10px] font-bold text-base-content/50 leading-tight">
+                  Investment Dashboard
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5 ml-1 text-xs opacity-70 group-hover:opacity-100 bg-base-200/80 px-2.5 py-1 rounded-xl border border-base-300/40 transition-all">
+                <LayoutGrid className="w-3.5 h-3.5 text-primary" />
+                <span className="hidden sm:inline font-bold text-[11px] text-base-content/70">
+                  Switch
+                </span>
+                <ChevronDown className="w-3.5 h-3.5 opacity-60 transition-transform group-hover:translate-y-0.5" />
+              </div>
+            </button>
 
             {/* Fund Filter Modal Trigger Button - Visible when Mutual Funds dashboard is selected */}
             {activeDashboard === "MF" && (
@@ -2001,6 +1946,102 @@ export default function InvDashboard() {
                 </span>
                 <ChevronDown className="w-3.5 h-3.5 opacity-60 ml-0.5 shrink-0" />
               </button>
+            )}
+
+            {/* Stocks Sub-Dashboard Dropdown Selector - Visible when Stocks & Equity is selected */}
+            {activeDashboard === "STOCKS" && (
+              <div className="dropdown dropdown-bottom">
+                <div
+                  tabIndex={0}
+                  role="button"
+                  className="btn btn-ghost text-xs md:text-sm font-bold min-h-0 h-auto hover:bg-base-200/80 px-3 py-1.5 rounded-xl flex items-center gap-2 transition-all border border-blue-500/30 bg-blue-500/10 text-blue-600 dark:text-blue-400 shadow-xs"
+                  title="Select stock view: Demat, Delivery, or Intraday"
+                >
+                  <TrendingUp className="w-3.5 h-3.5 shrink-0" />
+                  <span className="truncate max-w-[140px] sm:max-w-[200px] md:max-w-[260px] text-left">
+                    {stockSubView === "demat"
+                      ? "Stocks In Demat"
+                      : stockSubView === "delivery"
+                      ? "Delivery Analysis"
+                      : "Intraday Analysis"}
+                  </span>
+                  <ChevronDown className="w-3.5 h-3.5 opacity-60 ml-0.5 shrink-0" />
+                </div>
+                <ul
+                  tabIndex={0}
+                  className="dropdown-content menu p-2 shadow-2xl bg-base-100/95 backdrop-blur-md rounded-2xl w-56 z-[100] mt-2 border border-base-300/50"
+                >
+                  <li className="menu-title text-[10px] font-bold uppercase tracking-wider text-base-content/50 px-3 py-1">
+                    Stock Category
+                  </li>
+                  <li>
+                    <button
+                      className={`flex items-center justify-between py-2 px-3 rounded-xl text-xs font-semibold ${
+                        stockSubView === "demat"
+                          ? "bg-primary text-primary-content font-bold shadow-xs"
+                          : "hover:bg-base-200"
+                      }`}
+                      onClick={() => {
+                        setStockSubView("demat");
+                        localStorage.setItem("pulse_inv_dash_stock_view", "demat");
+                        if (document.activeElement instanceof HTMLElement) {
+                          document.activeElement.blur();
+                        }
+                      }}
+                    >
+                      <div className="flex items-center gap-2">
+                        <PackageCheck className="w-3.5 h-3.5 text-blue-500" />
+                        <span>Stocks In Demat</span>
+                      </div>
+                      {stockSubView === "demat" && <CheckCircle2 className="w-3.5 h-3.5" />}
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      className={`flex items-center justify-between py-2 px-3 rounded-xl text-xs font-semibold ${
+                        stockSubView === "delivery"
+                          ? "bg-primary text-primary-content font-bold shadow-xs"
+                          : "hover:bg-base-200"
+                      }`}
+                      onClick={() => {
+                        setStockSubView("delivery");
+                        localStorage.setItem("pulse_inv_dash_stock_view", "delivery");
+                        if (document.activeElement instanceof HTMLElement) {
+                          document.activeElement.blur();
+                        }
+                      }}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Clock className="w-3.5 h-3.5 text-emerald-500" />
+                        <span>Delivery Analysis</span>
+                      </div>
+                      {stockSubView === "delivery" && <CheckCircle2 className="w-3.5 h-3.5" />}
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      className={`flex items-center justify-between py-2 px-3 rounded-xl text-xs font-semibold ${
+                        stockSubView === "intraday"
+                          ? "bg-primary text-primary-content font-bold shadow-xs"
+                          : "hover:bg-base-200"
+                      }`}
+                      onClick={() => {
+                        setStockSubView("intraday");
+                        localStorage.setItem("pulse_inv_dash_stock_view", "intraday");
+                        if (document.activeElement instanceof HTMLElement) {
+                          document.activeElement.blur();
+                        }
+                      }}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Zap className="w-3.5 h-3.5 text-amber-500" />
+                        <span>Intraday Analysis</span>
+                      </div>
+                      {stockSubView === "intraday" && <CheckCircle2 className="w-3.5 h-3.5" />}
+                    </button>
+                  </li>
+                </ul>
+              </div>
             )}
 
             {/* Company Filter - Visible when SALARY or PF dashboard is selected */}
@@ -2030,85 +2071,87 @@ export default function InvDashboard() {
                   ? "/dashboard/investment/table-entry?tab=pf"
                   : activeDashboard === "MF"
                   ? "/dashboard/investment/table-entry?tab=mf"
+                  : activeDashboard === "STOCKS"
+                  ? "/dashboard/investment/table-entry?tab=stocks"
+                  : activeDashboard === "FD"
+                  ? "/dashboard/investment/table-entry?tab=fd"
+                  : activeDashboard === "RD"
+                  ? "/dashboard/investment/table-entry?tab=rd"
                   : "/dashboard/investment/table-entry?tab=salary"
               }
               className="btn btn-xs btn-ghost gap-1.5 text-base-content/70 hover:text-primary font-semibold border border-base-300/40 rounded-lg px-2.5 py-1"
-              title={
-                activeDashboard === "PF"
-                  ? "Manage PF Records & Withdrawals in Table Entry"
-                  : activeDashboard === "MF"
-                  ? "Manage Mutual Funds & SIPs in Table Entry"
-                  : "Manage Salary Records in Table Entry"
-              }
+              title={`Manage ${currentDashboardMeta.title} in Table Entry`}
             >
               <TableProperties size={13} />
               <span>Table Entry</span>
             </Link>
           </div>
 
-          {/* Right: Date Range Selectors */}
+          {/* Right: Date Range Selectors (Only applicable for Salary, PF, and MF month records) */}
           <div className="flex items-center gap-2.5 ml-auto flex-wrap">
+            {["SALARY", "PF", "MF"].includes(activeDashboard) && (
+              <>
+                {/* FROM */}
+                <div className="flex items-center gap-1.5 bg-base-200/70 p-1.5 rounded-xl border border-base-300/50 text-xs font-medium">
+                  <span className="text-[11px] font-bold uppercase opacity-60 px-1">From:</span>
+                  <select
+                    className="select select-bordered select-xs font-bold font-mono bg-base-100 min-w-[76px] px-2 text-xs"
+                    value={fromYear}
+                    onChange={(e) => setFromYear(e.target.value)}
+                  >
+                    {availableYears.map((y) => (
+                      <option key={`from-y-${y}`} value={y}>
+                        {y}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    className="select select-bordered select-xs font-bold bg-base-100 min-w-[68px] px-2 text-xs"
+                    value={fromMonth}
+                    onChange={(e) => setFromMonth(e.target.value)}
+                  >
+                    {monthNamesList.map((m) => (
+                      <option key={`from-m-${m.value}`} value={m.value}>
+                        {m.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-            {/* FROM */}
-            <div className="flex items-center gap-1.5 bg-base-200/70 p-1.5 rounded-xl border border-base-300/50 text-xs font-medium">
-              <span className="text-[11px] font-bold uppercase opacity-60 px-1">From:</span>
-              <select
-                className="select select-bordered select-xs font-bold font-mono bg-base-100 min-w-[76px] px-2 text-xs"
-                value={fromYear}
-                onChange={(e) => setFromYear(e.target.value)}
-              >
-                {availableYears.map((y) => (
-                  <option key={`from-y-${y}`} value={y}>
-                    {y}
-                  </option>
-                ))}
-              </select>
-              <select
-                className="select select-bordered select-xs font-bold bg-base-100 min-w-[70px] px-2 text-xs"
-                value={fromMonth}
-                onChange={(e) => setFromMonth(e.target.value)}
-              >
-                {monthNamesList.map((m) => (
-                  <option key={`from-m-${m.value}`} value={m.value}>
-                    {m.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <span className="text-xs font-bold opacity-40">→</span>
-
-            {/* TO */}
-            <div className="flex items-center gap-1.5 bg-base-200/70 p-1.5 rounded-xl border border-base-300/50 text-xs font-medium">
-              <span className="text-[11px] font-bold uppercase opacity-60 px-1">To:</span>
-              <select
-                className="select select-bordered select-xs font-bold font-mono bg-base-100 min-w-[76px] px-2 text-xs"
-                value={toYear}
-                onChange={(e) => setToYear(e.target.value)}
-              >
-                {availableYears.map((y) => (
-                  <option key={`to-y-${y}`} value={y}>
-                    {y}
-                  </option>
-                ))}
-              </select>
-              <select
-                className="select select-bordered select-xs font-bold bg-base-100 min-w-[70px] px-2 text-xs"
-                value={toMonth}
-                onChange={(e) => setToMonth(e.target.value)}
-              >
-                {monthNamesList.map((m) => (
-                  <option key={`to-m-${m.value}`} value={m.value}>
-                    {m.label}
-                  </option>
-                ))}
-              </select>
-            </div>
+                {/* TO */}
+                <div className="flex items-center gap-1.5 bg-base-200/70 p-1.5 rounded-xl border border-base-300/50 text-xs font-medium">
+                  <span className="text-[11px] font-bold uppercase opacity-60 px-1">To:</span>
+                  <select
+                    className="select select-bordered select-xs font-bold font-mono bg-base-100 min-w-[76px] px-2 text-xs"
+                    value={toYear}
+                    onChange={(e) => setToYear(e.target.value)}
+                  >
+                    {availableYears.map((y) => (
+                      <option key={`to-y-${y}`} value={y}>
+                        {y}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    className="select select-bordered select-xs font-bold bg-base-100 min-w-[68px] px-2 text-xs"
+                    value={toMonth}
+                    onChange={(e) => setToMonth(e.target.value)}
+                  >
+                    {monthNamesList.map((m) => (
+                      <option key={`to-m-${m.value}`} value={m.value}>
+                        {m.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </>
+            )}
 
             {/* Refresh Button */}
             <button
               onClick={fetchData}
-              className="btn btn-sm btn-ghost btn-circle border border-base-300/50 hover:bg-base-200 transition-all"
+              disabled={loading}
+              className="btn btn-circle btn-xs bg-base-200/70 hover:bg-base-200 border border-base-300/50"
               title="Refresh Data"
             >
               <RefreshCw size={14} className={loading ? "animate-spin text-primary" : "opacity-70"} />
@@ -2116,41 +2159,43 @@ export default function InvDashboard() {
           </div>
         </div>
 
-        {/* Quick Range Presets Chips */}
-        <div className="flex items-center gap-2 max-w-[1600px] mx-auto px-4 md:px-6 pt-1 pb-1.5 flex-wrap">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-base-content/50 mr-1 flex items-center gap-1">
-            <Calendar size={12} /> Quick Presets:
-          </span>
-          <button
-            onClick={() => handleQuickRange("this_year")}
-            className="btn btn-xs rounded-lg font-bold bg-base-200/70 hover:bg-primary/20 hover:text-primary transition-all border border-base-300/50"
-          >
-            This Year
-          </button>
-          <button
-            onClick={() => handleQuickRange("last_12")}
-            className="btn btn-xs rounded-lg font-bold bg-base-200/70 hover:bg-primary/20 hover:text-primary transition-all border border-base-300/50"
-          >
-            Last 12 Mos
-          </button>
-          <button
-            onClick={() => handleQuickRange("last_6")}
-            className="btn btn-xs rounded-lg font-bold bg-base-200/70 hover:bg-primary/20 hover:text-primary transition-all border border-base-300/50"
-          >
-            Last 6 Mos
-          </button>
-          <button
-            onClick={() => handleQuickRange("all")}
-            className="btn btn-xs rounded-lg font-bold bg-base-200/70 hover:bg-primary/20 hover:text-primary transition-all border border-base-300/50"
-          >
-            All Time
-          </button>
-        </div>
+        {/* Quick Range Presets Chips (Only shown when monthly date filtering is active) */}
+        {["SALARY", "PF", "MF"].includes(activeDashboard) && (
+          <div className="flex items-center gap-2 max-w-[1600px] mx-auto px-4 md:px-6 pt-1 pb-1.5 flex-wrap">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-base-content/50 mr-1 flex items-center gap-1">
+              <Calendar size={12} /> Quick Presets:
+            </span>
+            <button
+              onClick={() => handleQuickRange("this_year")}
+              className="btn btn-xs rounded-lg font-bold bg-base-200/70 hover:bg-primary/20 hover:text-primary transition-all border border-base-300/50"
+            >
+              This Year
+            </button>
+            <button
+              onClick={() => handleQuickRange("last_12")}
+              className="btn btn-xs rounded-lg font-bold bg-base-200/70 hover:bg-primary/20 hover:text-primary transition-all border border-base-300/50"
+            >
+              Last 12 Mos
+            </button>
+            <button
+              onClick={() => handleQuickRange("last_6")}
+              className="btn btn-xs rounded-lg font-bold bg-base-200/70 hover:bg-primary/20 hover:text-primary transition-all border border-base-300/50"
+            >
+              Last 6 Mos
+            </button>
+            <button
+              onClick={() => handleQuickRange("all")}
+              className="btn btn-xs rounded-lg font-bold bg-base-200/70 hover:bg-primary/20 hover:text-primary transition-all border border-base-300/50"
+            >
+              All Time
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="px-4 md:px-6 w-full max-w-[1600px] mx-auto space-y-6">
         {/* Date Range Error Alert */}
-        {isInvalidRange && (
+        {isInvalidRange && ["SALARY", "PF", "MF"].includes(activeDashboard) && (
           <div className="alert alert-error shadow-sm text-xs font-bold rounded-2xl">
             <span>Invalid Date Range: "From" date ({fromMonthStr}) cannot be after "To" date ({toMonthStr}). Please adjust your selection or click a Quick Preset.</span>
           </div>
@@ -2161,11 +2206,7 @@ export default function InvDashboard() {
           <div className="h-64 flex flex-col items-center justify-center gap-3">
             <span className="loading loading-spinner loading-lg text-primary"></span>
             <p className="text-xs text-base-content/60 font-semibold animate-pulse">
-              {activeDashboard === "SALARY"
-                ? "Loading salary intelligence & compensation data..."
-                : activeDashboard === "PF"
-                ? "Loading Provident Fund balance & contribution history..."
-                : "Loading mutual fund portfolios & transaction intelligence..."}
+              Loading {currentDashboardMeta.title} analytics & portfolios...
             </p>
           </div>
         )}
@@ -2179,30 +2220,30 @@ export default function InvDashboard() {
             <h3 className="text-xl font-bold">No Salary Entries Found</h3>
             <p className="text-sm text-base-content/60 max-w-md mx-auto">
               Start by logging your monthly salary breakdowns in Table Entry to activate interactive compensation
-              analytics and visualizations.
+              intelligence, graphs, deductions, and tax tracking.
             </p>
             <div>
-              <Link to="/dashboard/investment/table-entry?tab=salary" className="btn btn-primary btn-sm gap-2 rounded-xl">
+              <Link to="/dashboard/investment/table-entry" className="btn btn-primary btn-sm gap-2 rounded-xl">
                 <TableProperties size={14} /> Go to Salary Table Entry
               </Link>
             </div>
           </div>
         )}
 
-        {/* Empty State - PF */}
+        {/* Empty State - Provident Fund */}
         {!loading && salaryData.length === 0 && pfWithdrawals.length === 0 && activeDashboard === "PF" && (
           <div className="card bg-base-100 shadow-xl border border-base-200 p-12 text-center space-y-4">
             <div className="w-16 h-16 rounded-3xl bg-teal-500/10 text-teal-600 dark:text-teal-400 mx-auto flex items-center justify-center">
               <ShieldCheck size={32} />
             </div>
-            <h3 className="text-xl font-bold">No Provident Fund Records Found</h3>
+            <h3 className="text-xl font-bold">No PF Data Available</h3>
             <p className="text-sm text-base-content/60 max-w-md mx-auto">
-              PF contributions are automatically tracked and synchronized whenever you enter your monthly salary slips.
-              Start by adding your salary entries in Table Entry to view your EPF growth and cumulative balance.
+              PF contributions are automatically computed from your employee & employer salary entries.
+              Log monthly salary records or record PF withdrawals in Table Entry to view PF analytics.
             </p>
             <div>
-              <Link to="/dashboard/investment/table-entry?tab=salary" className="btn btn-primary btn-sm gap-2 rounded-xl">
-                <TableProperties size={14} /> Go to Salary Table Entry
+              <Link to="/dashboard/investment/table-entry" className="btn btn-primary btn-sm gap-2 rounded-xl">
+                <TableProperties size={14} /> Go to Table Entry
               </Link>
             </div>
           </div>
@@ -2222,6 +2263,43 @@ export default function InvDashboard() {
             <div>
               <Link to="/dashboard/investment/table-entry?tab=mf" className="btn btn-primary btn-sm gap-2 rounded-xl">
                 <TableProperties size={14} /> Go to Mutual Fund Table Entry
+              </Link>
+            </div>
+          </div>
+        )}
+
+        {/* Empty State - Stocks & Equity */}
+        {!loading && stocksData.length === 0 && activeDashboard === "STOCKS" && (
+          <div className="card bg-base-100 shadow-xl border border-base-200 p-12 text-center space-y-4">
+            <div className="w-16 h-16 rounded-3xl bg-blue-500/10 text-blue-600 dark:text-blue-400 mx-auto flex items-center justify-center">
+              <TrendingUp size={32} />
+            </div>
+            <h3 className="text-xl font-bold">No Stock Trades Found</h3>
+            <p className="text-sm text-base-content/60 max-w-md mx-auto">
+              Analyze your Demat holdings, delivery trades, and intraday orders with capital allocations,
+              quantity distributions, and detailed ledgers. Start by logging your trades in Table Entry.
+            </p>
+            <div>
+              <Link to="/dashboard/investment/table-entry?tab=stocks" className="btn btn-primary btn-sm gap-2 rounded-xl">
+                <TableProperties size={14} /> Go to Stocks Table Entry
+              </Link>
+            </div>
+          </div>
+        )}
+
+        {/* Empty State - Fixed Deposits */}
+        {!loading && fdData.length === 0 && activeDashboard === "FD" && (
+          <div className="card bg-base-100 shadow-xl border border-base-200 p-12 text-center space-y-4">
+            <div className="w-16 h-16 rounded-3xl bg-amber-500/10 text-amber-600 dark:text-amber-400 mx-auto flex items-center justify-center">
+              <Landmark size={32} />
+            </div>
+            <h3 className="text-xl font-bold">No Fixed Deposits Found</h3>
+            <p className="text-sm text-base-content/60 max-w-md mx-auto">
+              Track your bank fixed deposits, interest compounding, maturity schedules, and asset allocations across institutions. Start by adding your deposits.
+            </p>
+            <div>
+              <Link to="/dashboard/investment/table-entry?tab=fd" className="btn btn-primary btn-sm gap-2 rounded-xl">
+                <TableProperties size={14} /> Go to Fixed Deposits Table Entry
               </Link>
             </div>
           </div>
@@ -3885,6 +3963,87 @@ export default function InvDashboard() {
             </section>
           </>
         )}
+
+        {/* ================================================================ */}
+        {/* STOCKS & EQUITY DASHBOARD VIEW */}
+        {/* ================================================================ */}
+        {!loading && stocksData.length > 0 && activeDashboard === "STOCKS" && (
+          <StocksDashboard
+            key={`stocks-dashboard-${stockSubView}`}
+            stocksData={stocksData}
+            loading={loading}
+            fromYear={fromYear}
+            fromMonth={fromMonth}
+            toYear={toYear}
+            toMonth={toMonth}
+            activeSubView={stockSubView}
+            onSubViewChange={setStockSubView}
+          />
+        )}
+
+        {/* ================================================================ */}
+        {/* FIXED DEPOSITS (FD) DASHBOARD VIEW */}
+        {/* ================================================================ */}
+        {!loading && fdData.length > 0 && activeDashboard === "FD" && (
+          <FixedDepositDashboard
+            fdData={fdData}
+            loading={loading}
+            onRefresh={fetchData}
+          />
+        )}
+
+        {/* ================================================================ */}
+        {/* RECURRING DEPOSITS (RD) SHOWCASE VIEW */}
+        {/* ================================================================ */}
+        {!loading && activeDashboard === "RD" && (
+          <div className="card bg-base-100 shadow-xl border border-base-200/80 p-8 sm:p-12 text-center max-w-3xl mx-auto space-y-6 rounded-3xl">
+            <div
+              className={`w-20 h-20 rounded-3xl mx-auto flex items-center justify-center p-4 border shadow-sm ${currentDashboardMeta.bgClass}`}
+            >
+              {React.createElement(currentDashboardMeta.icon, { size: 38 })}
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center justify-center gap-2 flex-wrap">
+                <h3 className="text-2xl font-black tracking-tight text-base-content">
+                  {currentDashboardMeta.title} Dashboard
+                </h3>
+                <span className="badge badge-sm font-bold border bg-base-200 text-base-content/70">
+                  {currentDashboardMeta.badgeLabel}
+                </span>
+              </div>
+              <p className="text-sm text-base-content/65 max-w-lg mx-auto">
+                {currentDashboardMeta.description}
+              </p>
+            </div>
+
+            <div className="bg-base-200/50 border border-base-300/50 rounded-2xl p-5 text-left space-y-3">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-base-content/60 flex items-center gap-2">
+                <Sparkles size={14} className="text-primary" /> Features & Analytics In Progress
+              </h4>
+              <ul className="text-xs text-base-content/70 space-y-1.5 list-disc list-inside">
+                <li>Monthly recurring deposit compounding, maturity forecasts & interest calendar.</li>
+                <li>Installment payment schedules, due dates, and cumulative growth.</li>
+                <li>Bank-wise interest yield comparison & maturity timeline ledger.</li>
+              </ul>
+            </div>
+
+            <div className="flex items-center justify-center gap-3 flex-wrap">
+              <Link
+                to="/dashboard/investment/table-entry?tab=rd"
+                className="btn btn-primary btn-sm gap-2 rounded-xl font-bold"
+              >
+                <TableProperties size={14} /> Open Recurring Deposits Table Entry
+              </Link>
+              <button
+                type="button"
+                onClick={() => setIsDashboardModalOpen(true)}
+                className="btn btn-outline btn-sm gap-2 rounded-xl font-bold"
+              >
+                <LayoutGrid size={14} /> Switch Dashboard
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* MUTUAL FUND SELECTION MODAL POPUP */}
@@ -4159,6 +4318,23 @@ export default function InvDashboard() {
           </div>
         </div>
       )}
+
+      {/* ================================================================ */}
+      {/* DASHBOARD SELECTION MODAL POPUP */}
+      {/* ================================================================ */}
+      <SelectDashboardModal
+        isOpen={isDashboardModalOpen}
+        onClose={() => setIsDashboardModalOpen(false)}
+        activeDashboard={activeDashboard}
+        onSelectDashboard={handleSelectDashboard}
+        counts={{
+          SALARY: salaryData.length,
+          PF: salaryData.length + pfWithdrawals.length,
+          MF: mfData.length,
+          STOCKS: stocksData.length,
+          FD: fdData.length,
+        }}
+      />
     </div>
   );
 }

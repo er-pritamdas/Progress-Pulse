@@ -15,9 +15,15 @@ const isUserNamePresent = asynchandler(
         if (!password) {
             throw new ApiError(400, "Password is required")
         }
-        const userExist = await RegisteredUsers.findOne({ username: username })
+        const userExist = await RegisteredUsers.findOne({
+            $or: [
+                { username: username },
+                { username: { $regex: new RegExp(`^${username.trim()}$`, "i") } },
+                { email: username.trim().toLowerCase() }
+            ]
+        });
         if (!userExist) {
-            throw new ApiError(404, "User Not Found")
+            throw new ApiError(404, "User Not Found");
         }
         logger.info(`User ${username} login successful`);
 

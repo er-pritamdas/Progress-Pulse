@@ -91,6 +91,7 @@ const router = createBrowserRouter(
           <Route path="table-entry" element={<InvTableEntry />} />
           <Route path="dashboard" element={<InvDashboard />} />
           <Route path="table-view" element={<InvTableView />} />
+          <Route path="portfolio" element={<InvTableView />} />
           <Route path="settings" element={<InvSettings />} />
         </Route>
       </Route>

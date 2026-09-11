@@ -16,6 +16,12 @@ function FileTree({ open, setOpen }) {
 
     // Only apply 'btn-active' if pathname starts with /dashboard/
     const isActive = (path) => {
+        if (
+            (path === "/dashboard/investment/table-view" || path === "/dashboard/investment/portfolio") &&
+            (location.pathname === "/dashboard/investment/table-view" || location.pathname === "/dashboard/investment/portfolio")
+        ) {
+            return true;
+        }
         return location.pathname === path && location.pathname.startsWith("/dashboard/");
     };
 
@@ -202,13 +208,13 @@ function FileTree({ open, setOpen }) {
                                 </Tooltip>
                             </li>
                             <li>
-                                <Tooltip title={!open ? "Table View" : ""} placement="right" arrow slotProps={tooltipSlotProps}>
+                                <Tooltip title={!open ? "Portfolio" : ""} placement="right" arrow slotProps={tooltipSlotProps}>
                                     <Link
-                                        to="/dashboard/investment/table-view"
-                                        className={getLinkClass("/dashboard/investment/table-view")}
+                                        to="/dashboard/investment/portfolio"
+                                        className={getLinkClass("/dashboard/investment/portfolio")}
                                     >
                                         <TableView />
-                                        {open && <span className="ml-2">Table View</span>}
+                                        {open && <span className="ml-2">Portfolio</span>}
                                     </Link>
                                 </Tooltip>
                             </li>
