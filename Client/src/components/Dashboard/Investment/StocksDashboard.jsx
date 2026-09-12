@@ -19,15 +19,12 @@ import {
   Filter,
   CheckCircle2,
   Wallet,
-  Landmark,
   PiggyBank,
   Percent,
   ChevronDown,
   ExternalLink,
   ChevronUp,
   ChevronsUpDown,
-  Zap,
-  PackageCheck
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -86,6 +83,13 @@ export default function StocksDashboard({
   toMonth,
   activeSubView = "demat",
   onSubViewChange,
+  // External props from top sticky bar
+  selectedCap: externalCap,
+  onCapChange,
+  searchQuery: externalSearch,
+  onSearchChange,
+  activeMainTab: externalMainTab,
+  onMainTabChange,
 }) {
   // Derive subView directly from activeSubView prop or fallback to internal state
   const [internalSubView, setInternalSubView] = useState(() => {
@@ -108,12 +112,14 @@ export default function StocksDashboard({
   }, [activeSubView]);
 
   // Main Tab Navigation: "table" | "chart" (defaults to "table")
-  const [activeMainTab, setActiveMainTab] = useState(() => {
+  const [internalMainTab, setInternalMainTab] = useState(() => {
     return localStorage.getItem("pulse_stocks_dash_tab") || "table";
   });
+  const activeMainTab = externalMainTab !== undefined ? externalMainTab : internalMainTab;
 
   const handleTabChange = (tab) => {
-    setActiveMainTab(tab);
+    if (onMainTabChange) onMainTabChange(tab);
+    setInternalMainTab(tab);
     localStorage.setItem("pulse_stocks_dash_tab", tab);
   };
 
@@ -130,8 +136,19 @@ export default function StocksDashboard({
   const [chartDimension, setChartDimension] = useState("stock");
 
   // Filter & Search states
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCap, setSelectedCap] = useState("all"); // "all" | "Large" | "Mid" | "Small"
+  const [internalSearchQuery, setInternalSearchQuery] = useState("");
+  const searchQuery = externalSearch !== undefined ? externalSearch : internalSearchQuery;
+  const setSearchQuery = (q) => {
+    if (onSearchChange) onSearchChange(q);
+    setInternalSearchQuery(q);
+  };
+
+  const [internalSelectedCap, setInternalSelectedCap] = useState("all"); // "all" | "Large" | "Mid" | "Small"
+  const selectedCap = externalCap !== undefined ? externalCap : internalSelectedCap;
+  const setSelectedCap = (cap) => {
+    if (onCapChange) onCapChange(cap);
+    setInternalSelectedCap(cap);
+  };
 
   // Table Sorting
   const [sortField, setSortField] = useState("default");
@@ -509,136 +526,7 @@ export default function StocksDashboard({
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
       {/* -------------------------------------------------------------------- */}
-      {/* 1. Sub-Dashboard Switcher Tabs & Global Search Bar */}
-      {/* -------------------------------------------------------------------- */}
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-base-100 p-4 rounded-3xl shadow-sm border border-base-200/80">
-        {/* Left: 3 Sub-Dashboard Pills (User Requested: Demat, Delivery, Intraday) */}
-        <div className="flex items-center gap-1.5 p-1 bg-base-200/80 rounded-2xl border border-base-300/60 overflow-x-auto w-full md:w-auto [scrollbar-width:none]">
-          <button
-            onClick={() => handleSwitchSubView("demat")}
-            className={`px-4 py-2 text-xs font-black rounded-xl transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
-              subView === "demat"
-                ? "bg-primary text-primary-content shadow-sm scale-102"
-                : "text-base-content/70 hover:text-base-content hover:bg-base-300/50"
-            }`}
-          >
-            <Landmark size={14} className="text-blue-400 shrink-0" />
-            <span>Stocks In Demat</span>
-            <span
-              className={`badge badge-xs font-mono font-bold ${
-                subView === "demat" ? "bg-primary-content/20 text-primary-content" : "badge-ghost"
-              }`}
-            >
-              {allDematStocks.length}
-            </span>
-          </button>
-
-          <button
-            onClick={() => handleSwitchSubView("delivery")}
-            className={`px-4 py-2 text-xs font-black rounded-xl transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
-              subView === "delivery"
-                ? "bg-primary text-primary-content shadow-sm scale-102"
-                : "text-base-content/70 hover:text-base-content hover:bg-base-300/50"
-            }`}
-          >
-            <PackageCheck size={14} className="text-emerald-400 shrink-0" />
-            <span>Delivery Analysis</span>
-            <span
-              className={`badge badge-xs font-mono font-bold ${
-                subView === "delivery" ? "bg-primary-content/20 text-primary-content" : "badge-ghost"
-              }`}
-            >
-              {allDeliveryStocks.length}
-            </span>
-          </button>
-
-          <button
-            onClick={() => handleSwitchSubView("intraday")}
-            className={`px-4 py-2 text-xs font-black rounded-xl transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
-              subView === "intraday"
-                ? "bg-primary text-primary-content shadow-sm scale-102"
-                : "text-base-content/70 hover:text-base-content hover:bg-base-300/50"
-            }`}
-          >
-            <Zap size={14} className="text-amber-400 shrink-0" />
-            <span>Intraday Analysis</span>
-            <span
-              className={`badge badge-xs font-mono font-bold ${
-                subView === "intraday" ? "bg-primary-content/20 text-primary-content" : "badge-ghost"
-              }`}
-            >
-              {allIntradayStocks.length}
-            </span>
-          </button>
-        </div>
-
-        {/* Right Controls: Market Cap Filter, Search & View Modes */}
-        <div className="flex items-center gap-2.5 flex-wrap w-full md:w-auto justify-start md:justify-end">
-          {/* Cap Filter */}
-          <div className="flex items-center gap-1 bg-base-200/70 p-1 rounded-xl border border-base-300/50 text-xs font-medium">
-            <span className="text-[10px] font-bold uppercase opacity-50 px-1">Size:</span>
-            {["all", "Large", "Mid", "Small"].map((cap) => (
-              <button
-                key={`cap-${cap}`}
-                onClick={() => setSelectedCap(cap)}
-                className={`btn btn-xs rounded-lg px-2.5 font-bold capitalize transition-all ${
-                  selectedCap === cap ? "btn-primary shadow-2xs" : "btn-ghost text-base-content/70"
-                }`}
-              >
-                {cap === "all" ? "All Sizes" : cap}
-              </button>
-            ))}
-          </div>
-
-          {/* Search Box */}
-          <div className="relative min-w-[140px] max-w-[220px]">
-            <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 opacity-50" />
-            <input
-              type="text"
-              placeholder="Search stock..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="input input-xs input-bordered w-full pl-7 text-xs font-semibold rounded-xl focus:input-primary h-7.5"
-            />
-          </div>
-
-          {/* Main Tab Switcher: Table vs Pie Chart (with Tab Names) */}
-          <div className="flex items-center gap-1 bg-base-200/90 p-1 rounded-2xl border border-base-300 shadow-2xs">
-            <button
-              onClick={() => handleTabChange("table")}
-              className={`px-3.5 py-1.5 text-xs font-black rounded-xl transition-all flex items-center gap-2 cursor-pointer ${
-                activeMainTab === "table"
-                  ? "bg-primary text-primary-content shadow-sm scale-102"
-                  : "text-base-content/70 hover:text-base-content hover:bg-base-300/50"
-              }`}
-            >
-              <TableProperties size={14} />
-              <span>Table</span>
-              <span
-                className={`badge badge-xs font-mono font-bold ${
-                  activeMainTab === "table" ? "bg-primary-content/25 text-primary-content" : "badge-ghost opacity-60"
-                }`}
-              >
-                {sortedStocks.length}
-              </span>
-            </button>
-            <button
-              onClick={() => handleTabChange("chart")}
-              className={`px-3.5 py-1.5 text-xs font-black rounded-xl transition-all flex items-center gap-2 cursor-pointer ${
-                activeMainTab === "chart"
-                  ? "bg-primary text-primary-content shadow-sm scale-102"
-                  : "text-base-content/70 hover:text-base-content hover:bg-base-300/50"
-              }`}
-            >
-              <PieChart size={14} />
-              <span>Pie Chart</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* -------------------------------------------------------------------- */}
-      {/* 2. KPI Summary Cards Row */}
+      {/* 1. KPI Summary Cards Row */}
       {/* -------------------------------------------------------------------- */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         {/* Card 1: Total Capital / Investment */}

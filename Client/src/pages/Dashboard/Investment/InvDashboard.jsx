@@ -44,7 +44,9 @@ import {
   Search,
   Clock,
   Zap,
-  PackageCheck
+  PackageCheck,
+  Eye,
+  EyeOff
 } from "lucide-react";
 
 const monthNamesList = [
@@ -93,6 +95,38 @@ const formatCurrencyCompact = (val) => {
   return `₹${num.toLocaleString("en-IN")}`;
 };
 
+const isFundHoldingActive = (fund) => {
+  if (!fund) return false;
+  const txns = fund.transactions || [];
+  if (txns.length === 0) {
+    return (Number(fund.units) || Number(fund.activeUnits) || 0) > 0.0001;
+  }
+  let fUnitsAdded = 0;
+  let fUnitsWithdrawn = 0;
+  txns.forEach((t) => {
+    const typeLower = (t?.type || "").toLowerCase();
+    const isW =
+      typeLower.includes("withdr") ||
+      typeLower.includes("redemp") ||
+      typeLower.includes("swp");
+    const amt = Number(t.amtDeposit ?? t.amount ?? 0);
+    const er = Number(t.er ?? 0);
+    const act =
+      t.actualAmt !== undefined && t.actualAmt !== null
+        ? Number(t.actualAmt)
+        : Math.max(0, Math.abs(amt) - er);
+    const nav = Number(t.nav ?? 0);
+    const u = parseFloat(t.units) || (nav > 0 ? act / nav : 0);
+
+    if (isW) {
+      fUnitsWithdrawn += u;
+    } else {
+      fUnitsAdded += u;
+    }
+  });
+  return Math.max(0, parseFloat((fUnitsAdded - fUnitsWithdrawn).toFixed(4))) > 0.0001;
+};
+
 export default function InvDashboard() {
   TitleChanger("Progress Pulse | Investment Dashboard");
 
@@ -129,6 +163,106 @@ export default function InvDashboard() {
   const [stockSubView, setStockSubView] = useState(() => {
     return localStorage.getItem("pulse_inv_dash_stock_view") || "demat";
   });
+
+  // Stocks Dashboard Filter States (Controlled from top sticky bar)
+  const [stockSelectedCap, setStockSelectedCap] = useState(() => {
+    return localStorage.getItem("pulse_stocks_dash_cap") || "all";
+  });
+  const [stockSearchQuery, setStockSearchQuery] = useState("");
+  const [stockMainTab, setStockMainTab] = useState(() => {
+    return localStorage.getItem("pulse_stocks_dash_tab") || "table";
+  });
+
+  useEffect(() => {
+    if (stockSelectedCap) localStorage.setItem("pulse_stocks_dash_cap", stockSelectedCap);
+  }, [stockSelectedCap]);
+
+  useEffect(() => {
+    if (stockMainTab) localStorage.setItem("pulse_stocks_dash_tab", stockMainTab);
+  }, [stockMainTab]);
+
+  // Stocks Category Counts
+  const dematStocksCount = useMemo(() => {
+    return (stocksData || []).filter((s) => Number(s.qLeft) > 0).length;
+  }, [stocksData]);
+
+  const deliveryStocksCount = useMemo(() => {
+    return (stocksData || []).filter((s) => {
+      const isIntradayTerm = (s.term || "").toLowerCase() === "intraday";
+      if (isIntradayTerm) return false;
+      const qLeft = Number(s.qLeft) || 0;
+      const period = Number(s.period) || (s.sDate && s.sDate !== "-" && s.bDate ? dayjs(s.sDate).diff(dayjs(s.bDate), "day") : 0);
+      return qLeft <= 0 && period > 1;
+    }).length;
+  }, [stocksData]);
+
+  const intradayStocksCount = useMemo(() => {
+    return (stocksData || []).filter((s) => {
+      const isIntradayTerm = (s.term || "").toLowerCase() === "intraday";
+      if (isIntradayTerm) return true;
+      const qLeft = Number(s.qLeft) || 0;
+      const period = Number(s.period) || (s.sDate && s.sDate !== "-" && s.bDate ? dayjs(s.sDate).diff(dayjs(s.bDate), "day") : 0);
+      return qLeft <= 0 && s.sDate && s.sDate !== "-" && period <= 1;
+    }).length;
+  }, [stocksData]);
+
+  // Fixed Deposit Top Sticky Controls & Filter States
+  const [fdStatusFilter, setFdStatusFilter] = useState("all");
+  const [fdBankFilter, setFdBankFilter] = useState("all");
+  const [fdSearchQuery, setFdSearchQuery] = useState("");
+  const [fdMainTab, setFdMainTab] = useState(() => {
+    return localStorage.getItem("pulse_fd_dash_tab") || "table";
+  });
+  const [fdHideNumbers, setFdHideNumbers] = useState(() => {
+    return localStorage.getItem("pulse_fd_hide_numbers") === "true";
+  });
+  const [isAddFdModalOpen, setIsAddFdModalOpen] = useState(false);
+
+  useEffect(() => {
+    if (fdMainTab) localStorage.setItem("pulse_fd_dash_tab", fdMainTab);
+  }, [fdMainTab]);
+
+  useEffect(() => {
+    localStorage.setItem("pulse_fd_hide_numbers", String(fdHideNumbers));
+  }, [fdHideNumbers]);
+
+  // Fixed Deposit Category Counts (for top sticky dropdown badges)
+  const fdCounts = useMemo(() => {
+    const today = dayjs();
+    let totalCount = (fdData || []).length;
+    let activeCount = 0;
+    let maturedCount = 0;
+    let withdrawnCount = 0;
+
+    (fdData || []).forEach((fd) => {
+      if (fd.isWithdrawn) {
+        withdrawnCount++;
+      } else {
+        let maturity = fd.maturityDate ? dayjs(fd.maturityDate) : null;
+        if (!maturity && fd.startDate) {
+          const tenureYears = fd.tenureYears ?? (fd.tenureUnit === "Years" ? fd.tenureValue : 0);
+          const tenureMonths = fd.tenureMonths ?? (fd.tenureUnit === "Months" ? fd.tenureValue : 0);
+          const tenureDays = fd.tenureDays ?? (fd.tenureUnit === "Days" ? fd.tenureValue : 0);
+          maturity = dayjs(fd.startDate)
+            .add(tenureYears || 1, "year")
+            .add(tenureMonths || 0, "month")
+            .add(tenureDays || 0, "day");
+        }
+        if (maturity && (today.isAfter(maturity) || maturity.diff(today, "day") <= 0)) {
+          maturedCount++;
+        } else {
+          activeCount++;
+        }
+      }
+    });
+
+    return { totalCount, activeCount, maturedCount, withdrawnCount };
+  }, [fdData]);
+
+  // Unique list of banks for Fixed Deposits
+  const fdAvailableBanks = useMemo(() => {
+    return Array.from(new Set((fdData || []).map((f) => f.bankName).filter(Boolean))).sort();
+  }, [fdData]);
 
   // Selected Mutual Fund for filtering: "all", "group:<id>", or specific fund id (persisted in localStorage)
   const [selectedMfFund, setSelectedMfFund] = useState(() => {
@@ -1408,17 +1542,18 @@ export default function InvDashboard() {
 
   // Grouped Mutual Funds based on Custom Groups from Table Entry
   const groupedMutualFunds = useMemo(() => {
+    const activeFunds = (mfData || []).filter(isFundHoldingActive);
     if (!mfGroups || mfGroups.length === 0) {
       return [
         {
           id: "default-group",
           name: "General Mutual Funds",
-          funds: mfData,
+          funds: activeFunds,
         },
       ];
     }
 
-    const fundMap = new Map(mfData.map((f) => [String(f.id || f._id), f]));
+    const fundMap = new Map(activeFunds.map((f) => [String(f.id || f._id), f]));
     const assignedFundIds = new Set();
     const resultGroups = [];
 
@@ -1438,7 +1573,7 @@ export default function InvDashboard() {
       }
     });
 
-    const unassignedFunds = mfData.filter((f) => !assignedFundIds.has(String(f.id || f._id)));
+    const unassignedFunds = activeFunds.filter((f) => !assignedFundIds.has(String(f.id || f._id)));
     if (unassignedFunds.length > 0) {
       resultGroups.push({
         id: "unassigned-group",
@@ -1482,11 +1617,13 @@ export default function InvDashboard() {
 
   // Active funds based on fund dropdown filter: "all", "group:<id>", or specific fund ID
   const activeMfFunds = useMemo(() => {
-    if (selectedMfFund === "all") return mfData;
+    const activeFunds = (mfData || []).filter(isFundHoldingActive);
+    if (selectedMfFund === "all") return activeFunds;
     if (selectedMfFund.startsWith("group:")) {
-      return selectedGroupObj ? selectedGroupObj.funds : mfData;
+      const gFunds = selectedGroupObj ? selectedGroupObj.funds : activeFunds;
+      return gFunds.filter(isFundHoldingActive);
     }
-    return mfData.filter((f) => String(f.id || f._id) === selectedMfFund);
+    return activeFunds.filter((f) => String(f.id || f._id) === selectedMfFund);
   }, [mfData, selectedMfFund, selectedGroupObj]);
 
   // Selected Fund Object (if specific fund is selected)
@@ -2185,11 +2322,18 @@ export default function InvDashboard() {
                       ? "Delivery Analysis"
                       : "Intraday Analysis"}
                   </span>
+                  <span className="badge badge-xs font-mono font-bold bg-blue-500/20 text-blue-600 dark:text-blue-300">
+                    {stockSubView === "demat"
+                      ? dematStocksCount
+                      : stockSubView === "delivery"
+                      ? deliveryStocksCount
+                      : intradayStocksCount}
+                  </span>
                   <ChevronDown className="w-3.5 h-3.5 opacity-60 ml-0.5 shrink-0" />
                 </div>
                 <ul
                   tabIndex={0}
-                  className="dropdown-content menu p-2 shadow-2xl bg-base-100/95 backdrop-blur-md rounded-2xl w-56 z-[100] mt-2 border border-base-300/50"
+                  className="dropdown-content menu p-2 shadow-2xl bg-base-100/95 backdrop-blur-md rounded-2xl w-60 z-[100] mt-2 border border-base-300/50"
                 >
                   <li className="menu-title text-[10px] font-bold uppercase tracking-wider text-base-content/50 px-3 py-1">
                     Stock Category
@@ -2213,7 +2357,18 @@ export default function InvDashboard() {
                         <PackageCheck className="w-3.5 h-3.5 text-blue-500" />
                         <span>Stocks In Demat</span>
                       </div>
-                      {stockSubView === "demat" && <CheckCircle2 className="w-3.5 h-3.5" />}
+                      <div className="flex items-center gap-1.5">
+                        <span
+                          className={`badge badge-xs font-mono font-bold ${
+                            stockSubView === "demat"
+                              ? "bg-primary-content/20 text-primary-content"
+                              : "badge-ghost"
+                          }`}
+                        >
+                          {dematStocksCount}
+                        </span>
+                        {stockSubView === "demat" && <CheckCircle2 className="w-3.5 h-3.5" />}
+                      </div>
                     </button>
                   </li>
                   <li>
@@ -2235,7 +2390,18 @@ export default function InvDashboard() {
                         <Clock className="w-3.5 h-3.5 text-emerald-500" />
                         <span>Delivery Analysis</span>
                       </div>
-                      {stockSubView === "delivery" && <CheckCircle2 className="w-3.5 h-3.5" />}
+                      <div className="flex items-center gap-1.5">
+                        <span
+                          className={`badge badge-xs font-mono font-bold ${
+                            stockSubView === "delivery"
+                              ? "bg-primary-content/20 text-primary-content"
+                              : "badge-ghost"
+                          }`}
+                        >
+                          {deliveryStocksCount}
+                        </span>
+                        {stockSubView === "delivery" && <CheckCircle2 className="w-3.5 h-3.5" />}
+                      </div>
                     </button>
                   </li>
                   <li>
@@ -2257,7 +2423,187 @@ export default function InvDashboard() {
                         <Zap className="w-3.5 h-3.5 text-amber-500" />
                         <span>Intraday Analysis</span>
                       </div>
-                      {stockSubView === "intraday" && <CheckCircle2 className="w-3.5 h-3.5" />}
+                      <div className="flex items-center gap-1.5">
+                        <span
+                          className={`badge badge-xs font-mono font-bold ${
+                            stockSubView === "intraday"
+                              ? "bg-primary-content/20 text-primary-content"
+                              : "badge-ghost"
+                          }`}
+                        >
+                          {intradayStocksCount}
+                        </span>
+                        {stockSubView === "intraday" && <CheckCircle2 className="w-3.5 h-3.5" />}
+                      </div>
+                    </button>
+                  </li>
+                </ul>
+              </div>
+            )}
+
+            {/* Fixed Deposits Status Dropdown Selector - Visible when Fixed Deposits is selected */}
+            {activeDashboard === "FD" && (
+              <div className="dropdown dropdown-bottom">
+                <div
+                  tabIndex={0}
+                  role="button"
+                  className="btn btn-ghost text-xs md:text-sm font-bold min-h-0 h-auto hover:bg-base-200/80 px-3 py-1.5 rounded-xl flex items-center gap-2 transition-all border border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400 shadow-xs"
+                  title="Select deposit status: All, Active, Matured, or Withdrawn"
+                >
+                  <Landmark className="w-3.5 h-3.5 shrink-0" />
+                  <span className="truncate max-w-[140px] sm:max-w-[200px] md:max-w-[260px] text-left">
+                    {fdStatusFilter === "all"
+                      ? "All Deposits"
+                      : fdStatusFilter === "active"
+                      ? "Active Deposits"
+                      : fdStatusFilter === "matured"
+                      ? "Matured Deposits"
+                      : "Withdrawn Deposits"}
+                  </span>
+                  <span className="badge badge-xs font-mono font-bold bg-amber-500/20 text-amber-600 dark:text-amber-300">
+                    {fdStatusFilter === "all"
+                      ? fdCounts.totalCount
+                      : fdStatusFilter === "active"
+                      ? fdCounts.activeCount
+                      : fdStatusFilter === "matured"
+                      ? fdCounts.maturedCount
+                      : fdCounts.withdrawnCount}
+                  </span>
+                  <ChevronDown className="w-3.5 h-3.5 opacity-60 ml-0.5 shrink-0" />
+                </div>
+                <ul
+                  tabIndex={0}
+                  className="dropdown-content menu p-2 shadow-2xl bg-base-100/95 backdrop-blur-md rounded-2xl w-60 z-[100] mt-2 border border-base-300/50"
+                >
+                  <li className="menu-title text-[10px] font-bold uppercase tracking-wider text-base-content/50 px-3 py-1">
+                    Deposit Status
+                  </li>
+                  <li>
+                    <button
+                      className={`flex items-center justify-between py-2 px-3 rounded-xl text-xs font-semibold ${
+                        fdStatusFilter === "all"
+                          ? "bg-primary text-primary-content font-bold shadow-xs"
+                          : "hover:bg-base-200"
+                      }`}
+                      onClick={() => {
+                        setFdStatusFilter("all");
+                        if (document.activeElement instanceof HTMLElement) {
+                          document.activeElement.blur();
+                        }
+                      }}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Coins className="w-3.5 h-3.5 text-amber-500" />
+                        <span>All Deposits</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span
+                          className={`badge badge-xs font-mono font-bold ${
+                            fdStatusFilter === "all"
+                              ? "bg-primary-content/20 text-primary-content"
+                              : "badge-ghost"
+                          }`}
+                        >
+                          {fdCounts.totalCount}
+                        </span>
+                        {fdStatusFilter === "all" && <CheckCircle2 className="w-3.5 h-3.5" />}
+                      </div>
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      className={`flex items-center justify-between py-2 px-3 rounded-xl text-xs font-semibold ${
+                        fdStatusFilter === "active"
+                          ? "bg-primary text-primary-content font-bold shadow-xs"
+                          : "hover:bg-base-200"
+                      }`}
+                      onClick={() => {
+                        setFdStatusFilter("active");
+                        if (document.activeElement instanceof HTMLElement) {
+                          document.activeElement.blur();
+                        }
+                      }}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                        <span>Active Deposits</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span
+                          className={`badge badge-xs font-mono font-bold ${
+                            fdStatusFilter === "active"
+                              ? "bg-primary-content/20 text-primary-content"
+                              : "badge-ghost"
+                          }`}
+                        >
+                          {fdCounts.activeCount}
+                        </span>
+                        {fdStatusFilter === "active" && <CheckCircle2 className="w-3.5 h-3.5" />}
+                      </div>
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      className={`flex items-center justify-between py-2 px-3 rounded-xl text-xs font-semibold ${
+                        fdStatusFilter === "matured"
+                          ? "bg-primary text-primary-content font-bold shadow-xs"
+                          : "hover:bg-base-200"
+                      }`}
+                      onClick={() => {
+                        setFdStatusFilter("matured");
+                        if (document.activeElement instanceof HTMLElement) {
+                          document.activeElement.blur();
+                        }
+                      }}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                        <span>Matured Deposits</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span
+                          className={`badge badge-xs font-mono font-bold ${
+                            fdStatusFilter === "matured"
+                              ? "bg-primary-content/20 text-primary-content"
+                              : "badge-ghost"
+                          }`}
+                        >
+                          {fdCounts.maturedCount}
+                        </span>
+                        {fdStatusFilter === "matured" && <CheckCircle2 className="w-3.5 h-3.5" />}
+                      </div>
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      className={`flex items-center justify-between py-2 px-3 rounded-xl text-xs font-semibold ${
+                        fdStatusFilter === "withdrawn"
+                          ? "bg-primary text-primary-content font-bold shadow-xs"
+                          : "hover:bg-base-200"
+                      }`}
+                      onClick={() => {
+                        setFdStatusFilter("withdrawn");
+                        if (document.activeElement instanceof HTMLElement) {
+                          document.activeElement.blur();
+                        }
+                      }}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+                        <span>Withdrawn Deposits</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span
+                          className={`badge badge-xs font-mono font-bold ${
+                            fdStatusFilter === "withdrawn"
+                              ? "bg-primary-content/20 text-primary-content"
+                              : "badge-ghost"
+                          }`}
+                        >
+                          {fdCounts.withdrawnCount}
+                        </span>
+                        {fdStatusFilter === "withdrawn" && <CheckCircle2 className="w-3.5 h-3.5" />}
+                      </div>
                     </button>
                   </li>
                 </ul>
@@ -2305,6 +2651,113 @@ export default function InvDashboard() {
               <TableProperties size={13} />
               <span>Table Entry</span>
             </Link>
+
+            {/* Fixed Deposits Filters: Bank Filter, Search FD, Table / Analytics View, Hide Toggle, and Add FD */}
+            {activeDashboard === "FD" && (
+              <>
+                {/* 1. Bank Filter Dropdown */}
+                <div className="flex items-center gap-1.5 bg-base-200/70 p-1 rounded-xl border border-base-300/50 text-xs font-medium">
+                  <span className="text-[10px] font-bold uppercase opacity-60 px-1 flex items-center gap-1">
+                    <Building2 size={11} className="text-base-content/60" /> Bank:
+                  </span>
+                  <select
+                    value={fdBankFilter}
+                    onChange={(e) => setFdBankFilter(e.target.value)}
+                    className="select select-bordered select-xs font-bold bg-base-100 min-w-[95px] max-w-[160px] px-2 text-xs truncate rounded-lg"
+                  >
+                    <option value="all">All Banks ({fdAvailableBanks.length})</option>
+                    {fdAvailableBanks.map((b) => (
+                      <option key={`fd-bank-${b}`} value={b}>
+                        {b}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* 2. Search FD */}
+                <div className="relative min-w-[130px] max-w-[190px]">
+                  <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 opacity-50" />
+                  <input
+                    type="text"
+                    placeholder="Search FD..."
+                    value={fdSearchQuery}
+                    onChange={(e) => setFdSearchQuery(e.target.value)}
+                    className="input input-xs input-bordered w-full pl-7 pr-6 text-xs font-semibold rounded-xl focus:input-primary h-7.5"
+                  />
+                  {fdSearchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setFdSearchQuery("")}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 opacity-50 hover:opacity-100"
+                    >
+                      <X size={11} />
+                    </button>
+                  )}
+                </div>
+
+                {/* 3. Table & Analytics View Tab Switcher */}
+                <div className="flex items-center gap-1 bg-base-200/90 p-1 rounded-2xl border border-base-300 shadow-2xs">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFdMainTab("table");
+                      localStorage.setItem("pulse_fd_dash_tab", "table");
+                    }}
+                    className={`px-3 py-1 text-xs font-black rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${
+                      fdMainTab === "table"
+                        ? "bg-primary text-primary-content shadow-sm scale-102"
+                        : "text-base-content/70 hover:text-base-content hover:bg-base-300/50"
+                    }`}
+                  >
+                    <TableProperties size={13} />
+                    <span>Table</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFdMainTab("chart");
+                      localStorage.setItem("pulse_fd_dash_tab", "chart");
+                    }}
+                    className={`px-3 py-1 text-xs font-black rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${
+                      fdMainTab === "chart"
+                        ? "bg-primary text-primary-content shadow-sm scale-102"
+                        : "text-base-content/70 hover:text-base-content hover:bg-base-300/50"
+                    }`}
+                  >
+                    <PieChart size={13} />
+                    <span>Analytics</span>
+                  </button>
+                </div>
+
+                {/* 4. Privacy Mask Toggle */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFdHideNumbers((prev) => {
+                      const next = !prev;
+                      localStorage.setItem("pulse_fd_hide_numbers", String(next));
+                      return next;
+                    });
+                  }}
+                  className="btn btn-ghost btn-xs rounded-xl border border-base-300/60 text-xs gap-1 bg-base-100 hover:bg-base-200 px-2.5 py-1"
+                  title={fdHideNumbers ? "Show sensitive balances" : "Hide sensitive balances"}
+                >
+                  {fdHideNumbers ? <Eye size={13} /> : <EyeOff size={13} />}
+                  <span className="hidden sm:inline font-semibold">{fdHideNumbers ? "Show" : "Hide"}</span>
+                </button>
+
+                {/* 5. Add New FD Button */}
+                <button
+                  type="button"
+                  onClick={() => setIsAddFdModalOpen(true)}
+                  className="btn btn-primary btn-xs rounded-xl font-bold flex items-center gap-1 shadow-xs px-2.5 py-1"
+                  title="Add new Fixed Deposit"
+                >
+                  <Plus size={13} />
+                  <span className="hidden sm:inline">Add FD</span>
+                </button>
+              </>
+            )}
           </div>
 
           {/* Right: Date Range Selectors (Only applicable for Salary, PF, and MF month records) */}
@@ -2397,6 +2850,79 @@ export default function InvDashboard() {
                       </option>
                     ))}
                   </select>
+                </div>
+              </>
+            )}
+
+            {/* Stocks Filters in Top Sticky Bar: Size Tab, Search Stocks, and Table / Pie Chart View Tab */}
+            {activeDashboard === "STOCKS" && (
+              <>
+                {/* 1. Size Tab */}
+                <div className="flex items-center gap-1 bg-base-200/70 p-1 rounded-xl border border-base-300/50 text-xs font-medium">
+                  <span className="text-[10px] font-bold uppercase opacity-50 px-1">Size:</span>
+                  {["all", "Large", "Mid", "Small"].map((cap) => (
+                    <button
+                      key={`cap-${cap}`}
+                      type="button"
+                      onClick={() => setStockSelectedCap(cap)}
+                      className={`btn btn-xs rounded-lg px-2.5 font-bold capitalize transition-all ${
+                        stockSelectedCap === cap
+                          ? "btn-primary shadow-2xs"
+                          : "btn-ghost text-base-content/70"
+                      }`}
+                    >
+                      {cap === "all" ? "All Sizes" : cap}
+                    </button>
+                  ))}
+                </div>
+
+                {/* 2. Search Stocks */}
+                <div className="relative min-w-[130px] max-w-[200px]">
+                  <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 opacity-50" />
+                  <input
+                    type="text"
+                    placeholder="Search stocks..."
+                    value={stockSearchQuery}
+                    onChange={(e) => setStockSearchQuery(e.target.value)}
+                    className="input input-xs input-bordered w-full pl-7 pr-6 text-xs font-semibold rounded-xl focus:input-primary h-7.5"
+                  />
+                  {stockSearchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setStockSearchQuery("")}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 opacity-50 hover:opacity-100"
+                    >
+                      <X size={11} />
+                    </button>
+                  )}
+                </div>
+
+                {/* 3. Table and Pie Chart View Tab */}
+                <div className="flex items-center gap-1 bg-base-200/90 p-1 rounded-2xl border border-base-300 shadow-2xs">
+                  <button
+                    type="button"
+                    onClick={() => setStockMainTab("table")}
+                    className={`px-3 py-1 text-xs font-black rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${
+                      stockMainTab === "table"
+                        ? "bg-primary text-primary-content shadow-sm scale-102"
+                        : "text-base-content/70 hover:text-base-content hover:bg-base-300/50"
+                    }`}
+                  >
+                    <TableProperties size={13} />
+                    <span>Table</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setStockMainTab("chart")}
+                    className={`px-3 py-1 text-xs font-black rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${
+                      stockMainTab === "chart"
+                        ? "bg-primary text-primary-content shadow-sm scale-102"
+                        : "text-base-content/70 hover:text-base-content hover:bg-base-300/50"
+                    }`}
+                  >
+                    <PieChart size={13} />
+                    <span>Pie Chart</span>
+                  </button>
                 </div>
               </>
             )}
@@ -4244,6 +4770,12 @@ export default function InvDashboard() {
             toMonth={toMonth}
             activeSubView={stockSubView}
             onSubViewChange={setStockSubView}
+            selectedCap={stockSelectedCap}
+            onCapChange={setStockSelectedCap}
+            searchQuery={stockSearchQuery}
+            onSearchChange={setStockSearchQuery}
+            activeMainTab={stockMainTab}
+            onMainTabChange={setStockMainTab}
           />
         )}
 
@@ -4255,6 +4787,24 @@ export default function InvDashboard() {
             fdData={fdData}
             loading={loading}
             onRefresh={fetchData}
+            statusFilter={fdStatusFilter}
+            onStatusFilterChange={setFdStatusFilter}
+            bankFilter={fdBankFilter}
+            onBankFilterChange={setFdBankFilter}
+            searchQuery={fdSearchQuery}
+            onSearchChange={setFdSearchQuery}
+            activeMainTab={fdMainTab}
+            onMainTabChange={setFdMainTab}
+            hideNumbers={fdHideNumbers}
+            onToggleHideNumbers={() => {
+              setFdHideNumbers((prev) => {
+                const next = !prev;
+                localStorage.setItem("pulse_fd_hide_numbers", String(next));
+                return next;
+              });
+            }}
+            isAddModalOpen={isAddFdModalOpen}
+            onCloseAddModal={() => setIsAddFdModalOpen(false)}
           />
         )}
 
@@ -4596,7 +5146,7 @@ export default function InvDashboard() {
         counts={{
           SALARY: salaryData.length,
           PF: salaryData.length + pfWithdrawals.length,
-          MF: mfData.length,
+          MF: (mfData || []).filter(isFundHoldingActive).length,
           STOCKS: stocksData.length,
           FD: fdData.length,
         }}

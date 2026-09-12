@@ -14,6 +14,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
+import CompanyLogo from "./CompanyLogo";
 
 export default function MutualFundCard({
   index,
@@ -41,6 +42,7 @@ export default function MutualFundCard({
                 #{index}
               </span>
             )}
+            <CompanyLogo name={fund.amc} size="w-8 h-8" type="mf" />
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 flex-wrap">
                 <h3 className="font-extrabold text-base text-base-content tracking-tight truncate group-hover/card:text-secondary transition-colors">

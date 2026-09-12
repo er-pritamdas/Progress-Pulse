@@ -24,6 +24,7 @@ import {
   AlertCircle
 } from "lucide-react";
 import { evaluateMathExpression } from "../../../utils/mathExpression";
+import CompanyLogo from "./CompanyLogo";
 
 export default function FixedDepositTableModal({
   fd,
@@ -217,9 +218,7 @@ export default function FixedDepositTableModal({
         {/* Header */}
         <div className="p-4 sm:p-5 border-b border-base-200 bg-base-200/50 flex flex-wrap items-center justify-between gap-3 shrink-0">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-2xl bg-primary/15 text-primary">
-              <Landmark size={20} />
-            </div>
+            <CompanyLogo name={fd.bankName} size="w-10 h-10" rounded="rounded-2xl" type="bank" />
             <div>
               <h3 className="font-extrabold text-base sm:text-lg flex items-center gap-2 leading-tight">
                 <span>{fd.bankName}</span>

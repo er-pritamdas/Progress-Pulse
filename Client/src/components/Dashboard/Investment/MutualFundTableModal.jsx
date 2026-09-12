@@ -26,6 +26,7 @@ import {
   Clock,
 } from "lucide-react";
 import { formatDateDDMMMYYYY } from "../DatePicker";
+import CompanyLogo from "./CompanyLogo";
 
 export default function MutualFundTableModal({
   fund,
@@ -146,15 +147,7 @@ export default function MutualFundTableModal({
         {/* Floating Top Header Bar */}
         <div className="bg-base-100/95 backdrop-blur-md rounded-2xl sm:rounded-3xl border border-base-300/60 shadow-xl px-4 sm:px-6 py-3 sm:py-3.5 flex items-center justify-between gap-3 shrink-0">
           <div className="flex items-center gap-3 min-w-0">
-            <div
-              className={`w-10 h-10 rounded-2xl font-black text-base flex items-center justify-center shrink-0 border shadow-xs ${
-                isWithdrawalView
-                  ? "bg-primary/15 text-primary border-primary/25"
-                  : "bg-secondary/15 text-secondary border-secondary/20"
-              }`}
-            >
-              {(fund.amc || "?").charAt(0).toUpperCase()}
-            </div>
+            <CompanyLogo name={fund.amc} size="w-10 h-10" rounded="rounded-2xl" type="mf" />
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <h3 className="font-extrabold text-base sm:text-lg text-base-content tracking-tight truncate">

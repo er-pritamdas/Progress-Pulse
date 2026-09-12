@@ -93,6 +93,7 @@ const router = createBrowserRouter(
           <Route path="table-view" element={<InvTableView />} />
           <Route path="portfolio" element={<InvTableView />} />
           <Route path="settings" element={<InvSettings />} />
+          <Route path="planner" element={<InvSettings />} />
         </Route>
       </Route>
     </>

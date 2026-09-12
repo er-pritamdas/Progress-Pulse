@@ -10,6 +10,7 @@ import TableView from '../../../utils/Icons/TableView';
 import TableEntry from '../../../utils/Icons/TableEntry';
 import Dashboard from '../../../utils/Icons/Dashboard';
 import Settings from '../../../utils/Icons/Settings';
+import Planner from '../../../utils/Icons/Planner';
 
 function FileTree({ open, setOpen }) {
     const location = useLocation();
@@ -19,6 +20,12 @@ function FileTree({ open, setOpen }) {
         if (
             (path === "/dashboard/investment/table-view" || path === "/dashboard/investment/portfolio") &&
             (location.pathname === "/dashboard/investment/table-view" || location.pathname === "/dashboard/investment/portfolio")
+        ) {
+            return true;
+        }
+        if (
+            (path === "/dashboard/investment/planner" || path === "/dashboard/investment/settings") &&
+            (location.pathname === "/dashboard/investment/planner" || location.pathname === "/dashboard/investment/settings")
         ) {
             return true;
         }
@@ -219,13 +226,13 @@ function FileTree({ open, setOpen }) {
                                 </Tooltip>
                             </li>
                             <li>
-                                <Tooltip title={!open ? "Settings" : ""} placement="right" arrow slotProps={tooltipSlotProps}>
+                                <Tooltip title={!open ? "Planner" : ""} placement="right" arrow slotProps={tooltipSlotProps}>
                                     <Link
-                                        to="/dashboard/investment/settings"
-                                        className={getLinkClass("/dashboard/investment/settings")}
+                                        to="/dashboard/investment/planner"
+                                        className={getLinkClass("/dashboard/investment/planner")}
                                     >
-                                        <Settings />
-                                        {open && <span className="ml-2">Settings</span>}
+                                        <Planner />
+                                        {open && <span className="ml-2">Planner</span>}
                                     </Link>
                                 </Tooltip>
                             </li>

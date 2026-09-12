@@ -23,6 +23,7 @@ import {
   Tag
 } from "lucide-react";
 import { calculateFdMaturity } from "./AddFixedDepositModal";
+import CompanyLogo from "./CompanyLogo";
 
 export default function FixedDepositCard({
   index,
@@ -78,6 +79,7 @@ export default function FixedDepositCard({
                 #{index}
               </span>
             )}
+            <CompanyLogo name={fd.bankName} size="w-8 h-8" type="bank" />
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 flex-wrap">
                 <h3 className="font-black text-base text-base-content tracking-tight truncate group-hover/card:text-primary transition-colors">

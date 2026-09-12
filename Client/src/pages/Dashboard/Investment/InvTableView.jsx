@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import dayjs from "dayjs";
 import Chart from "react-apexcharts";
 import axiosInstance from "../../../Context/AxiosInstance";
@@ -8,6 +8,7 @@ import PortfolioSettingsModal, {
   calculateExactAge,
 } from "../../../components/Dashboard/Investment/PortfolioSettingsModal";
 import InteractivePortfolioGauge from "../../../components/Dashboard/Investment/InteractivePortfolioGauge";
+import CompanyLogo from "../../../components/Dashboard/Investment/CompanyLogo";
 import {
   Landmark,
   TrendingUp,
@@ -28,6 +29,8 @@ import {
   TableProperties,
   Layers,
   ChevronRight,
+  ChevronDown,
+  Check,
   CheckCircle2,
   AlertCircle,
   Flag,
@@ -37,7 +40,8 @@ import {
   Wallet,
   ArrowUpDown,
   ArrowUp,
-  ArrowDown
+  ArrowDown,
+  Pencil,
 } from "lucide-react";
 
 const ASSET_THEMES = {
@@ -125,6 +129,59 @@ const formatCurrencyCompact = (val) => {
   return `₹${num.toLocaleString("en-IN")}`;
 };
 
+export const calcMfAvailableUnits = (fund) => {
+  if (!fund) return 0;
+  const txns = fund.transactions || [];
+  if (txns.length === 0) {
+    return Number(fund.units) || Number(fund.activeUnits) || 0;
+  }
+  let totalUnits = 0;
+  let totalUnitsWithdrawn = 0;
+  txns.forEach((t) => {
+    const tl = (t?.type || "").toLowerCase();
+    const act =
+      t.actualAmt !== undefined && t.actualAmt !== null
+        ? Number(t.actualAmt)
+        : Math.max(0, (t.amtDeposit ?? (t.amtDeposit ? t.amtDeposit - (t.er || 0) : t.amount)) ?? 0);
+    const n = Number(t.nav ?? 0);
+    const u = parseFloat(t.units) || (n > 0 ? act / n : 0);
+    if (tl.includes("withdr") || tl.includes("redemp") || tl.includes("swp")) {
+      totalUnitsWithdrawn += u;
+    } else {
+      totalUnits += u;
+    }
+  });
+  return Math.max(0, parseFloat((totalUnits - totalUnitsWithdrawn).toFixed(4)));
+};
+
+export const calcMfHoldingValue = (fund) => {
+  if (!fund) return 0;
+  const activeUnits = calcMfAvailableUnits(fund);
+  if (activeUnits <= 0.0001) return 0;
+
+  const txns = fund.transactions || [];
+  if (txns.length === 0) {
+    return Number(fund.amount) || Number(fund.totalInvestment) || 0;
+  }
+  let totalUnits = 0;
+  let totalDeposit = 0;
+  txns.forEach((t) => {
+    const tl = (t?.type || "").toLowerCase();
+    const act =
+      t.actualAmt !== undefined && t.actualAmt !== null
+        ? Number(t.actualAmt)
+        : Math.max(0, (t.amtDeposit ?? (t.amtDeposit ? t.amtDeposit - (t.er || 0) : t.amount)) ?? 0);
+    const n = Number(t.nav ?? 0);
+    const u = parseFloat(t.units) || (n > 0 ? act / n : 0);
+    if (!tl.includes("withdr") && !tl.includes("redemp") && !tl.includes("swp")) {
+      totalUnits += u;
+      totalDeposit += act;
+    }
+  });
+  const avgNav = totalUnits > 0 ? totalDeposit / totalUnits : 0;
+  return avgNav > 0 ? activeUnits * avgNav : 0;
+};
+
 export default function InvTableView() {
   TitleChanger("Portfolio | Progress Pulse");
 
@@ -173,6 +230,58 @@ export default function InvTableView() {
       { id: "m4", label: "100% Target Portfolio", amount: 5000000 },
     ];
   });
+
+  // URL Query Params and Planner Goals
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const [plannerGoals, setPlannerGoals] = useState(() => {
+    try {
+      const saved = localStorage.getItem("pulse_investment_planner_goals");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          return parsed.filter((g) => g.id !== "goal-wedding-default" && g.id !== "goal-house-default");
+        }
+      }
+    } catch (e) {
+      console.error("Failed to load planner goals in portfolio:", e);
+    }
+    return [];
+  });
+
+  // Selected Planner Filter: "all" or goal.id
+  const [selectedPlannerId, setSelectedPlannerId] = useState(() => {
+    return searchParams.get("planner") || "all";
+  });
+
+  useEffect(() => {
+    const fromUrl = searchParams.get("planner");
+    if (fromUrl && fromUrl !== selectedPlannerId) {
+      setSelectedPlannerId(fromUrl);
+    }
+  }, [searchParams]);
+
+  // Sync latest planner goals from localStorage whenever window gets focus
+  useEffect(() => {
+    const handleSyncGoals = () => {
+      try {
+        const saved = localStorage.getItem("pulse_investment_planner_goals");
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) {
+            setPlannerGoals(parsed.filter((g) => g.id !== "goal-wedding-default" && g.id !== "goal-house-default"));
+          }
+        }
+      } catch (e) {}
+    };
+    window.addEventListener("focus", handleSyncGoals);
+    return () => window.removeEventListener("focus", handleSyncGoals);
+  }, []);
+
+  const activePlanner = useMemo(() => {
+    if (selectedPlannerId === "all") return null;
+    return plannerGoals.find((g) => g.id === selectedPlannerId) || null;
+  }, [plannerGoals, selectedPlannerId]);
 
   // Raw Data from APIs
   const [bankSources, setBankSources] = useState([]);
@@ -249,7 +358,7 @@ export default function InvTableView() {
         setRdData(list);
       }
 
-      // 5. Mutual Funds
+      // 5. Mutual Funds - Filter out any funds with 0 available units from Portfolio
       if (mfRes.status === "fulfilled") {
         const payload = mfRes.value?.data;
         const list = Array.isArray(payload?.data)
@@ -257,7 +366,8 @@ export default function InvTableView() {
           : Array.isArray(payload)
           ? payload
           : [];
-        setMfData(list);
+        const activeFunds = list.filter((f) => calcMfAvailableUnits(f) > 0.0001);
+        setMfData(activeFunds);
       }
 
       // 6. Salary & PF
@@ -309,10 +419,21 @@ export default function InvTableView() {
 
   // 1. Current Bank Balance (Bank, Wallet, Cash sources; exclude Cards and Loans)
   const bankMetrics = useMemo(() => {
-    const validSources = (bankSources || []).filter((s) => {
+    let validSources = (bankSources || []).filter((s) => {
       const type = (s.type || "").toLowerCase();
       return type !== "card" && type !== "credit card" && type !== "loan";
     });
+
+    if (activePlanner) {
+      const bankIds = new Set(activePlanner.selectedBanks || activePlanner.allocatedBanks || []);
+      if (activePlanner.allocations) {
+        Object.keys(activePlanner.allocations).forEach((k) => {
+          if (activePlanner.allocations[k]?.sourceType === "bank") bankIds.add(k);
+        });
+      }
+      validSources = validSources.filter((s) => bankIds.has(String(s.id || s._id)));
+    }
+
     const total = validSources.reduce((sum, s) => {
       const bal =
         Number(s.currentBalance !== undefined ? s.currentBalance : s.balance) || 0;
@@ -321,17 +442,23 @@ export default function InvTableView() {
     return {
       total: Math.round(total * 100) / 100,
       count: validSources.length,
-      primarySource: validSources[0]?.name || "Primary Account",
+      primarySource: validSources[0]?.name || (activePlanner ? "No Plan Bank" : "Primary Account"),
     };
-  }, [bankSources]);
+  }, [bankSources, activePlanner]);
 
   // 2. Current Demat Amount (Quantity Left * Share Price)
   const dematMetrics = useMemo(() => {
+    let list = stocksData || [];
+    if (activePlanner) {
+      const stockIds = new Set(activePlanner.selectedStocks || activePlanner.allocatedStocks || []);
+      list = list.filter((s) => stockIds.has(String(s.id || s._id)));
+    }
+
     let totalVal = 0;
     let totalShares = 0;
     let holdingsCount = 0;
 
-    (stocksData || []).forEach((s) => {
+    list.forEach((s) => {
       const q = Number(
         s.qLeft !== undefined
           ? s.qLeft
@@ -353,19 +480,25 @@ export default function InvTableView() {
       total: Math.round(totalVal * 100) / 100,
       holdingsCount,
       totalShares,
+      items: list,
     };
-  }, [stocksData]);
+  }, [stocksData, activePlanner]);
 
   // 3. Current FD Amount
   const fdMetrics = useMemo(() => {
-    const active = (fdData || []).filter(
+    let list = (fdData || []).filter(
       (fd) => !fd.isWithdrawn && fd.status !== "Withdrawn" && fd.status !== "Closed"
     );
-    const totalPrincipal = active.reduce(
+    if (activePlanner) {
+      const fdIds = new Set(activePlanner.selectedFds || activePlanner.allocatedFds || []);
+      list = list.filter((fd) => fdIds.has(String(fd.id || fd._id)));
+    }
+
+    const totalPrincipal = list.reduce(
       (sum, fd) => sum + (Number(fd.amount) || 0),
       0
     );
-    const totalMaturity = active.reduce(
+    const totalMaturity = list.reduce(
       (sum, fd) => sum + (Number(fd.maturityAmount) || 0),
       0
     );
@@ -373,18 +506,24 @@ export default function InvTableView() {
     return {
       total: Math.round(totalPrincipal * 100) / 100,
       maturityTotal: Math.round(totalMaturity * 100) / 100,
-      count: active.length,
+      count: list.length,
+      items: list,
     };
-  }, [fdData]);
+  }, [fdData, activePlanner]);
 
   // 4. Current RD Amount
   const rdMetrics = useMemo(() => {
-    const active = (rdData || []).filter(
+    let list = (rdData || []).filter(
       (rd) => !rd.isWithdrawn && rd.status !== "Withdrawn" && rd.status !== "Closed"
     );
+    if (activePlanner) {
+      const rdIds = new Set(activePlanner.selectedRds || activePlanner.allocatedRds || []);
+      list = list.filter((rd) => rdIds.has(String(rd.id || rd._id)));
+    }
+
     let totalDeposited = 0;
 
-    active.forEach((rd) => {
+    list.forEach((rd) => {
       const txns = rd.transactions || [];
       const txnSum = txns.reduce(
         (acc, t) => acc + (Number(t.amtDeposit) || Number(t.amount) || 0),
@@ -395,34 +534,31 @@ export default function InvTableView() {
 
     return {
       total: Math.round(totalDeposited * 100) / 100,
-      count: active.length,
+      count: list.length,
+      items: list,
     };
-  }, [rdData]);
+  }, [rdData, activePlanner]);
 
-  // 5. Current MF Amount
+  // 5. Current MF Amount - Exclude funds with 0 available units from Portfolio
   const mfMetrics = useMemo(() => {
-    let totalInvested = 0;
+    let list = (mfData || []).filter((fund) => calcMfAvailableUnits(fund) > 0.0001);
 
-    (mfData || []).forEach((fund) => {
-      const txns = fund.transactions || [];
-      if (txns.length > 0) {
-        const fundSum = txns.reduce((acc, t) => {
-          const amt = Number(t.amtDeposit) || Number(t.actualAmt) || Number(t.amount) || 0;
-          return (t.type === "Redemption" || t.type === "Withdrawal" || t.type === "SWP")
-            ? acc - amt
-            : acc + amt;
-        }, 0);
-        totalInvested += Math.max(0, fundSum);
-      } else {
-        totalInvested += Number(fund.amount) || Number(fund.totalInvestment) || 0;
-      }
+    if (activePlanner) {
+      const mfIds = new Set(activePlanner.selectedMfs || activePlanner.allocatedMfs || []);
+      list = list.filter((f) => mfIds.has(String(f.id || f._id)));
+    }
+
+    let totalInvested = 0;
+    list.forEach((fund) => {
+      totalInvested += calcMfHoldingValue(fund);
     });
 
     return {
       total: Math.round(totalInvested * 100) / 100,
-      count: (mfData || []).length,
+      count: list.length,
+      items: list,
     };
-  }, [mfData]);
+  }, [mfData, activePlanner]);
 
   // 6. Current PF Amount
   const pfMetrics = useMemo(() => {
@@ -437,14 +573,31 @@ export default function InvTableView() {
       (acc, w) => acc + (Number(w.amount) || 0),
       0
     );
-    const balance = Math.max(0, totalContributed - totalWithdrawn);
+    const fullBalance = Math.max(0, totalContributed - totalWithdrawn);
+
+    if (activePlanner) {
+      const isIncluded = activePlanner.includePf !== undefined ? activePlanner.includePf : (activePlanner.pfAllocation?.enabled ?? false);
+      const pfPct = Number(activePlanner.pfAllocatedPercent) || Number(activePlanner.pfAllocation?.percentage) || 50;
+      const allocatedBal = isIncluded ? (fullBalance * pfPct) / 100 : 0;
+      return {
+        total: Math.round(allocatedBal * 100) / 100,
+        fullBalance,
+        isIncluded,
+        allocatedPct: pfPct,
+        monthsCount: (salaryData || []).length,
+        withdrawalsCount: (pfWithdrawals || []).length,
+      };
+    }
 
     return {
-      total: Math.round(balance * 100) / 100,
+      total: Math.round(fullBalance * 100) / 100,
+      fullBalance,
+      isIncluded: true,
+      allocatedPct: 100,
       monthsCount: (salaryData || []).length,
       withdrawalsCount: (pfWithdrawals || []).length,
     };
-  }, [salaryData, pfWithdrawals]);
+  }, [salaryData, pfWithdrawals, activePlanner]);
 
   // Consolidated Total Portfolio Worth
   const totalWorth = useMemo(() => {
@@ -465,16 +618,37 @@ export default function InvTableView() {
     pfMetrics.total,
   ]);
 
+  // Dynamic Upper Limit & Milestones (Adapts to Active Planner)
+  const activeUpperLimit = useMemo(() => {
+    if (activePlanner && Number(activePlanner.targetAmount) > 0) {
+      return Number(activePlanner.targetAmount);
+    }
+    return upperLimit;
+  }, [activePlanner, upperLimit]);
+
+  const activeMilestones = useMemo(() => {
+    if (activePlanner && Number(activePlanner.targetAmount) > 0) {
+      const target = Number(activePlanner.targetAmount);
+      return [
+        { id: "p1", label: "25% Quarter Mark", amount: target * 0.25 },
+        { id: "p2", label: "50% Halfway Goal", amount: target * 0.5 },
+        { id: "p3", label: "75% Three-Quarter Goal", amount: target * 0.75 },
+        { id: "p4", label: `100% Target (${formatCurrencyCompact(target)})`, amount: target },
+      ];
+    }
+    return milestones;
+  }, [activePlanner, milestones]);
+
   // Achievement Percentage & Remaining to Goal
   const achievementPercent = useMemo(() => {
-    if (!upperLimit || upperLimit <= 0) return 0;
-    const raw = (totalWorth / upperLimit) * 100;
+    if (!activeUpperLimit || activeUpperLimit <= 0) return 0;
+    const raw = (totalWorth / activeUpperLimit) * 100;
     return Math.min(100, Math.round(raw * 10) / 10);
-  }, [totalWorth, upperLimit]);
+  }, [totalWorth, activeUpperLimit]);
 
   const remainingToGoal = useMemo(() => {
-    return Math.max(0, upperLimit - totalWorth);
-  }, [upperLimit, totalWorth]);
+    return Math.max(0, activeUpperLimit - totalWorth);
+  }, [activeUpperLimit, totalWorth]);
 
   // Percentage shares for each asset class
   const assetShares = useMemo(() => {
@@ -803,13 +977,146 @@ export default function InvTableView() {
                   Portfolio
                 </h1>
                 <span className="badge badge-sm font-bold bg-base-200 text-base-content/70">
-                  Total Wealth Tracker
+                  {activePlanner ? `${activePlanner.icon || "🎯"} ${activePlanner.title}` : "Total Wealth Tracker"}
                 </span>
               </div>
               <p className="text-xs text-base-content/60 font-medium hidden sm:block">
-                Whole consolidated net worth across Bank, Demat, FD, RD, MF & PF
+                {activePlanner
+                  ? `Dedicated portfolio for "${activePlanner.title}" (${achievementPercent}% of ${formatCurrencyCompact(activeUpperLimit)} target)`
+                  : "Whole consolidated net worth across Bank, Demat, FD, RD, MF & PF"}
               </p>
             </div>
+          </div>
+
+          {/* Center: Planner Selector Dropdown (Themed DaisyUI Dropdown) */}
+          <div className="dropdown dropdown-bottom">
+            <div
+              tabIndex={0}
+              role="button"
+              className="flex items-center gap-2.5 bg-base-200/90 hover:bg-base-200 px-3.5 py-1.5 rounded-2xl border border-base-300 hover:border-primary/40 shadow-xs transition-all cursor-pointer group select-none"
+              title="Switch Portfolio View"
+            >
+              <div className="w-6 h-6 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0 border border-primary/20">
+                <Target size={13} />
+              </div>
+              <div className="flex flex-col text-left">
+                <span className="text-[9px] uppercase tracking-wider font-extrabold text-base-content/45 leading-none mb-0.5">
+                  Portfolio View
+                </span>
+                <span className="font-bold text-xs text-base-content flex items-center gap-1.5 leading-tight">
+                  <span className="truncate max-w-[140px] sm:max-w-[190px]">
+                    {selectedPlannerId === "all"
+                      ? "🌐 Whole Portfolio"
+                      : `${activePlanner?.icon || "🎯"} ${activePlanner?.title || "Goal Plan"}`}
+                  </span>
+                </span>
+              </div>
+              <ChevronDown
+                size={14}
+                className="text-base-content/50 group-hover:text-primary transition-transform duration-200 group-hover:translate-y-0.5 shrink-0 ml-0.5"
+              />
+            </div>
+
+            <ul
+              tabIndex={0}
+              className="dropdown-content menu p-2 shadow-2xl bg-base-100/95 backdrop-blur-md rounded-2xl w-72 sm:w-80 z-[100] mt-2 border border-base-300/70 space-y-1 animate-in fade-in zoom-in-95 duration-150"
+            >
+              <li className="menu-title text-[10px] font-extrabold uppercase tracking-widest text-base-content/40 px-3 py-1">
+                Select Portfolio View
+              </li>
+
+              {/* Option 1: Whole Portfolio */}
+              <li>
+                <button
+                  type="button"
+                  className={`flex items-center justify-between py-2.5 px-3 rounded-xl text-xs transition-all ${
+                    selectedPlannerId === "all"
+                      ? "bg-primary text-primary-content font-bold shadow-xs"
+                      : "hover:bg-base-200 text-base-content"
+                  }`}
+                  onClick={() => {
+                    setSelectedPlannerId("all");
+                    setSearchParams({});
+                    if (document.activeElement instanceof HTMLElement) {
+                      document.activeElement.blur();
+                    }
+                  }}
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span className="text-base shrink-0">🌐</span>
+                    <div className="text-left min-w-0 truncate">
+                      <div className="font-bold leading-tight truncate">Whole Portfolio</div>
+                      <div className={`text-[10px] ${selectedPlannerId === "all" ? "text-primary-content/80" : "text-base-content/50"}`}>
+                        Consolidated net worth across all 6 asset classes
+                      </div>
+                    </div>
+                  </div>
+                  {selectedPlannerId === "all" && <Check size={14} className="shrink-0 ml-1" />}
+                </button>
+              </li>
+
+              {plannerGoals.length > 0 && (
+                <div className="divider my-1 text-[10px] uppercase tracking-wider text-base-content/30 font-bold">
+                  Goals & Plans ({plannerGoals.length})
+                </div>
+              )}
+
+              {/* Goal Plans */}
+              <div className="max-h-60 overflow-y-auto custom-scrollbar space-y-1">
+                {plannerGoals.map((g) => {
+                  const isSelected = selectedPlannerId === g.id;
+                  return (
+                    <li key={g.id}>
+                      <button
+                        type="button"
+                        className={`flex items-center justify-between py-2.5 px-3 rounded-xl text-xs transition-all ${
+                          isSelected
+                            ? "bg-primary text-primary-content font-bold shadow-xs"
+                            : "hover:bg-base-200 text-base-content"
+                        }`}
+                        onClick={() => {
+                          setSelectedPlannerId(g.id);
+                          setSearchParams({ planner: g.id });
+                          if (document.activeElement instanceof HTMLElement) {
+                            document.activeElement.blur();
+                          }
+                        }}
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <span className="text-base shrink-0">{g.icon || "🎯"}</span>
+                          <div className="text-left min-w-0 truncate">
+                            <div className="font-bold leading-tight truncate">{g.title}</div>
+                            <div className={`text-[10px] font-mono ${isSelected ? "text-primary-content/80" : "text-base-content/50"}`}>
+                              Target: {formatCurrencyCompact(g.targetAmount)}
+                              {g.targetDate ? ` • ${dayjs(g.targetDate).format("MMM YYYY")}` : ""}
+                            </div>
+                          </div>
+                        </div>
+                        {isSelected && <Check size={14} className="shrink-0 ml-1" />}
+                      </button>
+                    </li>
+                  );
+                })}
+              </div>
+
+              {/* Dropdown Footer with link to planner */}
+              <div className="pt-2 mt-1 border-t border-base-300/60">
+                <Link
+                  to="/dashboard/investment/planner"
+                  className="flex items-center justify-between py-2 px-3 rounded-xl text-xs text-primary hover:bg-primary/10 font-bold transition-all"
+                  onClick={() => {
+                    if (document.activeElement instanceof HTMLElement) {
+                      document.activeElement.blur();
+                    }
+                  }}
+                >
+                  <span className="flex items-center gap-1.5">
+                    <SlidersHorizontal size={13} /> Open Investment Planner
+                  </span>
+                  <ExternalLink size={12} />
+                </Link>
+              </div>
+            </ul>
           </div>
 
           {/* Right: Current Month, Age Badge, Actions */}
@@ -1383,8 +1690,8 @@ export default function InvTableView() {
               <div className="lg:col-span-6">
                 <InteractivePortfolioGauge
                   totalWorth={totalWorth}
-                  upperLimit={upperLimit}
-                  milestones={milestones}
+                  upperLimit={activeUpperLimit}
+                  milestones={activeMilestones}
                   hideNumbers={hideNumbers}
                   onOpenSettings={() => setIsSettingsOpen(true)}
                 />
@@ -1586,6 +1893,200 @@ export default function InvTableView() {
                 </table>
               </div>
             </div>
+
+            {/* Dedicated Allocated Assets in Plan Section */}
+            {activePlanner && totalWorth > 0 && (
+              <div className="card bg-base-200 shadow-md rounded-3xl p-6 space-y-4">
+                <div className="flex items-center justify-between flex-wrap gap-2 pb-3 border-b border-base-300">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold">
+                      <Target size={18} />
+                    </div>
+                    <div>
+                      <h3 className="text-base font-extrabold text-base-content">
+                        Assigned Assets in {activePlanner.title}
+                      </h3>
+                      <p className="text-[11px] text-base-content/50">
+                        Detailed breakdown of all sources earmarked for this life plan
+                      </p>
+                    </div>
+                  </div>
+
+                  <Link
+                    to="/dashboard/investment/planner"
+                    className="btn btn-sm btn-ghost border border-base-300 rounded-xl font-bold text-xs gap-1.5"
+                  >
+                    <span>Manage in Planner</span>
+                    <ExternalLink size={12} />
+                  </Link>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+                  {/* Stocks */}
+                  {dematMetrics.items?.map((s) => {
+                    const q = Number(s.qLeft !== undefined ? s.qLeft : s.bQty) || 0;
+                    const p = Number(s.bShare || s.bFShare || s.sharePrice || 0);
+                    const val = q * p;
+                    return (
+                      <div
+                        key={s.id || s._id}
+                        className="bg-base-100 p-3.5 rounded-2xl border border-base-300 shadow-xs flex items-center justify-between gap-2"
+                      >
+                        <div className="flex items-center gap-2.5 overflow-hidden">
+                          <CompanyLogo name={s.name} size="w-8 h-8" type="stock" />
+                          <div className="overflow-hidden">
+                            <span className="font-extrabold text-xs text-base-content truncate block">
+                              {s.name}
+                            </span>
+                            <span className="text-[10px] text-base-content/50 font-semibold">
+                              {q} Shares @ ₹{p.toLocaleString("en-IN")}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="text-right shrink-0 font-mono">
+                          <span className="text-xs font-black text-blue-600 dark:text-blue-400 block">
+                            {hideNumbers ? "••••••" : formatCurrencyCompact(val)}
+                          </span>
+                          <span className="badge badge-xs bg-blue-500/10 text-blue-500 border-blue-500/20 font-bold">
+                            Stock
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {/* Mutual Funds */}
+                  {mfMetrics.items
+                    ?.filter((fund) => calcMfAvailableUnits(fund) > 0.0001)
+                    .map((fund) => {
+                      const activeUnits = calcMfAvailableUnits(fund);
+                      const val = calcMfHoldingValue(fund);
+
+                      return (
+                        <div
+                          key={fund.id || fund._id}
+                          className="bg-base-100 p-3.5 rounded-2xl border border-base-300 shadow-xs flex items-center justify-between gap-2"
+                        >
+                          <div className="flex items-center gap-2.5 overflow-hidden">
+                            <CompanyLogo name={fund.amc} size="w-8 h-8" type="mf" />
+                            <div className="overflow-hidden">
+                              <span className="font-extrabold text-xs text-base-content truncate block">
+                                {fund.schemeName || fund.amc}
+                              </span>
+                              <span className="text-[10px] text-base-content/50 font-semibold">
+                                {activeUnits.toFixed(2)} Units • {fund.amc}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="text-right shrink-0 font-mono">
+                            <span className="text-xs font-black text-purple-600 dark:text-purple-400 block">
+                              {hideNumbers ? "••••••" : formatCurrencyCompact(val)}
+                            </span>
+                            <span className="badge badge-xs bg-purple-500/10 text-purple-500 border-purple-500/20 font-bold">
+                              MF
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                  {/* Fixed Deposits */}
+                  {fdMetrics.items?.map((fd) => {
+                    const amt = Number(fd.amount) || 0;
+                    return (
+                      <div
+                        key={fd.id || fd._id}
+                        className="bg-base-100 p-3.5 rounded-2xl border border-base-300 shadow-xs flex items-center justify-between gap-2"
+                      >
+                        <div className="flex items-center gap-2.5 overflow-hidden">
+                          <CompanyLogo name={fd.bankName} size="w-8 h-8" type="bank" />
+                          <div className="overflow-hidden">
+                            <span className="font-extrabold text-xs text-base-content truncate block">
+                              {fd.bankName} FD
+                            </span>
+                            <span className="text-[10px] text-base-content/50 font-semibold">
+                              {fd.interestRate}% • Maturity: {formatCurrencyCompact(fd.maturityAmount)}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="text-right shrink-0 font-mono">
+                          <span className="text-xs font-black text-amber-600 dark:text-amber-400 block">
+                            {hideNumbers ? "••••••" : formatCurrencyCompact(amt)}
+                          </span>
+                          <span className="badge badge-xs bg-amber-500/10 text-amber-500 border-amber-500/20 font-bold">
+                            FD
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {/* Recurring Deposits */}
+                  {rdMetrics.items?.map((rd) => {
+                    const txns = rd.transactions || [];
+                    const txnSum = txns.reduce(
+                      (acc, t) => acc + (Number(t.amtDeposit) || Number(t.amount) || 0),
+                      0
+                    );
+                    const amt = txnSum > 0 ? txnSum : (Number(rd.amount) || Number(rd.monthlyAmount) || 0);
+
+                    return (
+                      <div
+                        key={rd.id || rd._id}
+                        className="bg-base-100 p-3.5 rounded-2xl border border-base-300 shadow-xs flex items-center justify-between gap-2"
+                      >
+                        <div className="flex items-center gap-2.5 overflow-hidden">
+                          <CompanyLogo name={rd.bankName} size="w-8 h-8" type="bank" />
+                          <div className="overflow-hidden">
+                            <span className="font-extrabold text-xs text-base-content truncate block">
+                              {rd.bankName} RD
+                            </span>
+                            <span className="text-[10px] text-base-content/50 font-semibold">
+                              {rd.interestRate}% • {rd.tenureMonths}m
+                            </span>
+                          </div>
+                        </div>
+                        <div className="text-right shrink-0 font-mono">
+                          <span className="text-xs font-black text-orange-600 dark:text-orange-400 block">
+                            {hideNumbers ? "••••••" : formatCurrencyCompact(amt)}
+                          </span>
+                          <span className="badge badge-xs bg-orange-500/10 text-orange-500 border-orange-500/20 font-bold">
+                            RD
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {/* Provident Fund */}
+                  {pfMetrics.isIncluded && pfMetrics.total > 0 && (
+                    <div className="bg-base-100 p-3.5 rounded-2xl border border-base-300 shadow-xs flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2.5 overflow-hidden">
+                        <div className="w-8 h-8 rounded-xl bg-teal-500/10 text-teal-500 flex items-center justify-center font-bold text-xs">
+                          PF
+                        </div>
+                        <div className="overflow-hidden">
+                          <span className="font-extrabold text-xs text-base-content truncate block">
+                            Provident Fund (EPF)
+                          </span>
+                          <span className="text-[10px] text-base-content/50 font-semibold">
+                            {pfMetrics.allocatedPct}% of available balance
+                          </span>
+                        </div>
+                      </div>
+                      <div className="text-right shrink-0 font-mono">
+                        <span className="text-xs font-black text-teal-600 dark:text-teal-400 block">
+                          {hideNumbers ? "••••••" : formatCurrencyCompact(pfMetrics.total)}
+                        </span>
+                        <span className="badge badge-xs bg-teal-500/10 text-teal-500 border-teal-500/20 font-bold">
+                          EPF
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </>
         )}
       </div>

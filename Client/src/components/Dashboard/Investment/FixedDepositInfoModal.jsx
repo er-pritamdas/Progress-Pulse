@@ -19,6 +19,7 @@ import {
   Coins
 } from "lucide-react";
 import { calculateFdMaturity } from "./AddFixedDepositModal";
+import CompanyLogo from "./CompanyLogo";
 
 export default function FixedDepositInfoModal({
   isOpen,
@@ -70,9 +71,7 @@ export default function FixedDepositInfoModal({
         {/* Header */}
         <div className="p-4 sm:p-5 border-b-2 border-base-200 bg-base-200/50 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-2xl bg-primary/15 text-primary">
-              <Landmark size={20} />
-            </div>
+            <CompanyLogo name={fd.bankName} size="w-10 h-10" rounded="rounded-2xl" type="bank" />
             <div>
               <h3 className="font-black text-base sm:text-lg flex items-center gap-2 leading-tight text-base-content">
                 <span>{fd.bankName}</span>

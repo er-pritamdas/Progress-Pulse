@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Home, BookOpen, Navigation, TrendingUp, Wallet, CalendarCheck, Grid2x2Plus, Grid2x2Check, Settings2 } from 'lucide-react';
+import { Home, BookOpen, Navigation, TrendingUp, Wallet, CalendarCheck, Grid2x2Plus, Grid2x2Check, Settings2, Target } from 'lucide-react';
 import Dashboard from '../../utils/Icons/Dashboard';
 import QuickCalculator from '../Expense/QuickCalculator';
 
@@ -20,6 +20,7 @@ export default function ThemedBreadcrumbs() {
     'Portfolio': <Grid2x2Check className="w-4 h-4" />,
     'Settings': <Settings2 className="w-4 h-4" />,
     'Logging': <Grid2x2Check className="w-4 h-4" />,
+    'Planner': <Target className="w-4 h-4" />,
   };
 
   const mainCategoryRaw = pathnames[1]; // habit, expense, investment
@@ -40,6 +41,10 @@ export default function ThemedBreadcrumbs() {
 
   if (mainCategoryRaw === 'investment' && (subCategoryRaw === 'table-view' || subCategoryRaw === 'portfolio')) {
     subCategory = 'Portfolio';
+  }
+
+  if (mainCategoryRaw === 'investment' && (subCategoryRaw === 'settings' || subCategoryRaw === 'planner')) {
+    subCategory = 'Planner';
   }
 
   return (

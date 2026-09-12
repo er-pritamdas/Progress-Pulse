@@ -26,6 +26,7 @@ import {
   Layers
 } from "lucide-react";
 import { calculateRdMaturity } from "./AddRecurringDepositModal";
+import CompanyLogo from "./CompanyLogo";
 
 export default function RecurringDepositTableModal({
   isOpen,
@@ -216,9 +217,7 @@ export default function RecurringDepositTableModal({
         {/* Floating Top Header Bar */}
         <div className="bg-base-100/95 backdrop-blur-md rounded-2xl sm:rounded-3xl border border-base-300/60 shadow-xl px-4 sm:px-6 py-3 sm:py-3.5 flex items-center justify-between gap-3 shrink-0">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-10 h-10 rounded-2xl font-black text-base flex items-center justify-center shrink-0 border shadow-xs bg-primary/15 text-primary border-primary/20">
-              {(rd.bankName || "RD").charAt(0).toUpperCase()}
-            </div>
+            <CompanyLogo name={rd.bankName} size="w-10 h-10" rounded="rounded-2xl" type="bank" />
             <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <h3 className="font-extrabold text-base sm:text-lg text-base-content tracking-tight truncate">

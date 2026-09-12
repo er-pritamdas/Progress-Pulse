@@ -17,6 +17,7 @@ import {
   Clock,
   Sparkles,
 } from "lucide-react";
+import CompanyLogo from "./CompanyLogo";
 
 export default function MutualFundInfoModal({
   isOpen,
@@ -207,9 +208,7 @@ export default function MutualFundInfoModal({
         {/* Floating Top Title Bar */}
         <div className="bg-base-100/95 backdrop-blur-md rounded-2xl sm:rounded-3xl border border-base-300/60 shadow-xl px-4 sm:px-6 py-3 sm:py-3.5 flex items-center justify-between gap-3 shrink-0">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-10 h-10 rounded-2xl bg-info/10 text-info border border-info/20 font-bold flex items-center justify-center shrink-0 shadow-xs">
-              <Info size={20} />
-            </div>
+            <CompanyLogo name={fund.amc} size="w-10 h-10" rounded="rounded-2xl" type="mf" />
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <h3 className="font-extrabold text-base sm:text-lg text-base-content tracking-tight truncate">

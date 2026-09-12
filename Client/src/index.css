@@ -177,3 +177,14 @@ input[type="number"] {
   background: rgba(156, 163, 175, 0.85);
 }
 
+/* -------------------------------------------------------------------------- */
+/* No Scrollbar Utility (Hides scrollbar across all browsers)                */
+/* -------------------------------------------------------------------------- */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+

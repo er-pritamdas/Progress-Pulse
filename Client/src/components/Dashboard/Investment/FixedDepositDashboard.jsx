@@ -1,7 +1,6 @@
 import React, { useState, useMemo } from "react";
 import dayjs from "dayjs";
 import Chart from "react-apexcharts";
-import { Link } from "react-router-dom";
 import {
   Landmark,
   PiggyBank,
@@ -23,7 +22,6 @@ import {
   ChevronDown,
   ChevronUp,
   ChevronsUpDown,
-  ExternalLink,
   Plus,
   Info,
   Pencil,
@@ -83,37 +81,69 @@ export default function FixedDepositDashboard({
   fdData = [],
   loading = false,
   onRefresh,
+  statusFilter: externalStatusFilter,
+  onStatusFilterChange,
+  bankFilter: externalBankFilter,
+  onBankFilterChange,
+  searchQuery: externalSearchQuery,
+  onSearchChange,
+  activeMainTab: externalMainTab,
+  onMainTabChange,
+  hideNumbers: externalHideNumbers,
+  onToggleHideNumbers,
+  isAddModalOpen: externalIsAddModalOpen,
+  onCloseAddModal,
 }) {
   // Main view tab: "table" | "chart"
-  const [activeMainTab, setActiveMainTab] = useState(() => {
+  const [internalMainTab, setInternalMainTab] = useState(() => {
     return localStorage.getItem("pulse_fd_dash_tab") || "table";
   });
-
+  const activeMainTab = externalMainTab !== undefined ? externalMainTab : internalMainTab;
   const handleTabChange = (tab) => {
-    setActiveMainTab(tab);
+    if (onMainTabChange) onMainTabChange(tab);
+    setInternalMainTab(tab);
     localStorage.setItem("pulse_fd_dash_tab", tab);
   };
 
   // Sub-view filter by status: "all" | "active" | "matured" | "withdrawn"
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [internalStatusFilter, setInternalStatusFilter] = useState("all");
+  const statusFilter = externalStatusFilter !== undefined ? externalStatusFilter : internalStatusFilter;
+  const setStatusFilter = (st) => {
+    if (onStatusFilterChange) onStatusFilterChange(st);
+    setInternalStatusFilter(st);
+  };
 
   // Bank dropdown filter: "all" | bankName
-  const [bankFilter, setBankFilter] = useState("all");
+  const [internalBankFilter, setInternalBankFilter] = useState("all");
+  const bankFilter = externalBankFilter !== undefined ? externalBankFilter : internalBankFilter;
+  const setBankFilter = (b) => {
+    if (onBankFilterChange) onBankFilterChange(b);
+    setInternalBankFilter(b);
+  };
 
   // Global search input
-  const [searchQuery, setSearchQuery] = useState("");
+  const [internalSearchQuery, setInternalSearchQuery] = useState("");
+  const searchQuery = externalSearchQuery !== undefined ? externalSearchQuery : internalSearchQuery;
+  const setSearchQuery = (q) => {
+    if (onSearchChange) onSearchChange(q);
+    setInternalSearchQuery(q);
+  };
 
   // Privacy mask toggle
-  const [hideNumbers, setHideNumbers] = useState(() => {
+  const [internalHideNumbers, setInternalHideNumbers] = useState(() => {
     return localStorage.getItem("pulse_fd_hide_numbers") === "true";
   });
-
+  const hideNumbers = externalHideNumbers !== undefined ? externalHideNumbers : internalHideNumbers;
   const toggleHideNumbers = () => {
-    setHideNumbers((prev) => {
-      const next = !prev;
-      localStorage.setItem("pulse_fd_hide_numbers", String(next));
-      return next;
-    });
+    if (onToggleHideNumbers) {
+      onToggleHideNumbers();
+    } else {
+      setInternalHideNumbers((prev) => {
+        const next = !prev;
+        localStorage.setItem("pulse_fd_hide_numbers", String(next));
+        return next;
+      });
+    }
   };
 
   // Table Sorting state
@@ -140,7 +170,12 @@ export default function FixedDepositDashboard({
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
 
   const [editingFd, setEditingFd] = useState(null);
-  const [isAddEditModalOpen, setIsAddEditModalOpen] = useState(false);
+  const [internalIsAddModalOpen, setInternalIsAddModalOpen] = useState(false);
+  const isAddEditModalOpen = Boolean(externalIsAddModalOpen || internalIsAddModalOpen);
+  const setIsAddEditModalOpen = (val) => {
+    setInternalIsAddModalOpen(val);
+    if (!val && onCloseAddModal) onCloseAddModal();
+  };
 
   const [withdrawingFd, setWithdrawingFd] = useState(null);
   const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
@@ -630,130 +665,7 @@ export default function FixedDepositDashboard({
   return (
     <div className="space-y-6">
       {/* -------------------------------------------------------------------- */}
-      {/* Top Header & Sub-Navigation Bar */}
-      {/* -------------------------------------------------------------------- */}
-      <div className="card bg-base-200 rounded-3xl p-4 sm:p-5 shadow-md flex flex-col md:flex-row md:items-center justify-between gap-4">
-        
-        {/* Status Filter Badges */}
-        <div className="flex items-center gap-2 flex-wrap">
-          <button
-            onClick={() => setStatusFilter("all")}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border ${
-              statusFilter === "all"
-                ? "bg-primary text-primary-content border-primary shadow-sm"
-                : "bg-base-100 hover:bg-base-100/80 border-base-300 text-base-content/70"
-            }`}
-          >
-            <span>All Deposits</span>
-            <span className="badge badge-xs bg-base-200 text-base-content font-mono px-1.5">
-              {kpis.totalCount}
-            </span>
-          </button>
-
-          <button
-            onClick={() => setStatusFilter("active")}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border ${
-              statusFilter === "active"
-                ? "bg-emerald-500 text-white border-emerald-500 shadow-sm"
-                : "bg-emerald-500/10 hover:bg-emerald-500/20 border-emerald-500/30 text-emerald-600 dark:text-emerald-400"
-            }`}
-          >
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-            <span>Active</span>
-            <span className="badge badge-xs bg-base-100 text-emerald-600 font-mono px-1.5">
-              {kpis.activeCount}
-            </span>
-          </button>
-
-          <button
-            onClick={() => setStatusFilter("matured")}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border ${
-              statusFilter === "matured"
-                ? "bg-blue-500 text-white border-blue-500 shadow-sm"
-                : "bg-blue-500/10 hover:bg-blue-500/20 border-blue-500/30 text-blue-600 dark:text-blue-400"
-            }`}
-          >
-            <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
-            <span>Matured</span>
-            <span className="badge badge-xs bg-base-100 text-blue-600 font-mono px-1.5">
-              {kpis.maturedCount}
-            </span>
-          </button>
-
-          <button
-            onClick={() => setStatusFilter("withdrawn")}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border ${
-              statusFilter === "withdrawn"
-                ? "bg-amber-500 text-white border-amber-500 shadow-sm"
-                : "bg-amber-500/10 hover:bg-amber-500/20 border-amber-500/30 text-amber-600 dark:text-amber-400"
-            }`}
-          >
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
-            <span>Withdrawn</span>
-            <span className="badge badge-xs bg-base-100 text-amber-600 font-mono px-1.5">
-              {kpis.withdrawnCount}
-            </span>
-          </button>
-        </div>
-
-        {/* View Switcher & Action Controls */}
-        <div className="flex items-center gap-2.5 flex-wrap self-end md:self-auto">
-          {/* Main Tab Switcher: Table vs Visual Analytics */}
-          <div className="bg-base-100 p-1 rounded-2xl flex items-center border border-base-300">
-            <button
-              onClick={() => handleTabChange("table")}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
-                activeMainTab === "table"
-                  ? "bg-primary text-primary-content shadow-xs"
-                  : "text-base-content/60 hover:text-base-content"
-              }`}
-            >
-              <TableProperties className="w-3.5 h-3.5" />
-              <span>Table</span>
-              <span className="badge badge-xs bg-base-200 text-base-content font-mono px-1">
-                {filteredFds.length}
-              </span>
-            </button>
-
-            <button
-              onClick={() => handleTabChange("chart")}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
-                activeMainTab === "chart"
-                  ? "bg-primary text-primary-content shadow-xs"
-                  : "text-base-content/60 hover:text-base-content"
-              }`}
-            >
-              <PieChart className="w-3.5 h-3.5" />
-              <span>Analytics</span>
-            </button>
-          </div>
-
-          {/* Mask / Unmask Numbers */}
-          <button
-            onClick={toggleHideNumbers}
-            className="btn btn-ghost btn-sm rounded-xl border border-base-300 text-xs gap-1.5 bg-base-100 hover:bg-base-100/80"
-            title={hideNumbers ? "Show balances" : "Hide sensitive balances"}
-          >
-            {hideNumbers ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
-            <span className="hidden sm:inline">{hideNumbers ? "Show" : "Hide"}</span>
-          </button>
-
-          {/* New FD Button */}
-          <button
-            onClick={() => {
-              setEditingFd(null);
-              setIsAddEditModalOpen(true);
-            }}
-            className="btn btn-primary btn-sm rounded-xl font-bold flex items-center gap-1.5 shadow-sm"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Add New FD</span>
-          </button>
-        </div>
-      </div>
-
-      {/* -------------------------------------------------------------------- */}
-      {/* Top Metric KPI Cards */}
+      {/* 1. Top Metric KPI Cards */}
       {/* -------------------------------------------------------------------- */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         
@@ -882,53 +794,21 @@ export default function FixedDepositDashboard({
       {activeMainTab === "table" && (
         <div className="card bg-base-200 rounded-3xl shadow-md overflow-hidden flex flex-col">
           
-          {/* Table Control Bar: Search & Bank Selector */}
-          <div className="p-4 border-b border-base-300 bg-base-200 flex flex-col sm:flex-row items-center justify-between gap-3">
-            
-            {/* Search Input */}
-            <div className="relative w-full sm:w-72">
-              <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-base-content/40" />
-              <input
-                type="text"
-                placeholder="Search Bank, Scheme, FD #..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="input input-sm w-full pl-9 rounded-xl bg-base-100 border-base-300 text-xs font-medium focus:outline-none focus:border-primary"
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery("")}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs opacity-60 hover:opacity-100"
-                >
-                  ✕
-                </button>
-              )}
+          {/* Table Header Bar */}
+          <div className="px-5 py-3.5 border-b border-base-300/70 bg-base-200/50 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-black text-base-content uppercase tracking-wider">
+                Fixed Deposits Ledger
+              </span>
+              <span className="badge badge-sm badge-ghost font-mono font-bold">
+                {sortedFds.length} {sortedFds.length === 1 ? "deposit" : "deposits"}
+              </span>
             </div>
-
-            {/* Bank Filter & Action */}
-            <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
-              <select
-                value={bankFilter}
-                onChange={(e) => setBankFilter(e.target.value)}
-                className="select select-sm rounded-xl bg-base-100 border-base-300 text-xs font-medium focus:outline-none focus:border-primary"
-              >
-                <option value="all">All Banks ({availableBanks.length})</option>
-                {availableBanks.map((b) => (
-                  <option key={b} value={b}>
-                    {b}
-                  </option>
-                ))}
-              </select>
-
-              <Link
-                to="/dashboard/investment/table-entry"
-                className="btn btn-ghost btn-sm rounded-xl text-xs font-semibold text-primary hover:bg-primary/10 gap-1 border border-primary/20 bg-base-100"
-                title="Go to Table Entry to manage deposits"
-              >
-                <ExternalLink className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Table Entry</span>
-              </Link>
-            </div>
+            {hideNumbers && (
+              <span className="badge badge-xs badge-warning font-semibold gap-1">
+                <EyeOff className="w-3 h-3" /> Balances Masked
+              </span>
+            )}
           </div>
 
           {/* Table Content */}

@@ -71,6 +71,7 @@ import AddRdDepositModal from "../../../components/Dashboard/Investment/AddRdDep
 import RecurringDepositTableModal from "../../../components/Dashboard/Investment/RecurringDepositTableModal";
 import AddSalaryModal from "../../../components/Dashboard/Investment/AddSalaryModal";
 import AddPfWithdrawalModal from "../../../components/Dashboard/Investment/AddPfWithdrawalModal";
+import CompanyLogo from "../../../components/Dashboard/Investment/CompanyLogo";
 import axiosInstance from "../../../Context/AxiosInstance";
 import { formatDateDDMMMYYYY } from "../../../components/Dashboard/DatePicker";
 
@@ -5100,9 +5101,12 @@ export default function InvTableEntry() {
                             </div>
                           </td>
                           <td className="sticky left-[178px] z-10 bg-base-100 group-hover:bg-base-200 py-3 px-3 whitespace-nowrap font-bold text-base-content opacity-100 min-w-[200px] max-w-[220px] border-b border-r border-base-200/80 shadow-[3px_0_5px_-2px_rgba(0,0,0,0.08)] dark:shadow-[3px_0_8px_-2px_rgba(0,0,0,0.4)] transition-colors" style={{ opacity: 1 }}>
-                            <span className="font-bold text-base-content opacity-100" style={{ opacity: 1 }}>
-                              {item.company}
-                            </span>
+                            <div className="flex items-center gap-2">
+                              <CompanyLogo name={item.company} size="w-6 h-6" type="company" />
+                              <span className="font-bold text-base-content opacity-100 truncate max-w-[150px]" style={{ opacity: 1 }} title={item.company}>
+                                {item.company}
+                              </span>
+                            </div>
                           </td>
                           <td className="py-3 px-3 text-right font-mono text-base-content/90 whitespace-nowrap border-b border-base-200/60">
                             ₹{basic.toLocaleString("en-IN")}
@@ -5270,9 +5274,12 @@ export default function InvTableEntry() {
                             className="sticky left-[178px] z-10 bg-base-100 group-hover:bg-base-200 py-3.5 px-4 whitespace-nowrap font-bold text-base-content opacity-100 min-w-[200px] max-w-[220px] border-b border-r border-base-200/80 shadow-[3px_0_5px_-2px_rgba(0,0,0,0.08)] dark:shadow-[3px_0_8px_-2px_rgba(0,0,0,0.4)] transition-colors"
                             style={{ opacity: 1 }}
                           >
-                            <span className="font-bold text-base-content opacity-100" style={{ opacity: 1 }}>
-                              {item.company}
-                            </span>
+                            <div className="flex items-center gap-2">
+                              <CompanyLogo name={item.company} size="w-6 h-6" type="company" />
+                              <span className="font-bold text-base-content opacity-100 truncate max-w-[150px]" style={{ opacity: 1 }} title={item.company}>
+                                {item.company}
+                              </span>
+                            </div>
                           </td>
                           <td className="py-3.5 px-4 text-right font-mono font-black text-primary bg-primary/5 whitespace-nowrap border-b border-base-200/60">
                             <div className="flex items-center justify-end gap-1.5">
@@ -5626,9 +5633,12 @@ export default function InvTableEntry() {
                                 </div>
                               </td>
                               <td className="py-3.5 px-4 whitespace-nowrap font-bold text-base-content opacity-100" style={{ opacity: 1 }}>
-                                <span className="font-bold text-base-content opacity-100" style={{ opacity: 1 }}>
-                                  {item.company}
-                                </span>
+                                <div className="flex items-center gap-2">
+                                  <CompanyLogo name={item.company} size="w-6 h-6" type="company" />
+                                  <span className="font-bold text-base-content opacity-100 truncate max-w-[170px]" style={{ opacity: 1 }} title={item.company}>
+                                    {item.company}
+                                  </span>
+                                </div>
                               </td>
                               <td className="py-3.5 px-4 text-right font-mono font-medium text-base-content/90 whitespace-nowrap">
                                 ₹{er.toLocaleString("en-IN")}
@@ -6504,13 +6514,16 @@ export default function InvTableEntry() {
 
                             {/* 2. Name (Fixed Left) */}
                             {isColVisible("name") && (
-                              <td className="px-3 py-2.5 border-r-2 border-base-200 text-left font-bold text-base-content whitespace-nowrap max-w-[180px] sticky left-[65px] z-30 bg-base-100 dark:bg-base-200 shadow-md">
-                                <span
-                                  className="bg-primary/10 text-primary px-2 py-0.5 rounded-lg text-xs font-extrabold mr-1 truncate max-w-[160px] inline-block align-middle relative z-10"
-                                  title={row.name}
-                                >
-                                  {row.name}
-                                </span>
+                              <td className="px-3 py-2.5 border-r-2 border-base-200 text-left font-bold text-base-content whitespace-nowrap max-w-[210px] sticky left-[65px] z-30 bg-base-100 dark:bg-base-200 shadow-md">
+                                <div className="flex items-center gap-2">
+                                  <CompanyLogo name={row.name} size="w-6 h-6" type="stock" />
+                                  <span
+                                    className="bg-primary/10 text-primary px-2 py-0.5 rounded-lg text-xs font-extrabold mr-1 truncate max-w-[130px] inline-block align-middle relative z-10"
+                                    title={row.name}
+                                  >
+                                    {row.name}
+                                  </span>
+                                </div>
                               </td>
                             )}
 
@@ -6750,8 +6763,9 @@ export default function InvTableEntry() {
                             {/* 26. Platform */}
                             {isColVisible("platform") && (
                               <td className="px-3 py-2.5 border-r border-base-200 whitespace-nowrap">
-                                <span className="px-2 py-0.5 rounded-md bg-base-200 text-base-content/70 border border-base-300 text-[10px] font-semibold">
-                                  {row.platform}
+                                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-base-200 text-base-content/80 border border-base-300 text-[10px] font-semibold">
+                                  <CompanyLogo name={row.platform} size="w-4 h-4" rounded="rounded-sm" type="platform" />
+                                  <span>{row.platform}</span>
                                 </span>
                               </td>
                             )}

@@ -1,4 +1,4 @@
-import { Navigate, Outlet } from 'react-router-dom'
+import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useState } from 'react';
 
 
@@ -11,6 +11,7 @@ import { useAuth } from '../Context/JwtAuthContext';
 
 
 const DashboardLayout = () => {
+  const location = useLocation();
 
   // Variables
   const isOtpPage = location.pathname === "/otp";
@@ -35,7 +36,7 @@ const DashboardLayout = () => {
       {isAuthenticated ? (
         <div className="flex h-[calc(100vh-4rem)]">
           <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} />
-          <main className="flex-1 transition-all duration-300 mt-1 p-4 overflow-y-auto">
+          <main className="flex-1 transition-all duration-300 overflow-y-auto p-4">
             <ActiveLastBreadcrumb />
             <Outlet />
           </main>
