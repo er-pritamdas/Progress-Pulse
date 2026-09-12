@@ -632,7 +632,7 @@ export default function FixedDepositDashboard({
       {/* -------------------------------------------------------------------- */}
       {/* Top Header & Sub-Navigation Bar */}
       {/* -------------------------------------------------------------------- */}
-      <div className="bg-base-100 rounded-3xl p-4 sm:p-5 border border-base-300 dark:border-base-content/15 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="card bg-base-200 rounded-3xl p-4 sm:p-5 shadow-md flex flex-col md:flex-row md:items-center justify-between gap-4">
         
         {/* Status Filter Badges */}
         <div className="flex items-center gap-2 flex-wrap">
@@ -641,11 +641,11 @@ export default function FixedDepositDashboard({
             className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border ${
               statusFilter === "all"
                 ? "bg-primary text-primary-content border-primary shadow-sm"
-                : "bg-base-200/70 hover:bg-base-200 border-base-300 text-base-content/70"
+                : "bg-base-100 hover:bg-base-100/80 border-base-300 text-base-content/70"
             }`}
           >
             <span>All Deposits</span>
-            <span className="badge badge-xs bg-base-100 text-base-content font-mono px-1.5">
+            <span className="badge badge-xs bg-base-200 text-base-content font-mono px-1.5">
               {kpis.totalCount}
             </span>
           </button>
@@ -698,40 +698,44 @@ export default function FixedDepositDashboard({
 
         {/* View Switcher & Action Controls */}
         <div className="flex items-center gap-2.5 flex-wrap self-end md:self-auto">
-          {/* Main Tab Toggle: Table vs Analytics */}
-          <div className="bg-base-200/80 p-1 rounded-2xl border border-base-300/60 flex items-center">
+          {/* Main Tab Switcher: Table vs Visual Analytics */}
+          <div className="bg-base-100 p-1 rounded-2xl flex items-center border border-base-300">
             <button
               onClick={() => handleTabChange("table")}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
                 activeMainTab === "table"
-                  ? "bg-base-100 text-primary shadow-xs"
+                  ? "bg-primary text-primary-content shadow-xs"
                   : "text-base-content/60 hover:text-base-content"
               }`}
             >
               <TableProperties className="w-3.5 h-3.5" />
-              <span>Table View</span>
+              <span>Table</span>
+              <span className="badge badge-xs bg-base-200 text-base-content font-mono px-1">
+                {filteredFds.length}
+              </span>
             </button>
 
             <button
               onClick={() => handleTabChange("chart")}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
                 activeMainTab === "chart"
-                  ? "bg-base-100 text-primary shadow-xs"
+                  ? "bg-primary text-primary-content shadow-xs"
                   : "text-base-content/60 hover:text-base-content"
               }`}
             >
               <PieChart className="w-3.5 h-3.5" />
-              <span>Analytics & Charts</span>
+              <span>Analytics</span>
             </button>
           </div>
 
-          {/* Privacy Eye Button */}
+          {/* Mask / Unmask Numbers */}
           <button
             onClick={toggleHideNumbers}
-            className="btn btn-ghost btn-sm rounded-xl border border-base-300 text-base-content/70 hover:text-base-content"
-            title={hideNumbers ? "Show Numbers" : "Hide Numbers (Privacy Mode)"}
+            className="btn btn-ghost btn-sm rounded-xl border border-base-300 text-xs gap-1.5 bg-base-100 hover:bg-base-100/80"
+            title={hideNumbers ? "Show balances" : "Hide sensitive balances"}
           >
-            {hideNumbers ? <EyeOff className="w-4 h-4 text-amber-500" /> : <Eye className="w-4 h-4" />}
+            {hideNumbers ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+            <span className="hidden sm:inline">{hideNumbers ? "Show" : "Hide"}</span>
           </button>
 
           {/* New FD Button */}
@@ -754,105 +758,120 @@ export default function FixedDepositDashboard({
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         
         {/* Card 1: Active Principal Deposited */}
-        <div className="bg-base-100 rounded-3xl p-5 border border-base-300 dark:border-base-content/15 shadow-xs flex flex-col justify-between group hover:border-amber-500/40 transition-all">
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-xs font-bold text-base-content/60 uppercase tracking-wider">
-              Active Principal
-            </span>
-            <div className="w-8 h-8 rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center">
-              <Landmark className="w-4 h-4" />
-            </div>
+        <div className="card bg-base-200 rounded-3xl p-5 shadow-md flex flex-col justify-between group hover:shadow-lg transition-all relative overflow-hidden">
+          {/* Light Background Watermark Icon */}
+          <div className="absolute -right-3 -bottom-3 text-amber-500/10 dark:text-amber-400/10 pointer-events-none group-hover:scale-110 group-hover:-rotate-6 transition-transform duration-500">
+            <Landmark size={88} strokeWidth={1.5} />
           </div>
-          <div className="mt-3">
-            <div className="text-2xl font-black font-mono tracking-tight text-base-content">
-              {hideNumbers ? "••••••••" : `₹${formatCurrency2Dec(kpis.activePrincipal)}`}
+          <div className="relative z-10 flex flex-col justify-between h-full">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs font-bold text-base-content/60 uppercase tracking-wider">
+                Active Principal
+              </span>
             </div>
-            <p className="text-[11px] text-base-content/60 font-medium mt-1 flex items-center gap-1">
-              <span>Across {kpis.activeCount} active deposit{kpis.activeCount !== 1 ? "s" : ""}</span>
-            </p>
+            <div className="mt-3">
+              <div className="text-2xl font-black font-mono tracking-tight text-base-content">
+                {hideNumbers ? "••••••••" : `₹${formatCurrency2Dec(kpis.activePrincipal)}`}
+              </div>
+              <p className="text-[11px] text-base-content/60 font-medium mt-1 flex items-center gap-1">
+                <span>Across {kpis.activeCount} active deposit{kpis.activeCount !== 1 ? "s" : ""}</span>
+              </p>
+            </div>
           </div>
         </div>
 
         {/* Card 2: Estimated Maturity Amount */}
-        <div className="bg-base-100 rounded-3xl p-5 border border-base-300 dark:border-base-content/15 shadow-xs flex flex-col justify-between group hover:border-emerald-500/40 transition-all">
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-xs font-bold text-base-content/60 uppercase tracking-wider">
-              Maturity Value
-            </span>
-            <div className="w-8 h-8 rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
-              <TrendingUp className="w-4 h-4" />
-            </div>
+        <div className="card bg-base-200 rounded-3xl p-5 shadow-md flex flex-col justify-between group hover:shadow-lg transition-all relative overflow-hidden">
+          {/* Light Background Watermark Icon */}
+          <div className="absolute -right-3 -bottom-3 text-emerald-500/10 dark:text-emerald-400/10 pointer-events-none group-hover:scale-110 group-hover:-rotate-6 transition-transform duration-500">
+            <TrendingUp size={88} strokeWidth={1.5} />
           </div>
-          <div className="mt-3">
-            <div className="text-2xl font-black font-mono tracking-tight text-emerald-600 dark:text-emerald-400">
-              {hideNumbers ? "••••••••" : `₹${formatCurrency2Dec(kpis.activeMaturity)}`}
+          <div className="relative z-10 flex flex-col justify-between h-full">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs font-bold text-base-content/60 uppercase tracking-wider">
+                Maturity Value
+              </span>
             </div>
-            <p className="text-[11px] text-base-content/60 font-medium mt-1">
-              Expected at full maturity
-            </p>
+            <div className="mt-3">
+              <div className="text-2xl font-black font-mono tracking-tight text-emerald-600 dark:text-emerald-400">
+                {hideNumbers ? "••••••••" : `₹${formatCurrency2Dec(kpis.activeMaturity)}`}
+              </div>
+              <p className="text-[11px] text-base-content/60 font-medium mt-1">
+                Expected at full maturity
+              </p>
+            </div>
           </div>
         </div>
 
         {/* Card 3: Expected Interest / Accrued Gain */}
-        <div className="bg-base-100 rounded-3xl p-5 border border-base-300 dark:border-base-content/15 shadow-xs flex flex-col justify-between group hover:border-purple-500/40 transition-all">
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-xs font-bold text-base-content/60 uppercase tracking-wider">
-              Expected Interest
-            </span>
-            <div className="w-8 h-8 rounded-xl bg-purple-500/15 text-purple-600 dark:text-purple-400 flex items-center justify-center">
-              <Sparkles className="w-4 h-4" />
-            </div>
+        <div className="card bg-base-200 rounded-3xl p-5 shadow-md flex flex-col justify-between group hover:shadow-lg transition-all relative overflow-hidden">
+          {/* Light Background Watermark Icon */}
+          <div className="absolute -right-3 -bottom-3 text-purple-500/10 dark:text-purple-400/10 pointer-events-none group-hover:scale-110 group-hover:-rotate-6 transition-transform duration-500">
+            <Sparkles size={88} strokeWidth={1.5} />
           </div>
-          <div className="mt-3">
-            <div className="text-2xl font-black font-mono tracking-tight text-purple-600 dark:text-purple-400">
-              {hideNumbers ? "••••••••" : `+₹${formatCurrency2Dec(kpis.activeInterest)}`}
-            </div>
-            <p className="text-[11px] text-base-content/60 font-medium mt-1 flex items-center gap-1">
-              <span className="text-emerald-600 dark:text-emerald-400 font-bold">
-                +{kpis.returnPct.toFixed(2)}%
+          <div className="relative z-10 flex flex-col justify-between h-full">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs font-bold text-base-content/60 uppercase tracking-wider">
+                Expected Interest
               </span>
-              <span>projected growth</span>
-            </p>
+            </div>
+            <div className="mt-3">
+              <div className="text-2xl font-black font-mono tracking-tight text-purple-600 dark:text-purple-400">
+                {hideNumbers ? "••••••••" : `+₹${formatCurrency2Dec(kpis.activeInterest)}`}
+              </div>
+              <p className="text-[11px] text-base-content/60 font-medium mt-1 flex items-center gap-1">
+                <span className="text-emerald-600 dark:text-emerald-400 font-bold">
+                  +{kpis.returnPct.toFixed(2)}%
+                </span>
+                <span>projected growth</span>
+              </p>
+            </div>
           </div>
         </div>
 
         {/* Card 4: Weighted Average Rate */}
-        <div className="bg-base-100 rounded-3xl p-5 border border-base-300 dark:border-base-content/15 shadow-xs flex flex-col justify-between group hover:border-blue-500/40 transition-all">
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-xs font-bold text-base-content/60 uppercase tracking-wider">
-              Avg Interest Rate
-            </span>
-            <div className="w-8 h-8 rounded-xl bg-blue-500/15 text-blue-600 dark:text-blue-400 flex items-center justify-center">
-              <Percent className="w-4 h-4" />
-            </div>
+        <div className="card bg-base-200 rounded-3xl p-5 shadow-md flex flex-col justify-between group hover:shadow-lg transition-all relative overflow-hidden">
+          {/* Light Background Watermark Icon */}
+          <div className="absolute -right-3 -bottom-3 text-blue-500/10 dark:text-blue-400/10 pointer-events-none group-hover:scale-110 group-hover:-rotate-6 transition-transform duration-500">
+            <Percent size={88} strokeWidth={1.5} />
           </div>
-          <div className="mt-3">
-            <div className="text-2xl font-black font-mono tracking-tight text-blue-600 dark:text-blue-400">
-              {kpis.weightedRate.toFixed(2)}%
+          <div className="relative z-10 flex flex-col justify-between h-full">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs font-bold text-base-content/60 uppercase tracking-wider">
+                Avg Interest Rate
+              </span>
             </div>
-            <p className="text-[11px] text-base-content/60 font-medium mt-1">
-              Weighted p.a. return rate
-            </p>
+            <div className="mt-3">
+              <div className="text-2xl font-black font-mono tracking-tight text-blue-600 dark:text-blue-400">
+                {kpis.weightedRate.toFixed(2)}%
+              </div>
+              <p className="text-[11px] text-base-content/60 font-medium mt-1">
+                Weighted p.a. return rate
+              </p>
+            </div>
           </div>
         </div>
 
         {/* Card 5: Realized Payout (Withdrawn) */}
-        <div className="bg-base-100 rounded-3xl p-5 border border-base-300 dark:border-base-content/15 shadow-xs flex flex-col justify-between group hover:border-teal-500/40 transition-all">
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-xs font-bold text-base-content/60 uppercase tracking-wider">
-              Realized Payout
-            </span>
-            <div className="w-8 h-8 rounded-xl bg-teal-500/15 text-teal-600 dark:text-teal-400 flex items-center justify-center">
-              <CheckCircle2 className="w-4 h-4" />
-            </div>
+        <div className="card bg-base-200 rounded-3xl p-5 shadow-md flex flex-col justify-between group hover:shadow-lg transition-all relative overflow-hidden">
+          {/* Light Background Watermark Icon */}
+          <div className="absolute -right-3 -bottom-3 text-teal-500/10 dark:text-teal-400/10 pointer-events-none group-hover:scale-110 group-hover:-rotate-6 transition-transform duration-500">
+            <CheckCircle2 size={88} strokeWidth={1.5} />
           </div>
-          <div className="mt-3">
-            <div className="text-2xl font-black font-mono tracking-tight text-teal-600 dark:text-teal-400">
-              {hideNumbers ? "••••••••" : `₹${formatCurrency2Dec(kpis.realizedPayout)}`}
+          <div className="relative z-10 flex flex-col justify-between h-full">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs font-bold text-base-content/60 uppercase tracking-wider">
+                Realized Payout
+              </span>
             </div>
-            <p className="text-[11px] text-base-content/60 font-medium mt-1">
-              From {kpis.withdrawnCount} settled deposit{kpis.withdrawnCount !== 1 ? "s" : ""}
-            </p>
+            <div className="mt-3">
+              <div className="text-2xl font-black font-mono tracking-tight text-teal-600 dark:text-teal-400">
+                {hideNumbers ? "••••••••" : `₹${formatCurrency2Dec(kpis.realizedPayout)}`}
+              </div>
+              <p className="text-[11px] text-base-content/60 font-medium mt-1">
+                From {kpis.withdrawnCount} settled deposit{kpis.withdrawnCount !== 1 ? "s" : ""}
+              </p>
+            </div>
           </div>
         </div>
       </div>
@@ -861,10 +880,10 @@ export default function FixedDepositDashboard({
       {/* TAB 1: TABLE VIEW */}
       {/* -------------------------------------------------------------------- */}
       {activeMainTab === "table" && (
-        <div className="bg-base-100 rounded-3xl border border-base-300 dark:border-base-content/15 shadow-xs overflow-hidden flex flex-col">
+        <div className="card bg-base-200 rounded-3xl shadow-md overflow-hidden flex flex-col">
           
           {/* Table Control Bar: Search & Bank Selector */}
-          <div className="p-4 border-b border-base-300 dark:border-base-content/15 bg-base-100 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div className="p-4 border-b border-base-300 bg-base-200 flex flex-col sm:flex-row items-center justify-between gap-3">
             
             {/* Search Input */}
             <div className="relative w-full sm:w-72">
@@ -874,7 +893,7 @@ export default function FixedDepositDashboard({
                 placeholder="Search Bank, Scheme, FD #..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="input input-sm w-full pl-9 rounded-xl bg-base-200/60 border-base-300 text-xs font-medium focus:outline-none focus:border-primary"
+                className="input input-sm w-full pl-9 rounded-xl bg-base-100 border-base-300 text-xs font-medium focus:outline-none focus:border-primary"
               />
               {searchQuery && (
                 <button
@@ -891,7 +910,7 @@ export default function FixedDepositDashboard({
               <select
                 value={bankFilter}
                 onChange={(e) => setBankFilter(e.target.value)}
-                className="select select-sm rounded-xl bg-base-200/60 border-base-300 text-xs font-medium focus:outline-none focus:border-primary"
+                className="select select-sm rounded-xl bg-base-100 border-base-300 text-xs font-medium focus:outline-none focus:border-primary"
               >
                 <option value="all">All Banks ({availableBanks.length})</option>
                 {availableBanks.map((b) => (
@@ -903,7 +922,7 @@ export default function FixedDepositDashboard({
 
               <Link
                 to="/dashboard/investment/table-entry"
-                className="btn btn-ghost btn-sm rounded-xl text-xs font-semibold text-primary hover:bg-primary/10 gap-1 border border-primary/20"
+                className="btn btn-ghost btn-sm rounded-xl text-xs font-semibold text-primary hover:bg-primary/10 gap-1 border border-primary/20 bg-base-100"
                 title="Go to Table Entry to manage deposits"
               >
                 <ExternalLink className="w-3.5 h-3.5" />
@@ -913,9 +932,9 @@ export default function FixedDepositDashboard({
           </div>
 
           {/* Table Content */}
-          <div className="overflow-x-auto w-full">
+          <div className="overflow-x-auto w-full bg-base-100">
             <table className="table table-sm w-full text-left">
-              <thead className="bg-base-200/50 text-[11px] font-bold text-base-content/60 uppercase tracking-wider border-b border-base-300">
+              <thead className="bg-base-200 text-[11px] font-bold text-base-content/60 uppercase tracking-wider border-b border-base-300">
                 <tr>
                   <th
                     className="py-3 px-4 cursor-pointer hover:text-base-content select-none"
@@ -1215,10 +1234,10 @@ export default function FixedDepositDashboard({
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           
           {/* Left Column: Interactive ApexChart (7 Cols) */}
-          <div className="lg:col-span-7 bg-base-100 rounded-3xl border border-base-300 dark:border-base-content/15 p-5 shadow-xs flex flex-col justify-between">
+          <div className="lg:col-span-7 card bg-base-200 rounded-3xl p-5 shadow-md flex flex-col justify-between">
             
             {/* Chart Top Controls */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-base-300/60 pb-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-base-300 pb-4">
               <div>
                 <h3 className="font-black text-base text-base-content">
                   Fixed Deposit Allocation
@@ -1233,7 +1252,7 @@ export default function FixedDepositDashboard({
                 <select
                   value={chartMetric}
                   onChange={(e) => setChartMetric(e.target.value)}
-                  className="select select-sm rounded-xl bg-base-200/80 border-base-300 text-xs font-bold focus:outline-none focus:border-primary"
+                  className="select select-sm rounded-xl bg-base-100 border-base-300 text-xs font-bold focus:outline-none focus:border-primary"
                 >
                   <option value="principal">Principal by Bank</option>
                   <option value="maturity">Maturity Value by Bank</option>
@@ -1244,12 +1263,12 @@ export default function FixedDepositDashboard({
 
                 {/* Donut vs Pie Toggle (for non-bar charts) */}
                 {!chartData.isBar && (
-                  <div className="bg-base-200 p-1 rounded-xl flex items-center border border-base-300">
+                  <div className="bg-base-100 p-1 rounded-xl flex items-center border border-base-300">
                     <button
                       onClick={() => setChartType("donut")}
                       className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
                         chartType === "donut"
-                          ? "bg-base-100 text-primary shadow-xs"
+                          ? "bg-primary text-primary-content shadow-xs"
                           : "text-base-content/60 hover:text-base-content"
                       }`}
                     >
@@ -1259,7 +1278,7 @@ export default function FixedDepositDashboard({
                       onClick={() => setChartType("pie")}
                       className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
                         chartType === "pie"
-                          ? "bg-base-100 text-primary shadow-xs"
+                          ? "bg-primary text-primary-content shadow-xs"
                           : "text-base-content/60 hover:text-base-content"
                       }`}
                     >
@@ -1290,7 +1309,7 @@ export default function FixedDepositDashboard({
             </div>
 
             {/* Bottom Summary Bar */}
-            <div className="border-t border-base-300/60 pt-4 flex items-center justify-between text-xs text-base-content/60 font-medium">
+            <div className="border-t border-base-300 pt-4 flex items-center justify-between text-xs text-base-content/60 font-medium">
               <span>Total Capital Represented:</span>
               <span className="font-mono font-bold text-base-content text-sm">
                 {hideNumbers ? "••••••••" : `₹${formatCurrency2Dec(kpis.activePrincipal)}`}
@@ -1299,7 +1318,7 @@ export default function FixedDepositDashboard({
           </div>
 
           {/* Right Column: Stack of Bank Breakdown Cards (5 Cols) */}
-          <div className="lg:col-span-5 bg-base-100 rounded-3xl border border-base-300 dark:border-base-content/15 p-5 shadow-xs flex flex-col justify-between">
+          <div className="lg:col-span-5 card bg-base-200 rounded-3xl p-5 shadow-md flex flex-col justify-between">
             
             {/* Header with Search */}
             <div>
@@ -1310,7 +1329,7 @@ export default function FixedDepositDashboard({
                     Banks Breakdown
                   </h3>
                 </div>
-                <span className="badge badge-sm font-mono font-bold bg-base-200">
+                <span className="badge badge-sm font-mono font-bold bg-base-100">
                   {bankAnalytics.length} Banks
                 </span>
               </div>
@@ -1323,7 +1342,7 @@ export default function FixedDepositDashboard({
                   placeholder="Filter bank stack..."
                   value={bankStackSearch}
                   onChange={(e) => setBankStackSearch(e.target.value)}
-                  className="input input-sm w-full pl-8 rounded-xl bg-base-200/60 border-base-300 text-xs font-medium focus:outline-none focus:border-primary"
+                  className="input input-sm w-full pl-8 rounded-xl bg-base-100 border-base-300 text-xs font-medium focus:outline-none focus:border-primary"
                 />
               </div>
 
@@ -1343,7 +1362,7 @@ export default function FixedDepositDashboard({
                           setBankFilter(bank.bankName);
                           setActiveMainTab("table");
                         }}
-                        className="bg-base-200/50 hover:bg-base-200 p-3.5 rounded-2xl border border-base-300/60 hover:border-primary/40 transition-all cursor-pointer group"
+                        className="bg-base-100 hover:bg-base-100/80 p-3.5 rounded-2xl border border-base-300 hover:border-primary/40 transition-all cursor-pointer group"
                       >
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex items-center gap-2 min-w-0">
@@ -1362,7 +1381,7 @@ export default function FixedDepositDashboard({
 
                         {/* Progress Bar & Percent Share */}
                         <div className="mt-2.5">
-                          <div className="w-full bg-base-300/60 h-1.5 rounded-full overflow-hidden">
+                          <div className="w-full bg-base-200 h-1.5 rounded-full overflow-hidden">
                             <div
                               className="h-full rounded-full transition-all duration-500"
                               style={{

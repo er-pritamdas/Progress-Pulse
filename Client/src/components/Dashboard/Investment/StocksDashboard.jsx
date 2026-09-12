@@ -642,162 +642,176 @@ export default function StocksDashboard({
       {/* -------------------------------------------------------------------- */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         {/* Card 1: Total Capital / Investment */}
-        <div className="card bg-base-100 shadow-md border border-base-200/80 p-5 rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-base-content/60">
-              {subView === "demat" ? "Total Demat Capital" : "Capital Deployed"}
-            </span>
-            <div className="w-9 h-9 rounded-2xl bg-blue-500/15 text-blue-600 dark:text-blue-400 flex items-center justify-center">
-              <Wallet size={18} />
-            </div>
+        <div className="card bg-base-200 shadow-md p-5 rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
+          {/* Light Background Watermark Icon */}
+          <div className="absolute -right-3 -bottom-3 text-blue-500/10 dark:text-blue-400/10 pointer-events-none group-hover:scale-110 group-hover:-rotate-6 transition-transform duration-500">
+            <Wallet size={88} strokeWidth={1.5} />
           </div>
-          <div className="mt-3">
-            <div className="text-2xl lg:text-3xl font-black font-mono text-blue-600 dark:text-blue-400">
-              ₹{formatCurrency2Dec(kpiData.totalInvestedCapital)}
+          <div className="relative z-10">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold uppercase tracking-wider text-base-content/60">
+                {subView === "demat" ? "Total Demat Capital" : "Capital Deployed"}
+              </span>
             </div>
-            <div className="flex items-center gap-2 mt-1.5 text-xs text-base-content/60 font-medium">
-              <span className="badge badge-xs badge-info font-bold text-[10px]">
-                {kpiData.count} {kpiData.count === 1 ? "Stock" : "Stocks"}
-              </span>
-              <span>
-                {subView === "demat" ? "Holding In Demat" : "Total Traded Volume"}
-              </span>
+            <div className="mt-3">
+              <div className="text-2xl lg:text-3xl font-black font-mono text-blue-600 dark:text-blue-400">
+                ₹{formatCurrency2Dec(kpiData.totalInvestedCapital)}
+              </div>
+              <div className="flex items-center gap-2 mt-1.5 text-xs text-base-content/60 font-medium">
+                <span className="badge badge-xs badge-info font-bold text-[10px]">
+                  {kpiData.count} {kpiData.count === 1 ? "Stock" : "Stocks"}
+                </span>
+                <span>
+                  {subView === "demat" ? "Holding In Demat" : "Total Traded Volume"}
+                </span>
+              </div>
             </div>
           </div>
         </div>
 
         {/* Card 2: Total Quantity Left / Traded */}
-        <div className="card bg-base-100 shadow-md border border-base-200/80 p-5 rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-base-content/60">
-              {subView === "demat" ? "Quantity Left (Holding)" : "Total Quantity Traded"}
-            </span>
-            <div className="w-9 h-9 rounded-2xl bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
-              <Layers size={18} />
-            </div>
+        <div className="card bg-base-200 shadow-md p-5 rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
+          {/* Light Background Watermark Icon */}
+          <div className="absolute -right-3 -bottom-3 text-indigo-500/10 dark:text-indigo-400/10 pointer-events-none group-hover:scale-110 group-hover:-rotate-6 transition-transform duration-500">
+            <Layers size={88} strokeWidth={1.5} />
           </div>
-          <div className="mt-3">
-            <div className="text-2xl lg:text-3xl font-black font-mono text-indigo-600 dark:text-indigo-400">
-              {kpiData.totalQuantity.toLocaleString()}
-            </div>
-            <div className="flex items-center gap-2 mt-1.5 text-xs text-base-content/60 font-medium">
-              <span className="badge badge-xs badge-primary font-bold text-[10px]">
-                {subView === "demat" ? "Remaining Shares" : "Total Shares Sold"}
+          <div className="relative z-10">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold uppercase tracking-wider text-base-content/60">
+                {subView === "demat" ? "Quantity Left (Holding)" : "Total Quantity Traded"}
               </span>
-              <span>Across {kpiData.count} items</span>
+            </div>
+            <div className="mt-3">
+              <div className="text-2xl lg:text-3xl font-black font-mono text-indigo-600 dark:text-indigo-400">
+                {kpiData.totalQuantity.toLocaleString()}
+              </div>
+              <div className="flex items-center gap-2 mt-1.5 text-xs text-base-content/60 font-medium">
+                <span className="badge badge-xs badge-primary font-bold text-[10px]">
+                  {subView === "demat" ? "Remaining Shares" : "Total Shares Sold"}
+                </span>
+                <span>Across {kpiData.count} items</span>
+              </div>
             </div>
           </div>
         </div>
 
         {/* Card 3: Period / Duration Metric */}
-        <div className="card bg-base-100 shadow-md border border-base-200/80 p-5 rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-base-content/60">
-              {subView === "demat" ? "Avg Period From Today" : "Avg Holding Period"}
-            </span>
-            <div className="w-9 h-9 rounded-2xl bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center">
-              <Clock size={18} />
-            </div>
+        <div className="card bg-base-200 shadow-md p-5 rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
+          {/* Light Background Watermark Icon */}
+          <div className="absolute -right-3 -bottom-3 text-amber-500/10 dark:text-amber-400/10 pointer-events-none group-hover:scale-110 group-hover:-rotate-6 transition-transform duration-500">
+            <Clock size={88} strokeWidth={1.5} />
           </div>
-          <div className="mt-3">
-            <div className="text-2xl lg:text-3xl font-black font-mono text-amber-600 dark:text-amber-400">
-              {kpiData.avgHoldingDays} <span className="text-sm font-bold opacity-80">Days</span>
-            </div>
-            <div className="flex items-center gap-2 mt-1.5 text-xs text-base-content/60 font-medium">
-              <span className="badge badge-xs badge-warning font-bold text-[10px]">
-                {subView === "demat" ? "Days Since Buy" : "Holding Duration"}
+          <div className="relative z-10">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold uppercase tracking-wider text-base-content/60">
+                {subView === "demat" ? "Avg Period From Today" : "Avg Holding Period"}
               </span>
-              <span>{subView === "demat" ? "Holdings Tenure" : "> 1 Day Delivery"}</span>
+            </div>
+            <div className="mt-3">
+              <div className="text-2xl lg:text-3xl font-black font-mono text-amber-600 dark:text-amber-400">
+                {kpiData.avgHoldingDays} <span className="text-sm font-bold opacity-80">Days</span>
+              </div>
+              <div className="flex items-center gap-2 mt-1.5 text-xs text-base-content/60 font-medium">
+                <span className="badge badge-xs badge-warning font-bold text-[10px]">
+                  {subView === "demat" ? "Days Since Buy" : "Holding Duration"}
+                </span>
+                <span>{subView === "demat" ? "Holdings Tenure" : "> 1 Day Delivery"}</span>
+              </div>
             </div>
           </div>
         </div>
 
         {/* Card 4: Realized Gain or Cap Split */}
         {subView === "demat" ? (
-          <div className="card bg-base-100 shadow-md border border-base-200/80 p-5 rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-base-content/60">
-                Market Cap Allocation
-              </span>
-              <div className="w-9 h-9 rounded-2xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
-                <PieChart size={18} />
-              </div>
+          <div className="card bg-base-200 shadow-md p-5 rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
+            {/* Light Background Watermark Icon */}
+            <div className="absolute -right-3 -bottom-3 text-emerald-500/10 dark:text-emerald-400/10 pointer-events-none group-hover:scale-110 group-hover:-rotate-6 transition-transform duration-500">
+              <PieChart size={88} strokeWidth={1.5} />
             </div>
-            <div className="mt-3">
-              <div className="text-xl lg:text-2xl font-black font-mono text-emerald-600 dark:text-emerald-400 flex items-center gap-2">
-                <span>{kpiData.capDistribution.Large}L</span>
-                <span className="text-base-content/30">•</span>
-                <span className="text-indigo-500">{kpiData.capDistribution.Mid}M</span>
-                <span className="text-base-content/30">•</span>
-                <span className="text-amber-500">{kpiData.capDistribution.Small}S</span>
-              </div>
-              <div className="flex items-center gap-2 mt-1.5 text-xs text-base-content/60 font-medium">
-                <span className="badge badge-xs badge-success font-bold text-[10px]">
-                  Large / Mid / Small
+            <div className="relative z-10">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wider text-base-content/60">
+                  Market Cap Allocation
                 </span>
-                <span>Diversification</span>
+              </div>
+              <div className="mt-3">
+                <div className="text-xl lg:text-2xl font-black font-mono text-emerald-600 dark:text-emerald-400 flex items-center gap-2">
+                  <span>{kpiData.capDistribution.Large}L</span>
+                  <span className="text-base-content/30">•</span>
+                  <span className="text-indigo-500">{kpiData.capDistribution.Mid}M</span>
+                  <span className="text-base-content/30">•</span>
+                  <span className="text-amber-500">{kpiData.capDistribution.Small}S</span>
+                </div>
+                <div className="flex items-center gap-2 mt-1.5 text-xs text-base-content/60 font-medium">
+                  <span className="badge badge-xs badge-success font-bold text-[10px]">
+                    Large / Mid / Small
+                  </span>
+                  <span>Diversification</span>
+                </div>
               </div>
             </div>
           </div>
         ) : (
-          <div className="card bg-base-100 shadow-md border border-base-200/80 p-5 rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-base-content/60">
-                Net Realized P&L
-              </span>
-              <div
-                className={`w-9 h-9 rounded-2xl flex items-center justify-center ${
-                  kpiData.totalRealizedGain >= 0
-                    ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
-                    : "bg-rose-500/15 text-rose-600 dark:text-rose-400"
-                }`}
-              >
-                {kpiData.totalRealizedGain >= 0 ? <TrendingUp size={18} /> : <TrendingDown size={18} />}
-              </div>
+          <div className="card bg-base-200 shadow-md p-5 rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
+            {/* Light Background Watermark Icon */}
+            <div className={`absolute -right-3 -bottom-3 pointer-events-none group-hover:scale-110 group-hover:-rotate-6 transition-transform duration-500 ${
+              kpiData.totalRealizedGain >= 0 ? "text-emerald-500/10 dark:text-emerald-400/10" : "text-rose-500/10 dark:text-rose-400/10"
+            }`}>
+              {kpiData.totalRealizedGain >= 0 ? <TrendingUp size={88} strokeWidth={1.5} /> : <TrendingDown size={88} strokeWidth={1.5} />}
             </div>
-            <div className="mt-3">
-              <div
-                className={`text-2xl lg:text-3xl font-black font-mono ${
-                  kpiData.totalRealizedGain >= 0
-                    ? "text-emerald-600 dark:text-emerald-400"
-                    : "text-rose-600 dark:text-rose-400"
-                }`}
-              >
-                {kpiData.totalRealizedGain >= 0 ? "+" : ""}₹{formatCurrency2Dec(kpiData.totalRealizedGain)}
+            <div className="relative z-10">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wider text-base-content/60">
+                  Net Realized P&L
+                </span>
               </div>
-              <div className="flex items-center gap-2 mt-1.5 text-xs text-base-content/60 font-medium">
-                <span
-                  className={`badge badge-xs font-bold text-[10px] ${
-                    kpiData.totalRealizedGain >= 0 ? "badge-success" : "badge-error"
+              <div className="mt-3">
+                <div
+                  className={`text-2xl lg:text-3xl font-black font-mono ${
+                    kpiData.totalRealizedGain >= 0
+                      ? "text-emerald-600 dark:text-emerald-400"
+                      : "text-rose-600 dark:text-rose-400"
                   }`}
                 >
-                  {kpiData.totalRealizedGain >= 0 ? "+" : ""}{kpiData.gainPctOverall}%
-                </span>
-                <span>Realized Return</span>
+                  {kpiData.totalRealizedGain >= 0 ? "+" : ""}₹{formatCurrency2Dec(kpiData.totalRealizedGain)}
+                </div>
+                <div className="flex items-center gap-2 mt-1.5 text-xs text-base-content/60 font-medium">
+                  <span
+                    className={`badge badge-xs font-bold text-[10px] ${
+                      kpiData.totalRealizedGain >= 0 ? "badge-success" : "badge-error"
+                    }`}
+                  >
+                    {kpiData.totalRealizedGain >= 0 ? "+" : ""}{kpiData.gainPctOverall}%
+                  </span>
+                  <span>Realized Return</span>
+                </div>
               </div>
             </div>
           </div>
         )}
 
         {/* Card 5: Trade Win Rate / Demat Status */}
-        <div className="card bg-base-100 shadow-md border border-base-200/80 p-5 rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-base-content/60">
-              {subView === "demat" ? "Demat Portfolio Status" : "Trade Win Ratio"}
-            </span>
-            <div className="w-9 h-9 rounded-2xl bg-teal-500/15 text-teal-600 dark:text-teal-400 flex items-center justify-center">
-              <Sparkles size={18} />
-            </div>
+        <div className="card bg-base-200 shadow-md p-5 rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
+          {/* Light Background Watermark Icon */}
+          <div className="absolute -right-3 -bottom-3 text-teal-500/10 dark:text-teal-400/10 pointer-events-none group-hover:scale-110 group-hover:-rotate-6 transition-transform duration-500">
+            <Sparkles size={88} strokeWidth={1.5} />
           </div>
-          <div className="mt-3">
-            <div className="text-2xl lg:text-3xl font-black font-mono text-teal-600 dark:text-teal-400">
-              {subView === "demat" ? "100% Active" : `${kpiData.winRate}%`}
-            </div>
-            <div className="flex items-center gap-2 mt-1.5 text-xs text-base-content/60 font-medium">
-              <span className="badge badge-xs badge-secondary font-bold text-[10px]">
-                {subView === "demat" ? "In Demat Hold" : `${kpiData.profitableCount}W / ${kpiData.lossCount}L`}
+          <div className="relative z-10">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold uppercase tracking-wider text-base-content/60">
+                {subView === "demat" ? "Demat Portfolio Status" : "Trade Win Ratio"}
               </span>
-              <span>{subView === "demat" ? "Ready to Trade" : "Profitable Trades"}</span>
+            </div>
+            <div className="mt-3">
+              <div className="text-2xl lg:text-3xl font-black font-mono text-teal-600 dark:text-teal-400">
+                {subView === "demat" ? "100% Active" : `${kpiData.winRate}%`}
+              </div>
+              <div className="flex items-center gap-2 mt-1.5 text-xs text-base-content/60 font-medium">
+                <span className="badge badge-xs badge-secondary font-bold text-[10px]">
+                  {subView === "demat" ? "In Demat Hold" : `${kpiData.profitableCount}W / ${kpiData.lossCount}L`}
+                </span>
+                <span>{subView === "demat" ? "Ready to Trade" : "Profitable Trades"}</span>
+              </div>
             </div>
           </div>
         </div>
@@ -809,7 +823,7 @@ export default function StocksDashboard({
       {activeMainTab === "chart" && (
         <div className="space-y-6 animate-in fade-in duration-300">
           {/* Header Row with Title, Metric Dropdown, Dimension & Donut/Pie Controls */}
-          <div className="card bg-base-100 p-5 rounded-3xl shadow-sm border border-base-200/80 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div className="card bg-base-200 p-5 rounded-3xl shadow-md flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
               <div className="flex items-center gap-2.5">
                 <div className="w-9 h-9 rounded-2xl bg-blue-500/15 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
@@ -838,14 +852,14 @@ export default function StocksDashboard({
             {/* Metric Dropdown (User Requested!) & Controls */}
             <div className="flex items-center gap-2.5 flex-wrap w-full md:w-auto justify-start md:justify-end">
               {/* Metric Dropdown: Total Capital vs Total Qty */}
-              <div className="flex items-center gap-2 bg-base-200/80 px-3 py-1.5 rounded-2xl border border-base-300">
+              <div className="flex items-center gap-2 bg-base-100 px-3 py-1.5 rounded-2xl border border-base-300">
                 <span className="text-[11px] font-extrabold uppercase tracking-wider text-base-content/60 flex items-center gap-1">
                   <Filter size={12} /> Metric:
                 </span>
                 <select
                   value={pieMetric}
                   onChange={(e) => setPieMetric(e.target.value)}
-                  className="select select-xs font-black bg-base-100 rounded-xl border-base-300 focus:outline-none focus:border-primary text-xs cursor-pointer"
+                  className="select select-xs font-black bg-base-200/60 rounded-xl border-base-300 focus:outline-none focus:border-primary text-xs cursor-pointer"
                 >
                   <option value="capital">Total Capital</option>
                   <option value="quantity">Total Qty</option>
@@ -853,7 +867,7 @@ export default function StocksDashboard({
               </div>
 
               {/* Dimension Toggle: By Stock vs By Market Cap */}
-              <div className="join border border-base-300 rounded-xl p-0.5 bg-base-200/60 text-xs">
+              <div className="join border border-base-300 rounded-xl p-0.5 bg-base-100 text-xs">
                 <button
                   onClick={() => setChartDimension("stock")}
                   className={`join-item btn btn-xs rounded-lg font-bold ${
@@ -873,7 +887,7 @@ export default function StocksDashboard({
               </div>
 
               {/* Donut vs Pie */}
-              <div className="join border border-base-300 rounded-xl p-0.5 bg-base-200/60 text-xs">
+              <div className="join border border-base-300 rounded-xl p-0.5 bg-base-100 text-xs">
                 <button
                   onClick={() => setChartType("donut")}
                   className={`join-item btn btn-xs rounded-lg font-bold ${
@@ -896,14 +910,14 @@ export default function StocksDashboard({
 
           {/* 2-Column Grid: Left Side = Pie Chart, Right Side = Stack of Names */}
           {filteredStocks.length === 0 ? (
-            <div className="card bg-base-100 p-12 text-center text-sm opacity-50 italic rounded-3xl border border-base-200/80">
+            <div className="card bg-base-200 p-12 text-center text-sm opacity-50 italic rounded-3xl">
               No stock trade records found matching the current sub-dashboard filter.
             </div>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
               {/* LEFT SIDE: Pie Chart */}
-              <div className="lg:col-span-7 card bg-base-100 p-6 rounded-3xl shadow-xl border border-base-200/80 flex flex-col justify-between">
-                <div className="flex items-center justify-between pb-3 border-b border-base-200/80 mb-2">
+              <div className="lg:col-span-7 card bg-base-200 p-6 rounded-3xl shadow-md flex flex-col justify-between">
+                <div className="flex items-center justify-between pb-3 border-b border-base-300 mb-2">
                   <div className="flex items-center gap-2">
                     <div className="w-2.5 h-2.5 rounded-full bg-blue-500 shadow-xs"></div>
                     <span className="font-extrabold text-sm text-base-content">
@@ -938,7 +952,7 @@ export default function StocksDashboard({
                   )}
                 </div>
 
-                <div className="text-center text-[11px] opacity-60 pt-2 border-t border-base-200/60 font-medium">
+                <div className="text-center text-[11px] opacity-60 pt-2 border-t border-base-300 font-medium">
                   {chartDimension === "stock"
                     ? `Visual breakdown of ${unifiedChartData.labels.length} distinct stocks`
                     : "Visual breakdown grouped by Large, Mid, and Small Cap allocations"}
@@ -946,10 +960,10 @@ export default function StocksDashboard({
               </div>
 
               {/* RIGHT SIDE: Stack of Names */}
-              <div className="lg:col-span-5 card bg-base-100 p-6 rounded-3xl shadow-xl border border-base-200/80 flex flex-col justify-between">
+              <div className="lg:col-span-5 card bg-base-200 p-6 rounded-3xl shadow-md flex flex-col justify-between">
                 <div>
                   {/* Stack Header */}
-                  <div className="flex items-center justify-between pb-3 border-b border-base-200/80 mb-3">
+                  <div className="flex items-center justify-between pb-3 border-b border-base-300 mb-3">
                     <div className="flex items-center gap-2">
                       <Layers className="text-primary w-4.5 h-4.5" />
                       <h4 className="font-black text-sm text-base-content tracking-tight">
@@ -977,7 +991,7 @@ export default function StocksDashboard({
                         placeholder="Search names in stack..."
                         value={stackSearchQuery}
                         onChange={(e) => setStackSearchQuery(e.target.value)}
-                        className="input input-xs input-bordered w-full pl-7 text-xs rounded-xl focus:input-primary"
+                        className="input input-xs input-bordered w-full pl-7 text-xs rounded-xl focus:input-primary bg-base-100"
                       />
                     </div>
                   )}
@@ -992,7 +1006,7 @@ export default function StocksDashboard({
                       displayedStackItems.map((item, idx) => (
                         <div
                           key={`${item.name}-${idx}`}
-                          className="p-3 rounded-2xl bg-base-200/40 hover:bg-base-200/80 border border-base-300/40 hover:border-primary/40 hover:shadow-xs transition-all group"
+                          className="p-3 rounded-2xl bg-base-100 hover:bg-base-100/80 border border-base-300 hover:border-primary/40 hover:shadow-xs transition-all group"
                         >
                           <div className="flex items-center justify-between gap-2">
                             {/* Left: Rank, Color Swatch, Name, Cap Badge */}
@@ -1001,7 +1015,7 @@ export default function StocksDashboard({
                                 #{idx + 1}
                               </span>
                               <span
-                                className="w-3 h-3 rounded-full shrink-0 shadow-xs ring-2 ring-base-100"
+                                className="w-3 h-3 rounded-full shrink-0 shadow-xs ring-2 ring-base-200"
                                 style={{ backgroundColor: item.color }}
                               />
                               <span
@@ -1025,12 +1039,12 @@ export default function StocksDashboard({
                               )}
                             </div>
 
-                            {/* Right: Metric Value & Percentage */}
+                            {/* Right: Quantity / Capital Value & Percentage */}
                             <div className="flex items-center gap-2 shrink-0">
                               <span className="font-mono font-extrabold text-xs text-base-content/90">
                                 {unifiedChartData.isCapital
                                   ? `₹${formatCurrency2Dec(item.value)}`
-                                  : `${item.value.toLocaleString()} u`}
+                                  : `${item.value.toLocaleString()} shs`}
                               </span>
                               <span className="badge badge-sm badge-neutral font-mono font-black text-[10px] min-w-[48px] justify-center">
                                 {item.pct}%
@@ -1039,7 +1053,7 @@ export default function StocksDashboard({
                           </div>
 
                           {/* Visual Progress Bar */}
-                          <div className="w-full bg-base-300/60 h-1.5 rounded-full overflow-hidden mt-2">
+                          <div className="w-full bg-base-200 h-1.5 rounded-full overflow-hidden mt-2">
                             <div
                               className="h-full rounded-full transition-all duration-300"
                               style={{
@@ -1055,7 +1069,7 @@ export default function StocksDashboard({
                 </div>
 
                 {/* Stack Footer */}
-                <div className="pt-3 mt-2 border-t border-base-200/60 flex items-center justify-between text-[11px] font-medium opacity-60">
+                <div className="pt-3 mt-2 border-t border-base-300 flex items-center justify-between text-[11px] font-medium opacity-60">
                   <span>
                     Showing {displayedStackItems.length} of {unifiedChartData.items.length} positions
                   </span>
@@ -1071,9 +1085,9 @@ export default function StocksDashboard({
       {/* 4. TAB 1: Detailed Stock Data Table (User Requested: Keep Only Table) */}
       {/* -------------------------------------------------------------------- */}
       {activeMainTab === "table" && (
-        <div className="card bg-base-100 shadow-xl border border-base-200/80 rounded-3xl overflow-hidden space-y-4 p-6">
+        <div className="card bg-base-200 shadow-md rounded-3xl overflow-hidden space-y-4 p-6">
           {/* Table Header Row */}
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-base-200/80 pb-4">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-base-300 pb-4">
             <div>
               <div className="flex items-center gap-2">
                 <TableProperties className="text-primary w-5 h-5" />
@@ -1108,9 +1122,9 @@ export default function StocksDashboard({
           </div>
 
           {/* Table Container */}
-          <div className="overflow-x-auto rounded-2xl border border-base-300/60 max-h-[580px] [scrollbar-width:thin]">
+          <div className="overflow-x-auto rounded-2xl border border-base-300 max-h-[580px] [scrollbar-width:thin] bg-base-100">
             <table className="table table-zebra table-sm w-full text-xs">
-              <thead className="bg-base-200/80 text-base-content/70 sticky top-0 z-10 backdrop-blur-md">
+              <thead className="bg-base-200 text-base-content/70 sticky top-0 z-10 backdrop-blur-md">
                 <tr>
                   <th className="font-extrabold uppercase text-[10px] w-12 text-center">#</th>
 

@@ -924,12 +924,14 @@ export default function InvTableView() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {/* 1. BANK BALANCE CARD */}
-                <div className="card bg-base-100 shadow-md border border-base-200/80 p-5 rounded-3xl relative overflow-hidden group hover:shadow-xl">
-                  <div className="flex items-start justify-between gap-2 mb-3">
-                    <div className="flex items-center gap-2.5">
-                      <div className={`w-11 h-11 rounded-2xl flex items-center justify-center font-bold border ${ASSET_THEMES.bank.bgLight}`}>
-                        <Landmark size={22} />
-                      </div>
+                <div className="card bg-base-200 shadow-md p-5 rounded-3xl relative overflow-hidden group hover:shadow-xl">
+                  {/* Light Background Watermark Icon */}
+                  <div className="absolute -right-3 top-0 bottom-0 flex items-center pointer-events-none group-hover:scale-105 group-hover:-rotate-3 transition-transform duration-500 text-emerald-500/[0.06] dark:text-emerald-400/[0.07]">
+                    <Landmark className="h-[115%] w-auto aspect-square" strokeWidth={1.2} />
+                  </div>
+
+                  <div className="relative z-10">
+                    <div className="flex items-start justify-between gap-2 mb-3">
                       <div>
                         <h4 className="font-extrabold text-sm sm:text-base text-base-content">
                           Bank Balance
@@ -938,50 +940,52 @@ export default function InvTableView() {
                           {ASSET_THEMES.bank.category}
                         </span>
                       </div>
+                      <span className="badge badge-sm font-mono font-bold bg-emerald-500/10 text-emerald-600 border-emerald-500/20">
+                        {assetShares.bank}%
+                      </span>
                     </div>
-                    <span className="badge badge-sm font-mono font-bold bg-emerald-500/10 text-emerald-600 border-emerald-500/20">
-                      {assetShares.bank}%
-                    </span>
-                  </div>
 
-                  <div className="space-y-1 mb-4">
-                    <div className="text-xl sm:text-2xl font-black font-mono text-emerald-600 dark:text-emerald-400">
-                      {hideNumbers ? "••••••" : `₹${formatCurrency2Dec(bankMetrics.total)}`}
+                    <div className="space-y-1 mb-4">
+                      <div className="text-xl sm:text-2xl font-black font-mono text-emerald-600 dark:text-emerald-400">
+                        {hideNumbers ? "••••••" : `₹${formatCurrency2Dec(bankMetrics.total)}`}
+                      </div>
+                      <div className="text-xs text-base-content/60 flex items-center gap-1.5">
+                        <span>{bankMetrics.count} bank/wallet accounts</span>
+                      </div>
                     </div>
-                    <div className="text-xs text-base-content/60 flex items-center gap-1.5">
-                      <span>{bankMetrics.count} bank/wallet accounts</span>
+
+                    {/* Proportion bar */}
+                    <div className="w-full bg-base-100 rounded-full h-1.5 mb-4 overflow-hidden border border-base-300/40">
+                      <div
+                        className="bg-emerald-500 h-1.5 rounded-full"
+                        style={{ width: `${Math.min(100, assetShares.bank)}%` }}
+                      />
                     </div>
-                  </div>
 
-                  {/* Proportion bar */}
-                  <div className="w-full bg-base-200 rounded-full h-1.5 mb-4 overflow-hidden">
-                    <div
-                      className="bg-emerald-500 h-1.5 rounded-full"
-                      style={{ width: `${Math.min(100, assetShares.bank)}%` }}
-                    />
-                  </div>
-
-                  <div className="pt-3 border-t border-base-200/60 flex items-center justify-between text-xs">
-                    <span className="text-base-content/50 text-[11px]">
-                      Primary: {bankMetrics.primarySource}
-                    </span>
-                    <Link
-                      to={ASSET_THEMES.bank.link}
-                      className="text-primary font-bold hover:underline flex items-center gap-1 text-[11px]"
-                    >
-                      <span>Manage</span>
-                      <ExternalLink size={11} />
-                    </Link>
+                    <div className="pt-3 border-t border-base-300 flex items-center justify-between text-xs">
+                      <span className="text-base-content/50 text-[11px]">
+                        Primary: {bankMetrics.primarySource}
+                      </span>
+                      <Link
+                        to={ASSET_THEMES.bank.link}
+                        className="text-primary font-bold hover:underline flex items-center gap-1 text-[11px]"
+                      >
+                        <span>Manage</span>
+                        <ExternalLink size={11} />
+                      </Link>
+                    </div>
                   </div>
                 </div>
 
                 {/* 2. DEMAT / STOCKS AMOUNT CARD */}
-                <div className="card bg-base-100 shadow-md border border-base-200/80 p-5 rounded-3xl relative overflow-hidden group hover:shadow-xl">
-                  <div className="flex items-start justify-between gap-2 mb-3">
-                    <div className="flex items-center gap-2.5">
-                      <div className={`w-11 h-11 rounded-2xl flex items-center justify-center font-bold border ${ASSET_THEMES.demat.bgLight}`}>
-                        <TrendingUp size={22} />
-                      </div>
+                <div className="card bg-base-200 shadow-md p-5 rounded-3xl relative overflow-hidden group hover:shadow-xl">
+                  {/* Light Background Watermark Icon */}
+                  <div className="absolute -right-3 top-0 bottom-0 flex items-center pointer-events-none group-hover:scale-105 group-hover:-rotate-3 transition-transform duration-500 text-blue-500/[0.06] dark:text-blue-400/[0.07]">
+                    <TrendingUp className="h-[115%] w-auto aspect-square" strokeWidth={1.2} />
+                  </div>
+
+                  <div className="relative z-10">
+                    <div className="flex items-start justify-between gap-2 mb-3">
                       <div>
                         <h4 className="font-extrabold text-sm sm:text-base text-base-content">
                           Demat Amount
@@ -990,52 +994,54 @@ export default function InvTableView() {
                           {ASSET_THEMES.demat.category}
                         </span>
                       </div>
+                      <span className="badge badge-sm font-mono font-bold bg-blue-500/10 text-blue-600 border-blue-500/20">
+                        {assetShares.demat}%
+                      </span>
                     </div>
-                    <span className="badge badge-sm font-mono font-bold bg-blue-500/10 text-blue-600 border-blue-500/20">
-                      {assetShares.demat}%
-                    </span>
-                  </div>
 
-                  <div className="space-y-1 mb-4">
-                    <div className="text-xl sm:text-2xl font-black font-mono text-blue-600 dark:text-blue-400">
-                      {hideNumbers ? "••••••" : `₹${formatCurrency2Dec(dematMetrics.total)}`}
+                    <div className="space-y-1 mb-4">
+                      <div className="text-xl sm:text-2xl font-black font-mono text-blue-600 dark:text-blue-400">
+                        {hideNumbers ? "••••••" : `₹${formatCurrency2Dec(dematMetrics.total)}`}
+                      </div>
+                      <div className="text-xs text-base-content/60 flex items-center gap-1.5">
+                        <span>{dematMetrics.holdingsCount} stocks holding</span>
+                        <span>•</span>
+                        <span>{dematMetrics.totalShares} total shares</span>
+                      </div>
                     </div>
-                    <div className="text-xs text-base-content/60 flex items-center gap-1.5">
-                      <span>{dematMetrics.holdingsCount} stocks holding</span>
-                      <span>•</span>
-                      <span>{dematMetrics.totalShares} total shares</span>
+
+                    {/* Proportion bar */}
+                    <div className="w-full bg-base-100 rounded-full h-1.5 mb-4 overflow-hidden border border-base-300/40">
+                      <div
+                        className="bg-blue-500 h-1.5 rounded-full"
+                        style={{ width: `${Math.min(100, assetShares.demat)}%` }}
+                      />
                     </div>
-                  </div>
 
-                  {/* Proportion bar */}
-                  <div className="w-full bg-base-200 rounded-full h-1.5 mb-4 overflow-hidden">
-                    <div
-                      className="bg-blue-500 h-1.5 rounded-full"
-                      style={{ width: `${Math.min(100, assetShares.demat)}%` }}
-                    />
-                  </div>
-
-                  <div className="pt-3 border-t border-base-200/60 flex items-center justify-between text-xs">
-                    <span className="text-base-content/50 text-[11px]">
-                      Equity Holdings
-                    </span>
-                    <Link
-                      to={ASSET_THEMES.demat.link}
-                      className="text-primary font-bold hover:underline flex items-center gap-1 text-[11px]"
-                    >
-                      <span>Trades</span>
-                      <ExternalLink size={11} />
-                    </Link>
+                    <div className="pt-3 border-t border-base-300 flex items-center justify-between text-xs">
+                      <span className="text-base-content/50 text-[11px]">
+                        Equity Holdings
+                      </span>
+                      <Link
+                        to={ASSET_THEMES.demat.link}
+                        className="text-primary font-bold hover:underline flex items-center gap-1 text-[11px]"
+                      >
+                        <span>Trades</span>
+                        <ExternalLink size={11} />
+                      </Link>
+                    </div>
                   </div>
                 </div>
 
                 {/* 3. CURRENT FD CARD */}
-                <div className="card bg-base-100 shadow-md border border-base-200/80 p-5 rounded-3xl relative overflow-hidden group hover:shadow-xl">
-                  <div className="flex items-start justify-between gap-2 mb-3">
-                    <div className="flex items-center gap-2.5">
-                      <div className={`w-11 h-11 rounded-2xl flex items-center justify-center font-bold border ${ASSET_THEMES.fd.bgLight}`}>
-                        <ShieldCheck size={22} />
-                      </div>
+                <div className="card bg-base-200 shadow-md p-5 rounded-3xl relative overflow-hidden group hover:shadow-xl">
+                  {/* Light Background Watermark Icon */}
+                  <div className="absolute -right-3 top-0 bottom-0 flex items-center pointer-events-none group-hover:scale-105 group-hover:-rotate-3 transition-transform duration-500 text-amber-500/[0.06] dark:text-amber-400/[0.07]">
+                    <ShieldCheck className="h-[115%] w-auto aspect-square" strokeWidth={1.2} />
+                  </div>
+
+                  <div className="relative z-10">
+                    <div className="flex items-start justify-between gap-2 mb-3">
                       <div>
                         <h4 className="font-extrabold text-sm sm:text-base text-base-content">
                           Fixed Deposits (FD)
@@ -1044,52 +1050,54 @@ export default function InvTableView() {
                           {ASSET_THEMES.fd.category}
                         </span>
                       </div>
+                      <span className="badge badge-sm font-mono font-bold bg-amber-500/10 text-amber-600 border-amber-500/20">
+                        {assetShares.fd}%
+                      </span>
                     </div>
-                    <span className="badge badge-sm font-mono font-bold bg-amber-500/10 text-amber-600 border-amber-500/20">
-                      {assetShares.fd}%
-                    </span>
-                  </div>
 
-                  <div className="space-y-1 mb-4">
-                    <div className="text-xl sm:text-2xl font-black font-mono text-amber-600 dark:text-amber-400">
-                      {hideNumbers ? "••••••" : `₹${formatCurrency2Dec(fdMetrics.total)}`}
+                    <div className="space-y-1 mb-4">
+                      <div className="text-xl sm:text-2xl font-black font-mono text-amber-600 dark:text-amber-400">
+                        {hideNumbers ? "••••••" : `₹${formatCurrency2Dec(fdMetrics.total)}`}
+                      </div>
+                      <div className="text-xs text-base-content/60 flex items-center gap-1.5">
+                        <span>{fdMetrics.count} active deposits</span>
+                        <span>•</span>
+                        <span>Maturity: {hideNumbers ? "••••" : formatCurrencyCompact(fdMetrics.maturityTotal)}</span>
+                      </div>
                     </div>
-                    <div className="text-xs text-base-content/60 flex items-center gap-1.5">
-                      <span>{fdMetrics.count} active deposits</span>
-                      <span>•</span>
-                      <span>Maturity: {hideNumbers ? "••••" : formatCurrencyCompact(fdMetrics.maturityTotal)}</span>
+
+                    {/* Proportion bar */}
+                    <div className="w-full bg-base-100 rounded-full h-1.5 mb-4 overflow-hidden border border-base-300/40">
+                      <div
+                        className="bg-amber-500 h-1.5 rounded-full"
+                        style={{ width: `${Math.min(100, assetShares.fd)}%` }}
+                      />
                     </div>
-                  </div>
 
-                  {/* Proportion bar */}
-                  <div className="w-full bg-base-200 rounded-full h-1.5 mb-4 overflow-hidden">
-                    <div
-                      className="bg-amber-500 h-1.5 rounded-full"
-                      style={{ width: `${Math.min(100, assetShares.fd)}%` }}
-                    />
-                  </div>
-
-                  <div className="pt-3 border-t border-base-200/60 flex items-center justify-between text-xs">
-                    <span className="text-base-content/50 text-[11px]">
-                      Bank Term Yield
-                    </span>
-                    <Link
-                      to={ASSET_THEMES.fd.link}
-                      className="text-primary font-bold hover:underline flex items-center gap-1 text-[11px]"
-                    >
-                      <span>Deposits</span>
-                      <ExternalLink size={11} />
-                    </Link>
+                    <div className="pt-3 border-t border-base-300 flex items-center justify-between text-xs">
+                      <span className="text-base-content/50 text-[11px]">
+                        Bank Term Yield
+                      </span>
+                      <Link
+                        to={ASSET_THEMES.fd.link}
+                        className="text-primary font-bold hover:underline flex items-center gap-1 text-[11px]"
+                      >
+                        <span>Deposits</span>
+                        <ExternalLink size={11} />
+                      </Link>
+                    </div>
                   </div>
                 </div>
 
                 {/* 4. CURRENT RD CARD */}
-                <div className="card bg-base-100 shadow-md border border-base-200/80 p-5 rounded-3xl relative overflow-hidden group hover:shadow-xl">
-                  <div className="flex items-start justify-between gap-2 mb-3">
-                    <div className="flex items-center gap-2.5">
-                      <div className={`w-11 h-11 rounded-2xl flex items-center justify-center font-bold border ${ASSET_THEMES.rd.bgLight}`}>
-                        <PiggyBank size={22} />
-                      </div>
+                <div className="card bg-base-200 shadow-md p-5 rounded-3xl relative overflow-hidden group hover:shadow-xl">
+                  {/* Light Background Watermark Icon */}
+                  <div className="absolute -right-3 top-0 bottom-0 flex items-center pointer-events-none group-hover:scale-105 group-hover:-rotate-3 transition-transform duration-500 text-orange-500/[0.06] dark:text-orange-400/[0.07]">
+                    <PiggyBank className="h-[115%] w-auto aspect-square" strokeWidth={1.2} />
+                  </div>
+
+                  <div className="relative z-10">
+                    <div className="flex items-start justify-between gap-2 mb-3">
                       <div>
                         <h4 className="font-extrabold text-sm sm:text-base text-base-content">
                           Recurring Deposits (RD)
@@ -1098,50 +1106,52 @@ export default function InvTableView() {
                           {ASSET_THEMES.rd.category}
                         </span>
                       </div>
+                      <span className="badge badge-sm font-mono font-bold bg-orange-500/10 text-orange-600 border-orange-500/20">
+                        {assetShares.rd}%
+                      </span>
                     </div>
-                    <span className="badge badge-sm font-mono font-bold bg-orange-500/10 text-orange-600 border-orange-500/20">
-                      {assetShares.rd}%
-                    </span>
-                  </div>
 
-                  <div className="space-y-1 mb-4">
-                    <div className="text-xl sm:text-2xl font-black font-mono text-orange-600 dark:text-orange-400">
-                      {hideNumbers ? "••••••" : `₹${formatCurrency2Dec(rdMetrics.total)}`}
+                    <div className="space-y-1 mb-4">
+                      <div className="text-xl sm:text-2xl font-black font-mono text-orange-600 dark:text-orange-400">
+                        {hideNumbers ? "••••••" : `₹${formatCurrency2Dec(rdMetrics.total)}`}
+                      </div>
+                      <div className="text-xs text-base-content/60 flex items-center gap-1.5">
+                        <span>{rdMetrics.count} active recurring schemes</span>
+                      </div>
                     </div>
-                    <div className="text-xs text-base-content/60 flex items-center gap-1.5">
-                      <span>{rdMetrics.count} active recurring schemes</span>
+
+                    {/* Proportion bar */}
+                    <div className="w-full bg-base-100 rounded-full h-1.5 mb-4 overflow-hidden border border-base-300/40">
+                      <div
+                        className="bg-orange-500 h-1.5 rounded-full"
+                        style={{ width: `${Math.min(100, assetShares.rd)}%` }}
+                      />
                     </div>
-                  </div>
 
-                  {/* Proportion bar */}
-                  <div className="w-full bg-base-200 rounded-full h-1.5 mb-4 overflow-hidden">
-                    <div
-                      className="bg-orange-500 h-1.5 rounded-full"
-                      style={{ width: `${Math.min(100, assetShares.rd)}%` }}
-                    />
-                  </div>
-
-                  <div className="pt-3 border-t border-base-200/60 flex items-center justify-between text-xs">
-                    <span className="text-base-content/50 text-[11px]">
-                      Monthly Systematic
-                    </span>
-                    <Link
-                      to={ASSET_THEMES.rd.link}
-                      className="text-primary font-bold hover:underline flex items-center gap-1 text-[11px]"
-                    >
-                      <span>Installments</span>
-                      <ExternalLink size={11} />
-                    </Link>
+                    <div className="pt-3 border-t border-base-300 flex items-center justify-between text-xs">
+                      <span className="text-base-content/50 text-[11px]">
+                        Monthly Systematic
+                      </span>
+                      <Link
+                        to={ASSET_THEMES.rd.link}
+                        className="text-primary font-bold hover:underline flex items-center gap-1 text-[11px]"
+                      >
+                        <span>Installments</span>
+                        <ExternalLink size={11} />
+                      </Link>
+                    </div>
                   </div>
                 </div>
 
                 {/* 5. CURRENT MF CARD */}
-                <div className="card bg-base-100 shadow-md border border-base-200/80 p-5 rounded-3xl relative overflow-hidden group hover:shadow-xl">
-                  <div className="flex items-start justify-between gap-2 mb-3">
-                    <div className="flex items-center gap-2.5">
-                      <div className={`w-11 h-11 rounded-2xl flex items-center justify-center font-bold border ${ASSET_THEMES.mf.bgLight}`}>
-                        <PieChart size={22} />
-                      </div>
+                <div className="card bg-base-200 shadow-md p-5 rounded-3xl relative overflow-hidden group hover:shadow-xl">
+                  {/* Light Background Watermark Icon */}
+                  <div className="absolute -right-3 top-0 bottom-0 flex items-center pointer-events-none group-hover:scale-105 group-hover:-rotate-3 transition-transform duration-500 text-purple-500/[0.06] dark:text-purple-400/[0.07]">
+                    <PieChart className="h-[115%] w-auto aspect-square" strokeWidth={1.2} />
+                  </div>
+
+                  <div className="relative z-10">
+                    <div className="flex items-start justify-between gap-2 mb-3">
                       <div>
                         <h4 className="font-extrabold text-sm sm:text-base text-base-content">
                           Mutual Funds (MF)
@@ -1150,50 +1160,52 @@ export default function InvTableView() {
                           {ASSET_THEMES.mf.category}
                         </span>
                       </div>
+                      <span className="badge badge-sm font-mono font-bold bg-purple-500/10 text-purple-600 border-purple-500/20">
+                        {assetShares.mf}%
+                      </span>
                     </div>
-                    <span className="badge badge-sm font-mono font-bold bg-purple-500/10 text-purple-600 border-purple-500/20">
-                      {assetShares.mf}%
-                    </span>
-                  </div>
 
-                  <div className="space-y-1 mb-4">
-                    <div className="text-xl sm:text-2xl font-black font-mono text-purple-600 dark:text-purple-400">
-                      {hideNumbers ? "••••••" : `₹${formatCurrency2Dec(mfMetrics.total)}`}
+                    <div className="space-y-1 mb-4">
+                      <div className="text-xl sm:text-2xl font-black font-mono text-purple-600 dark:text-purple-400">
+                        {hideNumbers ? "••••••" : `₹${formatCurrency2Dec(mfMetrics.total)}`}
+                      </div>
+                      <div className="text-xs text-base-content/60 flex items-center gap-1.5">
+                        <span>{mfMetrics.count} active folios / schemes</span>
+                      </div>
                     </div>
-                    <div className="text-xs text-base-content/60 flex items-center gap-1.5">
-                      <span>{mfMetrics.count} active folios / schemes</span>
+
+                    {/* Proportion bar */}
+                    <div className="w-full bg-base-100 rounded-full h-1.5 mb-4 overflow-hidden border border-base-300/40">
+                      <div
+                        className="bg-purple-500 h-1.5 rounded-full"
+                        style={{ width: `${Math.min(100, assetShares.mf)}%` }}
+                      />
                     </div>
-                  </div>
 
-                  {/* Proportion bar */}
-                  <div className="w-full bg-base-200 rounded-full h-1.5 mb-4 overflow-hidden">
-                    <div
-                      className="bg-purple-500 h-1.5 rounded-full"
-                      style={{ width: `${Math.min(100, assetShares.mf)}%` }}
-                    />
-                  </div>
-
-                  <div className="pt-3 border-t border-base-200/60 flex items-center justify-between text-xs">
-                    <span className="text-base-content/50 text-[11px]">
-                      SIP & Lumpsum Corpus
-                    </span>
-                    <Link
-                      to={ASSET_THEMES.mf.link}
-                      className="text-primary font-bold hover:underline flex items-center gap-1 text-[11px]"
-                    >
-                      <span>Portfolios</span>
-                      <ExternalLink size={11} />
-                    </Link>
+                    <div className="pt-3 border-t border-base-300 flex items-center justify-between text-xs">
+                      <span className="text-base-content/50 text-[11px]">
+                        SIP & Lumpsum Corpus
+                      </span>
+                      <Link
+                        to={ASSET_THEMES.mf.link}
+                        className="text-primary font-bold hover:underline flex items-center gap-1 text-[11px]"
+                      >
+                        <span>Portfolios</span>
+                        <ExternalLink size={11} />
+                      </Link>
+                    </div>
                   </div>
                 </div>
 
                 {/* 6. CURRENT PF CARD */}
-                <div className="card bg-base-100 shadow-md border border-base-200/80 p-5 rounded-3xl relative overflow-hidden group hover:shadow-xl">
-                  <div className="flex items-start justify-between gap-2 mb-3">
-                    <div className="flex items-center gap-2.5">
-                      <div className={`w-11 h-11 rounded-2xl flex items-center justify-center font-bold border ${ASSET_THEMES.pf.bgLight}`}>
-                        <Percent size={22} />
-                      </div>
+                <div className="card bg-base-200 shadow-md p-5 rounded-3xl relative overflow-hidden group hover:shadow-xl">
+                  {/* Light Background Watermark Icon */}
+                  <div className="absolute -right-3 top-0 bottom-0 flex items-center pointer-events-none group-hover:scale-105 group-hover:-rotate-3 transition-transform duration-500 text-teal-500/[0.06] dark:text-teal-400/[0.07]">
+                    <Percent className="h-[115%] w-auto aspect-square" strokeWidth={1.2} />
+                  </div>
+
+                  <div className="relative z-10">
+                    <div className="flex items-start justify-between gap-2 mb-3">
                       <div>
                         <h4 className="font-extrabold text-sm sm:text-base text-base-content">
                           Provident Fund (PF)
@@ -1202,40 +1214,40 @@ export default function InvTableView() {
                           {ASSET_THEMES.pf.category}
                         </span>
                       </div>
+                      <span className="badge badge-sm font-mono font-bold bg-teal-500/10 text-teal-600 border-teal-500/20">
+                        {assetShares.pf}%
+                      </span>
                     </div>
-                    <span className="badge badge-sm font-mono font-bold bg-teal-500/10 text-teal-600 border-teal-500/20">
-                      {assetShares.pf}%
-                    </span>
-                  </div>
 
-                  <div className="space-y-1 mb-4">
-                    <div className="text-xl sm:text-2xl font-black font-mono text-teal-600 dark:text-teal-400">
-                      {hideNumbers ? "••••••" : `₹${formatCurrency2Dec(pfMetrics.total)}`}
+                    <div className="space-y-1 mb-4">
+                      <div className="text-xl sm:text-2xl font-black font-mono text-teal-600 dark:text-teal-400">
+                        {hideNumbers ? "••••••" : `₹${formatCurrency2Dec(pfMetrics.total)}`}
+                      </div>
+                      <div className="text-xs text-base-content/60 flex items-center gap-1.5">
+                        <span>{pfMetrics.monthsCount} monthly contributions</span>
+                      </div>
                     </div>
-                    <div className="text-xs text-base-content/60 flex items-center gap-1.5">
-                      <span>{pfMetrics.monthsCount} monthly contributions</span>
+
+                    {/* Proportion bar */}
+                    <div className="w-full bg-base-100 rounded-full h-1.5 mb-4 overflow-hidden border border-base-300/40">
+                      <div
+                        className="bg-teal-500 h-1.5 rounded-full"
+                        style={{ width: `${Math.min(100, assetShares.pf)}%` }}
+                      />
                     </div>
-                  </div>
 
-                  {/* Proportion bar */}
-                  <div className="w-full bg-base-200 rounded-full h-1.5 mb-4 overflow-hidden">
-                    <div
-                      className="bg-teal-500 h-1.5 rounded-full"
-                      style={{ width: `${Math.min(100, assetShares.pf)}%` }}
-                    />
-                  </div>
-
-                  <div className="pt-3 border-t border-base-200/60 flex items-center justify-between text-xs">
-                    <span className="text-base-content/50 text-[11px]">
-                      Retirement Safety Corpus
-                    </span>
-                    <Link
-                      to={ASSET_THEMES.pf.link}
-                      className="text-primary font-bold hover:underline flex items-center gap-1 text-[11px]"
-                    >
-                      <span>Ledger</span>
-                      <ExternalLink size={11} />
-                    </Link>
+                    <div className="pt-3 border-t border-base-300 flex items-center justify-between text-xs">
+                      <span className="text-base-content/50 text-[11px]">
+                        Retirement Safety Corpus
+                      </span>
+                      <Link
+                        to={ASSET_THEMES.pf.link}
+                        className="text-primary font-bold hover:underline flex items-center gap-1 text-[11px]"
+                      >
+                        <span>Ledger</span>
+                        <ExternalLink size={11} />
+                      </Link>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1246,7 +1258,7 @@ export default function InvTableView() {
             {/* ============================================================ */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
               {/* Left: Horizontal 100% Stacked Graph Card (6 cols) */}
-              <div className="lg:col-span-6 card bg-base-100 shadow-xl border border-base-200/80 rounded-3xl p-6 flex flex-col justify-between space-y-4">
+              <div className="lg:col-span-6 card bg-base-200 shadow-md rounded-3xl p-6 flex flex-col justify-between space-y-4">
                 <div>
                   <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
                     <div className="flex items-center gap-2.5">
@@ -1282,7 +1294,7 @@ export default function InvTableView() {
                 {/* Custom Legend Chips Grid */}
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 pt-2">
                   {/* Bank */}
-                  <div className="bg-base-200/50 p-2.5 rounded-2xl border border-base-300/40 text-xs space-y-0.5">
+                  <div className="bg-base-100 p-2.5 rounded-2xl border border-base-300 text-xs space-y-0.5">
                     <div className="flex items-center gap-1.5">
                       <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0" />
                       <span className="font-bold text-base-content/70 truncate">Bank Balance</span>
@@ -1296,7 +1308,7 @@ export default function InvTableView() {
                   </div>
 
                   {/* Demat */}
-                  <div className="bg-base-200/50 p-2.5 rounded-2xl border border-base-300/40 text-xs space-y-0.5">
+                  <div className="bg-base-100 p-2.5 rounded-2xl border border-base-300 text-xs space-y-0.5">
                     <div className="flex items-center gap-1.5">
                       <span className="w-2.5 h-2.5 rounded-full bg-blue-500 shrink-0" />
                       <span className="font-bold text-base-content/70 truncate">Demat Holdings</span>
@@ -1310,7 +1322,7 @@ export default function InvTableView() {
                   </div>
 
                   {/* FD */}
-                  <div className="bg-base-200/50 p-2.5 rounded-2xl border border-base-300/40 text-xs space-y-0.5">
+                  <div className="bg-base-100 p-2.5 rounded-2xl border border-base-300 text-xs space-y-0.5">
                     <div className="flex items-center gap-1.5">
                       <span className="w-2.5 h-2.5 rounded-full bg-amber-500 shrink-0" />
                       <span className="font-bold text-base-content/70 truncate">Fixed Deposits</span>
@@ -1324,7 +1336,7 @@ export default function InvTableView() {
                   </div>
 
                   {/* RD */}
-                  <div className="bg-base-200/50 p-2.5 rounded-2xl border border-base-300/40 text-xs space-y-0.5">
+                  <div className="bg-base-100 p-2.5 rounded-2xl border border-base-300 text-xs space-y-0.5">
                     <div className="flex items-center gap-1.5">
                       <span className="w-2.5 h-2.5 rounded-full bg-orange-500 shrink-0" />
                       <span className="font-bold text-base-content/70 truncate">Recurring Deposits</span>
@@ -1338,7 +1350,7 @@ export default function InvTableView() {
                   </div>
 
                   {/* MF */}
-                  <div className="bg-base-200/50 p-2.5 rounded-2xl border border-base-300/40 text-xs space-y-0.5">
+                  <div className="bg-base-100 p-2.5 rounded-2xl border border-base-300 text-xs space-y-0.5">
                     <div className="flex items-center gap-1.5">
                       <span className="w-2.5 h-2.5 rounded-full bg-purple-500 shrink-0" />
                       <span className="font-bold text-base-content/70 truncate">Mutual Funds</span>
@@ -1352,7 +1364,7 @@ export default function InvTableView() {
                   </div>
 
                   {/* PF */}
-                  <div className="bg-base-200/50 p-2.5 rounded-2xl border border-base-300/40 text-xs space-y-0.5">
+                  <div className="bg-base-100 p-2.5 rounded-2xl border border-base-300 text-xs space-y-0.5">
                     <div className="flex items-center gap-1.5">
                       <span className="w-2.5 h-2.5 rounded-full bg-teal-500 shrink-0" />
                       <span className="font-bold text-base-content/70 truncate">Provident Fund</span>
@@ -1382,8 +1394,8 @@ export default function InvTableView() {
             {/* ============================================================ */}
             {/* 3. CONSOLIDATED PORTFOLIO SUMMARY TABLE (SORTABLE)           */}
             {/* ============================================================ */}
-            <div className="card bg-base-100 shadow-xl border border-base-200/80 rounded-3xl overflow-hidden">
-              <div className="p-5 border-b border-base-200 flex items-center justify-between flex-wrap gap-2">
+            <div className="card bg-base-200 shadow-md rounded-3xl overflow-hidden">
+              <div className="p-5 border-b border-base-300 flex items-center justify-between flex-wrap gap-2">
                 <div className="flex items-center gap-2">
                   <TableProperties size={18} className="text-primary" />
                   <div>
@@ -1396,7 +1408,7 @@ export default function InvTableView() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="badge badge-sm font-mono font-bold bg-base-200">
+                  <span className="badge badge-sm font-mono font-bold bg-base-100">
                     Sorted by: {tableSortColumn} ({tableSortDirection.toUpperCase()})
                   </span>
                   <span className="text-xs text-base-content/50 hidden sm:inline">
@@ -1405,9 +1417,9 @@ export default function InvTableView() {
                 </div>
               </div>
 
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto bg-base-100">
                 <table className="table table-sm w-full text-xs">
-                  <thead className="bg-base-200/60 text-base-content/70 select-none">
+                  <thead className="bg-base-200 text-base-content/70 select-none border-b border-base-300">
                     <tr>
                       {/* 1. Asset Class */}
                       <th

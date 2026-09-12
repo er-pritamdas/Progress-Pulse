@@ -204,6 +204,16 @@ export default function InvDashboard() {
     return localStorage.getItem("pulse_inv_dash_theme") || "emerald";
   });
 
+  // Salary Component Distribution View: "earnings" | "deductions" | "overview" (persisted in localStorage)
+  const [salaryComponentView, setSalaryComponentView] = useState(() => {
+    return localStorage.getItem("pulse_inv_dash_salary_comp_view") || "earnings";
+  });
+
+  // Active date preset: "all" | "this_year" | "last_12" | "last_6" | "custom"
+  const [activePreset, setActivePreset] = useState(() => {
+    return localStorage.getItem("pulse_inv_dash_date_preset") || "all";
+  });
+
   // Filter states: Default is current year (Jan to Dec), with user preferences stored in localStorage
   const [selectedCompany, setSelectedCompany] = useState(() => {
     return localStorage.getItem("pulse_inv_dash_company") || "all";
@@ -225,6 +235,14 @@ export default function InvDashboard() {
   useEffect(() => {
     if (activeDashboard) localStorage.setItem("pulse_inv_dash_active_view", activeDashboard);
   }, [activeDashboard]);
+
+  useEffect(() => {
+    if (salaryComponentView) localStorage.setItem("pulse_inv_dash_salary_comp_view", salaryComponentView);
+  }, [salaryComponentView]);
+
+  useEffect(() => {
+    if (activePreset) localStorage.setItem("pulse_inv_dash_date_preset", activePreset);
+  }, [activePreset]);
 
   useEffect(() => {
     if (stockSubView) localStorage.setItem("pulse_inv_dash_stock_view", stockSubView);
@@ -344,6 +362,7 @@ export default function InvDashboard() {
 
   // Quick Range Selection Handlers
   const handleQuickRange = (type) => {
+    setActivePreset(type);
     const currentY = dayjs().format("YYYY");
     const currentM = dayjs().format("MM");
 
@@ -541,8 +560,93 @@ export default function InvDashboard() {
     return SALARY_COLOR_THEMES.find((t) => t.id === selectedTheme) || SALARY_COLOR_THEMES[0];
   }, [selectedTheme]);
 
-  // ApexCharts Series Data
+  // Dynamic Chart Colors based on Salary Component View
+  const chartColors = useMemo(() => {
+    if (salaryComponentView === "earnings") {
+      const colors = ["#10b981", "#06b6d4", "#3b82f6"]; // Basic (Emerald), HRA (Cyan), Flexi (Blue)
+      if (monthlyPlotData.some((m) => m.bonus > 0)) colors.push("#f59e0b"); // Bonus (Amber)
+      if (monthlyPlotData.some((m) => m.variablePay > 0)) colors.push("#8b5cf6"); // Variable Pay (Purple)
+      if (monthlyPlotData.some((m) => m.gratuity > 0)) colors.push("#ec4899"); // Gratuity (Pink)
+      colors.push("#10b981"); // Total Earnings trend line
+      return colors;
+    }
+    if (salaryComponentView === "deductions") {
+      return ["#f97316", "#ef4444", "#f43f5e"]; // PF (Orange), Taxes (Red), Total Deductions line (Rose)
+    }
+    // Overview (In-Hand vs Deductions)
+    return ["#10b981", "#ef4444", "#38bdf8"]; // In-Hand (Emerald), Deductions (Red), Total CTC (Sky)
+  }, [salaryComponentView, monthlyPlotData]);
+
+  // ApexCharts Series Data based on Component Distribution
   const apexSeries = useMemo(() => {
+    if (salaryComponentView === "earnings") {
+      const series = [
+        {
+          name: "Basic Salary",
+          type: "bar",
+          data: monthlyPlotData.map((m) => m.basic),
+        },
+        {
+          name: "HRA",
+          type: "bar",
+          data: monthlyPlotData.map((m) => m.hra),
+        },
+        {
+          name: "Flexi / Allowances",
+          type: "bar",
+          data: monthlyPlotData.map((m) => m.flexi),
+        },
+      ];
+      if (monthlyPlotData.some((m) => m.bonus > 0)) {
+        series.push({
+          name: "Bonus & Incentives",
+          type: "bar",
+          data: monthlyPlotData.map((m) => m.bonus),
+        });
+      }
+      if (monthlyPlotData.some((m) => m.variablePay > 0)) {
+        series.push({
+          name: "Variable Pay",
+          type: "bar",
+          data: monthlyPlotData.map((m) => m.variablePay),
+        });
+      }
+      if (monthlyPlotData.some((m) => m.gratuity > 0)) {
+        series.push({
+          name: "Gratuity",
+          type: "bar",
+          data: monthlyPlotData.map((m) => m.gratuity),
+        });
+      }
+      series.push({
+        name: "Total Earnings",
+        type: "line",
+        data: monthlyPlotData.map((m) => m.earnings),
+      });
+      return series;
+    }
+
+    if (salaryComponentView === "deductions") {
+      return [
+        {
+          name: "Employer PF",
+          type: "bar",
+          data: monthlyPlotData.map((m) => m.erPf),
+        },
+        {
+          name: "Taxes & Statutory",
+          type: "bar",
+          data: monthlyPlotData.map((m) => m.taxes),
+        },
+        {
+          name: "Total Deductions",
+          type: "line",
+          data: monthlyPlotData.map((m) => m.deductions),
+        },
+      ];
+    }
+
+    // Default: "overview"
     return [
       {
         name: "In Hand Salary",
@@ -560,12 +664,13 @@ export default function InvDashboard() {
         data: monthlyPlotData.map((m) => m.ctc),
       },
     ];
-  }, [monthlyPlotData]);
+  }, [monthlyPlotData, salaryComponentView]);
 
-  // ApexCharts Options mirroring the Expense Dashboard Sub-Category Chart
+  // ApexCharts Options for Salary Breakdown
   const apexOptions = useMemo(() => {
-    const themeColor = currentThemeObj.hex;
-    const lineTrendColor = "#38bdf8"; // Sky Blue for CTC line
+    const strokeWidths = apexSeries.map((s) => (s.type === "line" ? 2.5 : 0));
+    const fillOpacities = apexSeries.map((s) => (s.type === "line" ? 1 : 0.88));
+    const markerSizes = apexSeries.map((s) => (s.type === "line" ? 4.5 : 0));
 
     return {
       chart: {
@@ -582,16 +687,14 @@ export default function InvDashboard() {
           speed: 700,
         },
       },
-      // Same base color for In Hand and Deductions, with Sky Blue for CTC line!
-      colors: [themeColor, themeColor, lineTrendColor],
+      colors: chartColors,
       stroke: {
-        width: [0, 0, 2.5], // 0 for stacked bars, 2.5 for smooth CTC trend line
+        width: strokeWidths,
         curve: "smooth",
-        dashArray: [0, 0, 0],
+        dashArray: strokeWidths.map(() => 0),
       },
       fill: {
-        // EXACT REQUIREMENT: In Hand has full opacity, Total Deductions has lower opacity!
-        opacity: [0.95, 0.35, 1],
+        opacity: fillOpacities,
       },
       plotOptions: {
         bar: {
@@ -606,7 +709,7 @@ export default function InvDashboard() {
         enabled: false,
       },
       markers: {
-        size: [0, 0, 4.5], // Subtle markers on the CTC line
+        size: markerSizes,
         strokeColor: "#1e293b",
         strokeWidth: 2,
         hover: { size: 7 },
@@ -617,7 +720,7 @@ export default function InvDashboard() {
         horizontalAlign: "center",
         labels: { colors: "#FFFFFF" },
         markers: {
-          fillColors: [themeColor, themeColor, lineTrendColor],
+          fillColors: chartColors,
           radius: 12,
         },
         itemMargin: { horizontal: 14, vertical: 8 },
@@ -644,7 +747,12 @@ export default function InvDashboard() {
       yaxis: [
         {
           title: {
-            text: "Salary & Compensation (₹)",
+            text:
+              salaryComponentView === "earnings"
+                ? "Earnings Components (₹)"
+                : salaryComponentView === "deductions"
+                ? "Deductions (₹)"
+                : "Salary & Compensation (₹)",
             style: { color: "#FFFFFF", fontSize: "11px", fontWeight: "700" },
           },
           labels: {
@@ -671,6 +779,121 @@ export default function InvDashboard() {
 
           const monthLabel = item.monthLabel;
           const companyStr = item.companies.join(", ") || "Company";
+
+          if (salaryComponentView === "earnings") {
+            return `
+              <div class="space-y-3 min-w-[280px] text-xs text-base-content" style="background: rgba(15, 23, 42, 0.88); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.20); padding: 14px 18px; border-radius: 18px; box-shadow: 0 20px 30px -8px rgba(0, 0, 0, 0.45); font-size: 12px; font-family: inherit; color: #f8fafc;">
+                <div style="border-bottom: 1px solid rgba(255, 255, 255, 0.12); padding-bottom: 8px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
+                  <div>
+                    <span style="font-weight: 800; font-size: 13.5px; color: #ffffff; display: block;">${monthLabel}</span>
+                    <span style="font-size: 10.5px; opacity: 0.75; color: #cbd5e1;">${companyStr}</span>
+                  </div>
+                  <span style="background: rgba(16, 185, 129, 0.25); border: 1px solid rgba(16, 185, 129, 0.45); color: #34d399; font-weight: 700; font-size: 10.5px; padding: 2.5px 8px; border-radius: 9999px;">
+                    Earnings: ₹${formatCurrency2Dec(item.earnings)}
+                  </span>
+                </div>
+
+                <div style="display: flex; flex-direction: column; gap: 6px; font-weight: 500;">
+                  <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="display: flex; align-items: center; gap: 7px; color: #e2e8f0;">
+                      <span style="width: 8px; height: 8px; border-radius: 50%; background: #10b981; display: inline-block;"></span>
+                      Basic Salary:
+                    </span>
+                    <span style="font-family: monospace; font-weight: 700; color: #f1f5f9;">₹${formatCurrency2Dec(item.basic)}</span>
+                  </div>
+
+                  <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="display: flex; align-items: center; gap: 7px; color: #e2e8f0;">
+                      <span style="width: 8px; height: 8px; border-radius: 50%; background: #06b6d4; display: inline-block;"></span>
+                      HRA:
+                    </span>
+                    <span style="font-family: monospace; font-weight: 700; color: #f1f5f9;">₹${formatCurrency2Dec(item.hra)}</span>
+                  </div>
+
+                  <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="display: flex; align-items: center; gap: 7px; color: #e2e8f0;">
+                      <span style="width: 8px; height: 8px; border-radius: 50%; background: #3b82f6; display: inline-block;"></span>
+                      Flexi / Allowances:
+                    </span>
+                    <span style="font-family: monospace; font-weight: 700; color: #f1f5f9;">₹${formatCurrency2Dec(item.flexi)}</span>
+                  </div>
+
+                  ${item.bonus > 0 ? `
+                  <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="display: flex; align-items: center; gap: 7px; color: #e2e8f0;">
+                      <span style="width: 8px; height: 8px; border-radius: 50%; background: #f59e0b; display: inline-block;"></span>
+                      Bonus:
+                    </span>
+                    <span style="font-family: monospace; font-weight: 700; color: #f59e0b;">₹${formatCurrency2Dec(item.bonus)}</span>
+                  </div>` : ""}
+
+                  ${item.variablePay > 0 ? `
+                  <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="display: flex; align-items: center; gap: 7px; color: #e2e8f0;">
+                      <span style="width: 8px; height: 8px; border-radius: 50%; background: #8b5cf6; display: inline-block;"></span>
+                      Variable Pay:
+                    </span>
+                    <span style="font-family: monospace; font-weight: 700; color: #c084fc;">₹${formatCurrency2Dec(item.variablePay)}</span>
+                  </div>` : ""}
+
+                  ${item.gratuity > 0 ? `
+                  <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="display: flex; align-items: center; gap: 7px; color: #e2e8f0;">
+                      <span style="width: 8px; height: 8px; border-radius: 50%; background: #ec4899; display: inline-block;"></span>
+                      Gratuity:
+                    </span>
+                    <span style="font-family: monospace; font-weight: 700; color: #f472b6;">₹${formatCurrency2Dec(item.gratuity)}</span>
+                  </div>` : ""}
+                </div>
+
+                <div style="border-top: 1px solid rgba(255, 255, 255, 0.12); margin-top: 6px; padding-top: 6px; display: flex; justify-content: space-between; font-weight: 700;">
+                  <span style="color: #94a3b8; font-size: 11px;">Total CTC:</span>
+                  <span style="font-family: monospace; color: #38bdf8;">₹${formatCurrency2Dec(item.ctc)}</span>
+                </div>
+              </div>
+            `;
+          }
+
+          if (salaryComponentView === "deductions") {
+            return `
+              <div class="space-y-3 min-w-[280px] text-xs text-base-content" style="background: rgba(15, 23, 42, 0.88); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.20); padding: 14px 18px; border-radius: 18px; box-shadow: 0 20px 30px -8px rgba(0, 0, 0, 0.45); font-size: 12px; font-family: inherit; color: #f8fafc;">
+                <div style="border-bottom: 1px solid rgba(255, 255, 255, 0.12); padding-bottom: 8px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
+                  <div>
+                    <span style="font-weight: 800; font-size: 13.5px; color: #ffffff; display: block;">${monthLabel}</span>
+                    <span style="font-size: 10.5px; opacity: 0.75; color: #cbd5e1;">${companyStr}</span>
+                  </div>
+                  <span style="background: rgba(239, 68, 68, 0.25); border: 1px solid rgba(239, 68, 68, 0.45); color: #f87171; font-weight: 700; font-size: 10.5px; padding: 2.5px 8px; border-radius: 9999px;">
+                    Deductions: ₹${formatCurrency2Dec(item.deductions)}
+                  </span>
+                </div>
+
+                <div style="display: flex; flex-direction: column; gap: 6px; font-weight: 500;">
+                  <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="display: flex; align-items: center; gap: 7px; color: #e2e8f0;">
+                      <span style="width: 8px; height: 8px; border-radius: 50%; background: #f97316; display: inline-block;"></span>
+                      Employer PF:
+                    </span>
+                    <span style="font-family: monospace; font-weight: 700; color: #fb923c;">₹${formatCurrency2Dec(item.erPf)}</span>
+                  </div>
+
+                  <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="display: flex; align-items: center; gap: 7px; color: #e2e8f0;">
+                      <span style="width: 8px; height: 8px; border-radius: 50%; background: #ef4444; display: inline-block;"></span>
+                      Taxes & Statutory:
+                    </span>
+                    <span style="font-family: monospace; font-weight: 700; color: #f87171;">₹${formatCurrency2Dec(item.taxes)}</span>
+                  </div>
+                </div>
+
+                <div style="border-top: 1px solid rgba(255, 255, 255, 0.12); margin-top: 6px; padding-top: 6px; display: flex; justify-content: space-between; font-weight: 700;">
+                  <span style="color: #94a3b8; font-size: 11px;">In Hand Salary:</span>
+                  <span style="font-family: monospace; color: #34d399;">₹${formatCurrency2Dec(item.inHand)}</span>
+                </div>
+              </div>
+            `;
+          }
+
+          // Overview tooltip
           const inHand = item.inHand;
           const deductions = item.deductions;
           const gross = item.gross;
@@ -680,7 +903,7 @@ export default function InvDashboard() {
           const takeHomePct = gross > 0 ? ((inHand / gross) * 100).toFixed(1) : "0.0";
 
           return `
-            <div class="space-y-3 min-w-[270px] text-xs text-base-content" style="background: rgba(15, 23, 42, 0.65); backdrop-filter: blur(16px) saturate(180%); -webkit-backdrop-filter: blur(16px) saturate(180%); border: 1px solid rgba(255, 255, 255, 0.20); padding: 14px 18px; border-radius: 18px; box-shadow: 0 20px 30px -8px rgba(0, 0, 0, 0.45); min-width: 270px; font-size: 12px; font-family: inherit; color: #f8fafc;">
+            <div class="space-y-3 min-w-[270px] text-xs text-base-content" style="background: rgba(15, 23, 42, 0.88); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.20); padding: 14px 18px; border-radius: 18px; box-shadow: 0 20px 30px -8px rgba(0, 0, 0, 0.45); min-width: 270px; font-size: 12px; font-family: inherit; color: #f8fafc;">
               <div class="border-b pb-2 flex justify-between items-center" style="border-bottom: 1px solid rgba(255, 255, 255, 0.12); padding-bottom: 8px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
                 <div>
                   <span class="font-extrabold text-sm text-white block" style="font-weight: 800; font-size: 13.5px; color: #ffffff;">${monthLabel}</span>
@@ -695,16 +918,16 @@ export default function InvDashboard() {
                 <!-- In Hand Salary -->
                 <div class="flex justify-between items-center gap-4" style="display: flex; justify-content: space-between; align-items: center; gap: 16px;">
                   <span class="flex items-center gap-1.5 truncate" style="display: flex; align-items: center; gap: 7px; font-size: 11.5px; color: #e2e8f0;">
-                    <span class="w-2.5 h-2.5 rounded-full inline-block shrink-0" style="width: 10px; height: 10px; border-radius: 50%; background-color: ${themeColor}; display: inline-block; flex-shrink: 0; box-shadow: 0 0 8px ${themeColor}88;"></span>
+                    <span class="w-2.5 h-2.5 rounded-full inline-block shrink-0" style="width: 10px; height: 10px; border-radius: 50%; background-color: #10b981; display: inline-block; flex-shrink: 0; box-shadow: 0 0 8px #10b98188;"></span>
                     <span class="font-semibold">In Hand Salary:</span>
                   </span>
-                  <span class="font-mono font-extrabold" style="font-family: monospace; font-weight: 800; color: ${themeColor}; font-size: 12px; white-space: nowrap;">₹${formatCurrency2Dec(inHand)}</span>
+                  <span class="font-mono font-extrabold" style="font-family: monospace; font-weight: 800; color: #10b981; font-size: 12px; white-space: nowrap;">₹${formatCurrency2Dec(inHand)}</span>
                 </div>
 
                 <!-- Total Deductions -->
                 <div class="flex justify-between items-center gap-4" style="display: flex; justify-content: space-between; align-items: center; gap: 16px;">
                   <span class="flex items-center gap-1.5 truncate" style="display: flex; align-items: center; gap: 7px; font-size: 11.5px; color: #e2e8f0;">
-                    <span class="w-2.5 h-2.5 rounded-full inline-block shrink-0" style="width: 10px; height: 10px; border-radius: 50%; background-color: ${themeColor}; opacity: 0.45; border: 1px solid ${themeColor}; display: inline-block; flex-shrink: 0;"></span>
+                    <span class="w-2.5 h-2.5 rounded-full inline-block shrink-0" style="width: 10px; height: 10px; border-radius: 50%; background-color: #ef4444; opacity: 0.45; border: 1px solid #ef4444; display: inline-block; flex-shrink: 0;"></span>
                     <span class="font-semibold">Total Deductions:</span>
                   </span>
                   <span class="font-mono font-bold" style="font-family: monospace; font-weight: 700; color: #f87171; font-size: 12px; white-space: nowrap;">₹${formatCurrency2Dec(deductions)}</span>
@@ -743,7 +966,7 @@ export default function InvDashboard() {
         },
       },
     };
-  }, [currentThemeObj, monthlyPlotData]);
+  }, [monthlyPlotData, salaryComponentView, chartColors, apexSeries]);
 
   // Expand / Collapse Table Months
   const toggleExpandMonth = (rawMonth) => {
@@ -1919,11 +2142,8 @@ export default function InvDashboard() {
                   Investment Dashboard
                 </span>
               </div>
-              <div className="flex items-center gap-1.5 ml-1 text-xs opacity-70 group-hover:opacity-100 bg-base-200/80 px-2.5 py-1 rounded-xl border border-base-300/40 transition-all">
+              <div className="flex items-center gap-1.5 ml-1 text-xs opacity-70 group-hover:opacity-100 bg-base-200/80 px-2 py-1 rounded-xl border border-base-300/40 transition-all">
                 <LayoutGrid className="w-3.5 h-3.5 text-primary" />
-                <span className="hidden sm:inline font-bold text-[11px] text-base-content/70">
-                  Switch
-                </span>
                 <ChevronDown className="w-3.5 h-3.5 opacity-60 transition-transform group-hover:translate-y-0.5" />
               </div>
             </button>
@@ -2091,13 +2311,38 @@ export default function InvDashboard() {
           <div className="flex items-center gap-2.5 ml-auto flex-wrap">
             {["SALARY", "PF", "MF"].includes(activeDashboard) && (
               <>
+                {/* Range Preset Dropdown */}
+                <div className="flex items-center gap-1.5 bg-base-200/70 p-1.5 rounded-xl text-xs font-medium">
+                  <span className="text-[11px] font-bold uppercase opacity-60 px-1 flex items-center gap-1">
+                    <Calendar size={12} /> Range:
+                  </span>
+                  <select
+                    className="select select-bordered select-xs font-bold bg-base-100 min-w-[95px] px-2 text-xs"
+                    value={activePreset}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setActivePreset(val);
+                      if (val !== "custom") handleQuickRange(val);
+                    }}
+                  >
+                    <option value="all">All Time</option>
+                    <option value="this_year">This Year</option>
+                    <option value="last_12">Last 12 Mos</option>
+                    <option value="last_6">Last 6 Mos</option>
+                    <option value="custom">Custom</option>
+                  </select>
+                </div>
+
                 {/* FROM */}
-                <div className="flex items-center gap-1.5 bg-base-200/70 p-1.5 rounded-xl border border-base-300/50 text-xs font-medium">
+                <div className="flex items-center gap-1.5 bg-base-200/70 p-1.5 rounded-xl text-xs font-medium">
                   <span className="text-[11px] font-bold uppercase opacity-60 px-1">From:</span>
                   <select
                     className="select select-bordered select-xs font-bold font-mono bg-base-100 min-w-[76px] px-2 text-xs"
                     value={fromYear}
-                    onChange={(e) => setFromYear(e.target.value)}
+                    onChange={(e) => {
+                      setFromYear(e.target.value);
+                      setActivePreset("custom");
+                    }}
                   >
                     {availableYears.map((y) => (
                       <option key={`from-y-${y}`} value={y}>
@@ -2108,7 +2353,10 @@ export default function InvDashboard() {
                   <select
                     className="select select-bordered select-xs font-bold bg-base-100 min-w-[68px] px-2 text-xs"
                     value={fromMonth}
-                    onChange={(e) => setFromMonth(e.target.value)}
+                    onChange={(e) => {
+                      setFromMonth(e.target.value);
+                      setActivePreset("custom");
+                    }}
                   >
                     {monthNamesList.map((m) => (
                       <option key={`from-m-${m.value}`} value={m.value}>
@@ -2119,12 +2367,15 @@ export default function InvDashboard() {
                 </div>
 
                 {/* TO */}
-                <div className="flex items-center gap-1.5 bg-base-200/70 p-1.5 rounded-xl border border-base-300/50 text-xs font-medium">
+                <div className="flex items-center gap-1.5 bg-base-200/70 p-1.5 rounded-xl text-xs font-medium">
                   <span className="text-[11px] font-bold uppercase opacity-60 px-1">To:</span>
                   <select
                     className="select select-bordered select-xs font-bold font-mono bg-base-100 min-w-[76px] px-2 text-xs"
                     value={toYear}
-                    onChange={(e) => setToYear(e.target.value)}
+                    onChange={(e) => {
+                      setToYear(e.target.value);
+                      setActivePreset("custom");
+                    }}
                   >
                     {availableYears.map((y) => (
                       <option key={`to-y-${y}`} value={y}>
@@ -2135,7 +2386,10 @@ export default function InvDashboard() {
                   <select
                     className="select select-bordered select-xs font-bold bg-base-100 min-w-[68px] px-2 text-xs"
                     value={toMonth}
-                    onChange={(e) => setToMonth(e.target.value)}
+                    onChange={(e) => {
+                      setToMonth(e.target.value);
+                      setActivePreset("custom");
+                    }}
                   >
                     {monthNamesList.map((m) => (
                       <option key={`to-m-${m.value}`} value={m.value}>
@@ -2151,53 +2405,20 @@ export default function InvDashboard() {
             <button
               onClick={fetchData}
               disabled={loading}
-              className="btn btn-circle btn-xs bg-base-200/70 hover:bg-base-200 border border-base-300/50"
+              className="btn btn-circle btn-xs bg-base-200/70 hover:bg-base-200"
               title="Refresh Data"
             >
               <RefreshCw size={14} className={loading ? "animate-spin text-primary" : "opacity-70"} />
             </button>
           </div>
         </div>
-
-        {/* Quick Range Presets Chips (Only shown when monthly date filtering is active) */}
-        {["SALARY", "PF", "MF"].includes(activeDashboard) && (
-          <div className="flex items-center gap-2 max-w-[1600px] mx-auto px-4 md:px-6 pt-1 pb-1.5 flex-wrap">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-base-content/50 mr-1 flex items-center gap-1">
-              <Calendar size={12} /> Quick Presets:
-            </span>
-            <button
-              onClick={() => handleQuickRange("this_year")}
-              className="btn btn-xs rounded-lg font-bold bg-base-200/70 hover:bg-primary/20 hover:text-primary transition-all border border-base-300/50"
-            >
-              This Year
-            </button>
-            <button
-              onClick={() => handleQuickRange("last_12")}
-              className="btn btn-xs rounded-lg font-bold bg-base-200/70 hover:bg-primary/20 hover:text-primary transition-all border border-base-300/50"
-            >
-              Last 12 Mos
-            </button>
-            <button
-              onClick={() => handleQuickRange("last_6")}
-              className="btn btn-xs rounded-lg font-bold bg-base-200/70 hover:bg-primary/20 hover:text-primary transition-all border border-base-300/50"
-            >
-              Last 6 Mos
-            </button>
-            <button
-              onClick={() => handleQuickRange("all")}
-              className="btn btn-xs rounded-lg font-bold bg-base-200/70 hover:bg-primary/20 hover:text-primary transition-all border border-base-300/50"
-            >
-              All Time
-            </button>
-          </div>
-        )}
       </div>
 
       <div className="px-4 md:px-6 w-full max-w-[1600px] mx-auto space-y-6">
         {/* Date Range Error Alert */}
         {isInvalidRange && ["SALARY", "PF", "MF"].includes(activeDashboard) && (
           <div className="alert alert-error shadow-sm text-xs font-bold rounded-2xl">
-            <span>Invalid Date Range: "From" date ({fromMonthStr}) cannot be after "To" date ({toMonthStr}). Please adjust your selection or click a Quick Preset.</span>
+            <span>Invalid Date Range: "From" date ({fromMonthStr}) cannot be after "To" date ({toMonthStr}). Please adjust your selection or pick a Date Range preset.</span>
           </div>
         )}
 
@@ -2213,7 +2434,7 @@ export default function InvDashboard() {
 
         {/* Empty State - Salary */}
         {!loading && salaryData.length === 0 && activeDashboard === "SALARY" && (
-          <div className="card bg-base-100 shadow-xl border border-base-200 p-12 text-center space-y-4">
+          <div className="card bg-base-200 shadow-md p-12 text-center space-y-4">
             <div className="w-16 h-16 rounded-3xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 mx-auto flex items-center justify-center">
               <Banknote size={32} />
             </div>
@@ -2232,7 +2453,7 @@ export default function InvDashboard() {
 
         {/* Empty State - Provident Fund */}
         {!loading && salaryData.length === 0 && pfWithdrawals.length === 0 && activeDashboard === "PF" && (
-          <div className="card bg-base-100 shadow-xl border border-base-200 p-12 text-center space-y-4">
+          <div className="card bg-base-200 shadow-md p-12 text-center space-y-4">
             <div className="w-16 h-16 rounded-3xl bg-teal-500/10 text-teal-600 dark:text-teal-400 mx-auto flex items-center justify-center">
               <ShieldCheck size={32} />
             </div>
@@ -2251,7 +2472,7 @@ export default function InvDashboard() {
 
         {/* Empty State - MF */}
         {!loading && mfData.length === 0 && activeDashboard === "MF" && (
-          <div className="card bg-base-100 shadow-xl border border-base-200 p-12 text-center space-y-4">
+          <div className="card bg-base-200 shadow-md p-12 text-center space-y-4">
             <div className="w-16 h-16 rounded-3xl bg-purple-500/10 text-purple-600 dark:text-purple-400 mx-auto flex items-center justify-center">
               <PieChart size={32} />
             </div>
@@ -2270,7 +2491,7 @@ export default function InvDashboard() {
 
         {/* Empty State - Stocks & Equity */}
         {!loading && stocksData.length === 0 && activeDashboard === "STOCKS" && (
-          <div className="card bg-base-100 shadow-xl border border-base-200 p-12 text-center space-y-4">
+          <div className="card bg-base-200 shadow-md p-12 text-center space-y-4">
             <div className="w-16 h-16 rounded-3xl bg-blue-500/10 text-blue-600 dark:text-blue-400 mx-auto flex items-center justify-center">
               <TrendingUp size={32} />
             </div>
@@ -2289,7 +2510,7 @@ export default function InvDashboard() {
 
         {/* Empty State - Fixed Deposits */}
         {!loading && fdData.length === 0 && activeDashboard === "FD" && (
-          <div className="card bg-base-100 shadow-xl border border-base-200 p-12 text-center space-y-4">
+          <div className="card bg-base-200 shadow-md p-12 text-center space-y-4">
             <div className="w-16 h-16 rounded-3xl bg-amber-500/10 text-amber-600 dark:text-amber-400 mx-auto flex items-center justify-center">
               <Landmark size={32} />
             </div>
@@ -2310,132 +2531,144 @@ export default function InvDashboard() {
             {/* 2. KPI Summary Cards Row */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {/* Total In Hand */}
-              <div className="card bg-base-100 shadow-md border border-base-200/80 p-5 rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold uppercase tracking-wider text-base-content/60">
-                    Total In Hand
-                  </span>
-                  <div className="w-9 h-9 rounded-2xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
-                    <Wallet size={18} />
-                  </div>
+              <div className="card bg-base-200 shadow-md p-5 rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
+                {/* Light Background Watermark Icon */}
+                <div className="absolute -right-3 -bottom-3 text-emerald-500/10 dark:text-emerald-400/10 pointer-events-none group-hover:scale-110 group-hover:-rotate-6 transition-transform duration-500">
+                  <Wallet size={88} strokeWidth={1.5} />
                 </div>
-                <div className="mt-3">
-                  <div className="text-2xl lg:text-3xl font-black font-mono text-emerald-600 dark:text-emerald-400">
-                    ₹{formatCurrency2Dec(kpiSummary.totalInHand)}
-                  </div>
-                  <div className="flex items-center gap-2 mt-1.5 text-xs text-base-content/60 font-medium">
-                    <span className="badge badge-xs badge-success font-bold text-[10px]">
-                      {kpiSummary.overallTakeHomePct.toFixed(1)}% Take-Home
+                <div className="relative z-10">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold uppercase tracking-wider text-base-content/60">
+                      Total In Hand
                     </span>
-                    <span>of Gross Salary</span>
+                  </div>
+                  <div className="mt-3">
+                    <div className="text-2xl lg:text-3xl font-black font-mono text-emerald-600 dark:text-emerald-400">
+                      ₹{formatCurrency2Dec(kpiSummary.totalInHand)}
+                    </div>
+                    <div className="flex items-center gap-2 mt-1.5 text-xs text-base-content/60 font-medium">
+                      <span className="badge badge-xs badge-success font-bold text-[10px]">
+                        {kpiSummary.overallTakeHomePct.toFixed(1)}% Take-Home
+                      </span>
+                      <span>of Gross Salary</span>
+                    </div>
                   </div>
                 </div>
               </div>
 
               {/* Total Deductions */}
-              <div className="card bg-base-100 shadow-md border border-base-200/80 p-5 rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold uppercase tracking-wider text-base-content/60">
-                    Total Deductions
-                  </span>
-                  <div className="w-9 h-9 rounded-2xl bg-rose-500/15 text-rose-600 dark:text-rose-400 flex items-center justify-center">
-                    <Receipt size={18} />
-                  </div>
+              <div className="card bg-base-200 shadow-md p-5 rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
+                {/* Light Background Watermark Icon */}
+                <div className="absolute -right-3 -bottom-3 text-rose-500/10 dark:text-rose-400/10 pointer-events-none group-hover:scale-110 group-hover:-rotate-6 transition-transform duration-500">
+                  <Receipt size={88} strokeWidth={1.5} />
                 </div>
-                <div className="mt-3">
-                  <div className="text-2xl lg:text-3xl font-black font-mono text-rose-500">
-                    ₹{formatCurrency2Dec(kpiSummary.totalDeductions)}
+                <div className="relative z-10">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold uppercase tracking-wider text-base-content/60">
+                      Total Deductions
+                    </span>
                   </div>
-                  <div className="flex items-center gap-2 mt-1.5 text-xs text-base-content/60 font-medium">
-                    <span>PF: ₹{formatCurrencyCompact(kpiSummary.totalErPf)}</span>
-                    <span>•</span>
-                    <span>Taxes: ₹{formatCurrencyCompact(kpiSummary.totalTaxes)}</span>
+                  <div className="mt-3">
+                    <div className="text-2xl lg:text-3xl font-black font-mono text-rose-500">
+                      ₹{formatCurrency2Dec(kpiSummary.totalDeductions)}
+                    </div>
+                    <div className="flex items-center gap-2 mt-1.5 text-xs text-base-content/60 font-medium">
+                      <span>PF: ₹{formatCurrencyCompact(kpiSummary.totalErPf)}</span>
+                      <span>•</span>
+                      <span>Taxes: ₹{formatCurrencyCompact(kpiSummary.totalTaxes)}</span>
+                    </div>
                   </div>
                 </div>
               </div>
 
               {/* Total Gross / Earnings */}
-              <div className="card bg-base-100 shadow-md border border-base-200/80 p-5 rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold uppercase tracking-wider text-base-content/60">
-                    Gross Earnings
-                  </span>
-                  <div className="w-9 h-9 rounded-2xl bg-primary/15 text-primary flex items-center justify-center">
-                    <Banknote size={18} />
-                  </div>
+              <div className="card bg-base-200 shadow-md p-5 rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
+                {/* Light Background Watermark Icon */}
+                <div className="absolute -right-3 -bottom-3 text-primary/10 dark:text-primary/15 pointer-events-none group-hover:scale-110 group-hover:-rotate-6 transition-transform duration-500">
+                  <Banknote size={88} strokeWidth={1.5} />
                 </div>
-                <div className="mt-3">
-                  <div className="text-2xl lg:text-3xl font-black font-mono text-primary">
-                    ₹{formatCurrency2Dec(kpiSummary.totalGross)}
+                <div className="relative z-10">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold uppercase tracking-wider text-base-content/60">
+                      Gross Earnings
+                    </span>
                   </div>
-                  <div className="flex items-center gap-2 mt-1.5 text-xs text-base-content/60 font-medium">
-                    <span>Avg/Mo: ₹{formatCurrencyCompact(kpiSummary.avgMonthlyGross)}</span>
+                  <div className="mt-3">
+                    <div className="text-2xl lg:text-3xl font-black font-mono text-primary">
+                      ₹{formatCurrency2Dec(kpiSummary.totalGross)}
+                    </div>
+                    <div className="flex items-center gap-2 mt-1.5 text-xs text-base-content/60 font-medium">
+                      <span>Avg/Mo: ₹{formatCurrencyCompact(kpiSummary.avgMonthlyGross)}</span>
+                    </div>
                   </div>
                 </div>
               </div>
 
               {/* Total CTC & Experience */}
-              <div className="card bg-base-100 shadow-md border border-base-200/80 p-5 rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold uppercase tracking-wider text-base-content/60">
-                    Total CTC Logged
-                  </span>
-                  <div className="w-9 h-9 rounded-2xl bg-sky-500/15 text-sky-600 dark:text-sky-400 flex items-center justify-center">
-                    <TrendingUp size={18} />
-                  </div>
+              <div className="card bg-base-200 shadow-md p-5 rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
+                {/* Light Background Watermark Icon */}
+                <div className="absolute -right-3 -bottom-3 text-sky-500/10 dark:text-sky-400/10 pointer-events-none group-hover:scale-110 group-hover:-rotate-6 transition-transform duration-500">
+                  <TrendingUp size={88} strokeWidth={1.5} />
                 </div>
-                <div className="mt-3">
-                  <div className="text-2xl lg:text-3xl font-black font-mono text-sky-500">
-                    ₹{formatCurrency2Dec(kpiSummary.totalCtc)}
-                  </div>
-                  <div className="flex items-center gap-2 mt-1.5 text-xs text-base-content/60 font-medium">
-                    <span className="badge badge-xs badge-ghost font-bold text-[10px]">
-                      {kpiSummary.expText}
+                <div className="relative z-10">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold uppercase tracking-wider text-base-content/60">
+                      Total CTC Logged
                     </span>
-                    <span>across {kpiSummary.monthsCount} records</span>
+                  </div>
+                  <div className="mt-3">
+                    <div className="text-2xl lg:text-3xl font-black font-mono text-sky-500">
+                      ₹{formatCurrency2Dec(kpiSummary.totalCtc)}
+                    </div>
+                    <div className="flex items-center gap-2 mt-1.5 text-xs text-base-content/60 font-medium">
+                      <span className="badge badge-xs badge-ghost font-bold text-[10px]">
+                        {kpiSummary.expText}
+                      </span>
+                      <span>across {kpiSummary.monthsCount} records</span>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
 
             {/* 3. Main Salary Analysis Interactive Section */}
-            <section className="card bg-base-100 shadow-xl border border-base-200">
+            <section className="card bg-base-200 shadow-md rounded-3xl overflow-hidden">
               <div className="card-body p-6 space-y-6">
                 {/* Section Header & View Switcher */}
-                <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 border-b border-base-200 pb-4">
+                <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 border-b border-base-300/60 pb-4">
                   <div>
                     <h2 className="text-xl font-bold flex items-center gap-2">
                       <BarChart3 size={22} className="text-emerald-500" />
                       Salary & Compensation Breakdown
                     </h2>
                     <p className="text-xs text-base-content/60 mt-0.5">
-                      Stacked monthly distribution of In-Hand Salary and Total Deductions with overall CTC trend line
+                      {salaryComponentView === "earnings"
+                        ? "Monthly distribution of earnings components (Basic, HRA, Flexi, Bonus) with Total Earnings trend line"
+                        : salaryComponentView === "deductions"
+                        ? "Monthly distribution of deductions (Employer PF, Taxes & Statutory) with Total Deductions trend line"
+                        : "Stacked monthly distribution of In-Hand Salary and Total Deductions with overall CTC trend line"}
                     </p>
                   </div>
 
                   <div className="flex items-center gap-3 flex-wrap">
-                    {/* Theme Color Selector */}
-                    <div className="flex items-center gap-1.5 bg-base-200/70 p-1 rounded-xl border border-base-300/40">
-                      <span className="text-[10.5px] font-bold text-base-content/50 uppercase px-1 flex items-center gap-1">
-                        <Palette size={11} /> Theme:
+                    {/* Component Distribution Dropdown */}
+                    <div className="flex items-center gap-2 bg-base-100 px-3 py-1.5 rounded-2xl shadow-xs">
+                      <span className="text-xs font-bold text-base-content/70 flex items-center gap-1.5 whitespace-nowrap">
+                        <Layers size={13} className="text-primary" /> Component:
                       </span>
-                      {SALARY_COLOR_THEMES.map((theme) => (
-                        <button
-                          key={theme.id}
-                          onClick={() => setSelectedTheme(theme.id)}
-                          className={`w-5 h-5 rounded-lg transition-all ${
-                            selectedTheme === theme.id
-                              ? "ring-2 ring-primary scale-110 shadow-sm"
-                              : "opacity-60 hover:opacity-100"
-                          }`}
-                          style={{ backgroundColor: theme.hex }}
-                          title={theme.label}
-                        />
-                      ))}
+                      <select
+                        className="select select-bordered select-xs font-bold bg-base-200/60 text-xs min-w-[145px]"
+                        value={salaryComponentView}
+                        onChange={(e) => setSalaryComponentView(e.target.value)}
+                      >
+                        <option value="earnings">Total Earnings</option>
+                        <option value="deductions">Total Deductions</option>
+                        <option value="overview">In-Hand & Deductions</option>
+                      </select>
                     </div>
 
                     {/* View Switcher: Graph View vs Table View */}
-                    <div className="flex items-center gap-2 bg-base-200/80 p-1.5 rounded-2xl border border-base-300">
+                    <div className="flex items-center gap-2 bg-base-100 p-1.5 rounded-2xl shadow-xs">
                       <button
                         className={`px-4 py-2 text-xs font-extrabold rounded-xl transition-all flex items-center gap-2 cursor-pointer ${
                           viewTab === "graph"
@@ -2467,8 +2700,11 @@ export default function InvDashboard() {
                       <div className="w-full [&_.apexcharts-tooltip]:!bg-transparent [&_.apexcharts-tooltip]:!border-none [&_.apexcharts-tooltip]:!shadow-none [&_.apexcharts-tooltip]:!p-0">
                         <div className="flex items-center justify-between px-2 pb-2 text-xs font-semibold text-base-content/60">
                           <span>
-                            Click legend items below to toggle <span className="font-bold">In Hand</span>,{" "}
-                            <span className="font-bold">Total Deductions</span>, or <span className="font-bold">Total CTC</span>:
+                            {salaryComponentView === "earnings"
+                              ? "Click legend items below to toggle individual earnings components or Total Earnings line:"
+                              : salaryComponentView === "deductions"
+                              ? "Click legend items below to toggle deduction components or Total Deductions line:"
+                              : "Click legend items below to toggle In Hand, Total Deductions, or Total CTC:"}
                           </span>
                           <span className="text-[11px] opacity-75">
                             Showing {monthlyPlotData.length} monthly records
@@ -2672,127 +2908,142 @@ export default function InvDashboard() {
             {/* 1. PF KPI Summary Cards Row */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
               {/* Net Available Balance */}
-              <div className="card bg-base-100 shadow-md border border-base-200/80 p-5 rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold uppercase tracking-wider text-base-content/60">
-                    Net Available Balance
-                  </span>
-                  <div className="w-9 h-9 rounded-2xl bg-teal-500/15 text-teal-600 dark:text-teal-400 flex items-center justify-center">
-                    <ShieldCheck size={18} />
-                  </div>
+              <div className="card bg-base-200 shadow-md p-5 rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
+                {/* Light Background Watermark Icon */}
+                <div className="absolute -right-3 -bottom-3 text-teal-500/10 dark:text-teal-400/10 pointer-events-none group-hover:scale-110 group-hover:-rotate-6 transition-transform duration-500">
+                  <ShieldCheck size={88} strokeWidth={1.5} />
                 </div>
-                <div className="mt-3">
-                  <div className="text-2xl lg:text-3xl font-black font-mono text-teal-600 dark:text-teal-400">
-                    ₹{formatCurrency2Dec(pfKpiSummary.allTimeAvailablePfBalance)}
-                  </div>
-                  <div className="flex items-center gap-2 mt-1.5 text-xs text-base-content/60 font-medium">
-                    <span className="badge badge-xs badge-success font-bold text-[10px]">
-                      EPF Balance
+                <div className="relative z-10">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold uppercase tracking-wider text-base-content/60">
+                      Net Available Balance
                     </span>
-                    <span>Available to withdraw</span>
+                  </div>
+                  <div className="mt-3">
+                    <div className="text-2xl lg:text-3xl font-black font-mono text-teal-600 dark:text-teal-400">
+                      ₹{formatCurrency2Dec(pfKpiSummary.allTimeAvailablePfBalance)}
+                    </div>
+                    <div className="flex items-center gap-2 mt-1.5 text-xs text-base-content/60 font-medium">
+                      <span className="badge badge-xs badge-success font-bold text-[10px]">
+                        EPF Balance
+                      </span>
+                      <span>Available to withdraw</span>
+                    </div>
                   </div>
                 </div>
               </div>
 
               {/* Total Deposited in Period */}
-              <div className="card bg-base-100 shadow-md border border-base-200/80 p-5 rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold uppercase tracking-wider text-base-content/60">
-                    Period Deposits
-                  </span>
-                  <div className="w-9 h-9 rounded-2xl bg-primary/15 text-primary flex items-center justify-center">
-                    <PiggyBank size={18} />
-                  </div>
+              <div className="card bg-base-200 shadow-md p-5 rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
+                {/* Light Background Watermark Icon */}
+                <div className="absolute -right-3 -bottom-3 text-primary/10 dark:text-primary/15 pointer-events-none group-hover:scale-110 group-hover:-rotate-6 transition-transform duration-500">
+                  <PiggyBank size={88} strokeWidth={1.5} />
                 </div>
-                <div className="mt-3">
-                  <div className="text-2xl lg:text-3xl font-black font-mono text-primary">
-                    ₹{formatCurrency2Dec(pfKpiSummary.periodTotalDeposit)}
+                <div className="relative z-10">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold uppercase tracking-wider text-base-content/60">
+                      Period Deposits
+                    </span>
                   </div>
-                  <div className="flex items-center gap-2 mt-1.5 text-xs text-base-content/60 font-medium">
-                    <span>Avg/Mo: ₹{formatCurrencyCompact(pfKpiSummary.avgMonthlyDeposit)}</span>
-                    <span>•</span>
-                    <span>{pfKpiSummary.activeMonths} mos</span>
+                  <div className="mt-3">
+                    <div className="text-2xl lg:text-3xl font-black font-mono text-primary">
+                      ₹{formatCurrency2Dec(pfKpiSummary.periodTotalDeposit)}
+                    </div>
+                    <div className="flex items-center gap-2 mt-1.5 text-xs text-base-content/60 font-medium">
+                      <span>Avg/Mo: ₹{formatCurrencyCompact(pfKpiSummary.avgMonthlyDeposit)}</span>
+                      <span>•</span>
+                      <span>{pfKpiSummary.activeMonths} mos</span>
+                    </div>
                   </div>
                 </div>
               </div>
 
               {/* Total Withdrawn */}
-              <div className="card bg-base-100 shadow-md border border-base-200/80 p-5 rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold uppercase tracking-wider text-base-content/60">
-                    Total Withdrawn
-                  </span>
-                  <div className="w-9 h-9 rounded-2xl bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center">
-                    <ArrowUpRight size={18} />
-                  </div>
+              <div className="card bg-base-200 shadow-md p-5 rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
+                {/* Light Background Watermark Icon */}
+                <div className="absolute -right-3 -bottom-3 text-amber-500/10 dark:text-amber-400/10 pointer-events-none group-hover:scale-110 group-hover:-rotate-6 transition-transform duration-500">
+                  <ArrowUpRight size={88} strokeWidth={1.5} />
                 </div>
-                <div className="mt-3">
-                  <div className="text-2xl lg:text-3xl font-black font-mono text-amber-500">
-                    ₹{formatCurrency2Dec(pfKpiSummary.allTimePfWithdrawn)}
+                <div className="relative z-10">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold uppercase tracking-wider text-base-content/60">
+                      Total Withdrawn
+                    </span>
                   </div>
-                  <div className="flex items-center gap-2 mt-1.5 text-xs text-base-content/60 font-medium">
-                    <span className="badge badge-xs badge-warning font-bold text-[10px]">
-                      {pfKpiSummary.totalWithdrawalCount} {pfKpiSummary.totalWithdrawalCount === 1 ? "Txn" : "Txns"}
-                    </span>
-                    <span>
-                      {pfKpiSummary.periodWithdrawn > 0
-                        ? `Period: ₹${formatCurrencyCompact(pfKpiSummary.periodWithdrawn)}`
-                        : "All-time withdrawals"}
-                    </span>
+                  <div className="mt-3">
+                    <div className="text-2xl lg:text-3xl font-black font-mono text-amber-500">
+                      ₹{formatCurrency2Dec(pfKpiSummary.allTimePfWithdrawn)}
+                    </div>
+                    <div className="flex items-center gap-2 mt-1.5 text-xs text-base-content/60 font-medium">
+                      <span className="badge badge-xs badge-warning font-bold text-[10px]">
+                        {pfKpiSummary.totalWithdrawalCount} {pfKpiSummary.totalWithdrawalCount === 1 ? "Txn" : "Txns"}
+                      </span>
+                      <span>
+                        {pfKpiSummary.periodWithdrawn > 0
+                          ? `Period: ₹${formatCurrencyCompact(pfKpiSummary.periodWithdrawn)}`
+                          : "All-time withdrawals"}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
 
               {/* Employer Share (ER) */}
-              <div className="card bg-base-100 shadow-md border border-base-200/80 p-5 rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold uppercase tracking-wider text-base-content/60">
-                    Employer Share (ER)
-                  </span>
-                  <div className="w-9 h-9 rounded-2xl bg-sky-500/15 text-sky-600 dark:text-sky-400 flex items-center justify-center">
-                    <Building2 size={18} />
-                  </div>
+              <div className="card bg-base-200 shadow-md p-5 rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
+                {/* Light Background Watermark Icon */}
+                <div className="absolute -right-3 -bottom-3 text-sky-500/10 dark:text-sky-400/10 pointer-events-none group-hover:scale-110 group-hover:-rotate-6 transition-transform duration-500">
+                  <Building2 size={88} strokeWidth={1.5} />
                 </div>
-                <div className="mt-3">
-                  <div className="text-2xl lg:text-3xl font-black font-mono text-sky-500">
-                    ₹{formatCurrency2Dec(pfKpiSummary.periodErPf)}
+                <div className="relative z-10">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold uppercase tracking-wider text-base-content/60">
+                      Employer Share (ER)
+                    </span>
                   </div>
-                  <div className="flex items-center gap-2 mt-1.5 text-xs text-base-content/60 font-medium">
-                    <span>Company match</span>
-                    <span>•</span>
-                    <span>Period total</span>
+                  <div className="mt-3">
+                    <div className="text-2xl lg:text-3xl font-black font-mono text-sky-500">
+                      ₹{formatCurrency2Dec(pfKpiSummary.periodErPf)}
+                    </div>
+                    <div className="flex items-center gap-2 mt-1.5 text-xs text-base-content/60 font-medium">
+                      <span>Company match</span>
+                      <span>•</span>
+                      <span>Period total</span>
+                    </div>
                   </div>
                 </div>
               </div>
 
               {/* Employee Share (EE) */}
-              <div className="card bg-base-100 shadow-md border border-base-200/80 p-5 rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold uppercase tracking-wider text-base-content/60">
-                    Employee Share (EE)
-                  </span>
-                  <div className="w-9 h-9 rounded-2xl bg-purple-500/15 text-purple-600 dark:text-purple-400 flex items-center justify-center">
-                    <Wallet size={18} />
-                  </div>
+              <div className="card bg-base-200 shadow-md p-5 rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
+                {/* Light Background Watermark Icon */}
+                <div className="absolute -right-3 -bottom-3 text-purple-500/10 dark:text-purple-400/10 pointer-events-none group-hover:scale-110 group-hover:-rotate-6 transition-transform duration-500">
+                  <Wallet size={88} strokeWidth={1.5} />
                 </div>
-                <div className="mt-3">
-                  <div className="text-2xl lg:text-3xl font-black font-mono text-purple-500">
-                    ₹{formatCurrency2Dec(pfKpiSummary.periodEePf)}
+                <div className="relative z-10">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold uppercase tracking-wider text-base-content/60">
+                      Employee Share (EE)
+                    </span>
                   </div>
-                  <div className="flex items-center gap-2 mt-1.5 text-xs text-base-content/60 font-medium">
-                    <span>Salary deduction</span>
-                    <span>•</span>
-                    <span>Period total</span>
+                  <div className="mt-3">
+                    <div className="text-2xl lg:text-3xl font-black font-mono text-purple-500">
+                      ₹{formatCurrency2Dec(pfKpiSummary.periodEePf)}
+                    </div>
+                    <div className="flex items-center gap-2 mt-1.5 text-xs text-base-content/60 font-medium">
+                      <span>Salary deduction</span>
+                      <span>•</span>
+                      <span>Period total</span>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
 
             {/* 2. Main PF Analysis Interactive Section */}
-            <section className="card bg-base-100 shadow-xl border border-base-200">
+            <section className="card bg-base-200 shadow-md rounded-3xl overflow-hidden">
               <div className="card-body p-6 space-y-6">
                 {/* Section Header & View Switcher */}
-                <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 border-b border-base-200 pb-4">
+                <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 border-b border-base-300 pb-4">
                   <div>
                     <h2 className="text-xl font-bold flex items-center gap-2">
                       <ShieldCheck size={22} className="text-teal-500" />
@@ -2805,7 +3056,7 @@ export default function InvDashboard() {
 
                   <div className="flex items-center gap-3 flex-wrap">
                     {/* Theme Color Selector */}
-                    <div className="flex items-center gap-1.5 bg-base-200/70 p-1 rounded-xl border border-base-300/40">
+                    <div className="flex items-center gap-1.5 bg-base-100 p-1 rounded-xl border border-base-300">
                       <span className="text-[10.5px] font-bold text-base-content/50 uppercase px-1 flex items-center gap-1">
                         <Palette size={11} /> Theme:
                       </span>
@@ -2825,7 +3076,7 @@ export default function InvDashboard() {
                     </div>
 
                     {/* View Switcher: Graph View vs Table View */}
-                    <div className="flex items-center gap-2 bg-base-200/80 p-1.5 rounded-2xl border border-base-300">
+                    <div className="flex items-center gap-2 bg-base-100 p-1.5 rounded-2xl border border-base-300">
                       <button
                         className={`px-4 py-2 text-xs font-extrabold rounded-xl transition-all flex items-center gap-2 cursor-pointer ${
                           viewTab === "graph"
@@ -3168,135 +3419,150 @@ export default function InvDashboard() {
             {/* 1. MF KPI Summary Cards Row */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
               {/* Card 1: Net Capital Invested */}
-              <div className="card bg-base-100 shadow-md border border-base-200/80 p-5 rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold uppercase tracking-wider text-base-content/60">
-                    Net Capital Invested
-                  </span>
-                  <div className="w-9 h-9 rounded-2xl bg-purple-500/15 text-purple-600 dark:text-purple-400 flex items-center justify-center">
-                    <Wallet size={18} />
-                  </div>
+              <div className="card bg-base-200 shadow-md p-5 rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
+                {/* Light Background Watermark Icon */}
+                <div className="absolute -right-3 -bottom-3 text-purple-500/10 dark:text-purple-400/10 pointer-events-none group-hover:scale-110 group-hover:-rotate-6 transition-transform duration-500">
+                  <Wallet size={88} strokeWidth={1.5} />
                 </div>
-                <div className="mt-3">
-                  <div className="text-2xl lg:text-3xl font-black font-mono text-purple-600 dark:text-purple-400">
-                    ₹{formatCurrency2Dec(mfKpiSummary.allTimeNetInvested)}
+                <div className="relative z-10">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold uppercase tracking-wider text-base-content/60">
+                      Net Capital Invested
+                    </span>
                   </div>
-                  <div className="flex items-center gap-2 mt-1.5 text-xs text-base-content/60 font-medium">
-                    <span className="badge badge-xs badge-secondary font-bold text-[10px]">
-                      Portfolio Cost
-                    </span>
-                    <span>
-                      {selectedMfFund === "all"
-                        ? `${activeMfFunds.length} Funds`
-                        : selectedGroupObj
-                        ? `${selectedGroupObj.name} (${activeMfFunds.length} Funds)`
-                        : "Selected Scheme"}
-                    </span>
+                  <div className="mt-3">
+                    <div className="text-2xl lg:text-3xl font-black font-mono text-purple-600 dark:text-purple-400">
+                      ₹{formatCurrency2Dec(mfKpiSummary.allTimeNetInvested)}
+                    </div>
+                    <div className="flex items-center gap-2 mt-1.5 text-xs text-base-content/60 font-medium">
+                      <span className="badge badge-xs badge-secondary font-bold text-[10px]">
+                        Portfolio Cost
+                      </span>
+                      <span>
+                        {selectedMfFund === "all"
+                          ? `${activeMfFunds.length} Funds`
+                          : selectedGroupObj
+                          ? `${selectedGroupObj.name} (${activeMfFunds.length} Funds)`
+                          : "Selected Scheme"}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
 
               {/* Card 2: Period Deposits */}
-              <div className="card bg-base-100 shadow-md border border-base-200/80 p-5 rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold uppercase tracking-wider text-base-content/60">
-                    Period Deposits
-                  </span>
-                  <div className="w-9 h-9 rounded-2xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
-                    <PiggyBank size={18} />
-                  </div>
+              <div className="card bg-base-200 shadow-md p-5 rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
+                {/* Light Background Watermark Icon */}
+                <div className="absolute -right-3 -bottom-3 text-emerald-500/10 dark:text-emerald-400/10 pointer-events-none group-hover:scale-110 group-hover:-rotate-6 transition-transform duration-500">
+                  <PiggyBank size={88} strokeWidth={1.5} />
                 </div>
-                <div className="mt-3">
-                  <div className="text-2xl lg:text-3xl font-black font-mono text-emerald-600 dark:text-emerald-400">
-                    ₹{formatCurrency2Dec(mfKpiSummary.periodDeposited)}
-                  </div>
-                  <div className="flex items-center gap-2 mt-1.5 text-xs text-base-content/60 font-medium">
-                    <span className="badge badge-xs badge-success font-bold text-[10px]">
-                      {mfKpiSummary.totalSipCount} SIPs • {mfKpiSummary.totalLsCount} LS
+                <div className="relative z-10">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold uppercase tracking-wider text-base-content/60">
+                      Period Deposits
                     </span>
-                    <span>All: ₹{formatCurrencyCompact(mfKpiSummary.allTimeDeposited)}</span>
+                  </div>
+                  <div className="mt-3">
+                    <div className="text-2xl lg:text-3xl font-black font-mono text-emerald-600 dark:text-emerald-400">
+                      ₹{formatCurrency2Dec(mfKpiSummary.periodDeposited)}
+                    </div>
+                    <div className="flex items-center gap-2 mt-1.5 text-xs text-base-content/60 font-medium">
+                      <span className="badge badge-xs badge-success font-bold text-[10px]">
+                        {mfKpiSummary.totalSipCount} SIPs • {mfKpiSummary.totalLsCount} LS
+                      </span>
+                      <span>All: ₹{formatCurrencyCompact(mfKpiSummary.allTimeDeposited)}</span>
+                    </div>
                   </div>
                 </div>
               </div>
 
               {/* Card 3: Total Withdrawn / Redeemed */}
-              <div className="card bg-base-100 shadow-md border border-base-200/80 p-5 rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold uppercase tracking-wider text-base-content/60">
-                    Total Withdrawn
-                  </span>
-                  <div className="w-9 h-9 rounded-2xl bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center">
-                    <ArrowUpRight size={18} />
-                  </div>
+              <div className="card bg-base-200 shadow-md p-5 rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
+                {/* Light Background Watermark Icon */}
+                <div className="absolute -right-3 -bottom-3 text-amber-500/10 dark:text-amber-400/10 pointer-events-none group-hover:scale-110 group-hover:-rotate-6 transition-transform duration-500">
+                  <ArrowUpRight size={88} strokeWidth={1.5} />
                 </div>
-                <div className="mt-3">
-                  <div className="text-2xl lg:text-3xl font-black font-mono text-amber-500">
-                    ₹{formatCurrency2Dec(mfKpiSummary.allTimeWithdrawn)}
+                <div className="relative z-10">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold uppercase tracking-wider text-base-content/60">
+                      Total Withdrawn
+                    </span>
                   </div>
-                  <div className="flex items-center gap-2 mt-1.5 text-xs text-base-content/60 font-medium">
-                    <span className="badge badge-xs badge-warning font-bold text-[10px]">
-                      {mfKpiSummary.totalWithdrawalCount} {mfKpiSummary.totalWithdrawalCount === 1 ? "Redemption" : "Redemptions"}
-                    </span>
-                    <span>
-                      {mfKpiSummary.periodWithdrawn > 0
-                        ? `Period: ₹${formatCurrencyCompact(mfKpiSummary.periodWithdrawn)}`
-                        : "All-time redemptions"}
-                    </span>
+                  <div className="mt-3">
+                    <div className="text-2xl lg:text-3xl font-black font-mono text-amber-500">
+                      ₹{formatCurrency2Dec(mfKpiSummary.allTimeWithdrawn)}
+                    </div>
+                    <div className="flex items-center gap-2 mt-1.5 text-xs text-base-content/60 font-medium">
+                      <span className="badge badge-xs badge-warning font-bold text-[10px]">
+                        {mfKpiSummary.totalWithdrawalCount} {mfKpiSummary.totalWithdrawalCount === 1 ? "Redemption" : "Redemptions"}
+                      </span>
+                      <span>
+                        {mfKpiSummary.periodWithdrawn > 0
+                          ? `Period: ₹${formatCurrencyCompact(mfKpiSummary.periodWithdrawn)}`
+                          : "All-time redemptions"}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
 
               {/* Card 4: Total Units Held */}
-              <div className="card bg-base-100 shadow-md border border-base-200/80 p-5 rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold uppercase tracking-wider text-base-content/60">
-                    Total Units Held
-                  </span>
-                  <div className="w-9 h-9 rounded-2xl bg-sky-500/15 text-sky-600 dark:text-sky-400 flex items-center justify-center">
-                    <Layers size={18} />
-                  </div>
+              <div className="card bg-base-200 shadow-md p-5 rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
+                {/* Light Background Watermark Icon */}
+                <div className="absolute -right-3 -bottom-3 text-sky-500/10 dark:text-sky-400/10 pointer-events-none group-hover:scale-110 group-hover:-rotate-6 transition-transform duration-500">
+                  <Layers size={88} strokeWidth={1.5} />
                 </div>
-                <div className="mt-3">
-                  <div className="text-2xl lg:text-3xl font-black font-mono text-sky-500">
-                    {mfKpiSummary.allTimeUnitsHeld.toLocaleString(undefined, { minimumFractionDigits: 3, maximumFractionDigits: 3 })}
+                <div className="relative z-10">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold uppercase tracking-wider text-base-content/60">
+                      Total Units Held
+                    </span>
                   </div>
-                  <div className="flex items-center gap-2 mt-1.5 text-xs text-base-content/60 font-medium">
-                    <span>Added: +{mfKpiSummary.periodUnitsAdded.toFixed(2)}</span>
-                    <span>•</span>
-                    <span>Redeemed: -{mfKpiSummary.periodUnitsWithdrawn.toFixed(2)}</span>
+                  <div className="mt-3">
+                    <div className="text-2xl lg:text-3xl font-black font-mono text-sky-500">
+                      {mfKpiSummary.allTimeUnitsHeld.toLocaleString(undefined, { minimumFractionDigits: 3, maximumFractionDigits: 3 })}
+                    </div>
+                    <div className="flex items-center gap-2 mt-1.5 text-xs text-base-content/60 font-medium">
+                      <span>Added: +{mfKpiSummary.periodUnitsAdded.toFixed(2)}</span>
+                      <span>•</span>
+                      <span>Redeemed: -{mfKpiSummary.periodUnitsWithdrawn.toFixed(2)}</span>
+                    </div>
                   </div>
                 </div>
               </div>
 
               {/* Card 5: Expense Ratio & Avg NAV */}
-              <div className="card bg-base-100 shadow-md border border-base-200/80 p-5 rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold uppercase tracking-wider text-base-content/60">
-                    Total ER Incurred
-                  </span>
-                  <div className="w-9 h-9 rounded-2xl bg-rose-500/15 text-rose-600 dark:text-rose-400 flex items-center justify-center">
-                    <Percent size={18} />
-                  </div>
+              <div className="card bg-base-200 shadow-md p-5 rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
+                {/* Light Background Watermark Icon */}
+                <div className="absolute -right-3 -bottom-3 text-rose-500/10 dark:text-rose-400/10 pointer-events-none group-hover:scale-110 group-hover:-rotate-6 transition-transform duration-500">
+                  <Percent size={88} strokeWidth={1.5} />
                 </div>
-                <div className="mt-3">
-                  <div className="text-2xl lg:text-3xl font-black font-mono text-rose-500">
-                    ₹{formatCurrency2Dec(mfKpiSummary.allTimeEr)}
-                  </div>
-                  <div className="flex items-center gap-2 mt-1.5 text-xs text-base-content/60 font-medium">
-                    <span className="badge badge-xs badge-info font-bold text-[10px]">
-                      Avg NAV: ₹{mfKpiSummary.avgAcquisitionNav.toFixed(2)}
+                <div className="relative z-10">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold uppercase tracking-wider text-base-content/60">
+                      Total ER Incurred
                     </span>
-                    <span>Period: ₹{formatCurrencyCompact(mfKpiSummary.periodEr)}</span>
+                  </div>
+                  <div className="mt-3">
+                    <div className="text-2xl lg:text-3xl font-black font-mono text-rose-500">
+                      ₹{formatCurrency2Dec(mfKpiSummary.allTimeEr)}
+                    </div>
+                    <div className="flex items-center gap-2 mt-1.5 text-xs text-base-content/60 font-medium">
+                      <span className="badge badge-xs badge-info font-bold text-[10px]">
+                        Avg NAV: ₹{mfKpiSummary.avgAcquisitionNav.toFixed(2)}
+                      </span>
+                      <span>Period: ₹{formatCurrencyCompact(mfKpiSummary.periodEr)}</span>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
 
             {/* 2. Main Mutual Fund Section Card */}
-            <section className="card bg-base-100 shadow-xl border border-base-200 rounded-3xl overflow-hidden">
+            <section className="card bg-base-200 shadow-md rounded-3xl overflow-hidden">
               <div className="card-body p-4 sm:p-6 space-y-6">
                 {/* Header Row */}
-                <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 border-b border-base-200/80 pb-5">
+                <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 border-b border-base-300 pb-5">
                   <div>
                     <div className="flex items-center gap-2.5">
                       <h3 className="text-lg sm:text-xl font-black tracking-tight text-base-content">
@@ -3387,7 +3653,7 @@ export default function InvDashboard() {
                     </div>
 
                     {/* View Switcher: Graph View vs Table View */}
-                    <div className="bg-base-200/80 p-1 rounded-2xl flex items-center border border-base-300/60">
+                    <div className="bg-base-100 p-1 rounded-2xl flex items-center border border-base-300">
                       <button
                         className={`px-4 py-2 text-xs font-extrabold rounded-xl transition-all flex items-center gap-2 cursor-pointer ${
                           viewTab === "graph"
@@ -3413,7 +3679,7 @@ export default function InvDashboard() {
                 </div>
 
                 {/* Metric Switcher Button Toolbar - User Requested Multi-Graph Switcher */}
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-base-200/40 p-3 rounded-2xl border border-base-300/50">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-base-100 p-3 rounded-2xl border border-base-300">
                   <div className="flex items-center gap-2 text-xs font-bold text-base-content/70">
                     <Sparkles size={14} className="text-primary" />
                     <span>Select Metric Visualization:</span>
@@ -3499,7 +3765,7 @@ export default function InvDashboard() {
 
                           <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 [&_.apexcharts-tooltip]:!bg-transparent [&_.apexcharts-tooltip]:!border-none [&_.apexcharts-tooltip]:!shadow-none [&_.apexcharts-tooltip]:!p-0">
                             {/* 1. Deposits & Withdrawals */}
-                            <div className="card bg-base-200/40 border border-base-300/60 p-4 rounded-2xl space-y-2">
+                            <div className="card bg-base-100 shadow-sm border border-base-300 p-4 rounded-2xl space-y-2">
                               <div className="flex items-center justify-between">
                                 <h3 className="font-bold text-sm flex items-center gap-1.5 text-base-content">
                                   <PiggyBank size={15} className="text-primary" />
@@ -3516,7 +3782,7 @@ export default function InvDashboard() {
                             </div>
 
                             {/* 2. Purchase NAV History */}
-                            <div className="card bg-base-200/40 border border-base-300/60 p-4 rounded-2xl space-y-2">
+                            <div className="card bg-base-100 shadow-sm border border-base-300 p-4 rounded-2xl space-y-2">
                               <div className="flex items-center justify-between">
                                 <h3 className="font-bold text-sm flex items-center gap-1.5 text-base-content">
                                   <TrendingUp size={15} className="text-sky-500" />
@@ -3533,7 +3799,7 @@ export default function InvDashboard() {
                             </div>
 
                             {/* 3. Units Allocated & Held */}
-                            <div className="card bg-base-200/40 border border-base-300/60 p-4 rounded-2xl space-y-2">
+                            <div className="card bg-base-100 shadow-sm border border-base-300 p-4 rounded-2xl space-y-2">
                               <div className="flex items-center justify-between">
                                 <h3 className="font-bold text-sm flex items-center gap-1.5 text-base-content">
                                   <Layers size={15} className="text-indigo-500" />
@@ -3550,7 +3816,7 @@ export default function InvDashboard() {
                             </div>
 
                             {/* 4. Expense Ratio Incurred */}
-                            <div className="card bg-base-200/40 border border-base-300/60 p-4 rounded-2xl space-y-2">
+                            <div className="card bg-base-100 shadow-sm border border-base-300 p-4 rounded-2xl space-y-2">
                               <div className="flex items-center justify-between">
                                 <h3 className="font-bold text-sm flex items-center gap-1.5 text-base-content">
                                   <Percent size={15} className="text-rose-500" />
@@ -3622,7 +3888,7 @@ export default function InvDashboard() {
                 {viewTab === "table" && (
                   <div className="space-y-4">
                     {/* Sub-tab Navigation Bar */}
-                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-base-200/50 p-3 rounded-2xl border border-base-300">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-base-100 p-3 rounded-2xl border border-base-300">
                       <div className="flex items-center gap-2 flex-wrap">
                         <button
                           onClick={() => setMfTableSubTab("transactions")}
@@ -3996,7 +4262,7 @@ export default function InvDashboard() {
         {/* RECURRING DEPOSITS (RD) SHOWCASE VIEW */}
         {/* ================================================================ */}
         {!loading && activeDashboard === "RD" && (
-          <div className="card bg-base-100 shadow-xl border border-base-200/80 p-8 sm:p-12 text-center max-w-3xl mx-auto space-y-6 rounded-3xl">
+          <div className="card bg-base-200 shadow-md p-8 sm:p-12 text-center max-w-3xl mx-auto space-y-6 rounded-3xl">
             <div
               className={`w-20 h-20 rounded-3xl mx-auto flex items-center justify-center p-4 border shadow-sm ${currentDashboardMeta.bgClass}`}
             >
@@ -4007,7 +4273,7 @@ export default function InvDashboard() {
                 <h3 className="text-2xl font-black tracking-tight text-base-content">
                   {currentDashboardMeta.title} Dashboard
                 </h3>
-                <span className="badge badge-sm font-bold border bg-base-200 text-base-content/70">
+                <span className="badge badge-sm font-bold border bg-base-100 text-base-content/70">
                   {currentDashboardMeta.badgeLabel}
                 </span>
               </div>
@@ -4016,7 +4282,7 @@ export default function InvDashboard() {
               </p>
             </div>
 
-            <div className="bg-base-200/50 border border-base-300/50 rounded-2xl p-5 text-left space-y-3">
+            <div className="bg-base-100 border border-base-300 rounded-2xl p-5 text-left space-y-3">
               <h4 className="text-xs font-bold uppercase tracking-wider text-base-content/60 flex items-center gap-2">
                 <Sparkles size={14} className="text-primary" /> Features & Analytics In Progress
               </h4>

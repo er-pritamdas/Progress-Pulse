@@ -1915,6 +1915,7 @@ export default function InvTableEntry() {
           if (viewingTableRd && (viewingTableRd.id || viewingTableRd._id) === rdId) {
             setViewingTableRd(updated);
           }
+          setActiveRdForDeposit(updated);
         }
       } else {
         const res = await axiosInstance.post(
@@ -1929,6 +1930,7 @@ export default function InvTableEntry() {
           if (viewingTableRd && (viewingTableRd.id || viewingTableRd._id) === rdId) {
             setViewingTableRd(updated);
           }
+          setActiveRdForDeposit(updated);
         }
       }
       setIsAddRdDepositModalOpen(false);
@@ -5932,7 +5934,11 @@ export default function InvTableEntry() {
           setIsAddRdDepositModalOpen(false);
           setEditingRdTxn(null);
         }}
-        rd={activeRdForDeposit}
+        rd={
+          rdData.find(
+            (r) => (r.id || r._id) === (activeRdForDeposit?.id || activeRdForDeposit?._id)
+          ) || activeRdForDeposit
+        }
         initialTxn={editingRdTxn}
         onSave={handleSaveRdDeposit}
       />

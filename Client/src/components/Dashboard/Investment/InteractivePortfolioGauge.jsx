@@ -127,7 +127,7 @@ export default function InteractivePortfolioGauge({
   }, [milestones, upperLimit, totalWorth, r, strokeWidth, cx, cy]);
 
   return (
-    <div className="card bg-base-100 shadow-xl border border-base-200/80 rounded-3xl p-5 sm:p-6 relative overflow-hidden flex flex-col justify-between space-y-3">
+    <div className="card bg-base-200 shadow-md rounded-3xl p-5 sm:p-6 relative overflow-hidden flex flex-col justify-between space-y-3">
       {/* Header Bar */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-2.5">
@@ -529,8 +529,8 @@ export default function InteractivePortfolioGauge({
       </div>
 
       {/* Target KPI Summary Footer */}
-      <div className="pt-3 border-t border-base-200/80 grid grid-cols-3 gap-2 text-center text-xs">
-        <div className="bg-base-200/50 p-2.5 rounded-2xl border border-base-300/30">
+      <div className="pt-3 border-t border-base-300 grid grid-cols-3 gap-2 text-center text-xs">
+        <div className="bg-base-100 p-2.5 rounded-2xl border border-base-300">
           <span className="text-[10px] uppercase font-bold text-base-content/50 block">
             Current Worth
           </span>
@@ -539,7 +539,7 @@ export default function InteractivePortfolioGauge({
           </span>
         </div>
 
-        <div className="bg-base-200/50 p-2.5 rounded-2xl border border-base-300/30">
+        <div className="bg-base-100 p-2.5 rounded-2xl border border-base-300">
           <span className="text-[10px] uppercase font-bold text-base-content/50 block">
             Target Goal
           </span>
@@ -548,7 +548,7 @@ export default function InteractivePortfolioGauge({
           </span>
         </div>
 
-        <div className="bg-base-200/50 p-2.5 rounded-2xl border border-base-300/30">
+        <div className="bg-base-100 p-2.5 rounded-2xl border border-base-300">
           <span className="text-[10px] uppercase font-bold text-base-content/50 block">
             Remaining
           </span>
