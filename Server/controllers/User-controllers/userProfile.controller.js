@@ -3,6 +3,7 @@ import RegisteredUsers from "../../models/User-models/registeredUser.model.js";
 import { ApiError } from "../../utils/ApiError.js";
 import { ApiResponse } from "../../utils/ApiResponse.js";
 import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
 import logger from "../../utils/Logging.js";
 
 const getUserProfile = asynchandler(async (req, res) => {
@@ -30,11 +31,55 @@ const getUserProfile = asynchandler(async (req, res) => {
     );
 });
 
+const checkUsernameAvailability = asynchandler(async (req, res) => {
+    const rawUsername = req.query.username;
+    if (!rawUsername || !rawUsername.trim()) {
+        throw new ApiError(400, "Username query parameter is required");
+    }
+    const cleanUsername = rawUsername.trim();
+    const currentUserId = req.user?._id;
+
+    // Check if it's the user's current username
+    if (req.user?.username && req.user.username.toLowerCase() === cleanUsername.toLowerCase()) {
+        return res.status(200).json(
+            new ApiResponse(200, { available: true, isCurrent: true }, "This is your current username")
+        );
+    }
+
+    // Format validation: 3-30 chars, alphanumeric + _ . -
+    const usernameRegex = /^[a-zA-Z0-9_.-]{3,30}$/;
+    if (!usernameRegex.test(cleanUsername)) {
+        return res.status(200).json(
+            new ApiResponse(200, { 
+                available: false, 
+                reason: "Username must be 3-30 characters (letters, numbers, _, ., -)" 
+            }, "Invalid username format")
+        );
+    }
+
+    const existingUser = await RegisteredUsers.findOne({
+        _id: { $ne: currentUserId },
+        username: { $regex: new RegExp(`^${cleanUsername}$`, "i") }
+    });
+
+    if (existingUser) {
+        return res.status(200).json(
+            new ApiResponse(200, { available: false, reason: "Username is already taken" }, "Username taken")
+        );
+    }
+
+    return res.status(200).json(
+        new ApiResponse(200, { available: true }, "Username is available!")
+    );
+});
+
 const updateUserProfile = asynchandler(async (req, res) => {
     const userId = req.user?._id;
-    const username = req.user?.username || req.body.username;
+    const currentUsername = req.user?.username;
 
     const {
+        username,
+        newUsername,
         fullName,
         profilePic,
         customAvatars,
@@ -57,6 +102,26 @@ const updateUserProfile = asynchandler(async (req, res) => {
     if (currency !== undefined) updateFields.currency = currency;
     if (dateOfBirth !== undefined) updateFields.dateOfBirth = dateOfBirth;
 
+    // Handle username update with uniqueness check
+    const candidateUsername = (newUsername !== undefined ? newUsername : username)?.trim();
+    if (candidateUsername && candidateUsername.toLowerCase() !== currentUsername?.toLowerCase()) {
+        const usernameRegex = /^[a-zA-Z0-9_.-]{3,30}$/;
+        if (!usernameRegex.test(candidateUsername)) {
+            throw new ApiError(400, "Username must be 3-30 characters containing only letters, numbers, underscores, dashes, or dots.");
+        }
+
+        const existingUser = await RegisteredUsers.findOne({
+            _id: { $ne: userId || req.user?._id },
+            username: { $regex: new RegExp(`^${candidateUsername}$`, "i") }
+        });
+
+        if (existingUser) {
+            throw new ApiError(409, `Username "@${candidateUsername}" is already taken by another user. Please choose a different username.`);
+        }
+
+        updateFields.username = candidateUsername;
+    }
+
     // Optional password change
     if (newPassword) {
         if (!currentPassword) {
@@ -73,7 +138,7 @@ const updateUserProfile = asynchandler(async (req, res) => {
         updateFields.passwordHash = await bcrypt.hash(newPassword, 10);
     }
 
-    const filter = userId ? { _id: userId } : { username };
+    const filter = userId ? { _id: userId } : { username: currentUsername };
     const updatedUser = await RegisteredUsers.findOneAndUpdate(
         filter,
         { $set: updateFields },
@@ -84,11 +149,25 @@ const updateUserProfile = asynchandler(async (req, res) => {
         throw new ApiError(404, "User not found to update");
     }
 
+    let newAccessToken = null;
+    if (updateFields.username) {
+        newAccessToken = jwt.sign(
+            { id: updatedUser._id, username: updatedUser.username },
+            process.env.JWT_SECRET_KEY,
+            { expiresIn: process.env.ACCESS_TOKEN_EXPIRY || "15m" }
+        );
+    }
+
     logger.info(`Profile updated for user: ${updatedUser.username}`);
 
+    const userObj = updatedUser.toObject();
+    if (newAccessToken) {
+        userObj.accessToken = newAccessToken;
+    }
+
     return res.status(200).json(
-        new ApiResponse(200, updatedUser, "User profile updated successfully")
+        new ApiResponse(200, userObj, "User profile updated successfully")
     );
 });
 
-export { getUserProfile, updateUserProfile };
+export { getUserProfile, updateUserProfile, checkUsernameAvailability };

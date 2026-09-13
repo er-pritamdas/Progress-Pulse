@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Home, BookOpen, Navigation, TrendingUp, Wallet, CalendarCheck, Grid2x2Plus, Grid2x2Check, Settings2, Target, User, AlertTriangle, Palette, ShieldCheck } from 'lucide-react';
+import { Home, BookOpen, Navigation, TrendingUp, Wallet, CalendarCheck, Grid2x2Plus, Grid2x2Check, Settings2, Target, User, AlertTriangle, Palette, ShieldCheck, Bell, Download } from 'lucide-react';
 import Dashboard from '../../utils/Icons/Dashboard';
 import QuickCalculator from '../Expense/QuickCalculator';
 
@@ -26,6 +26,9 @@ export default function ThemedBreadcrumbs() {
     'Profile': <User className="w-4 h-4" />,
     'Preferences': <Palette className="w-4 h-4" />,
     'Security': <ShieldCheck className="w-4 h-4" />,
+    'Reminders': <Bell className="w-4 h-4" />,
+    'Notifications': <Bell className="w-4 h-4" />,
+    'Exports': <Download className="w-4 h-4" />,
     'Danger Zone': <AlertTriangle className="w-4 h-4 text-error" />,
   };
 
@@ -55,9 +58,9 @@ export default function ThemedBreadcrumbs() {
 
   return (
     <>
-      <div className="flex items-center justify-between gap-3 mb-4 relative z-10">
+      <div className="flex items-center justify-between gap-3 px-4 py-2 bg-base-200 text-base-content rounded-box shadow-sm mb-4 relative z-10 min-h-[46px]">
         {/* DaisyUI Breadcrumb navigation bar */}
-        <div className="breadcrumbs text-sm px-4 py-2.5 bg-base-200 text-base-content rounded-box shadow-sm flex-1 min-w-0">
+        <div className="breadcrumbs text-sm p-0 flex-1 min-w-0">
           <ul className="flex items-center gap-2">
             <li>
               <Link to="/dashboard" className="hover:text-primary transition-colors flex items-center gap-1 font-medium">
@@ -88,6 +91,9 @@ export default function ThemedBreadcrumbs() {
             )}
           </ul>
         </div>
+
+        {/* Extreme Right Action Slot for Breadcrumbs Navigation Bar */}
+        <div id="breadcrumb-actions" className="flex items-center gap-2 shrink-0"></div>
       </div>
 
       {/* Floating Action Quick Calculator for Expense Pages */}

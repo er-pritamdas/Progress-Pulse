@@ -601,3 +601,49 @@ export const deleteMealCategoryLogs = async (req, res) => {
     });
   }
 };
+
+// GET /api/v1/dashboard/habit/food/custom (Get user's custom foods)
+export const getUserCustomFoods = async (req, res) => {
+  try {
+    const userId = req.user?._id;
+    const customFoods = await FoodDatabase.find({ userId, isCustom: true }).sort({ createdAt: -1 });
+    return res.status(200).json({
+      success: true,
+      message: "User custom foods retrieved successfully",
+      data: customFoods,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Failed to fetch custom foods",
+    });
+  }
+};
+
+// DELETE /api/v1/dashboard/habit/food/database/:id (Delete user's custom food)
+export const deleteCustomFood = async (req, res) => {
+  try {
+    const userId = req.user?._id;
+    const { id } = req.params;
+
+    const food = await FoodDatabase.findOne({ _id: id, userId, isCustom: true });
+    if (!food) {
+      return res.status(404).json({
+        success: false,
+        message: "Custom food item not found or unauthorized to delete",
+      });
+    }
+
+    await FoodDatabase.findByIdAndDelete(id);
+
+    return res.status(200).json({
+      success: true,
+      message: "Custom food item deleted successfully",
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Failed to delete custom food item",
+    });
+  }
+};

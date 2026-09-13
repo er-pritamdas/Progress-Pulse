@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { useLocation, useNavigate, useBlocker } from "react-router-dom";
 import { 
   User, 
@@ -31,7 +32,13 @@ import {
   TrendingUp,
   X,
   Check,
-  ShieldAlert
+  ShieldAlert,
+  Bell,
+  Download,
+  Utensils,
+  FileSpreadsheet,
+  Send,
+  BookOpen
 } from "lucide-react";
 import { TitleChanger } from "../../../utils/TitleChanger";
 import axiosInstance from "../../../Context/AxiosInstance";
@@ -155,6 +162,114 @@ function UserSettings() {
     timezone: localStorage.getItem("user_timezone") || "auto",
   });
 
+  const [usernameCheck, setUsernameCheck] = useState({
+    checking: false,
+    available: null,
+    message: "",
+    isCurrent: true,
+  });
+  const usernameCheckTimeoutRef = useRef(null);
+
+  const handleUsernameChange = (e) => {
+    const rawVal = e.target.value;
+    const val = rawVal.replace(/\s+/g, "");
+    setProfile((prev) => ({ ...prev, username: val }));
+
+    const initialUser = (initialProfileRef.current?.username || "").toLowerCase();
+    const currentVal = val.toLowerCase();
+
+    if (usernameCheckTimeoutRef.current) {
+      clearTimeout(usernameCheckTimeoutRef.current);
+    }
+
+    if (!val) {
+      setUsernameCheck({
+        checking: false,
+        available: false,
+        message: "Required",
+        isCurrent: false,
+      });
+      return;
+    }
+
+    if (currentVal === initialUser) {
+      setUsernameCheck({
+        checking: false,
+        available: true,
+        message: "Current",
+        isCurrent: true,
+      });
+      return;
+    }
+
+    const usernameRegex = /^[a-zA-Z0-9_.-]{3,30}$/;
+    if (val.length < 3) {
+      setUsernameCheck({
+        checking: false,
+        available: false,
+        message: "Min 3 chars",
+        isCurrent: false,
+      });
+      return;
+    }
+
+    if (!usernameRegex.test(val)) {
+      setUsernameCheck({
+        checking: false,
+        available: false,
+        message: "Letters, numbers, _, ., - only",
+        isCurrent: false,
+      });
+      return;
+    }
+
+    setUsernameCheck({
+      checking: true,
+      available: null,
+      message: "Checking...",
+      isCurrent: false,
+    });
+
+    usernameCheckTimeoutRef.current = setTimeout(async () => {
+      try {
+        const res = await axiosInstance.get(
+          `/v1/dashboard/check-username?username=${encodeURIComponent(val)}`
+        );
+        const data = res.data?.data;
+        if (data?.available) {
+          setUsernameCheck({
+            checking: false,
+            available: true,
+            message: "Available",
+            isCurrent: Boolean(data.isCurrent),
+          });
+        } else {
+          setUsernameCheck({
+            checking: false,
+            available: false,
+            message: data?.reason || "Taken",
+            isCurrent: false,
+          });
+        }
+      } catch (err) {
+        setUsernameCheck({
+          checking: false,
+          available: false,
+          message: err.response?.data?.message || "Taken",
+          isCurrent: false,
+        });
+      }
+    }, 400);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (usernameCheckTimeoutRef.current) {
+        clearTimeout(usernameCheckTimeoutRef.current);
+      }
+    };
+  }, []);
+
   const dobParts = parseDob(profile.dateOfBirth);
   const maxDays = getDaysInMonth(dobParts.year, dobParts.month);
 
@@ -217,6 +332,8 @@ function UserSettings() {
   const getTabFromPath = () => {
     const path = location.pathname.toLowerCase();
     if (path.includes("/danger-zone")) return "danger";
+    if (path.includes("/exports")) return "exports";
+    if (path.includes("/reminders") || path.includes("/notifications")) return "reminders";
     if (path.includes("/preferences")) return "appearance";
     if (path.includes("/security")) return "security";
     return "profile";
@@ -229,6 +346,7 @@ function UserSettings() {
 
     const profileChanged =
       (profile.fullName || "").trim() !== (init.fullName || "").trim() ||
+      (profile.username || "").trim() !== (init.username || "").trim() ||
       (profile.phone || "").trim() !== (init.phone || "").trim() ||
       (profile.dateOfBirth || "").trim() !== (init.dateOfBirth || "").trim() ||
       (profile.occupation || "").trim() !== (init.occupation || "").trim() ||
@@ -292,6 +410,9 @@ function UserSettings() {
       profile: "/dashboard/settings/profile",
       appearance: "/dashboard/settings/preferences",
       security: "/dashboard/settings/security",
+      reminders: "/dashboard/settings/reminders",
+      notifications: "/dashboard/settings/reminders",
+      exports: "/dashboard/settings/exports",
       danger: "/dashboard/settings/danger-zone",
     };
     const targetPath = pathMap[tabKey] || "/dashboard/settings/profile";
@@ -417,6 +538,110 @@ function UserSettings() {
   const showError = (msg) => {
     setAlertError(msg);
     setTimeout(() => setAlertError(""), 4000);
+  };
+
+  // Exports Hub State & Handlers
+  const [selectedExportTracker, setSelectedExportTracker] = useState("habit");
+  const [exportRanges, setExportRanges] = useState({
+    habit: {
+      startDate: new Date(Date.now() - 30 * 86400000).toISOString().split("T")[0],
+      endDate: new Date().toISOString().split("T")[0],
+    },
+    food: {
+      startDate: new Date(Date.now() - 30 * 86400000).toISOString().split("T")[0],
+      endDate: new Date().toISOString().split("T")[0],
+    },
+    health: {
+      startDate: new Date(Date.now() - 30 * 86400000).toISOString().split("T")[0],
+      endDate: new Date().toISOString().split("T")[0],
+    },
+    journal: {
+      startDate: new Date(Date.now() - 30 * 86400000).toISOString().split("T")[0],
+      endDate: new Date().toISOString().split("T")[0],
+    },
+  });
+
+  const [exportLoading, setExportLoading] = useState({
+    habit: false,
+    food: false,
+    health: false,
+    journal: false,
+  });
+
+  const handlePresetRange = (type, days) => {
+    const today = new Date();
+    const endStr = today.toISOString().split("T")[0];
+    let startStr = "";
+
+    if (days === 0) {
+      startStr = "";
+    } else {
+      const d = new Date(Date.now() - days * 86400000);
+      startStr = d.toISOString().split("T")[0];
+    }
+
+    setExportRanges((prev) => ({
+      ...prev,
+      [type]: {
+        startDate: startStr,
+        endDate: days === 0 ? "" : endStr,
+      },
+    }));
+  };
+
+  const handleExportDateChange = (type, field, value) => {
+    setExportRanges((prev) => ({
+      ...prev,
+      [type]: {
+        ...prev[type],
+        [field]: value,
+      },
+    }));
+  };
+
+  const isPresetActive = (type, days) => {
+    const range = exportRanges[type];
+    if (days === 0) {
+      return !range.startDate && !range.endDate;
+    }
+    const today = new Date().toISOString().split("T")[0];
+    const expectedStart = new Date(Date.now() - days * 86400000).toISOString().split("T")[0];
+    return range.startDate === expectedStart && range.endDate === today;
+  };
+
+  const handleTriggerExport = async (type) => {
+    const range = exportRanges[type];
+    if (range.startDate && range.endDate && range.startDate > range.endDate) {
+      showError("Start date cannot be after end date.");
+      return;
+    }
+    setExportLoading((prev) => ({ ...prev, [type]: true }));
+
+    try {
+      let endpoint = "";
+      const payload = {};
+      if (range.startDate) payload.startDate = range.startDate;
+      if (range.endDate) payload.endDate = range.endDate;
+
+      if (type === "habit") {
+        endpoint = "/v1/dashboard/habit/export";
+      } else if (type === "food") {
+        endpoint = "/v1/dashboard/habit/food/export";
+      } else if (type === "health") {
+        endpoint = "/v1/dashboard/habit/health-report/export";
+      } else if (type === "journal") {
+        endpoint = "/v1/dashboard/habit/journal/export";
+      }
+
+      const res = await axiosInstance.post(endpoint, payload);
+      const msg = res.data?.message || `Export sent successfully to ${profile.email || "your registered email"}!`;
+      showSuccess(msg);
+    } catch (err) {
+      const errMsg = err.response?.data?.message || err.message || "Failed to trigger export";
+      showError(errMsg);
+    } finally {
+      setExportLoading((prev) => ({ ...prev, [type]: false }));
+    }
   };
 
   // Load existing profile from localStorage and backend
@@ -640,23 +865,29 @@ function UserSettings() {
         }
       }
 
-      // Update LocalStorage first for instant responsiveness
-      localStorage.setItem("user_profile", JSON.stringify(profile));
-      localStorage.setItem("user_timezone", profile.timezone || "auto");
-      window.dispatchEvent(new Event("user-timezone-updated"));
-
-      if (profile.profilePic) {
-        localStorage.setItem("profilePic", profile.profilePic);
-      } else {
-        localStorage.removeItem("profilePic");
+      // Validate Username
+      const cleanUsername = (profile.username || "").trim();
+      if (!cleanUsername) {
+        showError("Username cannot be empty.");
+        setIsSaving(false);
+        return false;
       }
-      if (profile.fullName) {
-        localStorage.setItem("fullName", profile.fullName);
+      const usernameRegex = /^[a-zA-Z0-9_.-]{3,30}$/;
+      if (!usernameRegex.test(cleanUsername)) {
+        showError("Username must be 3-30 characters (letters, numbers, _, ., -).");
+        setIsSaving(false);
+        return false;
+      }
+      if (usernameCheck.available === false && !usernameCheck.isCurrent) {
+        showError(`Username "@${cleanUsername}" is already taken by another user. Please choose a unique username.`);
+        setIsSaving(false);
+        return false;
       }
 
-      // Sync with server if endpoint is accessible
+      // Sync with server first to verify uniqueness and database write
       try {
         const payload = {
+          username: cleanUsername,
           fullName: profile.fullName,
           profilePic: profile.profilePic,
           bio: profile.bio,
@@ -672,9 +903,34 @@ function UserSettings() {
               }
             : {}),
         };
-        await axiosInstance.put("/v1/dashboard/profile", payload);
+        const res = await axiosInstance.put("/v1/dashboard/profile", payload);
+        const serverData = res.data?.data;
+        if (serverData?.accessToken) {
+          localStorage.setItem("token", serverData.accessToken);
+        }
+        if (serverData?.username) {
+          localStorage.setItem("username", serverData.username);
+        }
       } catch (apiErr) {
-        console.log("Backend profile sync notice: Local copy saved successfully.", apiErr?.message);
+        const errMsg = apiErr.response?.data?.message || apiErr.message || "Failed to update profile";
+        showError(errMsg);
+        setIsSaving(false);
+        return false;
+      }
+
+      // Update LocalStorage on successful server save
+      localStorage.setItem("username", cleanUsername);
+      localStorage.setItem("user_profile", JSON.stringify({ ...profile, username: cleanUsername }));
+      localStorage.setItem("user_timezone", profile.timezone || "auto");
+      window.dispatchEvent(new Event("user-timezone-updated"));
+
+      if (profile.profilePic) {
+        localStorage.setItem("profilePic", profile.profilePic);
+      } else {
+        localStorage.removeItem("profilePic");
+      }
+      if (profile.fullName) {
+        localStorage.setItem("fullName", profile.fullName);
       }
 
       // Broadcast event so Navbar and other components update immediately
@@ -683,16 +939,22 @@ function UserSettings() {
           detail: {
             profilePic: profile.profilePic,
             fullName: profile.fullName,
-            username: profile.username,
+            username: cleanUsername,
           },
         })
       );
 
-      // Reset password fields and baseline ref
+      // Reset password fields, username status and baseline ref
       setPasswords({ currentPassword: "", newPassword: "", confirmPassword: "" });
-      initialProfileRef.current = { ...profile };
+      initialProfileRef.current = { ...profile, username: cleanUsername };
+      setUsernameCheck({
+        checking: false,
+        available: true,
+        message: "Current",
+        isCurrent: true,
+      });
 
-      showSuccess("Settings and Profile Picture saved successfully!");
+      showSuccess("Settings and Profile saved successfully!");
       return true;
     } catch (err) {
       const msg = err.response?.data?.message || err.message || "Failed to update profile";
@@ -703,15 +965,97 @@ function UserSettings() {
     }
   };
 
-  return (
-    <div className="max-w-6xl mx-auto space-y-6 pb-12">
-      {/* Toast Alerts */}
-      {alertSuccess && <SuccessAlert message={alertSuccess} onClose={() => setAlertSuccess("")} />}
-      {alertError && <ErrorAlert message={alertError} onClose={() => setAlertError("")} />}
+  const handleReset = () => {
+    if (initialProfileRef.current) {
+      setProfile({ ...initialProfileRef.current });
+    } else {
+      const storedPic = localStorage.getItem("profilePic") || "";
+      const storedEmail = localStorage.getItem("email") || "";
+      const parsed = JSON.parse(localStorage.getItem("user_profile") || "{}");
+      setProfile((prev) => ({
+        ...prev,
+        ...parsed,
+        email: parsed.email || storedEmail || prev.email,
+        profilePic: storedPic,
+      }));
+    }
+    setPasswords({ currentPassword: "", newPassword: "", confirmPassword: "" });
+    setUsernameCheck({ checking: false, available: true, message: "Current", isCurrent: true });
+    showSuccess("Reset changes to saved profile");
+  };
 
-      {/* Top Tabs Bar */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-base-200/80 border border-base-300 p-2 rounded-2xl shadow-xs">
-        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+  const [breadcrumbContainer, setBreadcrumbContainer] = useState(() => {
+    if (typeof document !== "undefined") {
+      return document.getElementById("breadcrumb-actions");
+    }
+    return null;
+  });
+
+  useEffect(() => {
+    const el = document.getElementById("breadcrumb-actions");
+    if (el) {
+      setBreadcrumbContainer(el);
+    }
+  }, [location.pathname]);
+
+  const renderBreadcrumbActions = () => {
+    if (!breadcrumbContainer || activeTab === "danger") return null;
+
+    return createPortal(
+      <div className="flex items-center gap-2 shrink-0">
+        {isDirty && (
+          <span className="hidden md:inline-flex badge badge-warning badge-soft text-[11px] font-bold gap-1 animate-pulse border border-warning/30 shrink-0">
+            <span className="w-1.5 h-1.5 rounded-full bg-warning"></span>
+            Unsaved Changes
+          </span>
+        )}
+        <button
+          type="button"
+          onClick={handleReset}
+          disabled={!isDirty || isSaving}
+          className="btn btn-ghost btn-xs sm:btn-sm rounded-xl gap-1.5 font-semibold text-base-content/70 hover:text-base-content border border-base-content/10 disabled:opacity-40"
+          title="Reset unsaved changes"
+        >
+          <RotateCcw size={13} />
+          <span>Reset</span>
+        </button>
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={isSaving}
+          className="btn btn-primary btn-xs sm:btn-sm rounded-xl font-bold px-3 sm:px-4 gap-1.5 sm:gap-2 shadow-xs shrink-0"
+        >
+          {isSaving ? (
+            <>
+              <span className="loading loading-spinner loading-xs"></span>
+              <span>Saving...</span>
+            </>
+          ) : (
+            <>
+              <Save size={14} />
+              <span>Save Changes</span>
+            </>
+          )}
+        </button>
+      </div>,
+      breadcrumbContainer
+    );
+  };
+
+  return (
+    <div className="w-full pb-6">
+      {/* Portal buttons to extreme right of Breadcrumbs Navigation Bar */}
+      {renderBreadcrumbActions()}
+
+      {/* Toast Alerts */}
+      <div className="max-w-6xl mx-auto mb-3">
+        {alertSuccess && <SuccessAlert message={alertSuccess} onClose={() => setAlertSuccess("")} />}
+        {alertError && <ErrorAlert message={alertError} onClose={() => setAlertError("")} />}
+      </div>
+
+      {/* Top Tabs Navigation Bar - Sticky with ZERO gap to website nav bar */}
+      <div className="sticky top-[-16px] z-30 bg-base-200/98 border-b border-base-300 shadow-md backdrop-blur-lg mb-6 -mx-4 px-4 py-2 transition-all">
+        <div className="max-w-6xl mx-auto flex items-center gap-1.5 overflow-x-auto no-scrollbar">
           <button
             onClick={() => switchTab("profile")}
             className={`btn btn-sm rounded-xl gap-2 font-bold transition-all shrink-0 ${
@@ -749,6 +1093,33 @@ function UserSettings() {
           </button>
 
           <button
+            onClick={() => switchTab("reminders")}
+            className={`btn btn-sm rounded-xl gap-2 font-bold transition-all shrink-0 ${
+              activeTab === "reminders"
+                ? "btn-primary shadow-xs"
+                : "btn-ghost text-base-content/70 hover:text-base-content hover:bg-base-300/60"
+            }`}
+          >
+            <Bell size={15} />
+            Reminders
+          </button>
+
+          <button
+            onClick={() => switchTab("exports")}
+            className={`btn btn-sm rounded-xl gap-2 font-bold transition-all shrink-0 ${
+              activeTab === "exports"
+                ? "btn-primary shadow-xs"
+                : "btn-ghost text-base-content/70 hover:text-base-content hover:bg-base-300/60"
+            }`}
+          >
+            <Download size={15} />
+            Exports
+            <span className={`badge badge-xs ${activeTab === "exports" ? "badge-neutral" : "badge-outline"}`}>
+              New
+            </span>
+          </button>
+
+          <button
             onClick={() => switchTab("danger")}
             className={`btn btn-sm rounded-xl gap-2 font-bold transition-all shrink-0 ${
               activeTab === "danger"
@@ -763,43 +1134,15 @@ function UserSettings() {
             </span>
           </button>
         </div>
-
-        {activeTab !== "danger" && (
-          <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
-            {isDirty && (
-              <span className="badge badge-warning badge-soft text-[11px] font-bold gap-1 animate-pulse border border-warning/30">
-                <span className="w-1.5 h-1.5 rounded-full bg-warning"></span>
-                Unsaved Changes
-              </span>
-            )}
-            <button
-              onClick={handleSave}
-              disabled={isSaving}
-              className="btn btn-primary btn-sm rounded-xl font-bold px-5 gap-2 shadow-xs shrink-0"
-            >
-              {isSaving ? (
-                <>
-                  <span className="loading loading-spinner loading-xs"></span>
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <Save size={15} />
-                  Save Changes
-                </>
-              )}
-            </button>
-          </div>
-        )}
       </div>
 
+      <div className="max-w-6xl mx-auto space-y-5">
       {/* TAB 1: Profile & Avatar Upload */}
       {activeTab === "profile" && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Avatar Upload Card (Left Column) */}
-          <div className="card bg-base-200 border border-base-300 shadow-sm rounded-3xl p-6 flex flex-col justify-between">
-            <div>
-              <div className="flex items-center justify-between mb-4">
+          <div className="card bg-base-200 border border-base-300 shadow-sm rounded-3xl p-5 flex flex-col justify-between">
+            <div className="flex items-center justify-between mb-3">
                 <h3 className="text-lg font-black text-base-content flex items-center gap-2">
                   <Camera size={18} className="text-primary" />
                   Profile Picture
@@ -810,7 +1153,7 @@ function UserSettings() {
               </div>
 
               {/* Avatar Preview Display */}
-              <div className="flex flex-col items-center justify-center my-4">
+              <div className="flex flex-col items-center justify-center my-2.5">
                 <div className="relative group">
                   <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-base-100 shadow-xl ring-4 ring-primary/20 bg-neutral flex items-center justify-center">
                     {profile.profilePic ? (
@@ -898,11 +1241,10 @@ function UserSettings() {
                   </button>
                 )}
               </div>
-            </div>
 
             {/* Avatar Presets Selection */}
-            <div className="mt-6 pt-4 border-t border-base-300">
-              <p className="text-xs font-bold text-base-content/70 mb-2.5 flex items-center gap-1.5">
+            <div className="mt-3">
+              <p className="text-xs font-bold text-base-content/70 mb-2 flex items-center gap-1.5">
                 <Sparkles size={13} className="text-warning" />
                 Or pick a preset avatar:
               </p>
@@ -930,13 +1272,13 @@ function UserSettings() {
           </div>
 
           {/* Personal Details Form (Right 2 Columns) */}
-          <div className="lg:col-span-2 card bg-base-200 border border-base-300 shadow-sm rounded-3xl p-6 sm:p-8">
-            <h3 className="text-lg font-black text-base-content flex items-center gap-2 mb-6">
+          <div className="lg:col-span-2 card bg-base-200 border border-base-300 shadow-sm rounded-3xl p-5 sm:p-6">
+            <h3 className="text-lg font-black text-base-content flex items-center gap-2 mb-4">
               <User size={18} className="text-primary" />
               Personal Information
             </h3>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
               {/* Full Name */}
               <div className="form-control">
                 <label className="label text-xs font-bold uppercase tracking-wider text-base-content/70">
@@ -954,24 +1296,57 @@ function UserSettings() {
                 </div>
               </div>
 
-              {/* Username (Locked/Readonly) */}
+              {/* Username (Editable & Unique) */}
               <div className="form-control">
-                <label className="label text-xs font-bold uppercase tracking-wider text-base-content/70">
-                  Username
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="label text-xs font-bold uppercase tracking-wider text-base-content/70 p-0">
+                    Username
+                  </label>
+                  {usernameCheck.checking ? (
+                    <span className="badge badge-neutral badge-soft text-[10px] font-bold gap-1 animate-pulse">
+                      <span className="loading loading-spinner loading-xs"></span>
+                      Checking...
+                    </span>
+                  ) : usernameCheck.isCurrent ? (
+                    <span className="badge badge-neutral badge-soft text-[10px] font-bold">
+                      Current
+                    </span>
+                  ) : usernameCheck.available === true ? (
+                    <span className="badge badge-success badge-soft text-[10px] font-bold flex items-center gap-1">
+                      <CheckCircle2 size={11} />
+                      Available
+                    </span>
+                  ) : usernameCheck.available === false ? (
+                    <span className="badge badge-error badge-soft text-[10px] font-bold flex items-center gap-1">
+                      <AlertTriangle size={11} />
+                      {usernameCheck.message || "Taken"}
+                    </span>
+                  ) : null}
+                </div>
                 <div className="relative">
                   <input
                     type="text"
                     value={profile.username}
-                    readOnly
-                    className="input input-bordered w-full rounded-xl pl-10 text-sm font-medium bg-base-300/50 cursor-not-allowed opacity-80"
+                    onChange={handleUsernameChange}
+                    placeholder="Enter unique username"
+                    maxLength={30}
+                    className={`input input-bordered w-full rounded-xl pl-10 pr-10 text-sm font-medium transition-all ${
+                      !usernameCheck.isCurrent && usernameCheck.available === true
+                        ? "border-success focus:border-success ring-1 ring-success/30"
+                        : !usernameCheck.isCurrent && usernameCheck.available === false
+                        ? "border-error focus:border-error ring-1 ring-error/30"
+                        : ""
+                    }`}
                   />
                   <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-bold text-base-content/40">
                     @
                   </span>
-                  <span className="badge badge-neutral badge-xs absolute right-3 top-1/2 -translate-y-1/2">
-                    Primary
-                  </span>
+                  {!usernameCheck.isCurrent && usernameCheck.available === true && (
+                    <CheckCircle2 size={16} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-success" />
+                  )}
+                  {!usernameCheck.isCurrent && usernameCheck.available === false && (
+                    <AlertTriangle size={16} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-error" />
+                  )}
                 </div>
               </div>
 
@@ -994,11 +1369,6 @@ function UserSettings() {
                     Verified
                   </span>
                 </div>
-                <label className="label">
-                  <span className="label-text-alt text-base-content/50">
-                    Registered email securely linked to your account from database
-                  </span>
-                </label>
               </div>
 
               {/* Phone */}
@@ -1102,8 +1472,8 @@ function UserSettings() {
                 </div>
               </div>
 
-              {/* Occupation / Role */}
-              <div className="form-control sm:col-span-2">
+              {/* Occupation / Role (Right of Date of Birth) */}
+              <div className="form-control">
                 <label className="label text-xs font-bold uppercase tracking-wider text-base-content/70">
                   Occupation / Professional Title
                 </label>
@@ -1112,7 +1482,7 @@ function UserSettings() {
                     type="text"
                     value={profile.occupation}
                     onChange={(e) => setProfile({ ...profile, occupation: e.target.value })}
-                    placeholder="Software Engineer / Financial Analyst / Entrepreneur"
+                    placeholder="Software Engineer / Analyst / Entrepreneur"
                     className="input input-bordered w-full rounded-xl pl-10 text-sm font-medium"
                   />
                   <Briefcase size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-base-content/40" />
@@ -1126,59 +1496,14 @@ function UserSettings() {
                 </label>
                 <div className="relative">
                   <textarea
-                    rows={3}
+                    rows={2}
                     value={profile.bio}
                     onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
                     placeholder="Tell us a little bit about yourself or your productivity & financial goals..."
                     className="textarea textarea-bordered w-full rounded-xl p-3 text-sm font-medium resize-none"
                   />
                 </div>
-                <label className="label">
-                  <span className="label-text-alt text-base-content/50">
-                    Brief bio shown in your dashboard profile header
-                  </span>
-                </label>
               </div>
-            </div>
-
-            <div className="mt-8 pt-6 border-t border-base-300 flex justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => {
-                  if (initialProfileRef.current) {
-                    setProfile({ ...initialProfileRef.current });
-                  } else {
-                    const storedPic = localStorage.getItem("profilePic") || "";
-                    const storedEmail = localStorage.getItem("email") || "";
-                    const parsed = JSON.parse(localStorage.getItem("user_profile") || "{}");
-                    setProfile((prev) => ({
-                      ...prev,
-                      ...parsed,
-                      email: parsed.email || storedEmail || prev.email,
-                      profilePic: storedPic,
-                    }));
-                  }
-                  setPasswords({ currentPassword: "", newPassword: "", confirmPassword: "" });
-                  showSuccess("Reset to saved profile");
-                }}
-                className="btn btn-ghost rounded-xl gap-2 font-semibold text-base-content/70"
-              >
-                <RotateCcw size={16} />
-                Reset
-              </button>
-              <button
-                type="button"
-                onClick={handleSave}
-                disabled={isSaving}
-                className="btn btn-primary rounded-xl px-6 font-bold gap-2 shadow-sm"
-              >
-                {isSaving ? (
-                  <span className="loading loading-spinner loading-sm"></span>
-                ) : (
-                  <Save size={16} />
-                )}
-                Save Changes
-              </button>
             </div>
           </div>
         </div>
@@ -1187,37 +1512,109 @@ function UserSettings() {
       {/* TAB 2: Appearance & Preferences */}
       {activeTab === "appearance" && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Theme Switcher Card */}
-          <div className="card bg-base-200 border border-base-300 shadow-sm rounded-3xl p-6 sm:p-8">
-            <h3 className="text-lg font-black text-base-content flex items-center gap-2 mb-2">
-              <Palette size={18} className="text-primary" />
-              Application Theme
-            </h3>
-            <p className="text-xs text-base-content/70 mb-5">
-              Choose your favorite theme colors for Progress Pulse. Changes take effect instantly.
-            </p>
+          {/* Theme & Geographic Location Card */}
+          <div className="card bg-base-200 border border-base-300 shadow-sm rounded-3xl p-6 sm:p-8 flex flex-col justify-between">
+            <div>
+              {/* Application Theme Section */}
+              <h3 className="text-lg font-black text-base-content flex items-center gap-2 mb-2">
+                <Palette size={18} className="text-primary" />
+                Application Theme
+              </h3>
+              <p className="text-xs text-base-content/70 mb-4">
+                Choose your favorite theme colors for Progress Pulse. Changes take effect instantly.
+              </p>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {AVAILABLE_THEMES.map(({ name, label, emoji }) => (
-                <button
-                  key={name}
-                  type="button"
-                  onClick={() => handleThemeChange(name)}
-                  className={`p-3.5 rounded-2xl border text-left transition-all flex items-center justify-between ${
-                    profile.theme === name
-                      ? "border-primary bg-primary/10 shadow-sm font-bold ring-2 ring-primary/30"
-                      : "border-base-300 bg-base-100/60 hover:bg-base-100 hover:border-base-content/20"
-                  }`}
-                >
-                  <span className="flex items-center gap-2 text-sm text-base-content">
-                    <span>{emoji}</span>
-                    <span>{label}</span>
-                  </span>
-                  {profile.theme === name && (
-                    <CheckCircle2 size={16} className="text-primary shrink-0" />
-                  )}
-                </button>
-              ))}
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 mb-6">
+                {AVAILABLE_THEMES.map(({ name, label, emoji }) => (
+                  <button
+                    key={name}
+                    type="button"
+                    onClick={() => handleThemeChange(name)}
+                    className={`p-3 rounded-2xl border text-left transition-all flex items-center justify-between ${
+                      profile.theme === name
+                        ? "border-primary bg-primary/10 shadow-sm font-bold ring-2 ring-primary/30"
+                        : "border-base-300 bg-base-100/60 hover:bg-base-100 hover:border-base-content/20"
+                    }`}
+                  >
+                    <span className="flex items-center gap-2 text-xs sm:text-sm text-base-content">
+                      <span>{emoji}</span>
+                      <span>{label}</span>
+                    </span>
+                    {profile.theme === name && (
+                      <CheckCircle2 size={15} className="text-primary shrink-0" />
+                    )}
+                  </button>
+                ))}
+              </div>
+
+              {/* Geographic Location & Live Clock (Utilizing Space in Application Theme Card) */}
+              <div className="pt-5 border-t border-base-300">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
+                  <div>
+                    <h3 className="text-base font-black text-base-content flex items-center gap-2">
+                      <Globe size={17} className="text-primary" />
+                      Geographic Location & Live Clock
+                    </h3>
+                    <p className="text-xs text-base-content/70 mt-0.5">
+                      Display date and time dynamically based on your physical location.
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-base-100 border border-base-300 shadow-2xs shrink-0 self-start sm:self-auto">
+                    <MapPin size={13} className="text-primary shrink-0" />
+                    <span className="text-[11px] font-bold text-base-content font-mono">
+                      {getSystemGeoTimeZone()}
+                    </span>
+                    <span className="badge badge-xs badge-success">Active</span>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  {/* Select Timezone */}
+                  <div className="form-control">
+                    <label className="label text-xs font-bold uppercase tracking-wider text-base-content/70 py-1">
+                      Timezone Mode
+                    </label>
+                    <select
+                      value={profile.timezone || "auto"}
+                      onChange={(e) => handleTimezoneChange(e.target.value)}
+                      className="select select-bordered w-full rounded-xl text-sm font-medium"
+                    >
+                      <option value="auto">
+                        🌐 Auto-Detect via Geographic Location (Currently {getSystemGeoTimeZone()})
+                      </option>
+                      {COMMON_TIMEZONES.filter((tz) => tz.value !== "auto").map((tz) => (
+                        <option key={tz.value} value={tz.value}>
+                          {tz.flag} {tz.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Live Clock Preview Box */}
+                  <div className="p-3.5 rounded-2xl bg-base-100 border border-base-300 flex flex-col justify-center gap-1.5">
+                    <div className="flex items-center justify-between text-xs font-bold text-base-content/70">
+                      <span className="flex items-center gap-1.5">
+                        <Clock size={13} className="text-primary" />
+                        Live Geographic Preview
+                      </span>
+                      <span className="badge badge-primary badge-soft text-[10px] font-mono">
+                        {previewDateTime.timeZone}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2 text-base sm:text-lg font-black font-mono text-base-content">
+                      <span className="text-primary">{previewDateTime.formattedTime}</span>
+                      <span className="text-base-content/30">•</span>
+                      <span>{previewDateTime.formattedDate}</span>
+                    </div>
+
+                    <p className="text-[11px] text-base-content/60">
+                      Location: <span className="font-semibold text-base-content">{previewDateTime.city}</span> ({previewDateTime.tzAbbr || "Local"})
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -1264,21 +1661,21 @@ function UserSettings() {
                 ))}
               </div>
 
-              {/* Active Timezone Summary */}
+              {/* Active Preference Summary */}
               <div className="mt-6 p-4 rounded-2xl bg-base-100 border border-base-300 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2.5 min-w-0">
-                  <Globe size={18} className="text-primary shrink-0" />
+                  <Coins size={18} className="text-primary shrink-0" />
                   <div className="min-w-0">
                     <p className="text-xs font-bold text-base-content truncate">
-                      Active: {previewDateTime.city} ({previewDateTime.tzAbbr || previewDateTime.timeZone})
+                      Active Currency: {CURRENCIES.find((c) => c.code === profile.currency)?.name || profile.currency}
                     </p>
                     <p className="text-[11px] text-base-content/60 font-mono">
-                      {previewDateTime.formattedTime}
+                      Applied across Investments, Expenses & Budgets
                     </p>
                   </div>
                 </div>
                 <span className="badge badge-primary badge-soft text-[10px] font-bold shrink-0">
-                  {profile.timezone === "auto" ? "Auto-Geo" : "Custom"}
+                  {profile.currency}
                 </span>
               </div>
             </div>
@@ -1297,81 +1694,6 @@ function UserSettings() {
                 )}
                 Save Preferences
               </button>
-            </div>
-          </div>
-
-          {/* Geographic Location & Timezone Settings Card */}
-          <div className="lg:col-span-2 card bg-base-200 border border-base-300 shadow-sm rounded-3xl p-6 sm:p-8">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
-              <div>
-                <h3 className="text-lg font-black text-base-content flex items-center gap-2">
-                  <Globe size={18} className="text-primary" />
-                  Geographic Location & Live Clock
-                </h3>
-                <p className="text-xs text-base-content/70 mt-0.5">
-                  Display date and time dynamically based on your physical geographic location or custom timezone.
-                </p>
-              </div>
-
-              {/* Detected Geographic Location Badge */}
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-base-100 border border-base-300 shadow-2xs shrink-0 self-start sm:self-auto">
-                <MapPin size={14} className="text-primary shrink-0" />
-                <span className="text-xs font-bold text-base-content font-mono">
-                  Detected: {getSystemGeoTimeZone()}
-                </span>
-                <span className="badge badge-xs badge-success">Geo Active</span>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-4">
-              {/* Select Timezone */}
-              <div className="form-control">
-                <label className="label text-xs font-bold uppercase tracking-wider text-base-content/70">
-                  Select Timezone / Location Mode
-                </label>
-                <select
-                  value={profile.timezone || "auto"}
-                  onChange={(e) => handleTimezoneChange(e.target.value)}
-                  className="select select-bordered w-full rounded-xl text-sm font-medium"
-                >
-                  <option value="auto">
-                    🌐 Auto-Detect via Geographic Location (Currently {getSystemGeoTimeZone()})
-                  </option>
-                  {COMMON_TIMEZONES.filter((tz) => tz.value !== "auto").map((tz) => (
-                    <option key={tz.value} value={tz.value}>
-                      {tz.flag} {tz.label}
-                    </option>
-                  ))}
-                </select>
-                <label className="label">
-                  <span className="label-text-alt text-base-content/60">
-                    Selecting "Auto-Detect" automatically synchronizes with your device's physical geographic location.
-                  </span>
-                </label>
-              </div>
-
-              {/* Live Preview Pill for Selected Timezone */}
-              <div className="p-4 rounded-2xl bg-base-100 border border-base-300 flex flex-col justify-center gap-2">
-                <div className="flex items-center justify-between text-xs font-bold text-base-content/70">
-                  <span className="flex items-center gap-1.5">
-                    <Clock size={14} className="text-primary" />
-                    Live Geographic Preview
-                  </span>
-                  <span className="badge badge-primary badge-soft text-[10px] font-mono">
-                    {previewDateTime.timeZone}
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-2 text-base sm:text-lg font-black font-mono text-base-content">
-                  <span className="text-primary">{previewDateTime.formattedTime}</span>
-                  <span className="text-base-content/30">•</span>
-                  <span>{previewDateTime.formattedDate}</span>
-                </div>
-
-                <p className="text-[11px] text-base-content/60">
-                  Location: <span className="font-semibold text-base-content">{previewDateTime.city}</span> ({previewDateTime.tzAbbr || "Local"})
-                </p>
-              </div>
             </div>
           </div>
         </div>
@@ -1495,7 +1817,938 @@ function UserSettings() {
         </div>
       )}
 
-      {/* TAB 4: Danger Zone */}
+      {/* TAB 4: Reminders */}
+      {activeTab === "reminders" && (
+        <div className="space-y-5">
+          {/* Header Banner */}
+          <div className="card bg-base-200 border border-base-300 shadow-sm rounded-3xl p-5 sm:p-6 relative overflow-hidden">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10">
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-primary/15 border border-primary/30 flex items-center justify-center text-primary shrink-0 mt-0.5">
+                  <Bell size={24} />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-xl font-black text-base-content">
+                      Reminders
+                    </h3>
+                    <span className="badge badge-primary badge-soft text-xs font-bold">
+                      Upcoming Automation
+                    </span>
+                  </div>
+                  <p className="text-xs sm:text-sm text-base-content/70 mt-1 max-w-2xl leading-relaxed">
+                    Stay on track with intelligent nudges, habit streaks, budget alerts, and bill due date reminders. Configure how and when you receive automated alerts.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 2-Column Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            {/* Left Card: Reminder Alert Channels & Preferences */}
+            <div className="card bg-base-200 border border-base-300 shadow-sm rounded-3xl p-5 sm:p-6 flex flex-col justify-between">
+              <div>
+                <h4 className="text-base font-black text-base-content flex items-center gap-2 mb-1">
+                  <Sparkles size={18} className="text-warning" />
+                  Notification Preferences
+                </h4>
+                <p className="text-xs text-base-content/70 mb-4">
+                  Control which pulse categories trigger automated reminders and alerts.
+                </p>
+
+                <div className="space-y-3">
+                  {/* Item 1: Habits */}
+                  <div className="flex items-center justify-between p-3.5 rounded-2xl bg-base-100/70 border border-base-300">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                        <Activity size={18} />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-base-content">Habit Streak Nudges</p>
+                        <p className="text-[11px] text-base-content/60">Daily alerts for scheduled morning and evening habits</p>
+                      </div>
+                    </div>
+                    <input type="checkbox" defaultChecked className="toggle toggle-primary toggle-sm" />
+                  </div>
+
+                  {/* Item 2: Budget Thresholds */}
+                  <div className="flex items-center justify-between p-3.5 rounded-2xl bg-base-100/70 border border-base-300">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-xl bg-error/10 text-error flex items-center justify-center shrink-0">
+                        <Wallet size={18} />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-base-content">Budget Threshold Alerts</p>
+                        <p className="text-[11px] text-base-content/60">Notify when spending exceeds 80% and 100% of limits</p>
+                      </div>
+                    </div>
+                    <input type="checkbox" defaultChecked className="toggle toggle-error toggle-sm" />
+                  </div>
+
+                  {/* Item 3: Bill & Recurring Payments */}
+                  <div className="flex items-center justify-between p-3.5 rounded-2xl bg-base-100/70 border border-base-300">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-xl bg-warning/10 text-warning flex items-center justify-center shrink-0">
+                        <Calendar size={18} />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-base-content">Bill Due Dates & Subscriptions</p>
+                        <p className="text-[11px] text-base-content/60">Advance reminders 48 hours before upcoming renewals</p>
+                      </div>
+                    </div>
+                    <input type="checkbox" defaultChecked className="toggle toggle-warning toggle-sm" />
+                  </div>
+
+                  {/* Item 4: Investment & Financial Milestones */}
+                  <div className="flex items-center justify-between p-3.5 rounded-2xl bg-base-100/70 border border-base-300">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-xl bg-success/10 text-success flex items-center justify-center shrink-0">
+                        <TrendingUp size={18} />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-base-content">Portfolio & Goal Milestones</p>
+                        <p className="text-[11px] text-base-content/60">Celebrate achieved net-worth and saving targets</p>
+                      </div>
+                    </div>
+                    <input type="checkbox" defaultChecked className="toggle toggle-success toggle-sm" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-5 pt-4 border-t border-base-300 flex items-center justify-between">
+                <span className="text-xs text-base-content/60">Automated delivery via In-App Alerts & Navbar</span>
+                <span className="badge badge-sm badge-success badge-soft font-bold">Active Engine</span>
+              </div>
+            </div>
+
+            {/* Right Card: Scheduled Reminders Preview & Engine Status */}
+            <div className="card bg-base-200 border border-base-300 shadow-sm rounded-3xl p-5 sm:p-6 flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <h4 className="text-base font-black text-base-content flex items-center gap-2">
+                    <Clock size={18} className="text-primary" />
+                    Scheduled Reminders Queue
+                  </h4>
+                  <span className="badge badge-xs badge-outline font-mono">Live Preview</span>
+                </div>
+                <p className="text-xs text-base-content/70 mb-4">
+                  Upcoming reminders generated from your habits, budgets, and bills.
+                </p>
+
+                <div className="space-y-3">
+                  <div className="p-3.5 rounded-2xl bg-base-100/70 border border-base-300 flex items-start gap-3">
+                    <div className="w-2.5 h-2.5 rounded-full bg-primary mt-1.5 shrink-0 animate-pulse"></div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-xs font-bold text-base-content truncate">Daily Habit Check-in</p>
+                        <span className="text-[10px] font-mono font-bold text-primary shrink-0">08:00 PM Today</span>
+                      </div>
+                      <p className="text-[11px] text-base-content/60 mt-0.5">
+                        Log your daily progress for Reading and Workout habits.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="p-3.5 rounded-2xl bg-base-100/70 border border-base-300 flex items-start gap-3">
+                    <div className="w-2.5 h-2.5 rounded-full bg-warning mt-1.5 shrink-0"></div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-xs font-bold text-base-content truncate">Monthly Expense Review</p>
+                        <span className="text-[10px] font-mono font-bold text-warning shrink-0">In 2 Days</span>
+                      </div>
+                      <p className="text-[11px] text-base-content/60 mt-0.5">
+                        Compare your monthly spendings with set financial budgets.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="p-3.5 rounded-2xl bg-base-100/70 border border-base-300 flex items-start gap-3">
+                    <div className="w-2.5 h-2.5 rounded-full bg-success mt-1.5 shrink-0"></div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-xs font-bold text-base-content truncate">Emergency Fund Contribution</p>
+                        <span className="text-[10px] font-mono font-bold text-success shrink-0">1st of next month</span>
+                      </div>
+                      <p className="text-[11px] text-base-content/60 mt-0.5">
+                        Scheduled monthly transfer for savings target.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-5 p-3.5 rounded-2xl bg-primary/10 border border-primary/20 flex items-center gap-3">
+                <ShieldCheck size={20} className="text-primary shrink-0" />
+                <p className="text-xs text-base-content/80 leading-relaxed">
+                  <strong className="text-base-content">Reminder Engine Ready:</strong> As you configure custom alerts and milestones in each tracker module, live notifications will trigger here automatically.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 5: Exports */}
+      {activeTab === "exports" && (
+        <div className="space-y-6">
+          {/* Header Banner */}
+          <div className="card bg-base-200 border border-base-300 shadow-sm rounded-3xl p-6 sm:p-7 relative overflow-hidden">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
+              <div className="flex items-start gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-info/15 border border-info/30 flex items-center justify-center text-info shrink-0 mt-1 shadow-inner">
+                  <Download size={28} />
+                </div>
+                <div>
+                  <div className="flex flex-wrap items-center gap-2.5">
+                    <h3 className="text-xl sm:text-2xl font-black text-base-content tracking-tight">
+                      Data & Report Exports
+                    </h3>
+                    <span className="badge badge-info badge-soft text-xs font-bold px-2.5 py-1">
+                      Direct Email Delivery
+                    </span>
+                  </div>
+                  <p className="text-xs sm:text-sm text-base-content/70 mt-1.5 max-w-2xl leading-relaxed">
+                    Generate multi-sheet Microsoft Excel (<span className="font-semibold text-base-content">.xlsx</span>) spreadsheets for your tracker modules and have them delivered directly to your registered inbox.
+                  </p>
+                </div>
+              </div>
+
+              {/* Destination Email Pill */}
+              <div className="bg-base-100/80 border border-base-300/80 rounded-2xl p-3.5 sm:px-4 flex items-center gap-3 shrink-0">
+                <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                  <Mail size={18} />
+                </div>
+                <div>
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-base-content/50">
+                    Recipient Email
+                  </div>
+                  <div className="text-xs sm:text-sm font-semibold text-base-content font-mono truncate max-w-[200px] sm:max-w-[240px]">
+                    {profile.email || "Your Registered Email"}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Two-Column Layout: Vertical Stacked Sticky Sidebar + Exports Display */}
+          <div className="flex flex-col lg:flex-row items-start gap-6 relative">
+            {/* SIDEBAR: Vertical Stacked Sticky Section */}
+            <aside className="w-full lg:w-72 xl:w-80 shrink-0 lg:sticky lg:top-14 self-start space-y-3">
+              <div className="card bg-base-200 border border-base-300 shadow-sm rounded-3xl p-4 sm:p-5">
+                <div className="flex items-center justify-between mb-3.5 pb-3 border-b border-base-300">
+                  <div>
+                    <h4 className="text-sm font-black uppercase tracking-wider text-base-content">
+                      Tracker Exports
+                    </h4>
+                    <p className="text-[11px] text-base-content/60 mt-0.5">
+                      Select tracker module
+                    </p>
+                  </div>
+                  <span className="badge badge-neutral badge-xs font-bold">4 Trackers</span>
+                </div>
+
+                {/* Vertically Stacked Tracker Items */}
+                <div className="space-y-2">
+                  {/* Habit Tracker */}
+                  <button
+                    type="button"
+                    onClick={() => setSelectedExportTracker("habit")}
+                    className={`w-full text-left p-3 rounded-2xl border transition-all flex items-center justify-between gap-3 ${
+                      selectedExportTracker === "habit"
+                        ? "bg-primary/15 border-primary text-base-content shadow-sm ring-1 ring-primary/30"
+                        : "bg-base-100/70 border-base-300 text-base-content/80 hover:bg-base-300/60 hover:text-base-content"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+                        selectedExportTracker === "habit"
+                          ? "bg-primary text-primary-content"
+                          : "bg-primary/15 text-primary"
+                      }`}>
+                        <Activity size={18} />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-xs font-bold truncate">Habit Tracker</div>
+                        <div className="text-[10px] text-base-content/60 truncate">Check-ins & routines</div>
+                      </div>
+                    </div>
+                    <span className="badge badge-xs badge-outline font-mono shrink-0">3 Sheets</span>
+                  </button>
+
+                  {/* Food Logging */}
+                  <button
+                    type="button"
+                    onClick={() => setSelectedExportTracker("food")}
+                    className={`w-full text-left p-3 rounded-2xl border transition-all flex items-center justify-between gap-3 ${
+                      selectedExportTracker === "food"
+                        ? "bg-warning/15 border-warning text-base-content shadow-sm ring-1 ring-warning/30"
+                        : "bg-base-100/70 border-base-300 text-base-content/80 hover:bg-base-300/60 hover:text-base-content"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+                        selectedExportTracker === "food"
+                          ? "bg-warning text-warning-content"
+                          : "bg-warning/15 text-warning"
+                      }`}>
+                        <Utensils size={18} />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-xs font-bold truncate">Food Logging</div>
+                        <div className="text-[10px] text-base-content/60 truncate">Meals & nutrition</div>
+                      </div>
+                    </div>
+                    <span className="badge badge-xs badge-outline font-mono shrink-0">4 Sheets</span>
+                  </button>
+
+                  {/* Clinical Health */}
+                  <button
+                    type="button"
+                    onClick={() => setSelectedExportTracker("health")}
+                    className={`w-full text-left p-3 rounded-2xl border transition-all flex items-center justify-between gap-3 ${
+                      selectedExportTracker === "health"
+                        ? "bg-info/15 border-info text-base-content shadow-sm ring-1 ring-info/30"
+                        : "bg-base-100/70 border-base-300 text-base-content/80 hover:bg-base-300/60 hover:text-base-content"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+                        selectedExportTracker === "health"
+                          ? "bg-info text-info-content"
+                          : "bg-info/15 text-info"
+                      }`}>
+                        <FileSpreadsheet size={18} />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-xs font-bold truncate">Health Report</div>
+                        <div className="text-[10px] text-base-content/60 truncate">Macros & 24 micros</div>
+                      </div>
+                    </div>
+                    <span className="badge badge-xs badge-outline font-mono shrink-0">5 Sheets</span>
+                  </button>
+
+                  {/* Personal Journal */}
+                  <button
+                    type="button"
+                    onClick={() => setSelectedExportTracker("journal")}
+                    className={`w-full text-left p-3 rounded-2xl border transition-all flex items-center justify-between gap-3 ${
+                      selectedExportTracker === "journal"
+                        ? "bg-secondary/15 border-secondary text-base-content shadow-sm ring-1 ring-secondary/30"
+                        : "bg-base-100/70 border-base-300 text-base-content/80 hover:bg-base-300/60 hover:text-base-content"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+                        selectedExportTracker === "journal"
+                          ? "bg-secondary text-secondary-content"
+                          : "bg-secondary/15 text-secondary"
+                      }`}>
+                        <BookOpen size={18} />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-xs font-bold truncate">Personal Journal</div>
+                        <div className="text-[10px] text-base-content/60 truncate">Reflections & mood</div>
+                      </div>
+                    </div>
+                    <span className="badge badge-xs badge-outline font-mono shrink-0">3 Sheets</span>
+                  </button>
+
+                  {/* Divider & All Trackers */}
+                  <div className="pt-1.5">
+                    <div className="h-px bg-base-300 w-full mb-2"></div>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedExportTracker("all")}
+                      className={`w-full text-left p-2.5 rounded-xl border transition-all flex items-center justify-between text-xs font-bold ${
+                        selectedExportTracker === "all"
+                          ? "bg-base-content text-base-100 border-base-content shadow-sm"
+                          : "bg-base-100/40 border-dashed border-base-300 text-base-content/70 hover:bg-base-300/60 hover:text-base-content"
+                      }`}
+                    >
+                      <span className="flex items-center gap-2">
+                        <Sparkles size={14} />
+                        All Trackers (Grid)
+                      </span>
+                      <span className="badge badge-xs badge-neutral">Overview</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Sidebar Help Card */}
+              <div className="card bg-base-200/60 border border-base-300/80 rounded-3xl p-4 text-xs text-base-content/70">
+                <div className="flex items-center gap-2 font-bold text-base-content mb-1">
+                  <ShieldCheck size={15} className="text-success" />
+                  Direct Email Delivery
+                </div>
+                <p className="text-[11px] leading-relaxed">
+                  Export workbooks are formatted into Microsoft Excel spreadsheets and delivered directly to <span className="font-mono text-primary font-semibold truncate block">{profile.email || "your registered email"}</span>
+                </p>
+              </div>
+            </aside>
+
+            {/* MAIN CONTENT AREA: Selected Tracker Export or All Grid */}
+            <div className="flex-1 min-w-0 w-full">
+              <div className={selectedExportTracker === "all" ? "grid grid-cols-1 xl:grid-cols-2 gap-6" : "space-y-6"}>
+                {(selectedExportTracker === "all" || selectedExportTracker === "habit") && (
+                  /* CARD 1: Habit Logging Export */
+                  <div className="card bg-base-200 border border-base-300 shadow-sm rounded-3xl p-5 sm:p-6 flex flex-col justify-between hover:border-primary/40 transition-colors">
+              <div>
+                {/* Header */}
+                <div className="flex items-start justify-between gap-3 mb-4">
+                  <div className="w-12 h-12 rounded-2xl bg-primary/15 border border-primary/30 text-primary flex items-center justify-center shrink-0">
+                    <Activity size={24} />
+                  </div>
+                  <span className="badge badge-primary badge-soft text-[11px] font-bold">
+                    Habit Tracker
+                  </span>
+                </div>
+
+                <h4 className="text-lg font-black text-base-content tracking-tight">
+                  Habit Logging Data
+                </h4>
+                <p className="text-xs text-base-content/70 mt-1 mb-5 leading-relaxed min-h-[36px]">
+                  Daily check-in logs, completion streaks, tracker settings, and logged physical workout sessions.
+                </p>
+
+                {/* Date Range Selector */}
+                <div className="bg-base-100/60 border border-base-300 rounded-2xl p-3.5 mb-5 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-base-content/60 flex items-center gap-1.5">
+                      <Calendar size={13} /> Date Range
+                    </span>
+                    {/* Presets */}
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => handlePresetRange("habit", 7)}
+                        className={`btn btn-xs rounded-lg text-[10px] font-semibold ${
+                          isPresetActive("habit", 7)
+                            ? "btn-primary text-primary-content"
+                            : "btn-ghost text-base-content/70 hover:bg-base-300"
+                        }`}
+                      >
+                        7D
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handlePresetRange("habit", 30)}
+                        className={`btn btn-xs rounded-lg text-[10px] font-semibold ${
+                          isPresetActive("habit", 30)
+                            ? "btn-primary text-primary-content"
+                            : "btn-ghost text-base-content/70 hover:bg-base-300"
+                        }`}
+                      >
+                        30D
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handlePresetRange("habit", 0)}
+                        className={`btn btn-xs rounded-lg text-[10px] font-semibold ${
+                          isPresetActive("habit", 0)
+                            ? "btn-primary text-primary-content"
+                            : "btn-ghost text-base-content/70 hover:bg-base-300"
+                        }`}
+                      >
+                        All
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-[10px] text-base-content/50 block mb-1">Start Date</label>
+                      <input
+                        type="date"
+                        value={exportRanges.habit.startDate}
+                        onChange={(e) => handleExportDateChange("habit", "startDate", e.target.value)}
+                        className="input input-xs input-bordered w-full rounded-lg bg-base-200/80 text-xs font-mono"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-base-content/50 block mb-1">End Date</label>
+                      <input
+                        type="date"
+                        value={exportRanges.habit.endDate}
+                        onChange={(e) => handleExportDateChange("habit", "endDate", e.target.value)}
+                        className="input input-xs input-bordered w-full rounded-lg bg-base-200/80 text-xs font-mono"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Included Sheets */}
+                <div className="mb-5 space-y-1.5">
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-base-content/50 mb-1.5">
+                    Included Worksheets
+                  </div>
+                  <div className="text-xs text-base-content/80 flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary shrink-0"></span>
+                    <span><strong>Table Entries:</strong> Check-ins & daily status</span>
+                  </div>
+                  <div className="text-xs text-base-content/80 flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary shrink-0"></span>
+                    <span><strong>Habit Settings:</strong> Targets, rules & frequencies</span>
+                  </div>
+                  <div className="text-xs text-base-content/80 flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary shrink-0"></span>
+                    <span><strong>Physical Logs:</strong> Exercises, sets & reps</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Button */}
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={() => handleTriggerExport("habit")}
+                  disabled={exportLoading.habit}
+                  className="btn btn-primary w-full rounded-2xl gap-2 font-bold shadow-md shadow-primary/20"
+                >
+                  {exportLoading.habit ? (
+                    <>
+                      <span className="loading loading-spinner loading-xs"></span>
+                      <span>Dispatching Email...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Send size={15} />
+                      <span>Export Habit Data</span>
+                    </>
+                  )}
+                </button>
+                <p className="text-[11px] text-center text-base-content/50 mt-2">
+                  Delivered as formatted <code className="text-xs">.xlsx</code> to your inbox
+                </p>
+              </div>
+            </div>
+          )}
+
+          {(selectedExportTracker === "all" || selectedExportTracker === "food") && (
+            /* CARD 2: Food Logged Export */
+            <div className="card bg-base-200 border border-base-300 shadow-sm rounded-3xl p-5 sm:p-6 flex flex-col justify-between hover:border-warning/40 transition-colors">
+              <div>
+                {/* Header */}
+                <div className="flex items-start justify-between gap-3 mb-4">
+                  <div className="w-12 h-12 rounded-2xl bg-warning/15 border border-warning/30 text-warning flex items-center justify-center shrink-0">
+                    <Utensils size={24} />
+                  </div>
+                  <span className="badge badge-warning badge-soft text-[11px] font-bold">
+                    Food Logging
+                  </span>
+                </div>
+
+                <h4 className="text-lg font-black text-base-content tracking-tight">
+                  Food Logged Data
+                </h4>
+                <p className="text-xs text-base-content/70 mt-1 mb-5 leading-relaxed min-h-[36px]">
+                  All recorded meals, food item quantities, calorie distributions, macro splits, and daily nutrition totals.
+                </p>
+
+                {/* Date Range Selector */}
+                <div className="bg-base-100/60 border border-base-300 rounded-2xl p-3.5 mb-5 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-base-content/60 flex items-center gap-1.5">
+                      <Calendar size={13} /> Date Range
+                    </span>
+                    {/* Presets */}
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => handlePresetRange("food", 7)}
+                        className={`btn btn-xs rounded-lg text-[10px] font-semibold ${
+                          isPresetActive("food", 7)
+                            ? "btn-warning text-warning-content"
+                            : "btn-ghost text-base-content/70 hover:bg-base-300"
+                        }`}
+                      >
+                        7D
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handlePresetRange("food", 30)}
+                        className={`btn btn-xs rounded-lg text-[10px] font-semibold ${
+                          isPresetActive("food", 30)
+                            ? "btn-warning text-warning-content"
+                            : "btn-ghost text-base-content/70 hover:bg-base-300"
+                        }`}
+                      >
+                        30D
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handlePresetRange("food", 0)}
+                        className={`btn btn-xs rounded-lg text-[10px] font-semibold ${
+                          isPresetActive("food", 0)
+                            ? "btn-warning text-warning-content"
+                            : "btn-ghost text-base-content/70 hover:bg-base-300"
+                        }`}
+                      >
+                        All
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-[10px] text-base-content/50 block mb-1">Start Date</label>
+                      <input
+                        type="date"
+                        value={exportRanges.food.startDate}
+                        onChange={(e) => handleExportDateChange("food", "startDate", e.target.value)}
+                        className="input input-xs input-bordered w-full rounded-lg bg-base-200/80 text-xs font-mono"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-base-content/50 block mb-1">End Date</label>
+                      <input
+                        type="date"
+                        value={exportRanges.food.endDate}
+                        onChange={(e) => handleExportDateChange("food", "endDate", e.target.value)}
+                        className="input input-xs input-bordered w-full rounded-lg bg-base-200/80 text-xs font-mono"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Included Sheets */}
+                <div className="mb-5 space-y-1.5">
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-base-content/50 mb-1.5">
+                    Included Worksheets
+                  </div>
+                  <div className="text-xs text-base-content/80 flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-warning shrink-0"></span>
+                    <span><strong>Meal Entries:</strong> Meals, foods, grams & macros</span>
+                  </div>
+                  <div className="text-xs text-base-content/80 flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-warning shrink-0"></span>
+                    <span><strong>Daily Nutrition:</strong> Daily calories & totals</span>
+                  </div>
+                  <div className="text-xs text-base-content/80 flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-warning shrink-0"></span>
+                    <span><strong>Food Breakdown & Targets:</strong> Goals vs intake</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Button */}
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={() => handleTriggerExport("food")}
+                  disabled={exportLoading.food}
+                  className="btn btn-warning w-full rounded-2xl gap-2 font-bold shadow-md shadow-warning/20 text-warning-content"
+                >
+                  {exportLoading.food ? (
+                    <>
+                      <span className="loading loading-spinner loading-xs"></span>
+                      <span>Dispatching Email...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Send size={15} />
+                      <span>Export Food Data</span>
+                    </>
+                  )}
+                </button>
+                <p className="text-[11px] text-center text-base-content/50 mt-2">
+                  Delivered as formatted <code className="text-xs">.xlsx</code> to your inbox
+                </p>
+              </div>
+            </div>
+          )}
+
+          {(selectedExportTracker === "all" || selectedExportTracker === "health") && (
+            /* CARD 3: Health Report (Macros & Micros) */
+            <div className="card bg-base-200 border border-base-300 shadow-sm rounded-3xl p-5 sm:p-6 flex flex-col justify-between hover:border-info/40 transition-colors">
+              <div>
+                {/* Header */}
+                <div className="flex items-start justify-between gap-3 mb-4">
+                  <div className="w-12 h-12 rounded-2xl bg-info/15 border border-info/30 text-info flex items-center justify-center shrink-0">
+                    <FileSpreadsheet size={24} />
+                  </div>
+                  <span className="badge badge-info badge-soft text-[11px] font-bold">
+                    Health Report
+                  </span>
+                </div>
+
+                <h4 className="text-lg font-black text-base-content tracking-tight">
+                  Macros & Micros Report
+                </h4>
+                <p className="text-xs text-base-content/70 mt-1 mb-5 leading-relaxed min-h-[36px]">
+                  Clinical nutritional audit comparing daily macro averages, 13 vitamins, and 11 minerals against your personal RDA targets.
+                </p>
+
+                {/* Date Range Selector */}
+                <div className="bg-base-100/60 border border-base-300 rounded-2xl p-3.5 mb-5 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-base-content/60 flex items-center gap-1.5">
+                      <Calendar size={13} /> Date Range
+                    </span>
+                    {/* Presets */}
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => handlePresetRange("health", 7)}
+                        className={`btn btn-xs rounded-lg text-[10px] font-semibold ${
+                          isPresetActive("health", 7)
+                            ? "btn-info text-info-content"
+                            : "btn-ghost text-base-content/70 hover:bg-base-300"
+                        }`}
+                      >
+                        7D
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handlePresetRange("health", 30)}
+                        className={`btn btn-xs rounded-lg text-[10px] font-semibold ${
+                          isPresetActive("health", 30)
+                            ? "btn-info text-info-content"
+                            : "btn-ghost text-base-content/70 hover:bg-base-300"
+                        }`}
+                      >
+                        30D
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handlePresetRange("health", 0)}
+                        className={`btn btn-xs rounded-lg text-[10px] font-semibold ${
+                          isPresetActive("health", 0)
+                            ? "btn-info text-info-content"
+                            : "btn-ghost text-base-content/70 hover:bg-base-300"
+                        }`}
+                      >
+                        All
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-[10px] text-base-content/50 block mb-1">Start Date</label>
+                      <input
+                        type="date"
+                        value={exportRanges.health.startDate}
+                        onChange={(e) => handleExportDateChange("health", "startDate", e.target.value)}
+                        className="input input-xs input-bordered w-full rounded-lg bg-base-200/80 text-xs font-mono"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-base-content/50 block mb-1">End Date</label>
+                      <input
+                        type="date"
+                        value={exportRanges.health.endDate}
+                        onChange={(e) => handleExportDateChange("health", "endDate", e.target.value)}
+                        className="input input-xs input-bordered w-full rounded-lg bg-base-200/80 text-xs font-mono"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Included Sheets */}
+                <div className="mb-5 space-y-1.5">
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-base-content/50 mb-1.5">
+                    Included Worksheets (5 Sheets)
+                  </div>
+                  <div className="text-xs text-base-content/80 flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-info shrink-0"></span>
+                    <span><strong>Macros Overview:</strong> Avg macros vs target status</span>
+                  </div>
+                  <div className="text-xs text-base-content/80 flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-info shrink-0"></span>
+                    <span><strong>Vitamins Analysis:</strong> 13 vitamins vs RDA benchmarks</span>
+                  </div>
+                  <div className="text-xs text-base-content/80 flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-info shrink-0"></span>
+                    <span><strong>Minerals & Lipids:</strong> 11 minerals, fatty acids & fluids</span>
+                  </div>
+                  <div className="text-xs text-base-content/80 flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-info shrink-0"></span>
+                    <span><strong>Daily Log Timeline:</strong> Day-by-day complete metrics</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Button */}
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={() => handleTriggerExport("health")}
+                  disabled={exportLoading.health}
+                  className="btn btn-info w-full rounded-2xl gap-2 font-bold shadow-md shadow-info/20 text-info-content"
+                >
+                  {exportLoading.health ? (
+                    <>
+                      <span className="loading loading-spinner loading-xs"></span>
+                      <span>Dispatching Email...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Send size={15} />
+                      <span>Export Health Report</span>
+                    </>
+                  )}
+                </button>
+                <p className="text-[11px] text-center text-base-content/50 mt-2">
+                  Delivered as formatted <code className="text-xs">.xlsx</code> to your inbox
+                </p>
+              </div>
+            </div>
+          )}
+
+          {(selectedExportTracker === "all" || selectedExportTracker === "journal") && (
+            /* CARD 4: Journal & Reflections Export */
+            <div className="card bg-base-200 border border-base-300 shadow-sm rounded-3xl p-5 sm:p-6 flex flex-col justify-between hover:border-secondary/40 transition-colors">
+              <div>
+                {/* Header */}
+                <div className="flex items-start justify-between gap-3 mb-4">
+                  <div className="w-12 h-12 rounded-2xl bg-secondary/15 border border-secondary/30 text-secondary flex items-center justify-center shrink-0">
+                    <BookOpen size={24} />
+                  </div>
+                  <span className="badge badge-secondary badge-soft text-[11px] font-bold">
+                    Personal Journal
+                  </span>
+                </div>
+
+                <h4 className="text-lg font-black text-base-content tracking-tight">
+                  Journal & Reflection Logs
+                </h4>
+                <p className="text-xs text-base-content/70 mt-1 mb-5 leading-relaxed min-h-[36px]">
+                  Daily reflection notes, thoughts, moods recorded, word counts, and emotional tracking trends.
+                </p>
+
+                {/* Date Range Selector */}
+                <div className="bg-base-100/60 border border-base-300 rounded-2xl p-3.5 mb-5 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-base-content/60 flex items-center gap-1.5">
+                      <Calendar size={13} /> Date Range
+                    </span>
+                    {/* Presets */}
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => handlePresetRange("journal", 7)}
+                        className={`btn btn-xs rounded-lg text-[10px] font-semibold ${
+                          isPresetActive("journal", 7)
+                            ? "btn-secondary text-secondary-content"
+                            : "btn-ghost text-base-content/70 hover:bg-base-300"
+                        }`}
+                      >
+                        7D
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handlePresetRange("journal", 30)}
+                        className={`btn btn-xs rounded-lg text-[10px] font-semibold ${
+                          isPresetActive("journal", 30)
+                            ? "btn-secondary text-secondary-content"
+                            : "btn-ghost text-base-content/70 hover:bg-base-300"
+                        }`}
+                      >
+                        30D
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handlePresetRange("journal", 0)}
+                        className={`btn btn-xs rounded-lg text-[10px] font-semibold ${
+                          isPresetActive("journal", 0)
+                            ? "btn-secondary text-secondary-content"
+                            : "btn-ghost text-base-content/70 hover:bg-base-300"
+                        }`}
+                      >
+                        All
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-[10px] text-base-content/50 block mb-1">Start Date</label>
+                      <input
+                        type="date"
+                        value={exportRanges.journal.startDate}
+                        onChange={(e) => handleExportDateChange("journal", "startDate", e.target.value)}
+                        className="input input-xs input-bordered w-full rounded-lg bg-base-200/80 text-xs font-mono"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-base-content/50 block mb-1">End Date</label>
+                      <input
+                        type="date"
+                        value={exportRanges.journal.endDate}
+                        onChange={(e) => handleExportDateChange("journal", "endDate", e.target.value)}
+                        className="input input-xs input-bordered w-full rounded-lg bg-base-200/80 text-xs font-mono"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Included Sheets */}
+                <div className="mb-5 space-y-1.5">
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-base-content/50 mb-1.5">
+                    Included Worksheets (3 Sheets)
+                  </div>
+                  <div className="text-xs text-base-content/80 flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-secondary shrink-0"></span>
+                    <span><strong>Journal Entries:</strong> Day-by-day notes, mood & words</span>
+                  </div>
+                  <div className="text-xs text-base-content/80 flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-secondary shrink-0"></span>
+                    <span><strong>Journal Summary:</strong> Writing stats, streaks & averages</span>
+                  </div>
+                  <div className="text-xs text-base-content/80 flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-secondary shrink-0"></span>
+                    <span><strong>Mood Analytics:</strong> Mood distributions & emotional trends</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Button */}
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={() => handleTriggerExport("journal")}
+                  disabled={exportLoading.journal}
+                  className="btn btn-secondary w-full rounded-2xl gap-2 font-bold shadow-md shadow-secondary/20 text-secondary-content"
+                >
+                  {exportLoading.journal ? (
+                    <>
+                      <span className="loading loading-spinner loading-xs"></span>
+                      <span>Dispatching Email...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Send size={15} />
+                      <span>Export Journal Data</span>
+                    </>
+                  )}
+                </button>
+                <p className="text-[11px] text-center text-base-content/50 mt-2">
+                  Delivered as formatted <code className="text-xs">.xlsx</code> to your inbox
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+
+          {/* Email Info Notice Footer */}
+          <div className="card bg-base-200/60 border border-base-300/80 rounded-3xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-base-300 flex items-center justify-center text-base-content/70 shrink-0">
+                <ShieldCheck size={20} />
+              </div>
+              <p className="text-xs text-base-content/70 leading-relaxed">
+                Export generation takes 1–3 seconds depending on the date range. If you do not see the email in your inbox within a couple minutes, please check your spam or promotions tab.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 6: Danger Zone */}
       {activeTab === "danger" && (
         <div className="space-y-6">
           {/* Warning Banner */}
@@ -1768,6 +3021,7 @@ function UserSettings() {
           </div>
         </div>
       )}
+      </div>
 
       {/* Unsaved Changes Blocker Modal */}
       {blocker.state === "blocked" && (

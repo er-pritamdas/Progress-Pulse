@@ -5,12 +5,13 @@ import { TitleChanger } from "../../../utils/TitleChanger";
 import ErrorAlert from "../../../utils/Alerts/ErrorAlert";
 import SuccessAlert from "../../../utils/Alerts/SuccessAlert";
 import { setFieldRange, setSelfcareHabits, setMoodList, toggleSubscribeToNewsletter, toggleEmailNotification, toggleDarkMode, toggleStreakReminders } from "../../../services/redux/slice/habitSlice";
-import { Flame, Droplet, Moon, BookOpen, Utensils, Smile, UserCheck, X, Info, Download, SaveAll, ListRestart, Play, Calculator, Target, Mail, FileSpreadsheet } from "lucide-react";
+import { Flame, Droplet, Moon, BookOpen, Utensils, Smile, UserCheck, X, Info, Download, SaveAll, ListRestart, Play, Calculator, Target, Mail, FileSpreadsheet, Plus, Trash2 } from "lucide-react";
 import { useLoading } from "../../../Context/LoadingContext";
 import { fetchHabitSettings, updateHabitSettings, resetHabitSettings } from "../../../services/redux/slice/habitSlice";
 import store from "../../../services/redux/store/store";
 import axiosInstance from "../../../Context/AxiosInstance";
 import ExportFoodLogModal from "../../../components/Dashboard/Habit/FoodLogging/ExportFoodLogModal";
+import AddCustomFoodModal from "../../../components/Dashboard/Habit/FoodLogging/AddCustomFoodModal";
 
 function HabitSettings() {
   TitleChanger("Progress Pulse | Habit Settings");
@@ -272,6 +273,47 @@ function HabitSettings() {
     }
   };
 
+  // Custom Foods State & Handlers
+  const [isAddCustomFoodModalOpen, setIsAddCustomFoodModalOpen] = useState(false);
+  const [customFoods, setCustomFoods] = useState([]);
+  const [customFoodsLoading, setCustomFoodsLoading] = useState(false);
+  const [deletingFoodId, setDeletingFoodId] = useState(null);
+
+  const fetchCustomFoods = async () => {
+    try {
+      setCustomFoodsLoading(true);
+      const res = await axiosInstance.get("/v1/dashboard/habit/food/custom");
+      if (res.data?.data) {
+        setCustomFoods(res.data.data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch user custom foods", err);
+    } finally {
+      setCustomFoodsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCustomFoods();
+  }, []);
+
+  const handleDeleteCustomFood = async (foodId) => {
+    try {
+      setDeletingFoodId(foodId);
+      await axiosInstance.delete(`/v1/dashboard/habit/food/database/${foodId}`);
+      setCustomFoods((prev) => prev.filter((f) => f._id !== foodId));
+      setalertSuccessMessage("Custom food item deleted successfully");
+      setShowSuccessAlert(true);
+      setTimeout(() => setShowSuccessAlert(false), 3000);
+    } catch (err) {
+      setAlertErrorMessage(err.response?.data?.message || "Failed to delete custom food");
+      setShowErrorAlert(true);
+      setTimeout(() => setShowErrorAlert(false), 3000);
+    } finally {
+      setDeletingFoodId(null);
+    }
+  };
+
   const handleFoodExport = async (fromDate, toDate) => {
     try {
       setIsFoodExporting(true);
@@ -514,166 +556,201 @@ function HabitSettings() {
           ))}
         </div>
 
-        {/* Selfcare and Mood + Side Settings Container */}
-        <div className="flex flex-col lg:flex-row gap-4">
-          {/* Left 70% Content */}
-          <div className="lg:w-[60%] w-full">
-            {/* Selfcare Section */}
-            <div className="mb-8">
-              <h2 className="text-lg font-semibold mb-2 flex items-center gap-2">
-                <UserCheck size={22} /> Selfcare Habits
-              </h2>
-              <div className="flex gap-2 mb-4">
-                <input
-                  type="text"
-                  placeholder="Add a selfcare habit"
-                  className="input input-bordered w-full"
-                  value={selfcareInput}
-                  onChange={(e) => setSelfcareInput(e.target.value)}
-                />
-                <button
-                  className="btn btn-success"
-                  onClick={() =>
-                    addToArray("selfcare", selfcareInput, setSelfcareInput)
-                  }
-                >
-                  Add
-                </button>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {ranges.selfcare?.map((habit, idx) => (
-                  <div
-                    key={idx}
-                    className="badge badge-soft badge-success gap-1 text-sm px-3 py-2 flex items-center">
-                    <UserCheck size={14} />
-                    {habit}
-                    <button
-                      className="ml-2 cursor-pointer"
-                      onClick={() => removeFromArray("selfcare", idx)}
-                    >
-                      <X size={15} />
-                    </button>
-                  </div>
-                ))}
-              </div>
+        {/* Selfcare and Mood Tracking Container */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Selfcare Section */}
+          <div className="bg-base-200 rounded-xl p-6 shadow-md">
+            <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
+              <UserCheck size={22} className="text-success" /> Selfcare Habits
+            </h2>
+            <div className="flex gap-2 mb-4">
+              <input
+                type="text"
+                placeholder="Add a selfcare habit"
+                className="input input-bordered w-full"
+                value={selfcareInput}
+                onChange={(e) => setSelfcareInput(e.target.value)}
+              />
+              <button
+                className="btn btn-success"
+                onClick={() =>
+                  addToArray("selfcare", selfcareInput, setSelfcareInput)
+                }
+              >
+                Add
+              </button>
             </div>
-
-            {/* Mood Section */}
-            <div>
-              <h2 className="text-lg font-semibold mb-2 flex items-center gap-2">
-                <Smile size={22} /> Mood Tracking
-              </h2>
-              <div className="flex gap-2 mb-4">
-                <input
-                  type="text"
-                  placeholder="Add a mood"
-                  className="input input-bordered w-full"
-                  value={moodInput}
-                  onChange={(e) => setMoodInput(e.target.value)}
-                />
-                <button
-                  className="btn btn-success"
-                  onClick={() => addToArray("mood", moodInput, setMoodInput)}
-                >
-                  Add
-                </button>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {ranges.mood?.map((m, idx) => (
-                  <div
-                    key={idx}
-                    className="badge badge-soft badge-success gap-1 text-sm px-3 py-2 flex items-center"
+            <div className="flex flex-wrap gap-2">
+              {ranges.selfcare?.map((habit, idx) => (
+                <div
+                  key={idx}
+                  className="badge badge-soft badge-success gap-1 text-sm px-3 py-2 flex items-center">
+                  <UserCheck size={14} />
+                  {habit}
+                  <button
+                    className="ml-2 cursor-pointer"
+                    onClick={() => removeFromArray("selfcare", idx)}
                   >
-                    <Smile size={14} />
-                    {m}
-                    <button
-                      className="ml-2 cursor-pointer"
-                      onClick={() => removeFromArray("mood", idx)}
-                    >
-                      <X size={15} />
-                    </button>
-                  </div>
-                ))}
-              </div>
+                    <X size={15} />
+                  </button>
+                </div>
+              ))}
             </div>
           </div>
 
-          {/* Preferences Panel - Right Side (35%) */}
-          <div className="lg:w-[35%] w-full bg-base-200 rounded-xl p-6 shadow-md h-fit">
-            <h2 className="text-xl font-bold mb-5">Your Pulse Preferences</h2>
-
-            {/* Preferences */}
-            {[
-              { key: "subscribeToNewsletter", label: "Subscribe to Newsletter", toggleClass: "toggle-info" },
-              { key: "emailNotification", label: "Email Notifications", toggleClass: "toggle-success" },
-              { key: "darkMode", label: "Dark Mode", toggleClass: "toggle-warning" },
-              { key: "streakReminders", label: "Streak Reminders", toggleClass: "toggle-error" },
-            ].map(({ key, label, toggleClass }) => (
-              <div
-                key={key}
-                className="flex items-center justify-between py-3 border-b border-base-300"
-              >
-                <div className="flex flex-col gap-1">
-                  <div className="flex items-center gap-2">
-                    <p className="font-medium text-base">{label}</p>
-                    <button onClick={() => openModal(key)}>
-                      <Info size={16} />
-                    </button>
-                  </div>
-                  <p className="text-sm text-muted">
-                    {preferenceInfo[key].description.slice(0, 36)}...
-                  </p>
-                </div>
-                <input key={key} type="checkbox" className={`toggle ${toggleClass}`} onChange={() => toggle(key)}
-                  checked={isChecked(key)} />
-              </div>
-            ))}
-
-            {/* Export Habit Data */}
-            <div className="flex items-center justify-between py-3 border-b border-base-300">
-              <div className="flex flex-col gap-1">
-                <div className="flex items-center gap-2">
-                  <p className="font-medium text-base">Export Habit Data</p>
-                  <button onClick={() => openModal("exportData")}>
-                    <Info size={16} />
-                  </button>
-                </div>
-                <p className="text-sm text-muted">
-                  Receive CSV/Excel sheets via email (Table Entry, Settings & Logging).
-                </p>
-              </div>
+          {/* Mood Section */}
+          <div className="bg-base-200 rounded-xl p-6 shadow-md">
+            <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
+              <Smile size={22} className="text-success" /> Mood Tracking
+            </h2>
+            <div className="flex gap-2 mb-4">
+              <input
+                type="text"
+                placeholder="Add a mood"
+                className="input input-bordered w-full"
+                value={moodInput}
+                onChange={(e) => setMoodInput(e.target.value)}
+              />
               <button
-                className="btn btn-sm btn-primary flex items-center gap-1"
-                onClick={handleExportData}
-                disabled={isExporting}
+                className="btn btn-success"
+                onClick={() => addToArray("mood", moodInput, setMoodInput)}
               >
-                <Mail size={16} />
-                {isExporting ? "Exporting..." : "Export"}
+                Add
               </button>
             </div>
-
-            {/* Export Food Logging Data */}
-            <div className="flex items-center justify-between py-3">
-              <div className="flex flex-col gap-1">
-                <div className="flex items-center gap-2">
-                  <p className="font-medium text-base">Export Food Logging</p>
-                  <button onClick={() => openModal("exportFoodData")}>
-                    <Info size={16} />
+            <div className="flex flex-wrap gap-2">
+              {ranges.mood?.map((m, idx) => (
+                <div
+                  key={idx}
+                  className="badge badge-soft badge-success gap-1 text-sm px-3 py-2 flex items-center"
+                >
+                  <Smile size={14} />
+                  {m}
+                  <button
+                    className="ml-2 cursor-pointer"
+                    onClick={() => removeFromArray("mood", idx)}
+                  >
+                    <X size={15} />
                   </button>
                 </div>
-                <p className="text-sm text-muted">
-                  Generate 3-sheet Excel report of food logs, nutrition stats & category summaries.
-                </p>
-              </div>
-              <button
-                className="btn btn-sm btn-success text-white flex items-center gap-1"
-                onClick={() => setIsFoodExportModalOpen(true)}
-              >
-                <FileSpreadsheet size={16} />
-                Export
-              </button>
+              ))}
             </div>
           </div>
+        </div>
+
+        {/* Custom Foods Section */}
+        <div className="bg-base-200 rounded-xl p-6 shadow-md mt-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+            <div>
+              <h2 className="text-lg font-semibold flex items-center gap-2">
+                <Utensils size={22} className="text-secondary" />
+                Custom Foods & Recipes
+              </h2>
+              <p className="text-xs text-base-content/70 mt-0.5">
+                Create custom foods, homemade meals, and branded items with detailed nutritional profiles for your food logger.
+              </p>
+            </div>
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm rounded-xl gap-2 font-bold shrink-0 shadow-xs"
+              onClick={() => setIsAddCustomFoodModalOpen(true)}
+            >
+              <Plus size={16} />
+              Add Custom Food
+            </button>
+          </div>
+
+          {customFoodsLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <span className="loading loading-spinner loading-md text-secondary"></span>
+            </div>
+          ) : customFoods.length === 0 ? (
+            <div className="border-2 border-dashed border-base-300 rounded-2xl p-8 text-center bg-base-100/40">
+              <div className="w-12 h-12 rounded-2xl bg-secondary/10 text-secondary flex items-center justify-center mx-auto mb-3">
+                <Utensils size={24} />
+              </div>
+              <h4 className="text-sm font-bold text-base-content mb-1">
+                No custom foods added yet
+              </h4>
+              <p className="text-xs text-base-content/60 max-w-sm mx-auto mb-4">
+                Add your favorite recipes, snacks, or protein shakes to quickly log them in your daily food tracker.
+              </p>
+              <button
+                type="button"
+                className="btn btn-secondary btn-outline btn-sm rounded-xl gap-1.5 font-bold"
+                onClick={() => setIsAddCustomFoodModalOpen(true)}
+              >
+                <Plus size={14} />
+                Create Your First Food Item
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+              {customFoods.map((food) => (
+                <div
+                  key={food._id}
+                  className="bg-base-100/90 border border-base-300 rounded-2xl p-4 flex flex-col justify-between hover:border-secondary/40 transition-all shadow-xs"
+                >
+                  <div>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <h4 className="font-bold text-sm text-base-content truncate">
+                          {food.name}
+                        </h4>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <span className="badge badge-xs badge-soft badge-secondary font-semibold">
+                            {food.category || "General"}
+                          </span>
+                          {food.brand && food.brand !== "Generic" && (
+                            <span className="text-[11px] text-base-content/60 truncate">
+                              • {food.brand}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteCustomFood(food._id)}
+                        disabled={deletingFoodId === food._id}
+                        className="btn btn-ghost btn-xs btn-circle text-error/70 hover:text-error hover:bg-error/10 shrink-0"
+                        title="Delete custom food"
+                      >
+                        {deletingFoodId === food._id ? (
+                          <span className="loading loading-spinner loading-xs"></span>
+                        ) : (
+                          <Trash2 size={14} />
+                        )}
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-4 gap-1.5 mt-3 pt-3 border-t border-base-300 text-center">
+                      <div className="bg-base-200/70 rounded-lg p-1.5">
+                        <p className="text-[10px] text-base-content/60 uppercase font-bold">Cals</p>
+                        <p className="text-xs font-black text-secondary">{food.calories || 0}</p>
+                      </div>
+                      <div className="bg-base-200/70 rounded-lg p-1.5">
+                        <p className="text-[10px] text-base-content/60 uppercase font-bold">Prot</p>
+                        <p className="text-xs font-black text-info">{food.protein || 0}g</p>
+                      </div>
+                      <div className="bg-base-200/70 rounded-lg p-1.5">
+                        <p className="text-[10px] text-base-content/60 uppercase font-bold">Carb</p>
+                        <p className="text-xs font-black text-warning">{food.carbohydrates || 0}g</p>
+                      </div>
+                      <div className="bg-base-200/70 rounded-lg p-1.5">
+                        <p className="text-[10px] text-base-content/60 uppercase font-bold">Fat</p>
+                        <p className="text-xs font-black text-error">{food.fat || 0}g</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between mt-2.5 pt-2 text-[11px] text-base-content/60 border-t border-base-300/50">
+                    <span>Serving: {food.servingSize || 100} {food.unitType || "g"}</span>
+                    <span className="text-[10px] font-mono opacity-80">Custom</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
@@ -682,7 +759,19 @@ function HabitSettings() {
         isOpen={isFoodExportModalOpen}
         onClose={() => setIsFoodExportModalOpen(false)}
         onExport={handleFoodExport}
-        isExporting={isFoodExporting}
+        isFoodExporting={isFoodExporting}
+      />
+
+      {/* Add Custom Food Modal */}
+      <AddCustomFoodModal
+        isOpen={isAddCustomFoodModalOpen}
+        onClose={() => setIsAddCustomFoodModalOpen(false)}
+        onFoodAdded={() => {
+          fetchCustomFoods();
+          setalertSuccessMessage("Custom food item added successfully!");
+          setShowSuccessAlert(true);
+          setTimeout(() => setShowSuccessAlert(false), 3000);
+        }}
       />
     </div>
   );

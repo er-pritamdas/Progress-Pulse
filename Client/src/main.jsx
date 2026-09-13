@@ -72,6 +72,9 @@ const router = createBrowserRouter(
         <Route path="settings/profile" element={<UserSettings />} />
         <Route path="settings/preferences" element={<UserSettings />} />
         <Route path="settings/security" element={<UserSettings />} />
+        <Route path="settings/reminders" element={<UserSettings />} />
+        <Route path="settings/notifications" element={<UserSettings />} />
+        <Route path="settings/exports" element={<UserSettings />} />
         <Route path="settings/danger-zone" element={<UserSettings />} />
         <Route path="profile" element={<UserSettings />} />
 

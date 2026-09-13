@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { verifyToken } from "../../middlewares/JwtAuthorization.middleware.js";
 import { autoLogin } from "../../middlewares/JwtAuthorization.middleware.js";
-import { getUserProfile, updateUserProfile } from "../../controllers/User-controllers/userProfile.controller.js";
+import { getUserProfile, updateUserProfile, checkUsernameAvailability } from "../../controllers/User-controllers/userProfile.controller.js";
 import {
     resetHabitData,
     resetExpenseData,
@@ -13,6 +13,7 @@ const router = Router();
 
 router.route("/auto-login").get(autoLogin);
 router.route("/").get(verifyToken);
+router.route("/check-username").get(verifyToken, checkUsernameAvailability);
 router.route("/profile").get(verifyToken, getUserProfile).put(verifyToken, updateUserProfile);
 
 // Danger Zone Reset Routes

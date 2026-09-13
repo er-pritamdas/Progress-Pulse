@@ -7,7 +7,7 @@ import axios from "axios";
 import { useAuth } from '../../../Context/JwtAuthContext.jsx';
 
 
-import { Calendar, Clock, User, Settings, LogOut, Globe, Palette, ShieldCheck, AlertTriangle } from 'lucide-react';
+import { Calendar, Clock, User, Settings, LogOut, Globe, Palette, ShieldCheck, AlertTriangle, Bell, Download } from 'lucide-react';
 
 // Importing Components
 import ThemeSwitcher from '../../../utils/ThemeSwitches'
@@ -266,6 +266,23 @@ function Navbar() {
                                         <ShieldCheck size={15} className="text-info" />
                                         Security & Password
                                     </span>
+                                </Link>
+                            </li>
+                            <li>
+                                <Link to="/dashboard/settings/reminders" className="flex items-center justify-between py-2 rounded-xl">
+                                    <span className="flex items-center gap-2 font-medium">
+                                        <Bell size={15} className="text-warning" />
+                                        Reminders
+                                    </span>
+                                </Link>
+                            </li>
+                            <li>
+                                <Link to="/dashboard/settings/exports" className="flex items-center justify-between py-2 rounded-xl">
+                                    <span className="flex items-center gap-2 font-medium">
+                                        <Download size={15} className="text-info" />
+                                        Exports
+                                    </span>
+                                    <span className="badge badge-xs badge-neutral">New</span>
                                 </Link>
                             </li>
                             <li>

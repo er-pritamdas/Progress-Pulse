@@ -8,11 +8,15 @@ import { getHabitSettings, updateHabitSettings, resetHabitSettingsToDefault } fr
 import { addPhysicalLog, getPhysicalLogs, deletePhysicalLog } from "../../controllers/Habit-controllers/HabitLogging.controller.js";
 import { exportHabitDataToEmail } from "../../controllers/Habit-controllers/HabitExport.controller.js";
 import { exportFoodLoggingDataToEmail } from "../../controllers/Habit-controllers/FoodExport.controller.js";
+import { exportHealthReportDataToEmail } from "../../controllers/Habit-controllers/HealthReportExport.controller.js";
+import { exportJournalDataToEmail } from "../../controllers/Habit-controllers/JournalExport.controller.js";
 
 // Food Logging Controller
 import {
   getFoodDatabase,
   createCustomFood,
+  getUserCustomFoods,
+  deleteCustomFood,
   getDailyFoodLogs,
   getFoodLogsDateRange,
   logFoodItem,
@@ -38,6 +42,8 @@ router.route("/settings").delete(verifyToken, resetHabitSettingsToDefault);
 // Export Routes
 router.route("/export").post(verifyToken, exportHabitDataToEmail);
 router.route("/food/export").post(verifyToken, exportFoodLoggingDataToEmail);
+router.route("/health-report/export").post(verifyToken, exportHealthReportDataToEmail);
+router.route("/journal/export").post(verifyToken, exportJournalDataToEmail);
 
 // Habit Physical Logging Routes
 router.route("/logging").post(verifyToken, addPhysicalLog);
@@ -47,6 +53,8 @@ router.route("/logging/:logId").delete(verifyToken, deletePhysicalLog);
 // Food Database & Daily Food Logging Routes
 router.route("/food/database").get(verifyToken, getFoodDatabase);
 router.route("/food/database").post(verifyToken, createCustomFood);
+router.route("/food/database/:id").delete(verifyToken, deleteCustomFood);
+router.route("/food/custom").get(verifyToken, getUserCustomFoods);
 
 router.route("/food/log").get(verifyToken, getDailyFoodLogs);
 router.route("/food/range-logs").get(verifyToken, getFoodLogsDateRange);

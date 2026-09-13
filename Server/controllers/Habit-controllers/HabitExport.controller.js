@@ -12,21 +12,38 @@ export const exportHabitDataToEmail = asyncHandler(async (req, res) => {
   const userId = req.user._id;
   const userEmail = req.user.email;
   const username = req.user.username;
+  const { startDate, endDate } = req.body || {};
 
   if (!userEmail) {
     throw new ApiError(400, "No registered email address found for user");
   }
 
-  logger.info(`Starting Habit Data Export for user '${username}' (${userEmail})`);
+  logger.info(`Starting Habit Data Export for user '${username}' (${userEmail}) [${startDate || "All"} to ${endDate || "All"}]`);
 
-  // 1. Fetch Habit Tracker Table Entries
-  const habitEntries = await HabitTracker.find({ userId }).sort({ date: 1 });
+  // 1. Fetch Habit Tracker Table Entries within date range
+  const query = { userId };
+  if (startDate && endDate) {
+    query.date = { $gte: startDate, $lte: endDate };
+  } else if (startDate) {
+    query.date = { $gte: startDate };
+  } else if (endDate) {
+    query.date = { $lte: endDate };
+  }
+  const habitEntries = await HabitTracker.find(query).sort({ date: 1 });
 
   // 2. Fetch Habit Settings
   const habitSettings = await HabitSettings.findOne({ userId });
 
-  // 3. Fetch Physical Logs
-  const physicalLogs = await PhysicalLog.find({ userId }).sort({ date: 1 });
+  // 3. Fetch Physical Logs within date range
+  const logQuery = { userId };
+  if (startDate && endDate) {
+    logQuery.date = { $gte: new Date(startDate), $lte: new Date(endDate + "T23:59:59.999Z") };
+  } else if (startDate) {
+    logQuery.date = { $gte: new Date(startDate) };
+  } else if (endDate) {
+    logQuery.date = { $lte: new Date(endDate + "T23:59:59.999Z") };
+  }
+  const physicalLogs = await PhysicalLog.find(logQuery).sort({ date: 1 });
 
   // --- Prepare Sheet 1: Table Entry ---
   const tableEntryRows = habitEntries.map((entry) => ({
@@ -110,16 +127,19 @@ export const exportHabitDataToEmail = asyncHandler(async (req, res) => {
   });
 
   const currentDate = new Date().toISOString().split("T")[0];
+  const rangeTitle = startDate && endDate ? `(${startDate} to ${endDate})` : "";
+  const dateRangeStr = startDate && endDate ? `${startDate}_to_${endDate}` : currentDate;
+
   const mailOptions = {
     from: process.env.EMAIL_USER,
     to: userEmail,
-    subject: "📊 Progress Pulse - Your Exported Habit Tracker Data",
+    subject: `📊 Progress Pulse - Exported Habit Tracker Data ${rangeTitle}`.trim(),
     html: `
       <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #121212; color: #ffffff; padding: 20px;">
         <div style="max-width: 600px; margin: auto; background-color: #1e1e1e; padding: 30px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.5);">
           <h2 style="color: #00DFA2; text-align: center;">Habit Data Export</h2>
           <p style="font-size: 16px; color: #cccccc;">Hi <strong>${username}</strong>,</p>
-          <p style="font-size: 16px; color: #cccccc;">Your requested Habit Tracker export is attached below. The file contains 3 separate sheets:</p>
+          <p style="font-size: 16px; color: #cccccc;">Your requested Habit Tracker export ${rangeTitle} is attached below. The file contains 3 separate sheets:</p>
           <ul style="color: #00DFA2; line-height: 1.8; font-size: 15px;">
             <li><strong>Sheet 1: Table Entry</strong> - All your daily habit logs & tracking history.</li>
             <li><strong>Sheet 2: Settings</strong> - Your habit ranges, preferences & profile metrics.</li>
@@ -135,7 +155,7 @@ export const exportHabitDataToEmail = asyncHandler(async (req, res) => {
     `,
     attachments: [
       {
-        filename: `Habit_Tracker_Export_${currentDate}.xlsx`,
+        filename: `Habit_Tracker_Export_${dateRangeStr}.xlsx`,
         content: excelBuffer,
         contentType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       },

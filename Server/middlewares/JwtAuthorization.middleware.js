@@ -15,9 +15,19 @@ const autoLogin = asyncHandler(
     const token = authHeader.split(" ")[1];
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
+      const userId = decoded["id"];
       const username = decoded["username"];
-      const userExist = await RegisteredUsers.findOne({ username: username })
-      req.user = userExist
+      let userExist = null;
+      if (userId) {
+        userExist = await RegisteredUsers.findById(userId);
+      }
+      if (!userExist && username) {
+        userExist = await RegisteredUsers.findOne({ username: username });
+      }
+      if (!userExist) {
+        throw new ApiError(401, "User not found");
+      }
+      req.user = userExist;
       return res.status(200).json(
         new ApiResponse(200, userExist, "Authorized")
       );
@@ -26,8 +36,6 @@ const autoLogin = asyncHandler(
     }
   }
 )
-
-
 
 const verifyToken = asyncHandler(
   async (req, res, next) => {
@@ -40,9 +48,19 @@ const verifyToken = asyncHandler(
     const token = authHeader.split(" ")[1];
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
+      const userId = decoded["id"];
       const username = decoded["username"];
-      const userExist = await RegisteredUsers.findOne({ username: username })
-      req.user = userExist
+      let userExist = null;
+      if (userId) {
+        userExist = await RegisteredUsers.findById(userId);
+      }
+      if (!userExist && username) {
+        userExist = await RegisteredUsers.findOne({ username: username });
+      }
+      if (!userExist) {
+        throw new ApiError(401, "User not found");
+      }
+      req.user = userExist;
       next();
     } catch (error) {
       throw new ApiError(401, error.message);

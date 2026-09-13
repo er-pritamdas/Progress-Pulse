@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+  body { margin: 0; font-family: sans-serif; background: #000; color: #fff; }
+  #navbar { height: 64px; background: red; position: fixed; top: 0; left: 0; right: 0; z-index: 1000; }
+  #main { margin-top: 64px; height: 500px; overflow-y: auto; padding: 16px; background: yellow; box-sizing: border-box; }
+  #crumb { height: 46px; background: blue; margin-bottom: 16px; }
+  #sticky { position: sticky; top: -16px; height: 52px; background: green; z-index: 30; }
+  #content { height: 1200px; background: purple; }
+</style>
+</head>
+<body>
+  <div id="navbar">Navbar</div>
+  <div id="main">
+    <div id="crumb">Crumb</div>
+    <div id="sticky">Sticky</div>
+    <div id="content">Content</div>
+    <div id="res" style="color: black;"></div>
+  </div>
+  <script>
+    const main = document.getElementById("main");
+    main.scrollTop = 120;
+    const s = document.getElementById("sticky").getBoundingClientRect();
+    const n = document.getElementById("navbar").getBoundingClientRect();
+    console.log("RESULT_DATA:" + JSON.stringify({ nav: n, sticky: s, gap: s.top - n.bottom }));
+  </script>
+</body>
+</html>
