@@ -1,34 +1,52 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { AlertCircle, X } from 'lucide-react';
 
-function ErrorAlert({ message, top = 5 }) {
+function ErrorAlert({ message, onClose }) {
+  const [dismissed, setDismissed] = useState(false);
+
+  useEffect(() => {
+    setDismissed(false);
+  }, [message]);
+
+  const handleDismiss = () => {
+    setDismissed(true);
+    if (onClose) onClose();
+  };
+
   return (
     <AnimatePresence>
-      {message && (
-        <motion.div
-          role="alert"
-          className="alert alert-soft alert-error absolute right-5 z-50"
-          style={{ top: `${top * 0.25}rem` }}
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -10 }}
-          transition={{ duration: 0.3 }}
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="h-6 w-6 shrink-0 stroke-current"
-            fill="none"
-            viewBox="0 0 24 24"
+      {message && !dismissed && (
+        <div className="fixed top-2.5 sm:top-3 left-1/2 -translate-x-1/2 z-[999999] pointer-events-none flex justify-center w-full max-w-lg px-4">
+          <motion.div
+            role="alert"
+            className="pointer-events-auto flex items-center gap-3 px-4 py-2 sm:py-2.5 rounded-2xl shadow-2xl border border-error/40 bg-base-100/95 text-base-content backdrop-blur-xl ring-1 ring-error/20 w-auto max-w-full"
+            initial={{ opacity: 0, y: -15, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -15, scale: 0.95 }}
+            transition={{ duration: 0.22, ease: "easeOut" }}
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
-          </svg>
-          <span>{message}</span>
-        </motion.div>
+            <div className="w-7 h-7 rounded-xl bg-error/20 text-error flex items-center justify-center shrink-0 shadow-2xs">
+              <AlertCircle size={16} className="stroke-[2.5]" />
+            </div>
+            <div className="flex flex-col min-w-0 flex-1">
+              <span className="text-[10px] font-black uppercase tracking-wider text-error">
+                Notice / Error
+              </span>
+              <span className="text-xs sm:text-sm font-bold text-base-content leading-snug break-words">
+                {message}
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={handleDismiss}
+              className="btn btn-ghost btn-circle btn-xs text-base-content/40 hover:text-base-content shrink-0 ml-1"
+              title="Dismiss notification"
+            >
+              <X size={14} />
+            </button>
+          </motion.div>
+        </div>
       )}
     </AnimatePresence>
   );

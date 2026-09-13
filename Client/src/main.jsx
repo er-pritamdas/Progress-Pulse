@@ -42,6 +42,7 @@ import Layout from './layouts/Layout.jsx'
 import DashboardLayout from './layouts/DashboardLayout.jsx'
 import Expense from './pages/Dashboard/Expense/Expense.jsx'
 import Investment from './pages/Dashboard/Investment/Investment.jsx'
+import UserSettings from './pages/Dashboard/UserSettings/UserSettings.jsx'
 import HabitLayout from './layouts/HabitLayout.jsx'
 import ExpenseLayout from './layouts/ExpenseLayout.jsx'
 import InvestmentLayout from './layouts/InvestmentLayout.jsx'
@@ -66,6 +67,13 @@ const router = createBrowserRouter(
       {/* Protected Routes */}
       <Route path="/dashboard" element={<DashboardLayout />}>
         <Route index element={<Dashboard />} />
+        {/* User Settings Subpages */}
+        <Route path="settings" element={<UserSettings />} />
+        <Route path="settings/profile" element={<UserSettings />} />
+        <Route path="settings/preferences" element={<UserSettings />} />
+        <Route path="settings/security" element={<UserSettings />} />
+        <Route path="settings/danger-zone" element={<UserSettings />} />
+        <Route path="profile" element={<UserSettings />} />
 
         {/* Habit Routes */}
         <Route path="habit" element={<HabitLayout />}>

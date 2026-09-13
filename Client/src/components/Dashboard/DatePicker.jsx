@@ -23,7 +23,11 @@ export const CallyDatePicker = ({
   placeholder = "Select Date",
   className = "",
   size = "sm",
-  required = false
+  required = false,
+  max,
+  min,
+  showClear = false,
+  onClear
 }) => {
   const displayVal = value ? formatDateDDMMMYYYY(value) : placeholder;
 
@@ -32,15 +36,31 @@ export const CallyDatePicker = ({
       <div
         tabIndex={0}
         role="button"
-        className={`input input-${size} input-bordered focus:outline-none focus:ring-0 focus:border-primary/40 w-full flex items-center justify-between cursor-pointer font-bold text-xs rounded-xl bg-base-100`}
+        className={`input input-${size} input-bordered focus:outline-none focus:ring-0 focus:border-primary/40 w-full flex items-center justify-between cursor-pointer font-medium ${size === "xs" || size === "sm" ? "text-xs" : "text-sm"} rounded-xl bg-base-100`}
       >
         <span className="truncate flex items-center gap-2">
-          <Calendar size={14} className="shrink-0 text-primary" />
+          <Calendar size={size === "xs" || size === "sm" ? 14 : 16} className="shrink-0 text-primary" />
           <span className={value ? "text-base-content font-bold" : "text-base-content/40 font-normal"}>
             {displayVal}
           </span>
         </span>
-        <span className="text-[10px] opacity-40">▼</span>
+        <span className="flex items-center gap-1.5 shrink-0">
+          {showClear && value && (
+            <span
+              onClick={(e) => {
+                e.stopPropagation();
+                if (onClear) onClear();
+                else onChange("");
+                document.activeElement?.blur();
+              }}
+              className="text-error/70 hover:text-error hover:scale-110 transition-transform font-bold text-xs px-1 cursor-pointer"
+              title="Clear Date"
+            >
+              ✕
+            </span>
+          )}
+          <span className="text-[10px] opacity-40">▼</span>
+        </span>
       </div>
       <div
         tabIndex={0}
@@ -49,6 +69,8 @@ export const CallyDatePicker = ({
         <calendar-date
           class="cally"
           value={value || undefined}
+          max={max || undefined}
+          min={min || undefined}
           onchange={(e) => {
             if (e.target.value) {
               onChange(e.target.value);

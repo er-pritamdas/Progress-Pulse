@@ -74,6 +74,23 @@ const LoginAfterSignup = async () =>{
       const loginResponse = await axios.post("/api/v1/users/loggedin", formData);
       localStorage.setItem("token", loginResponse.data.data.accessToken);
       localStorage.setItem("username", formData.username);
+
+      const loggedInUser = loginResponse.data?.data?.user;
+      if (loggedInUser?.email) {
+        localStorage.setItem("email", loggedInUser.email);
+      }
+      if (loggedInUser?.fullName) {
+        localStorage.setItem("fullName", loggedInUser.fullName);
+      }
+      if (loggedInUser?.profilePic) {
+        localStorage.setItem("profilePic", loggedInUser.profilePic);
+      }
+      if (loggedInUser) {
+        try {
+          localStorage.setItem("user_profile", JSON.stringify(loggedInUser));
+        } catch (e) {}
+      }
+
       setvalidToken(true)
     }catch(error){
         const errorMessage = err.response?.data?.message || "Something went Wrong";

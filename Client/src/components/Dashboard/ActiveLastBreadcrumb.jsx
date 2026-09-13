@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Home, BookOpen, Navigation, TrendingUp, Wallet, CalendarCheck, Grid2x2Plus, Grid2x2Check, Settings2, Target } from 'lucide-react';
+import { Home, BookOpen, Navigation, TrendingUp, Wallet, CalendarCheck, Grid2x2Plus, Grid2x2Check, Settings2, Target, User, AlertTriangle, Palette, ShieldCheck } from 'lucide-react';
 import Dashboard from '../../utils/Icons/Dashboard';
 import QuickCalculator from '../Expense/QuickCalculator';
 
@@ -11,6 +11,8 @@ export default function ThemedBreadcrumbs() {
     Habit: <CalendarCheck className="w-4 h-4" />,
     Investment: <TrendingUp className="w-4 h-4" />,
     Expense: <Wallet className="w-4 h-4" />,
+    Settings: <Settings2 className="w-4 h-4" />,
+    Profile: <User className="w-4 h-4" />,
   };
 
   const subCategoryIcon = {
@@ -21,6 +23,10 @@ export default function ThemedBreadcrumbs() {
     'Settings': <Settings2 className="w-4 h-4" />,
     'Logging': <Grid2x2Check className="w-4 h-4" />,
     'Planner': <Target className="w-4 h-4" />,
+    'Profile': <User className="w-4 h-4" />,
+    'Preferences': <Palette className="w-4 h-4" />,
+    'Security': <ShieldCheck className="w-4 h-4" />,
+    'Danger Zone': <AlertTriangle className="w-4 h-4 text-error" />,
   };
 
   const mainCategoryRaw = pathnames[1]; // habit, expense, investment

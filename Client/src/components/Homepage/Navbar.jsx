@@ -53,14 +53,12 @@ function Navbar() {
                             <li><Link to="/login">Login</Link></li>
                         </ul>
                     </div>
-                    <div class="avatar avatar-placeholder ml-4">
-                        <div class="bg-neutral text-neutral-content w-8 rounded-full">
-                            <a href="/">
-                                <img src="/favicon/favicon.svg" />
-                            </a>
+                    <Link to="/" className="btn btn-ghost text-xl flex items-center gap-2.5 ml-2 normal-case font-black">
+                        <div className="w-8 h-8 rounded-xl bg-base-100 border border-base-300 flex items-center justify-center overflow-hidden shadow-xs shrink-0">
+                            <img src="/favicon/favicon.svg" alt="Progress Pulse Logo" className="w-full h-full object-contain p-0.5" />
                         </div>
-                    </div>
-                    <a href="/" className="btn btn-ghost text-xl">Progress Pulse</a>
+                        <span className="tracking-tight text-base-content">Progress Pulse</span>
+                    </Link>
                 </div>
                 <div className="navbar-center hidden lg:flex">
                     <ul className="menu menu-horizontal px-1">
@@ -81,8 +79,9 @@ function Navbar() {
                         </li>
                     </ul>
                 </div>
-                <div className="navbar-end">
+                <div className="navbar-end flex items-center gap-2">
                     <ThemeSwitcher />
+
                     <div className="hidden lg:flex">
                         <Link to="/signup" className="btn btn-primary mr-2 ml-2">Signup</Link>
                         <Link to="/login" className="btn btn-outline">Login</Link>

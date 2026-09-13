@@ -23,12 +23,33 @@ export const AuthProvider = ({ children }) => {
     try {
       setLoading(true);
       const res = await axiosInstance.get("/v1/dashboard/auto-login");
-      const username = res.data.data.username;
+      const userData = res.data?.data;
+      const username = userData?.username;
       setUser(username);
-      // Optional delay to persist user
-      setTimeout(() => {
+      if (username) {
         localStorage.setItem("username", username);
-      }, 5000);
+      }
+      if (userData?.email) {
+        localStorage.setItem("email", userData.email);
+      }
+      if (userData?.fullName) {
+        localStorage.setItem("fullName", userData.fullName);
+      }
+      if (userData?.profilePic) {
+        localStorage.setItem("profilePic", userData.profilePic);
+      }
+      try {
+        const existing = JSON.parse(localStorage.getItem("user_profile") || "{}");
+        localStorage.setItem(
+          "user_profile",
+          JSON.stringify({
+            ...existing,
+            ...userData,
+            email: userData?.email || existing.email,
+          })
+        );
+      } catch (e) {}
+
       setvalidToken(true);
       setLoading(true);
     } catch (err) {

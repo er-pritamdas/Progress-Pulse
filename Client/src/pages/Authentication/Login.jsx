@@ -44,6 +44,22 @@ function Login() {
       localStorage.setItem("token", response.data.data.accessToken);
       localStorage.setItem("username", formData.username);
 
+      const loggedInUser = response.data?.data?.user;
+      if (loggedInUser?.email) {
+        localStorage.setItem("email", loggedInUser.email);
+      }
+      if (loggedInUser?.fullName) {
+        localStorage.setItem("fullName", loggedInUser.fullName);
+      }
+      if (loggedInUser?.profilePic) {
+        localStorage.setItem("profilePic", loggedInUser.profilePic);
+      }
+      if (loggedInUser) {
+        try {
+          localStorage.setItem("user_profile", JSON.stringify(loggedInUser));
+        } catch (e) {}
+      }
+
       setalertSuccessMessage("User Logged In Successfully");
       setShowSuccessAlert(true);
 

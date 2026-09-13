@@ -51,10 +51,46 @@ const registeredUserSchema = new mongoose.Schema(
       default: false
     },
 
-    // profilePic: { 
-    //     type: String, 
-    //     default: "" 
-    // }, // Store URL of profile image
+    profilePic: { 
+      type: String, 
+      default: "" 
+    },
+
+    customAvatars: {
+      type: [String],
+      default: []
+    },
+
+    fullName: {
+      type: String,
+      default: "",
+      trim: true
+    },
+
+    bio: {
+      type: String,
+      default: ""
+    },
+
+    phone: {
+      type: String,
+      default: ""
+    },
+
+    occupation: {
+      type: String,
+      default: ""
+    },
+
+    currency: {
+      type: String,
+      default: "INR"
+    },
+
+    dateOfBirth: {
+      type: String,
+      default: ""
+    },
 
     // status: {
     //   type: String,
