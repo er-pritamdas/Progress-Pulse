@@ -508,6 +508,7 @@ function UserSettings() {
       }
       if (resetModal === "investment" || resetModal === "all") {
         localStorage.removeItem("pulse_investment_planners");
+        localStorage.removeItem("pulse_investment_planner_goals");
         localStorage.removeItem("pulse_investment_allocations");
         localStorage.removeItem("pulse_planner_unallocated_assets");
         window.dispatchEvent(new Event("investment-data-reset"));

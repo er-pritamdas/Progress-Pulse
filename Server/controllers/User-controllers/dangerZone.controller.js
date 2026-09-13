@@ -23,6 +23,7 @@ import RecurringDeposit from "../../models/Investment-models/recurringDeposit.mo
 import RecurringDepositGroup from "../../models/Investment-models/recurringDepositGroup.model.js";
 import PfWithdrawal from "../../models/Investment-models/pfWithdrawal.model.js";
 import Salary from "../../models/Investment-models/salary.model.js";
+import InvestmentPlan from "../../models/Investment-models/investmentPlan.model.js";
 
 /**
  * Reset all Habit Tracker data for authenticated user
@@ -88,7 +89,8 @@ const resetInvestmentData = asynchandler(async (req, res) => {
         RecurringDeposit.deleteMany({ userId }),
         RecurringDepositGroup.deleteMany({ userId }),
         PfWithdrawal.deleteMany({ userId }),
-        Salary.deleteMany({ userId })
+        Salary.deleteMany({ userId }),
+        InvestmentPlan.deleteMany({ userId })
     ]);
 
     return res.status(200).json(
@@ -125,7 +127,8 @@ const resetAllTrackerData = asynchandler(async (req, res) => {
         RecurringDeposit.deleteMany({ userId }),
         RecurringDepositGroup.deleteMany({ userId }),
         PfWithdrawal.deleteMany({ userId }),
-        Salary.deleteMany({ userId })
+        Salary.deleteMany({ userId }),
+        InvestmentPlan.deleteMany({ userId })
     ]);
 
     return res.status(200).json(

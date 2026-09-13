@@ -48,6 +48,14 @@ import {
   updatePfWithdrawal,
   deletePfWithdrawal,
 } from "../../controllers/Investment-controllers/pfWithdrawal.controller.js";
+import {
+  getAllInvestmentPlans,
+  createInvestmentPlan,
+  updateInvestmentPlan,
+  deleteInvestmentPlan,
+  clearPlanAllocations,
+  syncInvestmentPlans,
+} from "../../controllers/Investment-controllers/investmentPlan.controller.js";
 
 const router = Router();
 
@@ -170,5 +178,45 @@ router
   .route("/pf/withdrawals/:id")
   .put(updatePfWithdrawal)
   .delete(deletePfWithdrawal);
+
+// ----------------------------------------------------------------------
+// Investment Planner / Goals routes
+// ----------------------------------------------------------------------
+router
+  .route("/plans")
+  .get(getAllInvestmentPlans)
+  .post(createInvestmentPlan);
+
+router
+  .route("/plans/sync")
+  .post(syncInvestmentPlans);
+
+router
+  .route("/plans/:id")
+  .put(updateInvestmentPlan)
+  .delete(deleteInvestmentPlan);
+
+router
+  .route("/plans/:id/clear")
+  .put(clearPlanAllocations);
+
+// Aliases for /planner
+router
+  .route("/planner")
+  .get(getAllInvestmentPlans)
+  .post(createInvestmentPlan);
+
+router
+  .route("/planner/sync")
+  .post(syncInvestmentPlans);
+
+router
+  .route("/planner/:id")
+  .put(updateInvestmentPlan)
+  .delete(deleteInvestmentPlan);
+
+router
+  .route("/planner/:id/clear")
+  .put(clearPlanAllocations);
 
 export default router;

@@ -340,6 +340,7 @@ export default function InvSettings() {
         rdRes,
         salaryRes,
         pfWithRes,
+        plansRes,
       ] = await Promise.allSettled([
         axiosInstance.get("/v1/dashboard/expense/get-all-data"),
         axiosInstance.get("/v1/dashboard/investment/stocks"),
@@ -348,6 +349,7 @@ export default function InvSettings() {
         axiosInstance.get("/v1/dashboard/investment/rd"),
         axiosInstance.get("/v1/dashboard/investment/salary"),
         axiosInstance.get("/v1/dashboard/investment/pf/withdrawals"),
+        axiosInstance.get("/v1/dashboard/investment/plans"),
       ]);
 
       const parseList = (res) => {
@@ -374,6 +376,37 @@ export default function InvSettings() {
       setRdData(parseList(rdRes));
       setSalaryData(parseList(salaryRes));
       setPfWithdrawals(parseList(pfWithRes));
+
+      // 2. Investment Planner Goals from Database
+      if (plansRes.status === "fulfilled") {
+        const payload = plansRes.value?.data;
+        const dbList = Array.isArray(payload?.data) ? payload.data : [];
+        if (dbList.length > 0) {
+          setGoals(dbList);
+          localStorage.setItem("pulse_investment_planner_goals", JSON.stringify(dbList));
+        } else {
+          // If DB has 0 plans, check if there are legacy local plans to auto-migrate once
+          try {
+            const saved = localStorage.getItem("pulse_investment_planner_goals");
+            const parsed = saved ? JSON.parse(saved) : [];
+            const localPlans = Array.isArray(parsed)
+              ? parsed.filter((g) => g.id !== "goal-wedding-default" && g.id !== "goal-house-default")
+              : [];
+            if (localPlans.length > 0) {
+              const syncRes = await axiosInstance.post("/v1/dashboard/investment/plans/sync", {
+                plans: localPlans,
+              });
+              const synced = syncRes.data?.data || localPlans;
+              setGoals(synced);
+              localStorage.setItem("pulse_investment_planner_goals", JSON.stringify(synced));
+            } else {
+              setGoals([]);
+            }
+          } catch (e) {
+            setGoals([]);
+          }
+        }
+      }
     } catch (err) {
       console.error("Error loading planner assets:", err);
     } finally {
@@ -383,6 +416,19 @@ export default function InvSettings() {
 
   useEffect(() => {
     fetchAllData();
+
+    const handleReset = () => {
+      setGoals([]);
+      localStorage.removeItem("pulse_investment_planner_goals");
+      fetchAllData();
+    };
+
+    window.addEventListener("investment-data-reset", handleReset);
+    window.addEventListener("all-data-reset", handleReset);
+    return () => {
+      window.removeEventListener("investment-data-reset", handleReset);
+      window.removeEventListener("all-data-reset", handleReset);
+    };
   }, []);
 
   // ----------------------------------------------------------------------
@@ -991,7 +1037,9 @@ export default function InvSettings() {
   // ----------------------------------------------------------------------
   // Allocation Modifiers (Save & Remove from 3-Panel Modal)
   // ----------------------------------------------------------------------
-  const handleSaveAllocation = (planId, selectedSource, { percent, amount, shares }) => {
+  const handleSaveAllocation = async (planId, selectedSource, { percent, amount, shares }) => {
+    let updatedPlanPayload = null;
+
     setGoals((prevGoals) =>
       prevGoals.map((g) => {
         if (g.id !== planId) return g;
@@ -1042,12 +1090,26 @@ export default function InvSettings() {
           updated.pfAllocation = { enabled: true, percentage: Number(percent) || 50 };
         }
 
+        updatedPlanPayload = updated;
         return updated;
       })
     );
+
+    if (updatedPlanPayload) {
+      try {
+        await axiosInstance.put(
+          `/v1/dashboard/investment/plans/${planId}`,
+          updatedPlanPayload
+        );
+      } catch (err) {
+        console.error("Failed to save allocation to DB:", err);
+      }
+    }
   };
 
-  const handleRemoveAllocation = (planId, sourceId, sourceType) => {
+  const handleRemoveAllocation = async (planId, sourceId, sourceType) => {
+    let updatedPlanPayload = null;
+
     setGoals((prevGoals) =>
       prevGoals.map((g) => {
         if (g.id !== planId) return g;
@@ -1077,9 +1139,21 @@ export default function InvSettings() {
           updated.pfAllocation = { enabled: false, percentage: 0 };
         }
 
+        updatedPlanPayload = updated;
         return updated;
       })
     );
+
+    if (updatedPlanPayload) {
+      try {
+        await axiosInstance.put(
+          `/v1/dashboard/investment/plans/${planId}`,
+          updatedPlanPayload
+        );
+      } catch (err) {
+        console.error("Failed to remove allocation from DB:", err);
+      }
+    }
   };
 
   // Quick percent increment / decrement (like servings in FoodLoggingTab)
@@ -1139,27 +1213,44 @@ export default function InvSettings() {
     setIsGoalModalOpen(true);
   };
 
-  const handleSaveGoal = (e) => {
+  const handleSaveGoal = async (e) => {
     e.preventDefault();
     if (!goalForm.title.trim()) return;
 
     const parsedTarget = Math.max(0, Number(goalForm.targetAmount) || 0);
 
     if (editingGoal) {
+      const payload = {
+        ...goalForm,
+        targetAmount: parsedTarget,
+      };
+
       setGoals((prev) =>
         prev.map((g) =>
           g.id === editingGoal.id
             ? {
                 ...g,
-                ...goalForm,
-                targetAmount: parsedTarget,
+                ...payload,
               }
             : g
         )
       );
+
+      try {
+        const res = await axiosInstance.put(
+          `/v1/dashboard/investment/plans/${editingGoal.id}`,
+          payload
+        );
+        if (res.data?.data) {
+          setGoals((prev) =>
+            prev.map((g) => (g.id === editingGoal.id ? res.data.data : g))
+          );
+        }
+      } catch (err) {
+        console.error("Failed to update investment plan in DB:", err);
+      }
     } else {
-      const newGoal = {
-        id: `goal-${Date.now()}`,
+      const newGoalPayload = {
         ...goalForm,
         targetAmount: parsedTarget,
         allocations: {},
@@ -1170,18 +1261,37 @@ export default function InvSettings() {
         selectedRds: [],
         includePf: false,
         pfAllocatedPercent: 0,
-        createdAt: dayjs().format("YYYY-MM-DD"),
       };
-      setGoals((prev) => [...prev, newGoal]);
+
+      try {
+        const res = await axiosInstance.post(
+          "/v1/dashboard/investment/plans",
+          newGoalPayload
+        );
+        const created = res.data?.data;
+        if (created) {
+          setGoals((prev) => [...prev, created]);
+        }
+      } catch (err) {
+        console.error("Failed to create investment plan in DB:", err);
+        const fallback = {
+          id: `goal-${Date.now()}`,
+          ...newGoalPayload,
+          createdAt: dayjs().format("YYYY-MM-DD"),
+        };
+        setGoals((prev) => [...prev, fallback]);
+      }
     }
     setIsGoalModalOpen(false);
   };
 
-  const confirmClearPlan = () => {
+  const confirmClearPlan = async () => {
     if (!planToClear) return;
+    const targetId = planToClear.id;
+
     setGoals((prev) =>
       prev.map((g) => {
-        if (g.id !== planToClear.id) return g;
+        if (g.id !== targetId) return g;
         return {
           ...g,
           allocations: {},
@@ -1197,13 +1307,34 @@ export default function InvSettings() {
     );
     setIsClearModalOpen(false);
     setPlanToClear(null);
+
+    try {
+      const res = await axiosInstance.put(
+        `/v1/dashboard/investment/plans/${targetId}/clear`
+      );
+      if (res.data?.data) {
+        setGoals((prev) =>
+          prev.map((g) => (g.id === targetId ? res.data.data : g))
+        );
+      }
+    } catch (err) {
+      console.error("Failed to clear plan allocations in DB:", err);
+    }
   };
 
-  const confirmDeletePlan = () => {
+  const confirmDeletePlan = async () => {
     if (!planToDelete) return;
-    setGoals((prev) => prev.filter((g) => g.id !== planToDelete.id));
+    const targetId = planToDelete.id;
+
+    setGoals((prev) => prev.filter((g) => g.id !== targetId));
     setIsDeleteModalOpen(false);
     setPlanToDelete(null);
+
+    try {
+      await axiosInstance.delete(`/v1/dashboard/investment/plans/${targetId}`);
+    } catch (err) {
+      console.error("Failed to delete investment plan from DB:", err);
+    }
   };
 
   return (

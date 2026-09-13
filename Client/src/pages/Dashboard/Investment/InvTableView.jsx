@@ -261,9 +261,21 @@ export default function InvTableView() {
     }
   }, [searchParams]);
 
-  // Sync latest planner goals from localStorage whenever window gets focus
+  // Sync latest planner goals from DB or localStorage whenever window gets focus
   useEffect(() => {
-    const handleSyncGoals = () => {
+    const handleSyncGoals = async () => {
+      try {
+        const res = await axiosInstance.get("/v1/dashboard/investment/plans");
+        const list = res.data?.data;
+        if (Array.isArray(list)) {
+          setPlannerGoals(list);
+          localStorage.setItem("pulse_investment_planner_goals", JSON.stringify(list));
+          return;
+        }
+      } catch (err) {
+        // Fallback to local storage if offline
+      }
+
       try {
         const saved = localStorage.getItem("pulse_investment_planner_goals");
         if (saved) {
@@ -274,8 +286,15 @@ export default function InvTableView() {
         }
       } catch (e) {}
     };
+
     window.addEventListener("focus", handleSyncGoals);
-    return () => window.removeEventListener("focus", handleSyncGoals);
+    window.addEventListener("investment-data-reset", handleSyncGoals);
+    window.addEventListener("all-data-reset", handleSyncGoals);
+    return () => {
+      window.removeEventListener("focus", handleSyncGoals);
+      window.removeEventListener("investment-data-reset", handleSyncGoals);
+      window.removeEventListener("all-data-reset", handleSyncGoals);
+    };
   }, []);
 
   const activePlanner = useMemo(() => {
@@ -305,6 +324,7 @@ export default function InvTableView() {
         mfRes,
         salaryRes,
         pfWithdrawalsRes,
+        plansRes,
       ] = await Promise.allSettled([
         axiosInstance.get("/v1/dashboard/expense/get-all-data"),
         axiosInstance.get("/v1/dashboard/investment/stocks"),
@@ -313,6 +333,7 @@ export default function InvTableView() {
         axiosInstance.get("/v1/dashboard/investment/mf"),
         axiosInstance.get("/v1/dashboard/investment/salary"),
         axiosInstance.get("/v1/dashboard/investment/pf/withdrawals"),
+        axiosInstance.get("/v1/dashboard/investment/plans"),
       ]);
 
       // 1. Bank Sources from Expense
@@ -388,6 +409,16 @@ export default function InvTableView() {
           ? payload
           : [];
         setPfWithdrawals(list);
+      }
+
+      // 7. Investment Planner Goals
+      if (plansRes.status === "fulfilled") {
+        const payload = plansRes.value?.data;
+        const list = Array.isArray(payload?.data) ? payload.data : [];
+        if (list.length > 0) {
+          setPlannerGoals(list);
+          localStorage.setItem("pulse_investment_planner_goals", JSON.stringify(list));
+        }
       }
     } catch (err) {
       console.error("Error fetching consolidated portfolio data:", err);
