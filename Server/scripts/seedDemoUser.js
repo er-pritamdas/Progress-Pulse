@@ -93,6 +93,7 @@ async function seed() {
     investDb.collection("stocktrades").deleteMany({ userId: demoUserId }),
     investDb.collection("fixeddeposits").deleteMany({ userId: demoUserId }),
     investDb.collection("recurringdeposits").deleteMany({ userId: demoUserId }),
+    investDb.collection("investmentplans").deleteMany({ userId: demoUserId }),
   ]);
   console.log("Old records purged!");
 
@@ -1804,6 +1805,119 @@ async function seed() {
 
   await investDb.collection("fixeddeposits").insertMany(fixedDeposits);
   console.log(`Inserted ${fixedDeposits.length} Fixed Deposits.`);
+
+  // -------------------------------------------------------------------------
+  // 6. SEED INVESTMENT PLANS / GOALS
+  // -------------------------------------------------------------------------
+  const planWeddingId = new mongoose.Types.ObjectId();
+  const planHouseId = new mongoose.Types.ObjectId();
+  const planRetireId = new mongoose.Types.ObjectId();
+
+  const investmentPlans = [
+    {
+      _id: planWeddingId,
+      customId: planWeddingId.toString(),
+      userId: demoUserId,
+      title: "Wedding Fund",
+      icon: "💍",
+      category: "wedding",
+      targetAmount: 2500000,
+      targetDate: "2027-12-01",
+      notes: "Wedding ceremony, jewelry and family celebration",
+      allocations: {
+        [sourceHdfcId.toString()]: {
+          id: sourceHdfcId.toString(),
+          sourceType: "bank",
+          name: "HDFC Salary A/c",
+          percent: 50,
+          amount: 72500,
+        },
+      },
+      selectedBanks: [sourceHdfcId.toString()],
+      allocatedBanks: [sourceHdfcId.toString()],
+      selectedStocks: [],
+      allocatedStocks: [],
+      selectedMfs: [],
+      allocatedMfs: [],
+      selectedFds: [],
+      allocatedFds: [],
+      selectedRds: [],
+      allocatedRds: [],
+      includePf: false,
+      pfAllocatedPercent: 0,
+      pfAllocation: { enabled: false, percentage: 0 },
+      order: 0,
+      createdAt: new Date("2026-08-01T10:00:00.000Z"),
+      updatedAt: new Date("2026-09-01T10:00:00.000Z"),
+    },
+    {
+      _id: planHouseId,
+      customId: planHouseId.toString(),
+      userId: demoUserId,
+      title: "Dream Home Down Payment",
+      icon: "🏡",
+      category: "house",
+      targetAmount: 5000000,
+      targetDate: "2029-08-01",
+      notes: "Down payment and registration for apartment",
+      allocations: {
+        [sourceSbiId.toString()]: {
+          id: sourceSbiId.toString(),
+          sourceType: "bank",
+          name: "SBI Savings A/c",
+          percent: 60,
+          amount: 41100,
+        },
+      },
+      selectedBanks: [sourceSbiId.toString()],
+      allocatedBanks: [sourceSbiId.toString()],
+      selectedStocks: [],
+      allocatedStocks: [],
+      selectedMfs: [],
+      allocatedMfs: [],
+      selectedFds: [],
+      allocatedFds: [],
+      selectedRds: [],
+      allocatedRds: [],
+      includePf: false,
+      pfAllocatedPercent: 0,
+      pfAllocation: { enabled: false, percentage: 0 },
+      order: 1,
+      createdAt: new Date("2026-08-01T10:00:00.000Z"),
+      updatedAt: new Date("2026-09-01T10:00:00.000Z"),
+    },
+    {
+      _id: planRetireId,
+      customId: planRetireId.toString(),
+      userId: demoUserId,
+      title: "Retirement Corpus",
+      icon: "🏖️",
+      category: "retirement",
+      targetAmount: 10000000,
+      targetDate: "2055-09-22",
+      notes: "Early financial independence and retirement fund",
+      allocations: {},
+      selectedBanks: [],
+      allocatedBanks: [],
+      selectedStocks: [],
+      allocatedStocks: [],
+      selectedMfs: [],
+      allocatedMfs: [],
+      selectedFds: [],
+      allocatedFds: [],
+      selectedRds: [],
+      allocatedRds: [],
+      includePf: true,
+      pfAllocatedPercent: 100,
+      pfAllocation: { enabled: true, percentage: 100 },
+      order: 2,
+      createdAt: new Date("2026-08-01T10:00:00.000Z"),
+      updatedAt: new Date("2026-09-01T10:00:00.000Z"),
+    },
+  ];
+
+  await investDb.collection("investmentplans").insertMany(investmentPlans);
+  console.log(`Inserted ${investmentPlans.length} Investment Plans.`);
 
   console.log("\n==============================================================");
   console.log("🎉 DEMO USER AND ALL DEMO DATA SEEDED SUCCESSFULLY! 🎉");

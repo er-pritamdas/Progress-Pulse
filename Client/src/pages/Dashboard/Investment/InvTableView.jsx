@@ -211,7 +211,11 @@ export default function InvTableView() {
   });
 
   const [dob, setDob] = useState(() => {
-    return localStorage.getItem("pulse_portfolio_dob") || "1998-05-15";
+    try {
+      const parsed = JSON.parse(localStorage.getItem("user_profile") || "{}");
+      if (parsed.dateOfBirth) return parsed.dateOfBirth;
+    } catch (e) {}
+    return localStorage.getItem("pulse_portfolio_dob") || "";
   });
 
   const [milestones, setMilestones] = useState(() => {
@@ -325,6 +329,7 @@ export default function InvTableView() {
         salaryRes,
         pfWithdrawalsRes,
         plansRes,
+        profileRes,
       ] = await Promise.allSettled([
         axiosInstance.get("/v1/dashboard/expense/get-all-data"),
         axiosInstance.get("/v1/dashboard/investment/stocks"),
@@ -334,6 +339,7 @@ export default function InvTableView() {
         axiosInstance.get("/v1/dashboard/investment/salary"),
         axiosInstance.get("/v1/dashboard/investment/pf/withdrawals"),
         axiosInstance.get("/v1/dashboard/investment/plans"),
+        axiosInstance.get("/v1/dashboard/profile"),
       ]);
 
       // 1. Bank Sources from Expense
@@ -391,23 +397,15 @@ export default function InvTableView() {
         setMfData(activeFunds);
       }
 
-      // 6. Salary & PF
+      // 6. Salary & PF Withdrawals
       if (salaryRes.status === "fulfilled") {
         const payload = salaryRes.value?.data;
-        const list = Array.isArray(payload?.data)
-          ? payload.data
-          : Array.isArray(payload)
-          ? payload
-          : [];
+        const list = Array.isArray(payload?.data) ? payload.data : [];
         setSalaryData(list);
       }
       if (pfWithdrawalsRes.status === "fulfilled") {
         const payload = pfWithdrawalsRes.value?.data;
-        const list = Array.isArray(payload?.data)
-          ? payload.data
-          : Array.isArray(payload)
-          ? payload
-          : [];
+        const list = Array.isArray(payload?.data) ? payload.data : [];
         setPfWithdrawals(list);
       }
 
@@ -415,9 +413,15 @@ export default function InvTableView() {
       if (plansRes.status === "fulfilled") {
         const payload = plansRes.value?.data;
         const list = Array.isArray(payload?.data) ? payload.data : [];
-        if (list.length > 0) {
-          setPlannerGoals(list);
-          localStorage.setItem("pulse_investment_planner_goals", JSON.stringify(list));
+        setPlannerGoals(list);
+      }
+
+      // 8. Registered User Profile (DOB from Profile Settings)
+      if (profileRes.status === "fulfilled") {
+        const u = profileRes.value?.data?.data;
+        if (u?.dateOfBirth) {
+          setDob(u.dateOfBirth);
+          localStorage.setItem("pulse_portfolio_dob", u.dateOfBirth);
         }
       }
     } catch (err) {
@@ -433,7 +437,7 @@ export default function InvTableView() {
   }, []);
 
   // Handle Save Settings from Modal
-  const handleSaveSettings = ({ upperLimit: newLimit, milestones: newMilestones, dob: newDob }) => {
+  const handleSaveSettings = async ({ upperLimit: newLimit, milestones: newMilestones, dob: newDob }) => {
     setUpperLimit(newLimit);
     setMilestones(newMilestones);
     setDob(newDob);
@@ -441,6 +445,14 @@ export default function InvTableView() {
     localStorage.setItem("pulse_portfolio_upper_limit", String(newLimit));
     localStorage.setItem("pulse_portfolio_dob", newDob);
     localStorage.setItem("pulse_portfolio_milestones", JSON.stringify(newMilestones));
+    try {
+      const existing = JSON.parse(localStorage.getItem("user_profile") || "{}");
+      existing.dateOfBirth = newDob;
+      localStorage.setItem("user_profile", JSON.stringify(existing));
+    } catch (e) {}
+    try {
+      await axiosInstance.put("/v1/dashboard/profile", { dateOfBirth: newDob });
+    } catch (err) {}
   };
 
   // Computations

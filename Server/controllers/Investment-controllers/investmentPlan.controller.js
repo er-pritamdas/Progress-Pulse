@@ -14,12 +14,24 @@ const formatPlan = (plan) => {
 };
 
 const getFindQuery = (id, userId) => {
+  const userObjectId = mongoose.Types.ObjectId.isValid(userId)
+    ? new mongoose.Types.ObjectId(userId)
+    : userId;
+
   if (mongoose.Types.ObjectId.isValid(id)) {
     return {
-      $or: [{ _id: id, userId }, { customId: id, userId }],
+      $and: [
+        { userId: userObjectId },
+        {
+          $or: [
+            { _id: new mongoose.Types.ObjectId(id) },
+            { customId: String(id) },
+          ],
+        },
+      ],
     };
   }
-  return { customId: id, userId };
+  return { customId: String(id), userId: userObjectId };
 };
 
 // ----------------------------------------------------------------------
@@ -73,9 +85,9 @@ export const createInvestmentPlan = async (req, res) => {
       });
     }
 
-    if (customId) {
-      planData.customId = String(customId);
-    }
+    const newObjectId = new mongoose.Types.ObjectId();
+    planData._id = newObjectId;
+    planData.customId = customId ? String(customId) : newObjectId.toString();
 
     const createdPlan = await InvestmentPlan.create(planData);
 
@@ -299,9 +311,7 @@ export const syncInvestmentPlans = async (req, res) => {
         order: p.order !== undefined ? Number(p.order) : i,
       };
 
-      const query = mongoose.Types.ObjectId.isValid(customId)
-        ? { $or: [{ _id: customId, userId }, { customId, userId }] }
-        : { customId, userId };
+      const query = getFindQuery(customId, userId);
 
       await InvestmentPlan.findOneAndUpdate(query, { $set: planPayload }, { upsert: true, new: true });
     }

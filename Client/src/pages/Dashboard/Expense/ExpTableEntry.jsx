@@ -12,15 +12,49 @@ import TransactionInfoModal from "../../../components/Expense/TransactionInfoMod
 export const getReimbursableBreakdown = (t, splitsMap = {}) => {
   const amt = Number(t?.amount || 0);
   const txKey = String(t?._id || t?.id || "");
-  const splitCount = Math.max(1, Number(splitsMap[txKey]) || 1);
+  const entry = splitsMap[txKey];
+
+  let splitCount = 1;
+  let customAmount = null;
+
+  if (typeof entry === "number") {
+    splitCount = Math.max(1, Math.min(100, entry));
+  } else if (entry && typeof entry === "object") {
+    if (entry.splitCount !== undefined) {
+      splitCount = Math.max(1, Math.min(100, Number(entry.splitCount) || 1));
+    }
+    if (entry.customAmount !== undefined && entry.customAmount !== null && entry.customAmount !== "") {
+      const parsed = Number(entry.customAmount);
+      if (!isNaN(parsed)) {
+        customAmount = Math.max(0, parsed);
+      }
+    }
+  }
+
+  // If a custom amount to collect was entered by the user
+  if (customAmount !== null && !isNaN(customAmount)) {
+    const toCollect = Math.min(amt, Math.round((customAmount + Number.EPSILON) * 100) / 100);
+    const myShare = Math.max(0, Math.round((amt - toCollect + Number.EPSILON) * 100) / 100);
+    return {
+      total: amt,
+      splitCount,
+      myShare,
+      toCollect,
+      isCustomAmount: true,
+    };
+  }
+
+  // Standard split calculation
   if (splitCount <= 1) {
     return {
       total: amt,
       splitCount: 1,
       myShare: 0,
       toCollect: amt,
+      isCustomAmount: false,
     };
   }
+
   const myShare = Math.round((amt / splitCount + Number.EPSILON) * 100) / 100;
   const toCollect = Math.round(((amt * (splitCount - 1)) / splitCount + Number.EPSILON) * 100) / 100;
   return {
@@ -28,6 +62,7 @@ export const getReimbursableBreakdown = (t, splitsMap = {}) => {
     splitCount,
     myShare,
     toCollect,
+    isCustomAmount: false,
   };
 };
 
@@ -46,7 +81,7 @@ const ExpTableEntry = () => {
   const [showBankBalancesModal, setShowBankBalancesModal] = useState(false);
   const [bankModalTypeFilter, setBankModalTypeFilter] = useState("all");
 
-  // Reimbursable Splits Map (txId -> splitCount)
+  // Reimbursable Splits Map (txId -> { splitCount, customAmount } or splitCount)
   const [reimbursableSplits, setReimbursableSplits] = useState(() => {
     try {
       const saved = localStorage.getItem("expense_reimbursable_splits");
@@ -67,9 +102,23 @@ const ExpTableEntry = () => {
     return () => window.removeEventListener("reimbursable_splits_updated", handleSplitSync);
   }, []);
 
-  const updateSplit = (txId, count) => {
-    const newCount = Math.max(1, Math.min(100, Number(count) || 1));
-    const updated = { ...reimbursableSplits, [String(txId)]: newCount };
+  const updateSplit = (txId, countOrObj) => {
+    let entryToSave;
+    if (typeof countOrObj === "number") {
+      entryToSave = { splitCount: Math.max(1, Math.min(100, countOrObj)), customAmount: null };
+    } else if (countOrObj && typeof countOrObj === "object") {
+      entryToSave = {
+        splitCount: Math.max(1, Math.min(100, Number(countOrObj.splitCount) || 1)),
+        customAmount:
+          countOrObj.customAmount !== undefined && countOrObj.customAmount !== null && countOrObj.customAmount !== ""
+            ? Math.max(0, Number(countOrObj.customAmount))
+            : null,
+      };
+    } else {
+      entryToSave = { splitCount: 1, customAmount: null };
+    }
+
+    const updated = { ...reimbursableSplits, [String(txId)]: entryToSave };
     setReimbursableSplits(updated);
     try {
       localStorage.setItem("expense_reimbursable_splits", JSON.stringify(updated));
@@ -1397,6 +1446,100 @@ const TransactionListModal = ({ type, transactions, currentMonth, reimbursableSp
 
   const [infoModalTx, setInfoModalTx] = useState(null);
 
+  // Writable split and editable collect amounts state
+  const [editingSplits, setEditingSplits] = useState({});
+  const [editingAmounts, setEditingAmounts] = useState({});
+
+  const handleSplitChange = (txId, newCount) => {
+    const safeCount = Math.max(1, Math.min(100, Number(newCount) || 1));
+    if (onUpdateSplit) {
+      onUpdateSplit(txId, { splitCount: safeCount, customAmount: null });
+    }
+    setEditingSplits((prev) => {
+      const next = { ...prev };
+      delete next[String(txId)];
+      return next;
+    });
+    setEditingAmounts((prev) => {
+      const next = { ...prev };
+      delete next[String(txId)];
+      return next;
+    });
+  };
+
+  const handleSplitInputChange = (txId, rawVal) => {
+    setEditingSplits((prev) => ({ ...prev, [String(txId)]: rawVal }));
+    const val = parseInt(rawVal, 10);
+    if (!isNaN(val) && val >= 1 && val <= 100) {
+      if (onUpdateSplit) {
+        onUpdateSplit(txId, { splitCount: val, customAmount: null });
+      }
+      setEditingAmounts((prev) => {
+        const next = { ...prev };
+        delete next[String(txId)];
+        return next;
+      });
+    }
+  };
+
+  const handleSplitInputBlur = (txId, fallbackCount) => {
+    const rawVal = editingSplits[String(txId)];
+    if (rawVal !== undefined) {
+      const val = parseInt(rawVal, 10);
+      const safe = isNaN(val) || val < 1 ? 1 : Math.min(100, val);
+      if (onUpdateSplit) {
+        onUpdateSplit(txId, { splitCount: safe, customAmount: null });
+      }
+      setEditingSplits((prev) => {
+        const next = { ...prev };
+        delete next[String(txId)];
+        return next;
+      });
+    }
+  };
+
+  const handleAmountInputChange = (txId, rawVal, totalAmount, currentSplit) => {
+    setEditingAmounts((prev) => ({ ...prev, [String(txId)]: rawVal }));
+    const num = parseFloat(rawVal);
+    if (!isNaN(num) && num >= 0) {
+      if (onUpdateSplit) {
+        onUpdateSplit(txId, { splitCount: currentSplit, customAmount: Math.min(totalAmount, num) });
+      }
+    }
+  };
+
+  const handleAmountInputBlur = (txId, totalAmount, currentSplit) => {
+    const rawVal = editingAmounts[String(txId)];
+    if (rawVal !== undefined) {
+      if (rawVal === "" || isNaN(parseFloat(rawVal))) {
+        if (onUpdateSplit) {
+          onUpdateSplit(txId, { splitCount: currentSplit, customAmount: null });
+        }
+      } else {
+        const num = Math.min(totalAmount, Math.max(0, parseFloat(rawVal)));
+        if (onUpdateSplit) {
+          onUpdateSplit(txId, { splitCount: currentSplit, customAmount: num });
+        }
+      }
+      setEditingAmounts((prev) => {
+        const next = { ...prev };
+        delete next[String(txId)];
+        return next;
+      });
+    }
+  };
+
+  const handleResetAmount = (txId, currentSplit) => {
+    if (onUpdateSplit) {
+      onUpdateSplit(txId, { splitCount: currentSplit, customAmount: null });
+    }
+    setEditingAmounts((prev) => {
+      const next = { ...prev };
+      delete next[String(txId)];
+      return next;
+    });
+  };
+
   const hasColFilters = Boolean(colFilters.date || colFilters.description || colFilters.sourceId || colFilters.categoryId);
   const clearColFilters = () => setColFilters({ date: "", description: "", sourceId: "", categoryId: "" });
 
@@ -1479,9 +1622,17 @@ const TransactionListModal = ({ type, transactions, currentMonth, reimbursableSp
   const totalToCollect = useMemo(() => {
     if (!isReimbursable) return totalSpent;
     return filteredTransactions.reduce((sum, t) => {
+      const txId = String(t._id || t.id);
+      if (editingAmounts[txId] !== undefined && editingAmounts[txId] !== "") {
+        const parsed = parseFloat(editingAmounts[txId]);
+        if (!isNaN(parsed)) {
+          const totalAmt = Number(t.amount || 0);
+          return sum + Math.min(totalAmt, Math.max(0, parsed));
+        }
+      }
       return sum + getReimbursableBreakdown(t, reimbursableSplits).toCollect;
     }, 0);
-  }, [filteredTransactions, isReimbursable, reimbursableSplits]);
+  }, [filteredTransactions, isReimbursable, reimbursableSplits, editingAmounts]);
 
   const totalMyShare = totalSpent - totalToCollect;
 
@@ -1498,19 +1649,19 @@ const TransactionListModal = ({ type, transactions, currentMonth, reimbursableSp
 
   return (
     <div className="fixed inset-0 z-[99999] bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
-      <div className="bg-base-100 rounded-3xl shadow-2xl w-full max-w-5xl max-h-[85vh] flex flex-col overflow-hidden border border-base-300 animate-in fade-in zoom-in-95 duration-200">
+      <div className={`bg-base-100 rounded-3xl shadow-2xl w-full ${isReimbursable ? 'max-w-6xl xl:max-w-7xl' : 'max-w-5xl xl:max-w-6xl'} max-h-[85vh] flex flex-col overflow-hidden border border-base-300 animate-in fade-in zoom-in-95 duration-200`}>
         {/* Header */}
-        <div className="p-5 border-b border-base-200 flex flex-wrap gap-3 justify-between items-center bg-base-200/50">
-          <div className="flex items-center gap-3">
-            <div className={`p-2.5 rounded-2xl ${isReimbursable ? 'bg-warning/15 text-warning' : (isDebit ? 'bg-error/15 text-error' : 'bg-success/15 text-success')}`}>
+        <div className="p-5 border-b border-base-200 flex items-center justify-between gap-4 bg-base-200/50">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className={`p-2.5 rounded-2xl shrink-0 ${isReimbursable ? 'bg-warning/15 text-warning' : (isDebit ? 'bg-error/15 text-error' : 'bg-success/15 text-success')}`}>
               <Icon size={22} />
             </div>
-            <div>
-              <h3 className="font-extrabold text-lg flex items-center gap-2">
+            <div className="min-w-0">
+              <h3 className="font-extrabold text-lg flex items-center gap-2 whitespace-nowrap">
                 <span>{title}</span>
                 <span className="text-xs opacity-60 font-mono font-medium">({dayjs(currentMonth).format("MMMM YYYY")})</span>
               </h3>
-              <p className="text-xs opacity-60 font-medium mt-0.5">
+              <p className="text-xs opacity-60 font-medium mt-0.5 truncate">
                 {isReimbursable ? (
                   <span>Split bill among people — 1 part is your own share, remaining parts to collect.</span>
                 ) : (
@@ -1520,29 +1671,29 @@ const TransactionListModal = ({ type, transactions, currentMonth, reimbursableSp
             </div>
           </div>
 
-          <div className="flex items-center gap-2 flex-wrap justify-end">
+          <div className="flex items-center gap-2 shrink-0 justify-end">
             {isReimbursable ? (
               <>
-                <span className="px-2.5 py-1 rounded-xl text-xs font-bold font-mono bg-base-200 border border-base-300 text-base-content/70 hidden sm:inline-block">
+                <span className="px-2.5 py-1 rounded-xl text-xs font-bold font-mono bg-base-200 border border-base-300 text-base-content/70 whitespace-nowrap hidden sm:inline-flex items-center">
                   Spent: ₹{totalSpent.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
                 {totalMyShare > 0 && (
-                  <span className="px-2.5 py-1 rounded-xl text-xs font-bold font-mono bg-base-200 border border-base-300 text-base-content/70 hidden sm:inline-block">
+                  <span className="px-2.5 py-1 rounded-xl text-xs font-bold font-mono bg-base-200 border border-base-300 text-base-content/70 whitespace-nowrap inline-flex items-center">
                     My Share: ₹{totalMyShare.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
                 )}
-                <span className="px-3 py-1 rounded-xl text-sm font-extrabold font-mono border bg-warning/10 text-warning border-warning/30 shadow-2xs">
+                <span className="px-3 py-1 rounded-xl text-sm font-extrabold font-mono border bg-warning/10 text-warning border-warning/30 shadow-2xs whitespace-nowrap inline-flex items-center">
                   To Collect: ₹{totalToCollect.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
               </>
             ) : (
-              <span className={`px-3 py-1 rounded-xl text-sm font-extrabold font-mono border ${bgBadge}`}>
+              <span className={`px-3 py-1 rounded-xl text-sm font-extrabold font-mono border ${bgBadge} whitespace-nowrap`}>
                 Total: ₹{totalSpent.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
             )}
             <button
               onClick={onClose}
-              className="btn btn-xs sm:btn-sm btn-ghost gap-1 px-1.5 rounded-xl text-base-content/70 hover:text-base-content hover:bg-base-200/80 transition-all font-mono select-none"
+              className="btn btn-xs sm:btn-sm btn-ghost gap-1 px-1.5 rounded-xl text-base-content/70 hover:text-base-content hover:bg-base-200/80 transition-all font-mono select-none shrink-0"
               title="Close (Press Esc)"
             >
               <kbd className="kbd kbd-sm font-mono font-black text-[11px] bg-base-100 border border-base-300 shadow-2xs px-2 py-0.5 rounded-lg cursor-pointer">ESC</kbd>
@@ -1766,7 +1917,9 @@ const TransactionListModal = ({ type, transactions, currentMonth, reimbursableSp
                       </th>
                     )}
 
-                    <th className="py-3 px-4 text-right">{isReimbursable ? "Net To Collect" : "Amount"}</th>
+                    <th className={`py-3 px-4 text-right ${isReimbursable ? 'min-w-[140px]' : ''}`}>
+                      {isReimbursable ? "Net To Collect" : "Amount"}
+                    </th>
                     <th className="py-3 px-4 text-center">Action</th>
                   </tr>
                 </thead>
@@ -1783,13 +1936,26 @@ const TransactionListModal = ({ type, transactions, currentMonth, reimbursableSp
                     const srcTagStyle = getSourceTagStyle(srcObj);
 
                     const breakdown = getReimbursableBreakdown(t, reimbursableSplits);
+                    const txIdStr = String(t._id || t.id);
+                    const editingAmountVal = editingAmounts[txIdStr];
+                    const isCustom = breakdown.isCustomAmount || (editingAmountVal !== undefined && editingAmountVal !== "");
+                    const currentMyShare = (() => {
+                      if (editingAmountVal !== undefined && editingAmountVal !== "") {
+                        const parsed = parseFloat(editingAmountVal);
+                        if (!isNaN(parsed)) {
+                          const col = Math.min(breakdown.total, Math.max(0, parsed));
+                          return Math.max(0, Math.round((breakdown.total - col + Number.EPSILON) * 100) / 100);
+                        }
+                      }
+                      return breakdown.myShare;
+                    })();
 
                     return (
                       <tr key={t._id || t.id} className="hover:bg-base-200/40 transition-colors">
                         <td className="py-3 px-4 font-mono text-base-content/70 whitespace-nowrap">
                           {dayjs(t.date).format("DD MMM YYYY")}
                         </td>
-                        <td className="py-3 px-4 font-semibold text-base-content">
+                        <td className="py-3 px-4 font-semibold text-base-content max-w-[240px] truncate" title={t.description || ""}>
                           <span>{t.description || <span className="opacity-40 italic">No description</span>}</span>
                         </td>
                         <td className="py-3 px-4">
@@ -1842,80 +2008,116 @@ const TransactionListModal = ({ type, transactions, currentMonth, reimbursableSp
                         {isReimbursable && (
                           <td className="py-2 px-4 text-center whitespace-nowrap">
                             <div className="flex flex-col items-center gap-1">
-                              <div className="inline-flex items-center gap-1 bg-base-200/80 p-0.5 rounded-xl border border-base-300">
+                              <div className="inline-flex items-center gap-1 bg-base-200/90 p-1 rounded-xl border border-base-300 shadow-2xs">
                                 <button
                                   type="button"
                                   disabled={breakdown.splitCount <= 1}
-                                  onClick={() => onUpdateSplit && onUpdateSplit(t._id || t.id, breakdown.splitCount - 1)}
-                                  className="btn btn-xs btn-square btn-ghost h-6 w-6 min-h-0 disabled:opacity-20 hover:bg-base-300 rounded-lg cursor-pointer"
+                                  onClick={() => handleSplitChange(t._id || t.id, breakdown.splitCount - 1)}
+                                  className="btn btn-xs btn-square btn-ghost h-7 w-7 min-h-0 disabled:opacity-20 hover:bg-base-300 rounded-lg cursor-pointer text-base-content"
                                   title="Decrease people count"
                                 >
-                                  <Minus size={11} />
+                                  <Minus size={12} />
                                 </button>
 
-                                <div className="dropdown dropdown-bottom dropdown-end">
-                                  <button
-                                    tabIndex={0}
-                                    type="button"
-                                    className={`btn btn-xs h-6 min-h-0 font-mono font-bold rounded-lg px-2 gap-1 text-[11px] cursor-pointer ${breakdown.splitCount > 1 ? 'btn-warning btn-outline shadow-2xs' : 'btn-ghost text-base-content/70'}`}
-                                    title="Click to select number of people to split with"
-                                  >
-                                    <Users size={11} />
-                                    <span>{breakdown.splitCount === 1 ? '1 (No Split)' : `${breakdown.splitCount} People`}</span>
-                                  </button>
-                                  <ul tabIndex={0} className="dropdown-content z-[99999] menu p-1.5 bg-base-100 rounded-2xl shadow-2xl border border-base-300 w-44 mt-1 font-medium text-xs max-h-56 overflow-y-auto">
-                                    <li className="menu-title text-[10px] uppercase font-bold text-base-content/50">Split Bill Among</li>
-                                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 15, 20].map((num) => (
-                                      <li key={num}>
-                                        <a
-                                          onClick={() => onUpdateSplit && onUpdateSplit(t._id || t.id, num)}
-                                          className={`flex justify-between items-center ${breakdown.splitCount === num ? 'active font-bold' : ''}`}
-                                        >
-                                          <span>{num === 1 ? '1 (100% Mine/Collect)' : `${num} People`}</span>
-                                          <span className="text-[10px] opacity-60 font-mono">
-                                            {num === 1 ? 'Full' : `${num - 1}/${num}`}
-                                          </span>
-                                        </a>
-                                      </li>
-                                    ))}
-                                  </ul>
+                                <div className="flex items-center gap-1 px-1">
+                                  <input
+                                    type="number"
+                                    min="1"
+                                    max="100"
+                                    value={
+                                      editingSplits[String(t._id || t.id)] !== undefined
+                                        ? editingSplits[String(t._id || t.id)]
+                                        : breakdown.splitCount
+                                    }
+                                    onChange={(e) => handleSplitInputChange(t._id || t.id, e.target.value)}
+                                    onBlur={() => handleSplitInputBlur(t._id || t.id, breakdown.splitCount)}
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter") e.currentTarget.blur();
+                                    }}
+                                    className="input input-xs input-bordered h-7 w-12 text-center font-mono font-black text-xs rounded-lg bg-base-100 p-0 text-base-content focus:border-warning focus:ring-1 focus:ring-warning"
+                                    title="Type number of people to split with"
+                                  />
+                                  <span className="text-[11px] font-semibold text-base-content/60 select-none">
+                                    {breakdown.splitCount === 1 ? "person" : "people"}
+                                  </span>
                                 </div>
 
                                 <button
                                   type="button"
-                                  disabled={breakdown.splitCount >= 50}
-                                  onClick={() => onUpdateSplit && onUpdateSplit(t._id || t.id, breakdown.splitCount + 1)}
-                                  className="btn btn-xs btn-square btn-ghost h-6 w-6 min-h-0 hover:bg-base-300 rounded-lg cursor-pointer"
+                                  disabled={breakdown.splitCount >= 100}
+                                  onClick={() => handleSplitChange(t._id || t.id, breakdown.splitCount + 1)}
+                                  className="btn btn-xs btn-square btn-ghost h-7 w-7 min-h-0 hover:bg-base-300 rounded-lg cursor-pointer text-base-content"
                                   title="Increase people count"
                                 >
-                                  <Plus size={11} />
+                                  <Plus size={12} />
                                 </button>
                               </div>
 
-                              {breakdown.splitCount > 1 && (
-                                <span className="text-[10px] font-mono text-base-content/50">
-                                  1 part self: ₹{breakdown.myShare.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                </span>
-                              )}
+                              <span className={`text-[10px] font-mono ${isCustom ? "text-warning font-semibold" : "text-base-content/50"}`}>
+                                {isCustom || breakdown.splitCount > 1
+                                  ? `My share: ₹${currentMyShare.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                                  : "100% collect (no self share)"}
+                              </span>
                             </div>
                           </td>
                         )}
 
                         <td className="py-3 px-4 text-right font-mono font-extrabold whitespace-nowrap">
                           {isReimbursable ? (
-                            <div className="flex flex-col items-end">
-                              <span className="text-warning font-black text-sm">
-                                +₹{breakdown.toCollect.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                              </span>
-                              {breakdown.splitCount > 1 ? (
-                                <span className="text-[10px] font-mono font-semibold text-base-content/50">
-                                  {breakdown.splitCount - 1}/{breakdown.splitCount} of ₹{breakdown.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                </span>
-                              ) : (
-                                <span className="text-[10px] font-sans font-medium text-base-content/40">
-                                  Full ₹{breakdown.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                </span>
-                              )}
+                            <div className="flex flex-col items-end gap-1">
+                              <div className="inline-flex items-center gap-1 bg-warning/10 border border-warning/30 rounded-xl px-2 py-0.5 focus-within:ring-2 focus-within:ring-warning/40 focus-within:bg-base-100 transition-all shadow-2xs">
+                                <span className="text-warning font-black text-xs font-mono select-none">+₹</span>
+                                <input
+                                  type="number"
+                                  step="any"
+                                  min="0"
+                                  max={breakdown.total}
+                                  value={
+                                    editingAmounts[String(t._id || t.id)] !== undefined
+                                      ? editingAmounts[String(t._id || t.id)]
+                                      : breakdown.toCollect
+                                  }
+                                  onChange={(e) =>
+                                    handleAmountInputChange(t._id || t.id, e.target.value, breakdown.total, breakdown.splitCount)
+                                  }
+                                  onBlur={() =>
+                                    handleAmountInputBlur(t._id || t.id, breakdown.total, breakdown.splitCount)
+                                  }
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter") e.currentTarget.blur();
+                                  }}
+                                  className="w-24 text-right font-mono font-black text-sm text-warning bg-transparent border-none outline-hidden p-0 focus:text-base-content"
+                                  placeholder="0.00"
+                                  title="Click to edit amount to collect"
+                                />
+                              </div>
+
+                              <div className="flex items-center gap-1 text-[10px] font-mono">
+                                {isCustom ? (
+                                  <div className="flex items-center gap-1">
+                                    <span className="badge badge-warning badge-xs font-bold text-[9px] px-1 py-0.5 text-warning-content">
+                                      Custom
+                                    </span>
+                                    <span className="text-base-content/50">
+                                      of ₹{breakdown.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleResetAmount(t._id || t.id, breakdown.splitCount)}
+                                      className="text-primary hover:underline font-bold text-[9px] cursor-pointer ml-0.5"
+                                      title="Reset to split ratio calculation"
+                                    >
+                                      (Reset)
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <span className="text-base-content/50 font-semibold">
+                                    {breakdown.splitCount > 1
+                                      ? `${breakdown.splitCount - 1}/${breakdown.splitCount} of ₹${breakdown.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                                      : `Full ₹${breakdown.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                                  </span>
+                                )}
+                              </div>
                             </div>
                           ) : (
                             <span className={isTrf ? "text-amber-500 dark:text-amber-400" : (isDebit ? "text-error" : "text-success")}>

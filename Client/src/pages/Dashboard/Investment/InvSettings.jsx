@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import dayjs from "dayjs";
 import { Link, useNavigate } from "react-router-dom";
 import {
@@ -165,6 +165,27 @@ const GOAL_PRESETS = [
   { id: "custom", name: "Custom Life Goal", icon: "🎯", defaultAmount: 2000000, defaultYears: 2, desc: "Create your own unique life plan" },
 ];
 
+const POPULAR_GOAL_ICONS = [
+  "🎯", "💍", "🏡", "🚗", "✈️", "🏖️",
+  "👶", "🎓", "🛡️", "💼", "🔨", "🚀",
+  "💻", "📈", "💎", "⛵", "🏥", "🚲",
+];
+
+const MONTHS = [
+  { value: 0, name: "January", short: "Jan" },
+  { value: 1, name: "February", short: "Feb" },
+  { value: 2, name: "March", short: "Mar" },
+  { value: 3, name: "April", short: "Apr" },
+  { value: 4, name: "May", short: "May" },
+  { value: 5, name: "June", short: "Jun" },
+  { value: 6, name: "July", short: "Jul" },
+  { value: 7, name: "August", short: "Aug" },
+  { value: 8, name: "September", short: "Sep" },
+  { value: 9, name: "October", short: "Oct" },
+  { value: 10, name: "November", short: "Nov" },
+  { value: 11, name: "December", short: "Dec" },
+];
+
 export default function InvSettings() {
   TitleChanger("Investment Planner | Progress Pulse");
   const navigate = useNavigate();
@@ -182,29 +203,9 @@ export default function InvSettings() {
   const [loading, setLoading] = useState(true);
 
   // ----------------------------------------------------------------------
-  // Goals / Plans Management States (Starts completely empty)
+  // Goals / Plans Management States (Single source of truth: MongoDB)
   // ----------------------------------------------------------------------
-  const [goals, setGoals] = useState(() => {
-    try {
-      const saved = localStorage.getItem("pulse_investment_planner_goals");
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
-          return parsed.filter(
-            (g) => g.id !== "goal-wedding-default" && g.id !== "goal-house-default"
-          );
-        }
-      }
-    } catch (e) {
-      console.error("Failed to load planner goals:", e);
-    }
-    return [];
-  });
-
-  // Persist goals to localStorage
-  useEffect(() => {
-    localStorage.setItem("pulse_investment_planner_goals", JSON.stringify(goals));
-  }, [goals]);
+  const [goals, setGoals] = useState([]);
 
   // Collapse / Expand state for planners (like FoodLoggingTab)
   const [collapsedPlans, setCollapsedPlans] = useState({});
@@ -267,64 +268,131 @@ export default function InvSettings() {
   // 6. Unallocated Assets Breakdown by Source Type Modal
   const [isUnallocatedModalOpen, setIsUnallocatedModalOpen] = useState(false);
 
+  // Emoji picker popup state for goal modal
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+
   // Relative Date Info for currently edited date
   const modalDateInfo = useMemo(() => {
     return getRelativeDateInfo(goalForm.targetDate);
   }, [goalForm.targetDate]);
 
-  // User Date of Birth (stored in localStorage, default to 1998-05-15)
+  // Target Month & Year dropdown popup states for goal modal
+  const [isMonthOpen, setIsMonthOpen] = useState(false);
+  const [isYearOpen, setIsYearOpen] = useState(false);
+  const monthPickerRef = useRef(null);
+  const yearPickerRef = useRef(null);
+
+  // Close month/year popups on click outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (monthPickerRef.current && !monthPickerRef.current.contains(e.target)) {
+        setIsMonthOpen(false);
+      }
+      if (yearPickerRef.current && !yearPickerRef.current.contains(e.target)) {
+        setIsYearOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const targetDateObj = useMemo(() => {
+    return dayjs(goalForm.targetDate).isValid()
+      ? dayjs(goalForm.targetDate)
+      : dayjs().add(2, "year");
+  }, [goalForm.targetDate]);
+
+  const currentMonthIndex = targetDateObj.month();
+  const currentYearVal = targetDateObj.year();
+
+  const handleSelectMonth = (monthIndex) => {
+    const updated = targetDateObj.month(monthIndex).date(1).format("YYYY-MM-DD");
+    setGoalForm((prev) => ({ ...prev, targetDate: updated }));
+    setIsMonthOpen(false);
+  };
+
+  const handleSelectYear = (yearNum) => {
+    const updated = targetDateObj.year(yearNum).date(1).format("YYYY-MM-DD");
+    setGoalForm((prev) => ({ ...prev, targetDate: updated }));
+    setIsYearOpen(false);
+  };
+
+  const availableYears = useMemo(() => {
+    const thisYear = dayjs().year();
+    const minYear = Math.min(thisYear - 1, currentYearVal);
+    const maxYear = Math.max(thisYear + 45, currentYearVal + 10);
+    const list = [];
+    for (let y = minYear; y <= maxYear; y++) {
+      list.push(y);
+    }
+    return list;
+  }, [currentYearVal]);
+
+  // ----------------------------------------------------------------------
+  // User Profile Data (DOB & Picture from Registered user profile settings)
+  // ----------------------------------------------------------------------
+  const [userProfilePic, setUserProfilePic] = useState(() => {
+    const directPic = localStorage.getItem("profilePic");
+    if (directPic) return directPic;
+    try {
+      const parsed = JSON.parse(localStorage.getItem("user_profile") || "{}");
+      if (parsed.profilePic) return parsed.profilePic;
+    } catch (e) {}
+    return "";
+  });
+
+  const [userDisplayName, setUserDisplayName] = useState(() => {
+    let name = localStorage.getItem("fullName") || localStorage.getItem("username");
+    if (!name) {
+      try {
+        const parsed = JSON.parse(localStorage.getItem("user_profile") || "{}");
+        name = parsed.fullName || parsed.username;
+      } catch (e) {}
+    }
+    return name || "User";
+  });
+
+  const userInitials = useMemo(() => {
+    const name = userDisplayName.trim();
+    if (!name) return "U";
+    const parts = name.split(" ");
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return name.slice(0, 2).toUpperCase();
+  }, [userDisplayName]);
+
+  // User Date of Birth (fetched from Registered user profile settings / MongoDB)
   const [userDob, setUserDob] = useState(() => {
-    return localStorage.getItem("pulse_portfolio_dob") || "1998-05-15";
+    try {
+      const parsed = JSON.parse(localStorage.getItem("user_profile") || "{}");
+      if (parsed.dateOfBirth) return parsed.dateOfBirth;
+    } catch (e) {}
+    return localStorage.getItem("pulse_portfolio_dob") || "";
   });
   const [isEditingDob, setIsEditingDob] = useState(false);
 
-  const handleUpdateDob = (newDob) => {
+  const handleUpdateDob = async (newDob) => {
     setUserDob(newDob);
     localStorage.setItem("pulse_portfolio_dob", newDob);
+    try {
+      const existing = JSON.parse(localStorage.getItem("user_profile") || "{}");
+      existing.dateOfBirth = newDob;
+      localStorage.setItem("user_profile", JSON.stringify(existing));
+    } catch (e) {}
+
+    // Persist to RegisteredUsers in MongoDB
+    try {
+      await axiosInstance.put("/v1/dashboard/profile", { dateOfBirth: newDob });
+    } catch (err) {
+      console.error("Failed to update dateOfBirth in profile:", err);
+    }
   };
 
   // User Age on the selected target date
   const userAgeOnTargetDate = useMemo(() => {
     return calculateAgeOnDate(userDob, goalForm.targetDate);
   }, [userDob, goalForm.targetDate]);
-
-  // Separate Dropdown States for Day, Month, Year
-  const selectedDateParts = useMemo(() => {
-    const valid = dayjs(goalForm.targetDate).isValid();
-    const d = valid ? dayjs(goalForm.targetDate) : dayjs().add(2, "year");
-    return {
-      year: d.year(),
-      month: d.month() + 1, // 1 to 12
-      day: d.date(), // 1 to 31
-    };
-  }, [goalForm.targetDate]);
-
-  const maxDaysInMonth = useMemo(() => {
-    const valid = dayjs(goalForm.targetDate).isValid();
-    const d = valid ? dayjs(goalForm.targetDate) : dayjs().add(2, "year");
-    return d.daysInMonth() || 31;
-  }, [goalForm.targetDate]);
-
-  const handleDatePartChange = (part, value) => {
-    const valid = dayjs(goalForm.targetDate).isValid();
-    const current = valid ? dayjs(goalForm.targetDate) : dayjs().add(2, "year");
-    let y = current.year();
-    let m = current.month(); // 0 to 11
-    let d = current.date();
-
-    if (part === "year") y = parseInt(value, 10);
-    if (part === "month") m = parseInt(value, 10) - 1;
-    if (part === "day") d = parseInt(value, 10);
-
-    const maxDays = dayjs(new Date(y, m, 1)).daysInMonth();
-    const safeDay = Math.min(d, maxDays);
-    const newDateStr = dayjs(new Date(y, m, safeDay)).format("YYYY-MM-DD");
-
-    setGoalForm((prev) => ({
-      ...prev,
-      targetDate: newDateStr,
-    }));
-  };
 
   // ----------------------------------------------------------------------
   // Fetch All Investment Assets Across All 6 Categories (Matching Portfolio)
@@ -341,6 +409,7 @@ export default function InvSettings() {
         salaryRes,
         pfWithRes,
         plansRes,
+        profileRes,
       ] = await Promise.allSettled([
         axiosInstance.get("/v1/dashboard/expense/get-all-data"),
         axiosInstance.get("/v1/dashboard/investment/stocks"),
@@ -350,6 +419,7 @@ export default function InvSettings() {
         axiosInstance.get("/v1/dashboard/investment/salary"),
         axiosInstance.get("/v1/dashboard/investment/pf/withdrawals"),
         axiosInstance.get("/v1/dashboard/investment/plans"),
+        axiosInstance.get("/v1/dashboard/profile"),
       ]);
 
       const parseList = (res) => {
@@ -383,7 +453,9 @@ export default function InvSettings() {
         const dbList = Array.isArray(payload?.data) ? payload.data : [];
         if (dbList.length > 0) {
           setGoals(dbList);
-          localStorage.setItem("pulse_investment_planner_goals", JSON.stringify(dbList));
+          try {
+            localStorage.removeItem("pulse_investment_planner_goals");
+          } catch (e) {}
         } else {
           // If DB has 0 plans, check if there are legacy local plans to auto-migrate once
           try {
@@ -396,15 +468,54 @@ export default function InvSettings() {
               const syncRes = await axiosInstance.post("/v1/dashboard/investment/plans/sync", {
                 plans: localPlans,
               });
-              const synced = syncRes.data?.data || localPlans;
-              setGoals(synced);
-              localStorage.setItem("pulse_investment_planner_goals", JSON.stringify(synced));
+              const synced = syncRes.data?.data;
+              if (Array.isArray(synced) && synced.length > 0) {
+                setGoals(synced);
+              } else {
+                setGoals([]);
+              }
+              localStorage.removeItem("pulse_investment_planner_goals");
             } else {
               setGoals([]);
             }
           } catch (e) {
             setGoals([]);
           }
+        }
+      } else {
+        console.error("Failed to fetch investment plans from server:", plansRes.reason);
+      }
+
+      // 3. Registered User Profile (DOB & Picture from Settings of Profile)
+      if (profileRes.status === "fulfilled") {
+        const u = profileRes.value?.data?.data;
+        if (u) {
+          if (u.dateOfBirth) {
+            setUserDob(u.dateOfBirth);
+            localStorage.setItem("pulse_portfolio_dob", u.dateOfBirth);
+          }
+          if (u.profilePic) {
+            setUserProfilePic(u.profilePic);
+            localStorage.setItem("profilePic", u.profilePic);
+          }
+          const name = u.fullName || u.username || "";
+          if (name) {
+            setUserDisplayName(name);
+          }
+          try {
+            const existing = JSON.parse(localStorage.getItem("user_profile") || "{}");
+            localStorage.setItem(
+              "user_profile",
+              JSON.stringify({
+                ...existing,
+                fullName: u.fullName || existing.fullName,
+                username: u.username || existing.username,
+                email: u.email || existing.email,
+                dateOfBirth: u.dateOfBirth || existing.dateOfBirth,
+                profilePic: u.profilePic || existing.profilePic,
+              })
+            );
+          } catch (e) {}
         }
       }
     } catch (err) {
@@ -1038,121 +1149,124 @@ export default function InvSettings() {
   // Allocation Modifiers (Save & Remove from 3-Panel Modal)
   // ----------------------------------------------------------------------
   const handleSaveAllocation = async (planId, selectedSource, { percent, amount, shares }) => {
-    let updatedPlanPayload = null;
+    const targetPlan = goals.find((g) => g.id === planId || g._id === planId);
+    if (!targetPlan) return;
 
-    setGoals((prevGoals) =>
-      prevGoals.map((g) => {
-        if (g.id !== planId) return g;
+    const newAllocations = {
+      ...(targetPlan.allocations || {}),
+      [selectedSource.id]: {
+        id: selectedSource.id,
+        sourceType: selectedSource.sourceType,
+        name: selectedSource.displayName || selectedSource.name,
+        percent: Number(percent) || 0,
+        amount: Number(amount) || 0,
+        shares: shares !== undefined ? Number(shares) : undefined,
+      },
+    };
 
-        const newAllocations = {
-          ...(g.allocations || {}),
-          [selectedSource.id]: {
-            id: selectedSource.id,
-            sourceType: selectedSource.sourceType,
-            name: selectedSource.displayName || selectedSource.name,
-            percent: Number(percent) || 0,
-            amount: Number(amount) || 0,
-            shares: shares !== undefined ? Number(shares) : undefined,
-          },
-        };
+    const updatedPlan = {
+      ...targetPlan,
+      allocations: newAllocations,
+    };
 
-        const updated = { ...g, allocations: newAllocations };
+    // Maintain backward compatibility arrays for InvTableView.jsx
+    if (selectedSource.sourceType === "bank") {
+      const set = new Set(targetPlan.selectedBanks || targetPlan.allocatedBanks || []);
+      set.add(selectedSource.id);
+      updatedPlan.selectedBanks = Array.from(set);
+      updatedPlan.allocatedBanks = Array.from(set);
+    } else if (selectedSource.sourceType === "stock") {
+      const set = new Set(targetPlan.selectedStocks || targetPlan.allocatedStocks || []);
+      set.add(selectedSource.id);
+      updatedPlan.selectedStocks = Array.from(set);
+      updatedPlan.allocatedStocks = Array.from(set);
+    } else if (selectedSource.sourceType === "mf") {
+      const set = new Set(targetPlan.selectedMfs || targetPlan.allocatedMfs || []);
+      set.add(selectedSource.id);
+      updatedPlan.selectedMfs = Array.from(set);
+      updatedPlan.allocatedMfs = Array.from(set);
+    } else if (selectedSource.sourceType === "fd") {
+      const set = new Set(targetPlan.selectedFds || targetPlan.allocatedFds || []);
+      set.add(selectedSource.id);
+      updatedPlan.selectedFds = Array.from(set);
+      updatedPlan.allocatedFds = Array.from(set);
+    } else if (selectedSource.sourceType === "rd") {
+      const set = new Set(targetPlan.selectedRds || targetPlan.allocatedRds || []);
+      set.add(selectedSource.id);
+      updatedPlan.selectedRds = Array.from(set);
+      updatedPlan.allocatedRds = Array.from(set);
+    } else if (selectedSource.sourceType === "pf") {
+      updatedPlan.includePf = true;
+      updatedPlan.pfAllocatedPercent = Number(percent) || 50;
+      updatedPlan.pfAllocation = { enabled: true, percentage: Number(percent) || 50 };
+    }
 
-        // Maintain backward compatibility arrays for InvTableView.jsx
-        if (selectedSource.sourceType === "bank") {
-          const set = new Set(g.selectedBanks || g.allocatedBanks || []);
-          set.add(selectedSource.id);
-          updated.selectedBanks = Array.from(set);
-          updated.allocatedBanks = Array.from(set);
-        } else if (selectedSource.sourceType === "stock") {
-          const set = new Set(g.selectedStocks || g.allocatedStocks || []);
-          set.add(selectedSource.id);
-          updated.selectedStocks = Array.from(set);
-          updated.allocatedStocks = Array.from(set);
-        } else if (selectedSource.sourceType === "mf") {
-          const set = new Set(g.selectedMfs || g.allocatedMfs || []);
-          set.add(selectedSource.id);
-          updated.selectedMfs = Array.from(set);
-          updated.allocatedMfs = Array.from(set);
-        } else if (selectedSource.sourceType === "fd") {
-          const set = new Set(g.selectedFds || g.allocatedFds || []);
-          set.add(selectedSource.id);
-          updated.selectedFds = Array.from(set);
-          updated.allocatedFds = Array.from(set);
-        } else if (selectedSource.sourceType === "rd") {
-          const set = new Set(g.selectedRds || g.allocatedRds || []);
-          set.add(selectedSource.id);
-          updated.selectedRds = Array.from(set);
-          updated.allocatedRds = Array.from(set);
-        } else if (selectedSource.sourceType === "pf") {
-          updated.includePf = true;
-          updated.pfAllocatedPercent = Number(percent) || 50;
-          updated.pfAllocation = { enabled: true, percentage: Number(percent) || 50 };
-        }
+    // Optimistic UI update
+    setGoals((prev) => prev.map((g) => (g.id === planId || g._id === planId ? updatedPlan : g)));
 
-        updatedPlanPayload = updated;
-        return updated;
-      })
-    );
-
-    if (updatedPlanPayload) {
-      try {
-        await axiosInstance.put(
-          `/v1/dashboard/investment/plans/${planId}`,
-          updatedPlanPayload
+    // Save directly to DB
+    try {
+      const dbId = targetPlan._id || targetPlan.id || planId;
+      const res = await axiosInstance.put(
+        `/v1/dashboard/investment/plans/${dbId}`,
+        updatedPlan
+      );
+      if (res.data?.data) {
+        setGoals((prev) =>
+          prev.map((g) => (g.id === planId || g._id === planId ? res.data.data : g))
         );
-      } catch (err) {
-        console.error("Failed to save allocation to DB:", err);
       }
+    } catch (err) {
+      console.error("Failed to save allocation to DB:", err);
     }
   };
 
   const handleRemoveAllocation = async (planId, sourceId, sourceType) => {
-    let updatedPlanPayload = null;
+    const targetPlan = goals.find((g) => g.id === planId || g._id === planId);
+    if (!targetPlan) return;
 
-    setGoals((prevGoals) =>
-      prevGoals.map((g) => {
-        if (g.id !== planId) return g;
+    const newAllocations = { ...(targetPlan.allocations || {}) };
+    delete newAllocations[sourceId];
 
-        const newAllocations = { ...(g.allocations || {}) };
-        delete newAllocations[sourceId];
+    const updatedPlan = { ...targetPlan, allocations: newAllocations };
+    if (sourceType === "bank") {
+      updatedPlan.selectedBanks = (targetPlan.selectedBanks || []).filter((id) => id !== sourceId);
+      updatedPlan.allocatedBanks = (targetPlan.allocatedBanks || []).filter((id) => id !== sourceId);
+    } else if (sourceType === "stock") {
+      updatedPlan.selectedStocks = (targetPlan.selectedStocks || []).filter((id) => id !== sourceId);
+      updatedPlan.allocatedStocks = (targetPlan.allocatedStocks || []).filter((id) => id !== sourceId);
+    } else if (sourceType === "mf") {
+      updatedPlan.selectedMfs = (targetPlan.selectedMfs || []).filter((id) => id !== sourceId);
+      updatedPlan.allocatedMfs = (targetPlan.allocatedMfs || []).filter((id) => id !== sourceId);
+    } else if (sourceType === "fd") {
+      updatedPlan.selectedFds = (targetPlan.selectedFds || []).filter((id) => id !== sourceId);
+      updatedPlan.allocatedFds = (targetPlan.allocatedFds || []).filter((id) => id !== sourceId);
+    } else if (sourceType === "rd") {
+      updatedPlan.selectedRds = (targetPlan.selectedRds || []).filter((id) => id !== sourceId);
+      updatedPlan.allocatedRds = (targetPlan.allocatedRds || []).filter((id) => id !== sourceId);
+    } else if (sourceType === "pf") {
+      updatedPlan.includePf = false;
+      updatedPlan.pfAllocatedPercent = 0;
+      updatedPlan.pfAllocation = { enabled: false, percentage: 0 };
+    }
 
-        const updated = { ...g, allocations: newAllocations };
-        if (sourceType === "bank") {
-          updated.selectedBanks = (g.selectedBanks || []).filter((id) => id !== sourceId);
-          updated.allocatedBanks = (g.allocatedBanks || []).filter((id) => id !== sourceId);
-        } else if (sourceType === "stock") {
-          updated.selectedStocks = (g.selectedStocks || []).filter((id) => id !== sourceId);
-          updated.allocatedStocks = (g.allocatedStocks || []).filter((id) => id !== sourceId);
-        } else if (sourceType === "mf") {
-          updated.selectedMfs = (g.selectedMfs || []).filter((id) => id !== sourceId);
-          updated.allocatedMfs = (g.allocatedMfs || []).filter((id) => id !== sourceId);
-        } else if (sourceType === "fd") {
-          updated.selectedFds = (g.selectedFds || []).filter((id) => id !== sourceId);
-          updated.allocatedFds = (g.allocatedFds || []).filter((id) => id !== sourceId);
-        } else if (sourceType === "rd") {
-          updated.selectedRds = (g.selectedRds || []).filter((id) => id !== sourceId);
-          updated.allocatedRds = (g.allocatedRds || []).filter((id) => id !== sourceId);
-        } else if (sourceType === "pf") {
-          updated.includePf = false;
-          updated.pfAllocatedPercent = 0;
-          updated.pfAllocation = { enabled: false, percentage: 0 };
-        }
+    // Optimistic UI update
+    setGoals((prev) => prev.map((g) => (g.id === planId || g._id === planId ? updatedPlan : g)));
 
-        updatedPlanPayload = updated;
-        return updated;
-      })
-    );
-
-    if (updatedPlanPayload) {
-      try {
-        await axiosInstance.put(
-          `/v1/dashboard/investment/plans/${planId}`,
-          updatedPlanPayload
+    // Save directly to DB
+    try {
+      const dbId = targetPlan._id || targetPlan.id || planId;
+      const res = await axiosInstance.put(
+        `/v1/dashboard/investment/plans/${dbId}`,
+        updatedPlan
+      );
+      if (res.data?.data) {
+        setGoals((prev) =>
+          prev.map((g) => (g.id === planId || g._id === planId ? res.data.data : g))
         );
-      } catch (err) {
-        console.error("Failed to remove allocation from DB:", err);
       }
+    } catch (err) {
+      console.error("Failed to remove allocation from DB:", err);
     }
   };
 
@@ -1186,15 +1300,24 @@ export default function InvSettings() {
   // ----------------------------------------------------------------------
   const openCreateGoalModal = (preset = null) => {
     setEditingGoal(null);
-    const p = preset || GOAL_PRESETS[0];
+    setShowEmojiPicker(false);
+    setIsMonthOpen(false);
+    setIsYearOpen(false);
+    const isPresetObj =
+      preset &&
+      typeof preset === "object" &&
+      "id" in preset &&
+      !("nativeEvent" in preset) &&
+      !("_reactName" in preset);
+    const p = isPresetObj ? preset : GOAL_PRESETS[0];
     setGoalForm({
       title: p?.id === "custom" ? "" : (p?.name || ""),
       icon: p?.icon || "💍",
       category: p?.id || "wedding",
       targetAmount: p?.defaultAmount || 2500000,
       targetDate: p?.defaultYears
-        ? dayjs().add(p.defaultYears, "year").format("YYYY-MM-DD")
-        : dayjs().add(2, "year").format("YYYY-MM-DD"),
+        ? dayjs().add(p.defaultYears, "year").date(1).format("YYYY-MM-DD")
+        : dayjs().add(2, "year").date(1).format("YYYY-MM-DD"),
       notes: "",
     });
     setIsGoalModalOpen(true);
@@ -1202,12 +1325,17 @@ export default function InvSettings() {
 
   const openEditGoalModal = (goal) => {
     setEditingGoal(goal);
+    setShowEmojiPicker(false);
+    setIsMonthOpen(false);
+    setIsYearOpen(false);
     setGoalForm({
       title: goal.title || "",
       icon: goal.icon || "🎯",
       category: goal.category || "custom",
       targetAmount: goal.targetAmount !== undefined ? goal.targetAmount : 2000000,
-      targetDate: goal.targetDate || dayjs().add(2, "year").format("YYYY-MM-DD"),
+      targetDate: goal.targetDate
+        ? dayjs(goal.targetDate).date(1).format("YYYY-MM-DD")
+        : dayjs().add(2, "year").date(1).format("YYYY-MM-DD"),
       notes: goal.notes || "",
     });
     setIsGoalModalOpen(true);
@@ -1220,6 +1348,7 @@ export default function InvSettings() {
     const parsedTarget = Math.max(0, Number(goalForm.targetAmount) || 0);
 
     if (editingGoal) {
+      const dbId = editingGoal._id || editingGoal.id;
       const payload = {
         ...goalForm,
         targetAmount: parsedTarget,
@@ -1227,7 +1356,7 @@ export default function InvSettings() {
 
       setGoals((prev) =>
         prev.map((g) =>
-          g.id === editingGoal.id
+          g.id === dbId || g._id === dbId
             ? {
                 ...g,
                 ...payload,
@@ -1238,12 +1367,12 @@ export default function InvSettings() {
 
       try {
         const res = await axiosInstance.put(
-          `/v1/dashboard/investment/plans/${editingGoal.id}`,
+          `/v1/dashboard/investment/plans/${dbId}`,
           payload
         );
         if (res.data?.data) {
           setGoals((prev) =>
-            prev.map((g) => (g.id === editingGoal.id ? res.data.data : g))
+            prev.map((g) => (g.id === dbId || g._id === dbId ? res.data.data : g))
           );
         }
       } catch (err) {
@@ -1255,12 +1384,18 @@ export default function InvSettings() {
         targetAmount: parsedTarget,
         allocations: {},
         selectedBanks: [],
+        allocatedBanks: [],
         selectedStocks: [],
+        allocatedStocks: [],
         selectedMfs: [],
+        allocatedMfs: [],
         selectedFds: [],
+        allocatedFds: [],
         selectedRds: [],
+        allocatedRds: [],
         includePf: false,
         pfAllocatedPercent: 0,
+        pfAllocation: { enabled: false, percentage: 0 },
       };
 
       try {
@@ -1274,12 +1409,6 @@ export default function InvSettings() {
         }
       } catch (err) {
         console.error("Failed to create investment plan in DB:", err);
-        const fallback = {
-          id: `goal-${Date.now()}`,
-          ...newGoalPayload,
-          createdAt: dayjs().format("YYYY-MM-DD"),
-        };
-        setGoals((prev) => [...prev, fallback]);
       }
     }
     setIsGoalModalOpen(false);
@@ -1287,21 +1416,27 @@ export default function InvSettings() {
 
   const confirmClearPlan = async () => {
     if (!planToClear) return;
-    const targetId = planToClear.id;
+    const targetId = planToClear._id || planToClear.id;
 
     setGoals((prev) =>
       prev.map((g) => {
-        if (g.id !== targetId) return g;
+        if (g.id !== targetId && g._id !== targetId) return g;
         return {
           ...g,
           allocations: {},
           selectedBanks: [],
+          allocatedBanks: [],
           selectedStocks: [],
+          allocatedStocks: [],
           selectedMfs: [],
+          allocatedMfs: [],
           selectedFds: [],
+          allocatedFds: [],
           selectedRds: [],
+          allocatedRds: [],
           includePf: false,
           pfAllocatedPercent: 0,
+          pfAllocation: { enabled: false, percentage: 0 },
         };
       })
     );
@@ -1314,7 +1449,7 @@ export default function InvSettings() {
       );
       if (res.data?.data) {
         setGoals((prev) =>
-          prev.map((g) => (g.id === targetId ? res.data.data : g))
+          prev.map((g) => (g.id === targetId || g._id === targetId ? res.data.data : g))
         );
       }
     } catch (err) {
@@ -1324,9 +1459,9 @@ export default function InvSettings() {
 
   const confirmDeletePlan = async () => {
     if (!planToDelete) return;
-    const targetId = planToDelete.id;
+    const targetId = planToDelete._id || planToDelete.id;
 
-    setGoals((prev) => prev.filter((g) => g.id !== targetId));
+    setGoals((prev) => prev.filter((g) => g.id !== targetId && g._id !== targetId));
     setIsDeleteModalOpen(false);
     setPlanToDelete(null);
 
@@ -1712,7 +1847,7 @@ export default function InvSettings() {
                         </span>
                       </div>
 
-                      {/* Target Date in DD MMM YYYY Format */}
+                      {/* Target Date in MMM YYYY Format */}
                       {goal.targetDate && (
                         <div
                           className="badge badge-ghost badge-sm text-[11px] font-mono py-2.5 px-2.5 gap-1.5 items-center border border-base-300/70 bg-base-100/80 shadow-2xs shrink-0"
@@ -1720,7 +1855,7 @@ export default function InvSettings() {
                         >
                           <Calendar size={12} className="text-primary shrink-0" />
                           <span className="font-semibold text-base-content/85">
-                            {dayjs(goal.targetDate).format("DD MMM YYYY")}
+                            {dayjs(goal.targetDate).format("MMM YYYY")}
                           </span>
                           {dateInfo && (
                             <span className={`font-bold text-[10px] ml-0.5 ${dateInfo.isPast ? "text-error" : "text-primary"}`}>
@@ -2176,381 +2311,531 @@ export default function InvSettings() {
       {/* -------------------------------------------------------------------- */}
       {/* 5. CREATE / EDIT GOAL MODAL                                          */}
       {/* -------------------------------------------------------------------- */}
-      {/* -------------------------------------------------------------------- */}
-      {/* 5. CREATE / EDIT GOAL MODAL (Dual Popup: Recommendations on Left)    */}
-      {/* -------------------------------------------------------------------- */}
       {isGoalModalOpen && (
-        <div className="fixed inset-0 z-[99999] bg-black/60 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 overflow-x-auto">
-          <div className="flex items-stretch justify-center gap-3 sm:gap-4 max-w-4xl w-full h-[660px] max-h-[94vh]">
-            {/* ================================================================ */}
-            {/* LEFT POPUP: RECOMMENDATIONS & LIFE GOAL TEMPLATES                */}
-            {/* ================================================================ */}
-            <div className="bg-base-100 rounded-3xl border border-base-300 shadow-2xl w-60 sm:w-72 flex flex-col overflow-hidden shrink-0 animate-in fade-in zoom-in-95 duration-200">
-              {/* Header */}
-              <div className="p-4 border-b border-base-300 flex items-center justify-between shrink-0 bg-base-200/50">
-                <div className="flex items-center gap-2">
-                  <Sparkles size={16} className="text-primary" />
-                  <h4 className="font-extrabold text-xs uppercase tracking-wider text-base-content">
-                    Recommendations
-                  </h4>
+        <div className="fixed inset-0 z-[99999] bg-black/60 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+          <div className="bg-base-100 rounded-3xl border border-base-300 shadow-2xl w-full max-w-xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 my-auto flex flex-col max-h-[92vh]">
+            {/* Modal Header */}
+            <div className="px-6 py-4 border-b border-base-300 flex items-center justify-between shrink-0 bg-base-200/30">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-xl shadow-xs shrink-0">
+                  {goalForm.icon || "🎯"}
                 </div>
-                <span className="badge badge-xs font-bold font-mono bg-primary/10 text-primary">
-                  {GOAL_PRESETS.length} Ideas
-                </span>
+                <div className="min-w-0">
+                  <h3 className="font-extrabold text-base text-base-content leading-tight truncate">
+                    {editingGoal ? "Edit Financial Goal" : "Create New Goal"}
+                  </h3>
+                  <p className="text-xs text-base-content/50 mt-0.5 truncate">
+                    {editingGoal
+                      ? "Update your target amount, completion date, or notes"
+                      : "Define your target capital, timeline, and life vision"}
+                  </p>
+                </div>
               </div>
-
-              {/* Recommendations List */}
-              <div className="p-2 flex-1 overflow-y-auto custom-scrollbar space-y-1.5">
-                {GOAL_PRESETS.map((preset) => {
-                  const isSelected = goalForm.category === preset.id;
-                  return (
-                    <button
-                      key={preset.id}
-                      type="button"
-                      onClick={() => {
-                        setGoalForm((prev) => ({
-                          ...prev,
-                          category: preset.id,
-                          icon: preset.icon,
-                          title: preset.id === "custom" ? (prev.title || "Custom Goal") : preset.name,
-                          targetAmount: preset.defaultAmount,
-                          targetDate: preset.defaultYears
-                            ? dayjs().add(preset.defaultYears, "year").format("YYYY-MM-DD")
-                            : prev.targetDate,
-                        }));
-                      }}
-                      className={`w-full p-2.5 rounded-2xl text-left transition-all flex items-center justify-between group cursor-pointer border ${
-                        isSelected
-                          ? "bg-primary/10 border-primary text-primary font-bold shadow-xs ring-1 ring-primary/20"
-                          : "bg-base-200/40 hover:bg-base-200 border-base-300/40 text-base-content/80 font-medium"
-                      }`}
-                    >
-                      <div className="flex items-center gap-2.5 truncate min-w-0">
-                        <span className="text-xl shrink-0">{preset.icon}</span>
-                        <div className="truncate text-left min-w-0">
-                          <div className="truncate text-xs font-bold leading-tight">{preset.name}</div>
-                          <div className="text-[10px] text-base-content/50 font-mono mt-0.5">
-                            {formatINRCompact(preset.defaultAmount)}
-                            {preset.defaultYears ? ` • ${preset.defaultYears}y target` : ""}
-                          </div>
-                        </div>
-                      </div>
-                      {isSelected && <Check size={14} className="text-primary shrink-0 ml-1" />}
-                    </button>
-                  );
-                })}
-              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsGoalModalOpen(false);
+                  setShowEmojiPicker(false);
+                }}
+                className="btn btn-sm btn-circle btn-ghost text-base-content/60 hover:text-base-content"
+                title="Close"
+              >
+                <X size={18} />
+              </button>
             </div>
 
-            {/* ================================================================ */}
-            {/* RIGHT POPUP: GOAL DETAILS FORM & 3 DATE DROPDOWNS                */}
-            {/* ================================================================ */}
-            <div className="bg-base-100 rounded-3xl border border-base-300 shadow-2xl flex-1 flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200 min-w-0 max-w-xl">
-              {/* Header */}
-              <div className="px-5 py-4 border-b border-base-300 flex items-center justify-between shrink-0 bg-base-200/50">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-xl shrink-0">
-                    {goalForm.icon || "🎯"}
-                  </div>
-                  <div>
-                    <h3 className="font-extrabold text-sm text-base-content leading-tight">
-                      {editingGoal ? "Edit Financial Goal" : "Create New Goal"}
-                    </h3>
-                    <p className="text-[11px] text-base-content/50 mt-0.5">
-                      {editingGoal ? "Update your target amount, date, or plan details" : "Define your target, timeline, and financial vision"}
-                    </p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setIsGoalModalOpen(false)}
-                  className="btn btn-sm btn-circle btn-ghost"
-                >
-                  <X size={16} />
-                </button>
-              </div>
-
-              {/* Form Body */}
-              <form onSubmit={handleSaveGoal} className="flex-1 min-h-0 overflow-y-auto no-scrollbar flex flex-col">
-                <div className="p-5 space-y-5 flex-1">
-
-                  {/* ── Section 1: Goal Identity ── */}
-                  <div>
-                    <p className="text-[10px] font-extrabold uppercase tracking-widest text-base-content/40 mb-2.5">
-                      Goal Identity
-                    </p>
-                    <div className="grid grid-cols-5 gap-2.5">
-                      <div className="col-span-1">
-                        <label className="text-xs font-semibold text-base-content/60 block mb-1.5">Icon</label>
-                        <input
-                          type="text"
-                          maxLength={4}
-                          value={goalForm.icon}
-                          onChange={(e) => setGoalForm({ ...goalForm, icon: e.target.value })}
-                          className="input input-bordered input-sm h-10 w-full text-center text-xl rounded-xl"
-                        />
-                      </div>
-                      <div className="col-span-4">
-                        <label className="text-xs font-semibold text-base-content/60 block mb-1.5">
-                          Goal Name / Planner Title <span className="text-error">*</span>
-                        </label>
-                        <input
-                          type="text"
-                          required
-                          placeholder="e.g. Wedding 2027, Dream Home Down Payment"
-                          value={goalForm.title}
-                          onChange={(e) => setGoalForm({ ...goalForm, title: e.target.value })}
-                          className="input input-bordered input-sm h-10 w-full rounded-xl text-sm font-semibold"
-                        />
-                      </div>
+            {/* Form & Body */}
+            <form onSubmit={handleSaveGoal} className="flex-1 min-h-0 flex flex-col overflow-hidden">
+              <div className="flex-1 overflow-y-auto custom-scrollbar p-5 sm:p-6 space-y-5">
+                {/* Popular Templates Row (Shown in Create Mode) */}
+                {!editingGoal && (
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-extrabold uppercase tracking-wider text-base-content/50 flex items-center gap-1.5">
+                        <Sparkles size={12} className="text-primary" /> Popular Templates
+                      </span>
+                      <span className="text-[10px] text-base-content/40 font-medium">Click to autofill</span>
                     </div>
-                  </div>
-
-                  <div className="border-t border-base-200" />
-
-                  {/* ── Section 2: Target Capital ── */}
-                  <div>
-                    <div className="flex items-center justify-between mb-2.5">
-                      <p className="text-[10px] font-extrabold uppercase tracking-widest text-base-content/40">
-                        Target Capital
-                      </p>
-                      {Number(goalForm.targetAmount) > 0 && (
-                        <span className="text-xs font-mono font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-lg border border-primary/20">
-                          {formatINR(goalForm.targetAmount)}
-                          <span className="text-base-content/50 ml-1 font-medium">({formatINRCompact(goalForm.targetAmount)})</span>
-                        </span>
-                      )}
-                    </div>
-                    <div className="relative mb-2.5">
-                      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-bold text-sm text-base-content/40 font-mono">₹</span>
-                      <input
-                        type="number"
-                        min="0"
-                        step="any"
-                        required
-                        placeholder="Enter amount, e.g. 2500000"
-                        value={goalForm.targetAmount === 0 ? "" : goalForm.targetAmount}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setGoalForm((prev) => ({
-                            ...prev,
-                            targetAmount: val === "" ? "" : val,
-                          }));
-                        }}
-                        className="input input-bordered input-sm h-10 w-full pl-8 rounded-xl font-mono text-base font-bold bg-base-100"
-                      />
-                    </div>
-                    {/* Quick amount shortcuts */}
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="text-[10px] text-base-content/40 font-bold uppercase tracking-wider shrink-0">Quick:</span>
-                      {[500000, 1000000, 2000000, 2500000, 5000000, 10000000].map((amt) => {
-                        const isSelected = Number(goalForm.targetAmount) === amt;
+                    <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar -mx-1 px-1">
+                      {GOAL_PRESETS.map((preset) => {
+                        const isSelected = goalForm.category === preset.id;
                         return (
                           <button
-                            key={amt}
+                            key={preset.id}
                             type="button"
-                            onClick={() => setGoalForm((prev) => ({ ...prev, targetAmount: amt }))}
-                            className={`px-2 py-1 font-mono text-[10px] rounded-lg transition-all shrink-0 cursor-pointer border font-semibold ${
+                            onClick={() => {
+                              setGoalForm((prev) => ({
+                                ...prev,
+                                category: preset.id,
+                                icon: preset.icon,
+                                title: preset.id === "custom" ? (prev.title || "") : (preset.id === "house" ? "Dream Home" : preset.name),
+                                targetAmount: preset.defaultAmount,
+                                targetDate: preset.defaultYears
+                                  ? dayjs().add(preset.defaultYears, "year").format("YYYY-MM-DD")
+                                  : prev.targetDate,
+                              }));
+                              setShowEmojiPicker(false);
+                            }}
+                            className={`px-3 py-1.5 rounded-xl text-xs font-semibold shrink-0 transition-all flex items-center gap-1.5 border cursor-pointer ${
                               isSelected
-                                ? "bg-primary/20 border-primary text-primary shadow-xs"
-                                : "bg-base-200/60 hover:bg-primary/10 border-base-300 text-base-content/60 hover:text-primary hover:border-primary/40"
+                                ? "bg-primary text-primary-content border-primary shadow-xs font-bold"
+                                : "bg-base-200/60 hover:bg-base-200 border-base-300/80 text-base-content/75 hover:border-primary/40"
                             }`}
                           >
-                            {formatINRCompact(amt)}
+                            <span>{preset.icon}</span>
+                            <span>{preset.id === "house" ? "Home" : preset.name}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Goal Title & Icon */}
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-extrabold uppercase tracking-wider text-base-content/50">
+                    Goal Title <span className="text-error">*</span>
+                  </label>
+                  <div className="flex items-center gap-2">
+                    {/* Interactive Emoji Button */}
+                    <div className="relative shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                        className="w-11 h-11 rounded-2xl bg-base-200 hover:bg-base-300 border border-base-300 flex items-center justify-center text-xl transition-all cursor-pointer shadow-xs hover:border-primary/40 active:scale-95"
+                        title="Choose icon"
+                      >
+                        {goalForm.icon || "🎯"}
+                      </button>
+
+                      {/* Emoji Dropdown Popover */}
+                      {showEmojiPicker && (
+                        <div className="absolute top-full left-0 mt-2 z-50 p-3 bg-base-100 rounded-2xl border border-base-300 shadow-xl w-64 animate-in fade-in zoom-in-95 duration-150">
+                          <div className="text-[10px] font-bold text-base-content/50 uppercase tracking-wider mb-2 flex items-center justify-between">
+                            <span>Select Goal Icon</span>
+                            <button
+                              type="button"
+                              onClick={() => setShowEmojiPicker(false)}
+                              className="text-base-content/40 hover:text-base-content text-xs font-bold"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                          <div className="grid grid-cols-6 gap-1.5 mb-2.5">
+                            {POPULAR_GOAL_ICONS.map((emoji) => (
+                              <button
+                                key={emoji}
+                                type="button"
+                                onClick={() => {
+                                  setGoalForm((prev) => ({ ...prev, icon: emoji }));
+                                  setShowEmojiPicker(false);
+                                }}
+                                className={`w-8 h-8 rounded-xl flex items-center justify-center text-lg hover:bg-primary/20 transition-all ${
+                                  goalForm.icon === emoji ? "bg-primary/20 ring-1 ring-primary" : "bg-base-200/70"
+                                }`}
+                              >
+                                {emoji}
+                              </button>
+                            ))}
+                          </div>
+                          <div className="flex items-center gap-1.5 pt-2 border-t border-base-200">
+                            <span className="text-[10px] text-base-content/50 shrink-0">Custom:</span>
+                            <input
+                              type="text"
+                              maxLength={4}
+                              placeholder="Emoji"
+                              value={goalForm.icon}
+                              onChange={(e) => setGoalForm((prev) => ({ ...prev, icon: e.target.value }))}
+                              className="input input-xs input-bordered w-full rounded-lg text-center"
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Title Input */}
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Wedding 2027, Dream Home Down Payment"
+                      value={goalForm.title}
+                      onChange={(e) => setGoalForm({ ...goalForm, title: e.target.value })}
+                      className="input input-bordered h-11 flex-1 rounded-2xl text-sm font-semibold bg-base-200/40 focus:bg-base-100 transition-all"
+                    />
+                  </div>
+                </div>
+
+                {/* Target Capital */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[11px] font-extrabold uppercase tracking-wider text-base-content/50">
+                      Target Capital <span className="text-error">*</span>
+                    </label>
+                    {Number(goalForm.targetAmount) > 0 && (
+                      <span className="text-xs font-mono font-bold text-primary bg-primary/10 px-2.5 py-0.5 rounded-xl border border-primary/20">
+                        {formatINR(goalForm.targetAmount)}
+                        <span className="text-base-content/50 ml-1.5 font-medium">({formatINRCompact(goalForm.targetAmount)})</span>
+                      </span>
+                    )}
+                  </div>
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 font-mono font-bold text-base text-base-content/40">
+                      ₹
+                    </span>
+                    <input
+                      type="number"
+                      min="0"
+                      step="any"
+                      required
+                      placeholder="Enter target amount, e.g. 2500000"
+                      value={goalForm.targetAmount === 0 ? "" : goalForm.targetAmount}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setGoalForm((prev) => ({
+                          ...prev,
+                          targetAmount: val === "" ? "" : val,
+                        }));
+                      }}
+                      className="input input-bordered h-11 w-full pl-8 rounded-2xl font-mono text-sm font-bold bg-base-200/40 focus:bg-base-100 transition-all"
+                    />
+                  </div>
+
+                  {/* Quick Amount Shortcuts */}
+                  <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+                    <span className="text-[10px] text-base-content/40 font-bold uppercase tracking-wider shrink-0">Quick:</span>
+                    {[500000, 1000000, 2000000, 2500000, 5000000, 10000000].map((amt) => {
+                      const isSelected = Number(goalForm.targetAmount) === amt;
+                      return (
+                        <button
+                          key={amt}
+                          type="button"
+                          onClick={() => setGoalForm((prev) => ({ ...prev, targetAmount: amt }))}
+                          className={`px-2.5 py-1 font-mono text-[11px] rounded-xl transition-all shrink-0 cursor-pointer border font-semibold ${
+                            isSelected
+                              ? "bg-primary/20 border-primary text-primary shadow-xs font-bold"
+                              : "bg-base-200/60 hover:bg-primary/10 border-base-300 text-base-content/60 hover:text-primary hover:border-primary/40"
+                          }`}
+                        >
+                          {formatINRCompact(amt)}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Target Date & Timeline & Age */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[11px] font-extrabold uppercase tracking-wider text-base-content/50 flex items-center gap-1.5">
+                      <Calendar size={12} className="text-primary" /> Target Date & Timeline <span className="text-error">*</span>
+                    </label>
+                    {modalDateInfo && (
+                      <span
+                        className={`badge badge-sm font-bold font-mono text-[10px] ${
+                          modalDateInfo.isPast
+                            ? "badge-error text-white"
+                            : modalDateInfo.isToday
+                            ? "badge-warning"
+                            : "badge-primary badge-soft text-primary"
+                        }`}
+                      >
+                        {modalDateInfo.text}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    {/* Month & Year Separate Dropdown Popups */}
+                    <div className="grid grid-cols-2 gap-2 sm:gap-2.5">
+                      {/* Month Dropdown Popup */}
+                      <div className="relative" ref={monthPickerRef}>
+                        <label className="text-[10px] font-extrabold uppercase tracking-wider text-base-content/50 block mb-1">
+                          Target Month
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsMonthOpen(!isMonthOpen);
+                            setIsYearOpen(false);
+                            setShowEmojiPicker(false);
+                          }}
+                          className={`h-11 w-full px-3 sm:px-3.5 rounded-2xl border flex items-center justify-between text-xs font-bold transition-all cursor-pointer shadow-2xs ${
+                            isMonthOpen
+                              ? "bg-base-100 border-primary ring-2 ring-primary/20 text-primary"
+                              : "bg-base-200/50 hover:bg-base-200 border-base-300 text-base-content hover:border-primary/40"
+                          }`}
+                          title="Select Target Month"
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            <Calendar size={14} className={isMonthOpen ? "text-primary shrink-0" : "text-base-content/50 shrink-0"} />
+                            <span className="truncate">{MONTHS[currentMonthIndex]?.name || "Select Month"}</span>
+                          </div>
+                          <ChevronDown
+                            size={14}
+                            className={`transition-transform duration-200 shrink-0 text-base-content/50 ${
+                              isMonthOpen ? "rotate-180 text-primary" : ""
+                            }`}
+                          />
+                        </button>
+
+                        {/* Month Popup Menu */}
+                        {isMonthOpen && (
+                          <div className="absolute top-full left-0 mt-2 z-50 bg-base-100 rounded-2xl border border-base-300 shadow-2xl p-2.5 w-64 sm:w-72 animate-in fade-in zoom-in-95 duration-150">
+                            <div className="flex items-center justify-between pb-2 mb-1 border-b border-base-200 px-1">
+                              <span className="text-[10px] font-extrabold uppercase tracking-wider text-base-content/50">
+                                Select Target Month
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => setIsMonthOpen(false)}
+                                className="text-base-content/40 hover:text-base-content text-xs font-bold px-1"
+                              >
+                                ✕
+                              </button>
+                            </div>
+                            <div className="grid grid-cols-3 gap-1.5 pt-1">
+                              {MONTHS.map((m) => {
+                                const isSelected = currentMonthIndex === m.value;
+                                return (
+                                  <button
+                                    key={m.value}
+                                    type="button"
+                                    onClick={() => handleSelectMonth(m.value)}
+                                    className={`py-2 px-1 rounded-xl text-xs font-bold transition-all cursor-pointer text-center ${
+                                      isSelected
+                                        ? "bg-primary text-primary-content shadow-xs font-black"
+                                        : "bg-base-200/60 hover:bg-primary/15 text-base-content hover:text-primary"
+                                    }`}
+                                  >
+                                    <span className="sm:hidden">{m.short}</span>
+                                    <span className="hidden sm:inline">{m.name}</span>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Year Dropdown Popup */}
+                      <div className="relative" ref={yearPickerRef}>
+                        <label className="text-[10px] font-extrabold uppercase tracking-wider text-base-content/50 block mb-1">
+                          Target Year
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsYearOpen(!isYearOpen);
+                            setIsMonthOpen(false);
+                            setShowEmojiPicker(false);
+                          }}
+                          className={`h-11 w-full px-3 sm:px-3.5 rounded-2xl border flex items-center justify-between text-xs font-bold transition-all cursor-pointer shadow-2xs ${
+                            isYearOpen
+                              ? "bg-base-100 border-primary ring-2 ring-primary/20 text-primary"
+                              : "bg-base-200/50 hover:bg-base-200 border-base-300 text-base-content hover:border-primary/40"
+                          }`}
+                          title="Select Target Year"
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            <Clock size={14} className={isYearOpen ? "text-primary shrink-0" : "text-base-content/50 shrink-0"} />
+                            <span className="font-mono text-xs font-extrabold truncate">{currentYearVal}</span>
+                          </div>
+                          <ChevronDown
+                            size={14}
+                            className={`transition-transform duration-200 shrink-0 text-base-content/50 ${
+                              isYearOpen ? "rotate-180 text-primary" : ""
+                            }`}
+                          />
+                        </button>
+
+                        {/* Year Popup Menu */}
+                        {isYearOpen && (
+                          <div className="absolute top-full right-0 mt-2 z-50 bg-base-100 rounded-2xl border border-base-300 shadow-2xl p-2.5 w-64 sm:w-72 animate-in fade-in zoom-in-95 duration-150">
+                            <div className="flex items-center justify-between pb-2 mb-1 border-b border-base-200 px-1">
+                              <span className="text-[10px] font-extrabold uppercase tracking-wider text-base-content/50">
+                                Select Target Year
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => setIsYearOpen(false)}
+                                className="text-base-content/40 hover:text-base-content text-xs font-bold px-1"
+                              >
+                                ✕
+                              </button>
+                            </div>
+                            <div className="grid grid-cols-3 gap-1.5 pt-1 max-h-56 overflow-y-auto custom-scrollbar pr-0.5">
+                              {availableYears.map((y) => {
+                                const isSelected = currentYearVal === y;
+                                return (
+                                  <button
+                                    key={y}
+                                    type="button"
+                                    onClick={() => handleSelectYear(y)}
+                                    className={`py-2 px-1 rounded-xl font-mono text-xs font-bold transition-all cursor-pointer text-center ${
+                                      isSelected
+                                        ? "bg-primary text-primary-content shadow-xs font-black"
+                                        : "bg-base-200/60 hover:bg-primary/15 text-base-content hover:text-primary"
+                                    }`}
+                                  >
+                                    {y}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Quick Horizon Buttons */}
+                    <div className="flex items-center gap-1 bg-base-200/50 border border-base-300/80 rounded-2xl p-1 justify-between">
+                      {[
+                        { label: "+1Y", years: 1 },
+                        { label: "+2Y", years: 2 },
+                        { label: "+3Y", years: 3 },
+                        { label: "+5Y", years: 5 },
+                        { label: "+10Y", years: 10 },
+                      ].map((h) => {
+                        const horizonMonth = dayjs().add(h.years, "year").month();
+                        const horizonYear = dayjs().add(h.years, "year").year();
+                        const isSelected = currentMonthIndex === horizonMonth && currentYearVal === horizonYear;
+                        return (
+                          <button
+                            key={h.years}
+                            type="button"
+                            onClick={() => {
+                              const targetFromHorizon = dayjs().add(h.years, "year").date(1).format("YYYY-MM-DD");
+                              setGoalForm((prev) => ({ ...prev, targetDate: targetFromHorizon }));
+                            }}
+                            className={`flex-1 py-1.5 font-mono text-[11px] rounded-xl font-bold transition-all text-center cursor-pointer ${
+                              isSelected
+                                ? "bg-primary text-primary-content shadow-xs"
+                                : "hover:bg-base-300 text-base-content/70 hover:text-base-content"
+                            }`}
+                          >
+                            {h.label}
                           </button>
                         );
                       })}
                     </div>
                   </div>
 
-                  <div className="border-t border-base-200" />
-
-                  {/* ── Section 3: Target Date ── */}
-                  <div>
-                    <div className="flex items-center justify-between mb-2.5">
-                      <p className="text-[10px] font-extrabold uppercase tracking-widest text-base-content/40 flex items-center gap-1.5">
-                        <Calendar size={11} className="text-primary" /> Target Date
-                      </p>
-                      {modalDateInfo && (
-                        <span
-                          className={`badge badge-sm font-bold font-mono text-[10px] ${
-                            modalDateInfo.isPast
-                              ? "badge-error text-white"
-                              : modalDateInfo.isToday
-                              ? "badge-warning"
-                              : "badge-primary badge-soft text-primary"
-                          }`}
-                        >
-                          {modalDateInfo.text}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* 3 Date Dropdowns */}
-                    <div className="grid grid-cols-3 gap-2 mb-2.5">
-                      <div>
-                        <span className="text-[10px] font-semibold text-base-content/40 uppercase tracking-wider block mb-1">Day</span>
-                        <select
-                          value={selectedDateParts.day}
-                          onChange={(e) => handleDatePartChange("day", e.target.value)}
-                          className="select select-bordered select-sm w-full rounded-xl font-mono text-xs font-bold bg-base-100"
-                        >
-                          {Array.from({ length: maxDaysInMonth }, (_, i) => i + 1).map((d) => (
-                            <option key={d} value={d}>{String(d).padStart(2, "0")}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <div>
-                        <span className="text-[10px] font-semibold text-base-content/40 uppercase tracking-wider block mb-1">Month</span>
-                        <select
-                          value={selectedDateParts.month}
-                          onChange={(e) => handleDatePartChange("month", e.target.value)}
-                          className="select select-bordered select-sm w-full rounded-xl text-xs font-bold bg-base-100"
-                        >
-                          {[
-                            { v: 1, label: "01 — Jan" }, { v: 2, label: "02 — Feb" }, { v: 3, label: "03 — Mar" },
-                            { v: 4, label: "04 — Apr" }, { v: 5, label: "05 — May" }, { v: 6, label: "06 — Jun" },
-                            { v: 7, label: "07 — Jul" }, { v: 8, label: "08 — Aug" }, { v: 9, label: "09 — Sep" },
-                            { v: 10, label: "10 — Oct" }, { v: 11, label: "11 — Nov" }, { v: 12, label: "12 — Dec" },
-                          ].map((m) => (
-                            <option key={m.v} value={m.v}>{m.label}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <div>
-                        <span className="text-[10px] font-semibold text-base-content/40 uppercase tracking-wider block mb-1">Year</span>
-                        <select
-                          value={selectedDateParts.year}
-                          onChange={(e) => handleDatePartChange("year", e.target.value)}
-                          className="select select-bordered select-sm w-full rounded-xl font-mono text-xs font-bold bg-base-100"
-                        >
-                          {Array.from({ length: 35 }, (_, i) => dayjs().year() + i).map((yr) => (
-                            <option key={yr} value={yr}>{yr}</option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-
-                    {/* Quick Horizon */}
-                    <div className="flex items-center gap-1.5 flex-wrap mb-3">
-                      <span className="text-[10px] text-base-content/40 font-bold uppercase tracking-wider shrink-0">Horizon:</span>
-                      {[
-                        { label: "+1 Yr", years: 1 }, { label: "+2 Yrs", years: 2 },
-                        { label: "+3 Yrs", years: 3 }, { label: "+5 Yrs", years: 5 },
-                        { label: "+10 Yrs", years: 10 },
-                      ].map((h) => (
-                        <button
-                          key={h.years}
-                          type="button"
-                          onClick={() => {
-                            const newD = dayjs().add(h.years, "year").format("YYYY-MM-DD");
-                            setGoalForm((prev) => ({ ...prev, targetDate: newD }));
-                          }}
-                          className="px-2 py-1 font-mono text-[10px] rounded-lg border border-base-300 bg-base-200/60 hover:bg-primary/10 hover:text-primary hover:border-primary/40 font-semibold transition-all shrink-0 cursor-pointer"
-                        >
-                          {h.label}
-                        </button>
-                      ))}
-                    </div>
-
-                    {/* Age on Target Date Card */}
-                    <div className="rounded-2xl bg-base-200/60 border border-base-300 overflow-hidden">
-                      <div className="flex items-center justify-between px-3.5 py-2.5">
-                        <div className="flex items-center gap-2.5">
-                          <div className="w-7 h-7 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0 border border-primary/20">
-                            <User size={13} />
-                          </div>
-                          <div>
-                            <div className="text-[10px] font-semibold text-base-content/50 leading-tight">Your age on target date</div>
-                            <div className="flex items-center gap-1.5 mt-0.5">
-                              {userAgeOnTargetDate ? (
-                                <span className="font-mono font-black text-xs text-primary bg-primary/10 px-2 py-0.5 rounded-lg border border-primary/20">
-                                  {userAgeOnTargetDate.years} Yrs{userAgeOnTargetDate.months > 0 ? `, ${userAgeOnTargetDate.months} Mos` : ""}
-                                </span>
-                              ) : (
-                                <span className="text-xs text-base-content/40 font-mono">—</span>
-                              )}
-                              {modalDateInfo && !modalDateInfo.isPast && (
-                                <span className="badge badge-xs badge-ghost font-mono font-bold border border-base-300/80 text-[9px]">
-                                  <Clock size={8} className="mr-0.5 text-primary" /> {modalDateInfo.text}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="text-right shrink-0">
-                          <div className="text-[9px] text-base-content/40 font-medium">DOB</div>
-                          <div className="text-[10px] font-mono font-bold text-base-content/60">{dayjs(userDob).format("DD MMM YYYY")}</div>
-                          <button
-                            type="button"
-                            onClick={() => setIsEditingDob(!isEditingDob)}
-                            className="text-[9px] text-primary hover:underline font-bold leading-tight"
-                          >
-                            {isEditingDob ? "Close" : "Change"}
-                          </button>
-                        </div>
-                      </div>
-                      {isEditingDob && (
-                        <div className="px-3.5 pb-2.5 border-t border-base-300/60 pt-2 flex items-center justify-between gap-2">
-                          <span className="text-[11px] font-semibold text-base-content/60">Your Birth Date:</span>
-                          <input
-                            type="date"
-                            max={dayjs().format("YYYY-MM-DD")}
-                            value={userDob}
-                            onChange={(e) => handleUpdateDob(e.target.value)}
-                            className="input input-xs input-bordered rounded-lg font-mono"
+                  {/* Age on Target Date Banner */}
+                  <div className="rounded-2xl bg-base-200/50 border border-base-300/80 p-3 flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0 border border-primary/20 overflow-hidden shadow-xs">
+                        {userProfilePic ? (
+                          <img
+                            src={userProfilePic}
+                            alt="Profile"
+                            className="w-full h-full object-cover"
                           />
+                        ) : (
+                          <span className="text-xs font-bold text-primary font-mono">
+                            {userInitials || "U"}
+                          </span>
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-[10px] font-semibold text-base-content/50 uppercase tracking-wider">Age on Target Date</div>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          {userAgeOnTargetDate ? (
+                            <span className="font-mono font-bold text-xs text-primary">
+                              {userAgeOnTargetDate.years} Yrs{userAgeOnTargetDate.months > 0 ? `, ${userAgeOnTargetDate.months} Mos` : ""}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-base-content/40 font-mono">
+                              {userDob ? "—" : "Set DOB to calculate age"}
+                            </span>
+                          )}
+                          {modalDateInfo && !modalDateInfo.isPast && (
+                            <span className="text-[10px] text-base-content/40 font-mono">
+                              • {dayjs(goalForm.targetDate).format("MMMM YYYY")}
+                            </span>
+                          )}
                         </div>
-                      )}
-                      {modalDateInfo?.isPast && (
-                        <div className="px-3.5 pb-2 border-t border-error/20 pt-1.5 flex items-center gap-1 text-[10.5px] text-error font-semibold">
-                          <span>⚠️ Target date is in the past — please pick a future date.</span>
-                        </div>
-                      )}
+                      </div>
+                    </div>
+
+                    <div className="text-right shrink-0">
+                      <div className="text-[10px] text-base-content/50 font-mono">
+                        {userDob && dayjs(userDob).isValid() ? `DOB: ${dayjs(userDob).format("DD MMM YYYY")}` : "DOB: Not set"}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setIsEditingDob(!isEditingDob)}
+                        className="text-[10px] text-primary hover:underline font-bold"
+                      >
+                        {isEditingDob ? "Done" : userDob ? "Change" : "Set DOB"}
+                      </button>
                     </div>
                   </div>
 
-                  <div className="border-t border-base-200" />
+                  {isEditingDob && (
+                    <div className="px-3 py-2 bg-base-200/80 rounded-2xl border border-base-300 flex items-center justify-between gap-3 animate-in fade-in duration-150">
+                      <span className="text-xs font-semibold text-base-content/70">Date of Birth (Profile):</span>
+                      <input
+                        type="date"
+                        max={dayjs().format("YYYY-MM-DD")}
+                        value={userDob || ""}
+                        onChange={(e) => handleUpdateDob(e.target.value)}
+                        className="input input-xs input-bordered rounded-xl font-mono text-xs"
+                      />
+                    </div>
+                  )}
 
-                  {/* ── Section 4: Notes ── */}
-                  <div>
-                    <p className="text-[10px] font-extrabold uppercase tracking-widest text-base-content/40 mb-2.5">
-                      Notes & Vision <span className="normal-case text-base-content/30 font-normal">(optional)</span>
-                    </p>
-                    <textarea
-                      rows={2}
-                      placeholder="e.g. Venue, jewelry, catering, decorations, and travel…"
-                      value={goalForm.notes}
-                      onChange={(e) => setGoalForm({ ...goalForm, notes: e.target.value })}
-                      className="textarea textarea-bordered textarea-sm w-full rounded-xl text-xs h-14 min-h-[52px] max-h-[60px] resize-none"
-                    />
-                  </div>
+                  {modalDateInfo?.isPast && (
+                    <div className="px-3 py-2 rounded-xl bg-error/10 border border-error/20 flex items-center gap-1.5 text-xs text-error font-medium">
+                      <AlertCircle size={14} className="shrink-0" />
+                      <span>Target month is in the past. Please select a future month & year.</span>
+                    </div>
+                  )}
                 </div>
 
-                {/* Actions Footer */}
-                <div className="px-5 py-3.5 border-t border-base-300 bg-base-200/40 flex items-center justify-between gap-2 shrink-0">
-                  <p className="text-[10px] text-base-content/40 font-medium hidden sm:block">
-                    {editingGoal ? "Changes will update this goal immediately." : "You can allocate sources after creating the goal."}
-                  </p>
-                  <div className="flex items-center gap-2 ml-auto">
-                    <button
-                      type="button"
-                      onClick={() => setIsGoalModalOpen(false)}
-                      className="btn btn-sm btn-ghost rounded-xl font-bold"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      className="btn btn-sm btn-primary rounded-xl font-bold gap-1.5 shadow-sm px-5"
-                    >
-                      <Check size={14} />
-                      <span>{editingGoal ? "Update Goal" : "Create Goal"}</span>
-                    </button>
+                {/* Notes & Vision */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[11px] font-extrabold uppercase tracking-wider text-base-content/50">
+                      Notes & Vision
+                    </label>
+                    <span className="text-[10px] text-base-content/40 font-medium">Optional</span>
                   </div>
+                  <textarea
+                    rows={2}
+                    placeholder="e.g. Venue, jewelry, down payment breakdown, vacation wishlist..."
+                    value={goalForm.notes}
+                    onChange={(e) => setGoalForm({ ...goalForm, notes: e.target.value })}
+                    className="textarea textarea-bordered w-full rounded-2xl text-xs bg-base-200/40 focus:bg-base-100 transition-all resize-none min-h-[58px]"
+                  />
                 </div>
-              </form>
-            </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="px-6 py-4 border-t border-base-300 bg-base-200/30 flex items-center justify-between gap-2 shrink-0">
+                <p className="text-[11px] text-base-content/45 font-medium hidden sm:block">
+                  {editingGoal ? "Changes save directly to your database." : "You can allot savings & investments after creating."}
+                </p>
+                <div className="flex items-center gap-2 ml-auto">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsGoalModalOpen(false);
+                      setShowEmojiPicker(false);
+                    }}
+                    className="btn btn-sm btn-ghost rounded-xl font-semibold"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn btn-sm btn-primary rounded-xl font-bold gap-1.5 px-5 shadow-sm"
+                  >
+                    <Check size={14} />
+                    <span>{editingGoal ? "Save Changes" : "Create Goal"}</span>
+                  </button>
+                </div>
+              </div>
+            </form>
           </div>
         </div>
       )}
