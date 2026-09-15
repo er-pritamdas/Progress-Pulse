@@ -50,6 +50,7 @@ const formatINRCompact = (val) => {
 // ----------------------------------------------------------------------
 const ASSET_CATEGORIES = [
   { id: "all", label: "All Sources", icon: Sparkles, color: "text-amber-500", bg: "bg-amber-500/10" },
+  { id: "in_plan", label: "In Plan", icon: CheckCircle2, color: "text-primary", bg: "bg-primary/10" },
   { id: "bank", label: "Bank Accounts", icon: Landmark, color: "text-emerald-500", bg: "bg-emerald-500/10" },
   { id: "stock", label: "Held Stocks", icon: TrendingUp, color: "text-blue-500", bg: "bg-blue-500/10" },
   { id: "mf", label: "Mutual Funds", icon: PieChart, color: "text-purple-500", bg: "bg-purple-500/10" },
@@ -176,9 +177,32 @@ export default function AllocateSourceModal({
     }
   }, [isOpen, selectedSource?.id]);
 
+  // Helper to determine if a source is selected / allocated to currentPlan
+  const isSourceInCurrentPlan = (sourceItem) => {
+    if (!sourceItem || !currentPlan) return false;
+    if (currentPlan.allocations && sourceItem.id in currentPlan.allocations) {
+      return true;
+    }
+    // Backward compatibility fallback for legacy ID lists
+    if (!currentPlan.allocations || Object.keys(currentPlan.allocations).length === 0) {
+      if (sourceItem.sourceType === "bank" && (currentPlan.selectedBanks || []).includes(sourceItem.id)) return true;
+      if (sourceItem.sourceType === "stock" && (currentPlan.selectedStocks || []).includes(sourceItem.id)) return true;
+      if (sourceItem.sourceType === "mf" && (currentPlan.selectedMfs || []).includes(sourceItem.id)) return true;
+      if (sourceItem.sourceType === "fd" && (currentPlan.selectedFds || []).includes(sourceItem.id)) return true;
+      if (sourceItem.sourceType === "rd" && (currentPlan.selectedRds || []).includes(sourceItem.id)) return true;
+      if (sourceItem.sourceType === "pf" && currentPlan.includePf && sourceItem.id === "source-pf-balance") return true;
+    }
+    return false;
+  };
+
   const handleCategoryClick = (catId) => {
     setSelectedCategory(catId);
-    if (catId !== "all") {
+    if (catId === "in_plan") {
+      const firstInPlan = allSources.find((s) => isSourceInCurrentPlan(s));
+      if (firstInPlan) {
+        setSelectedSource(firstInPlan);
+      }
+    } else if (catId !== "all") {
       const firstInCat = allSources.find((s) => s.sourceType === catId);
       if (firstInCat && selectedSource?.sourceType !== catId) {
         setSelectedSource(firstInCat);
@@ -186,28 +210,43 @@ export default function AllocateSourceModal({
     }
   };
 
+  // When in_plan category is active and currentPlan changes, ensure selectedSource is in plan
+  useEffect(() => {
+    if (selectedCategory === "in_plan") {
+      if (!selectedSource || !isSourceInCurrentPlan(selectedSource)) {
+        const firstInPlan = allSources.find((s) => isSourceInCurrentPlan(s));
+        setSelectedSource(firstInPlan || null);
+      }
+    }
+  }, [selectedCategory, currentPlan?.id, allSources]);
+
   // When selectedSource or currentPlan changes, populate its existing allocation for currentPlan if any
   useEffect(() => {
     if (!selectedSource || !currentPlan) return;
     const planAlloc = currentPlan.allocations?.[selectedSource.id];
     const totalVal = Number(selectedSource.holdingValue) || 0;
+    const stats = getSourceStats(selectedSource, currentPlan.id);
 
     if (planAlloc) {
-      setAllotPercent(Number(planAlloc.percent) || 100);
-      setAllotAmount(Number(planAlloc.amount) || totalVal);
+      const p = planAlloc.percent !== undefined ? Number(planAlloc.percent) : 100;
+      const amt = planAlloc.amount !== undefined ? Number(planAlloc.amount) : (totalVal * p) / 100;
+      setAllotPercent(Math.min(stats.maxAllowedPct, Math.max(0, p)));
+      setAllotAmount(Math.min(stats.maxAllowedAmt, Math.max(0, amt)));
       if (selectedSource.sourceType === "stock") {
-        setAllotShares(planAlloc.shares !== undefined ? Number(planAlloc.shares) : (selectedSource.holdingQty || 1));
+        setAllotShares(
+          planAlloc.shares !== undefined
+            ? Math.min(stats.maxAllowedShares, Number(planAlloc.shares))
+            : Math.min(stats.maxAllowedShares, Math.round((selectedSource.holdingQty || 1) * (p / 100)))
+        );
       }
     } else {
-      // Default: Allocate remaining available amount or 100%
-      const stats = getSourceStats(selectedSource, currentPlan.id);
-      const defaultPct = stats.remainingPct > 0 ? stats.remainingPct : 100;
-      const defaultAmt = (totalVal * defaultPct) / 100;
+      // Default: Allocate remaining available amount
+      const defaultPct = stats.maxAllowedPct;
+      const defaultAmt = stats.maxAllowedAmt;
       setAllotPercent(defaultPct);
       setAllotAmount(defaultAmt);
       if (selectedSource.sourceType === "stock") {
-        const remainingShares = Math.max(1, Math.round((selectedSource.holdingQty || 1) * (defaultPct / 100)));
-        setAllotShares(remainingShares);
+        setAllotShares(stats.maxAllowedShares);
       }
     }
   }, [selectedSource?.id, currentPlan?.id]);
@@ -219,10 +258,12 @@ export default function AllocateSourceModal({
     return ASSET_CATEGORIES.filter((c) => c.label.toLowerCase().includes(q));
   }, [categorySearchQuery]);
 
-  // Filter Sources for Middle Panel
+  // Filter Sources for Middle Panel (dynamically respects In Plan category for currentPlan)
   const filteredSources = useMemo(() => {
     let list = allSources;
-    if (selectedCategory !== "all") {
+    if (selectedCategory === "in_plan") {
+      list = list.filter((s) => isSourceInCurrentPlan(s));
+    } else if (selectedCategory !== "all") {
       list = list.filter((s) => s.sourceType === selectedCategory);
     }
     if (searchQuery.trim()) {
@@ -235,79 +276,140 @@ export default function AllocateSourceModal({
       });
     }
     return list;
-  }, [allSources, selectedCategory, searchQuery]);
+  }, [allSources, selectedCategory, searchQuery, currentPlan]);
 
   // Compute stats across all goals for a source
   const getSourceStats = (sourceItem, currentGoalId) => {
     if (!sourceItem) {
-      return { totalVal: 0, breakdown: [], totalAllotted: 0, remainingAmt: 0, remainingPct: 0 };
+      return {
+        totalVal: 0,
+        breakdown: [],
+        totalAllotted: 0,
+        allottedToOtherGoals: 0,
+        otherGoalsPercent: 0,
+        maxAllowedAmt: 0,
+        maxAllowedPct: 0,
+        maxAllowedShares: 0,
+        remainingAmt: 0,
+        remainingPct: 0,
+        globalFreeAmt: 0,
+        globalFreePct: 0,
+        currentGoalAllotted: 0,
+        currentGoalPercent: 0,
+        currentGoalShares: 0,
+        isAllottedToCurrentGoal: false,
+      };
     }
+
     const totalVal = Number(sourceItem.holdingValue) || 0;
+    const totalShares = Number(sourceItem.holdingQty) || 1;
     const breakdown = [];
     let totalAllotted = 0;
     let currentGoalAllotted = 0;
     let currentGoalPercent = 0;
     let currentGoalShares = 0;
+    let isAllottedToCurrentGoal = false;
+
+    let otherGoalsAmount = 0;
+    let otherGoalsPercent = 0;
+    let otherGoalsShares = 0;
 
     goals.forEach((g) => {
-      const alloc = g.allocations?.[sourceItem.id];
-      if (alloc && alloc.amount > 0) {
+      const hasAlloc = Boolean(g.allocations && sourceItem.id in g.allocations);
+      const isCurrent = g.id === currentGoalId;
+
+      if (hasAlloc) {
+        const alloc = g.allocations[sourceItem.id];
+        const pct = Math.max(0, Math.min(100, Math.round((Number(alloc.percent) ?? 0) * 10) / 10));
+        const amt = alloc.amount !== undefined ? Number(alloc.amount) : (totalVal * pct) / 100;
+        const shares = alloc.shares !== undefined ? Number(alloc.shares) : Math.round(totalShares * (pct / 100));
+
         breakdown.push({
           goalId: g.id,
           goalTitle: g.title,
           goalIcon: g.icon || "🎯",
-          amount: alloc.amount,
-          percent: alloc.percent,
-          shares: alloc.shares,
+          amount: amt,
+          percent: pct,
+          shares,
         });
-        totalAllotted += alloc.amount;
-        if (g.id === currentGoalId) {
-          currentGoalAllotted = alloc.amount;
-          currentGoalPercent = alloc.percent;
-          currentGoalShares = alloc.shares;
+
+        totalAllotted += amt;
+
+        if (isCurrent) {
+          currentGoalAllotted = amt;
+          currentGoalPercent = pct;
+          currentGoalShares = shares;
+          isAllottedToCurrentGoal = true;
+        } else {
+          otherGoalsAmount += amt;
+          otherGoalsPercent += pct;
+          otherGoalsShares += shares;
         }
       } else if (
-        // Fallback for legacy ID lists
-        (sourceItem.sourceType === "bank" && (g.selectedBanks || []).includes(sourceItem.id)) ||
-        (sourceItem.sourceType === "stock" && (g.selectedStocks || []).includes(sourceItem.id)) ||
-        (sourceItem.sourceType === "mf" && (g.selectedMfs || []).includes(sourceItem.id)) ||
-        (sourceItem.sourceType === "fd" && (g.selectedFds || []).includes(sourceItem.id)) ||
-        (sourceItem.sourceType === "rd" && (g.selectedRds || []).includes(sourceItem.id)) ||
-        (sourceItem.sourceType === "pf" && g.includePf && sourceItem.id === "source-pf-balance")
+        // Only fallback to legacy ID lists if this goal doesn't have an allocations map
+        (!g.allocations || Object.keys(g.allocations).length === 0) &&
+        ((sourceItem.sourceType === "bank" && (g.selectedBanks || []).includes(sourceItem.id)) ||
+          (sourceItem.sourceType === "stock" && (g.selectedStocks || []).includes(sourceItem.id)) ||
+          (sourceItem.sourceType === "mf" && (g.selectedMfs || []).includes(sourceItem.id)) ||
+          (sourceItem.sourceType === "fd" && (g.selectedFds || []).includes(sourceItem.id)) ||
+          (sourceItem.sourceType === "rd" && (g.selectedRds || []).includes(sourceItem.id)) ||
+          (sourceItem.sourceType === "pf" && g.includePf && sourceItem.id === "source-pf-balance"))
       ) {
         const fallbackPct = sourceItem.sourceType === "pf" ? (g.pfAllocatedPercent || 50) : 100;
         const fallbackAmt = (totalVal * fallbackPct) / 100;
+        const fallbackShares = Math.round(totalShares * (fallbackPct / 100));
+
         breakdown.push({
           goalId: g.id,
           goalTitle: g.title,
           goalIcon: g.icon || "🎯",
           amount: fallbackAmt,
           percent: fallbackPct,
+          shares: fallbackShares,
         });
+
         totalAllotted += fallbackAmt;
-        if (g.id === currentGoalId) {
+
+        if (isCurrent) {
           currentGoalAllotted = fallbackAmt;
           currentGoalPercent = fallbackPct;
+          currentGoalShares = fallbackShares;
+          isAllottedToCurrentGoal = true;
+        } else {
+          otherGoalsAmount += fallbackAmt;
+          otherGoalsPercent += fallbackPct;
+          otherGoalsShares += fallbackShares;
         }
       }
     });
 
-    // Remaining excluding current goal so user can re-allocate full available share
-    const allottedToOtherGoals = totalAllotted - currentGoalAllotted;
-    const remainingAmt = Math.max(0, totalVal - allottedToOtherGoals);
-    const remainingPct = totalVal > 0 ? (remainingAmt / totalVal) * 100 : 100;
+    // The maximum that can be allocated to currentGoalId:
+    // It can take whatever other goals haven't taken: (100 - otherGoalsPercent)
+    const maxAllowedPct = Math.max(0, Math.min(100, Math.round((100 - otherGoalsPercent) * 10) / 10));
+    const maxAllowedAmt = Math.max(0, Math.min(totalVal, totalVal - otherGoalsAmount));
+    const maxAllowedShares = Math.max(0, Math.min(totalShares, totalShares - otherGoalsShares));
+
+    // Global free / unallocated pool across ALL goals
+    const globalFreeAmt = Math.max(0, totalVal - totalAllotted);
+    const globalFreePct = totalVal > 0 ? Math.max(0, Math.round((globalFreeAmt / totalVal) * 1000) / 10) : 100;
 
     return {
       totalVal,
       breakdown,
       totalAllotted,
-      allottedToOtherGoals,
-      remainingAmt,
-      remainingPct: Math.round(remainingPct * 10) / 10,
+      allottedToOtherGoals: otherGoalsAmount,
+      otherGoalsPercent,
+      maxAllowedAmt,
+      maxAllowedPct,
+      maxAllowedShares,
+      remainingAmt: maxAllowedAmt,
+      remainingPct: maxAllowedPct,
+      globalFreeAmt,
+      globalFreePct,
       currentGoalAllotted,
       currentGoalPercent,
       currentGoalShares,
-      isAllottedToCurrentGoal: currentGoalAllotted > 0,
+      isAllottedToCurrentGoal,
     };
   };
 
@@ -315,55 +417,84 @@ export default function AllocateSourceModal({
     return getSourceStats(selectedSource, currentPlan?.id);
   }, [selectedSource, currentPlan, goals]);
 
-  // Handlers for changing percent / amount
+  // Handlers for changing percent / amount - strictly clamped to what is left!
   const handlePercentChange = (pct) => {
-    const p = Math.max(0, Math.min(100, Number(pct) || 0));
+    const maxPct = currentStats.maxAllowedPct;
+    const p = Math.max(0, Math.min(maxPct, Number(pct) || 0));
     setAllotPercent(p);
     const totalVal = Number(selectedSource?.holdingValue) || 0;
-    const calcAmt = (totalVal * p) / 100;
+    const calcAmt = Math.min(currentStats.maxAllowedAmt, (totalVal * p) / 100);
     setAllotAmount(calcAmt);
     if (selectedSource?.sourceType === "stock") {
-      const shares = Math.round((selectedSource.holdingQty || 1) * (p / 100));
+      const shares = Math.min(
+        currentStats.maxAllowedShares,
+        Math.round((selectedSource.holdingQty || 1) * (p / 100))
+      );
       setAllotShares(shares);
     }
   };
 
   const handleAmountChange = (amt) => {
-    const val = Math.max(0, Number(amt) || 0);
+    const maxAmt = currentStats.maxAllowedAmt;
+    const val = Math.max(0, Math.min(maxAmt, Number(amt) || 0));
     setAllotAmount(val);
     const totalVal = Number(selectedSource?.holdingValue) || 1;
-    const p = Math.min(100, Math.round((val / totalVal) * 1000) / 10);
+    const p = Math.min(currentStats.maxAllowedPct, Math.round((val / totalVal) * 1000) / 10);
     setAllotPercent(p);
     if (selectedSource?.sourceType === "stock") {
-      const shares = Math.round((selectedSource.holdingQty || 1) * (p / 100));
+      const shares = Math.min(
+        currentStats.maxAllowedShares,
+        Math.round((selectedSource.holdingQty || 1) * (p / 100))
+      );
       setAllotShares(shares);
     }
   };
 
   const handleSharesChange = (sh) => {
     if (!selectedSource || selectedSource.sourceType !== "stock") return;
-    const totalShares = selectedSource.holdingQty || 1;
-    const clampedShares = Math.max(1, Math.min(totalShares, Number(sh) || 1));
+    const maxShares = currentStats.maxAllowedShares;
+    const clampedShares = Math.max(0, Math.min(maxShares, Number(sh) || 0));
     setAllotShares(clampedShares);
-    const p = Math.round((clampedShares / totalShares) * 1000) / 10;
+    const totalShares = selectedSource.holdingQty || 1;
+    const p = Math.min(currentStats.maxAllowedPct, Math.round((clampedShares / totalShares) * 1000) / 10);
     setAllotPercent(p);
     const buyPrice = Number(selectedSource.bFShare || selectedSource.bShare || selectedSource.sharePrice || 0);
-    setAllotAmount(clampedShares * buyPrice);
+    setAllotAmount(Math.min(currentStats.maxAllowedAmt, clampedShares * buyPrice));
   };
 
   const handleSave = () => {
     if (!selectedSource || !currentPlan) return;
+    const maxPct = currentStats.maxAllowedPct;
+    const maxAmt = currentStats.maxAllowedAmt;
+
+    // Strict validation: cannot allocate more than what is left
+    if (allotPercent > maxPct + 0.01 || allotAmount > maxAmt + 1) {
+      showNotification(
+        "error",
+        `Cannot allocate more than available. Max left: ${maxPct}% (${formatINRCompact(maxAmt)})`
+      );
+      return;
+    }
+
+    const finalPercent = Math.max(0, Math.min(maxPct, Number(allotPercent) || 0));
+    const finalAmount = Math.max(0, Math.min(maxAmt, Number(allotAmount) || 0));
+    const finalShares =
+      selectedSource.sourceType === "stock"
+        ? Math.max(0, Math.min(currentStats.maxAllowedShares, Number(allotShares) || 0))
+        : undefined;
+
     const isUpdate = currentStats.isAllottedToCurrentGoal;
     onSaveAllocation(currentPlan.id, selectedSource, {
-      percent: allotPercent,
-      amount: allotAmount,
-      shares: selectedSource.sourceType === "stock" ? allotShares : undefined,
+      percent: finalPercent,
+      amount: finalAmount,
+      shares: finalShares,
     });
+
     showNotification(
       "success",
       `${selectedSource.displayName} ${
         isUpdate ? "updated in" : "added to"
-      } ${currentPlan.title} (${allotPercent}% • ${formatINRCompact(allotAmount)})`
+      } ${currentPlan.title} (${finalPercent}% • ${formatINRCompact(finalAmount)})`
     );
   };
 
@@ -374,12 +505,6 @@ export default function AllocateSourceModal({
       "info",
       `${selectedSource.displayName} removed from ${currentPlan.title}`
     );
-    const totalVal = Number(selectedSource.holdingValue) || 0;
-    setAllotPercent(100);
-    setAllotAmount(totalVal);
-    if (selectedSource.sourceType === "stock") {
-      setAllotShares(selectedSource.holdingQty || 1);
-    }
   };
 
   if (!isOpen || !currentPlan) return null;
@@ -433,6 +558,8 @@ export default function AllocateSourceModal({
               const count =
                 cat.id === "all"
                   ? allSources.length
+                  : cat.id === "in_plan"
+                  ? allSources.filter((s) => isSourceInCurrentPlan(s)).length
                   : cat.id === "bank"
                   ? bankAccounts.length
                   : cat.id === "stock"
@@ -478,7 +605,12 @@ export default function AllocateSourceModal({
           {/* Bottom Status Footer */}
           <div className="p-3 border-t border-base-200 text-[11px] text-base-content/70 flex items-center justify-between shrink-0 bg-base-200/40">
             <span className="truncate max-w-[160px]">
-              Active: <span className="font-bold text-primary">{ASSET_CATEGORIES.find((c) => c.id === selectedCategory)?.label}</span>
+              Active:{" "}
+              <span className="font-bold text-primary">
+                {selectedCategory === "in_plan"
+                  ? `In Plan (${currentPlan?.title || "Active"})`
+                  : ASSET_CATEGORIES.find((c) => c.id === selectedCategory)?.label}
+              </span>
             </span>
             {selectedCategory !== "all" && (
               <button
@@ -593,7 +725,12 @@ export default function AllocateSourceModal({
                   <div className="flex items-center justify-between px-3 py-1.5 rounded-xl border border-base-300 text-xs shrink-0 bg-base-100">
                     <span className="text-base-content/80 flex items-center gap-1.5 font-semibold">
                       <Layers size={13} className="text-primary" />
-                      Showing: <span className="font-bold text-primary">{ASSET_CATEGORIES.find((c) => c.id === selectedCategory)?.label}</span>
+                      Showing:{" "}
+                      <span className="font-bold text-primary">
+                        {selectedCategory === "in_plan"
+                          ? `In Plan (${currentPlan?.title || "Active"})`
+                          : ASSET_CATEGORIES.find((c) => c.id === selectedCategory)?.label}
+                      </span>
                     </span>
                     <button
                       type="button"
@@ -610,8 +747,16 @@ export default function AllocateSourceModal({
                   {filteredSources.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-full text-center p-4">
                       <Coins size={32} className="opacity-30 mb-2" />
-                      <p className="text-sm font-bold opacity-70">No investment sources found.</p>
-                      <p className="text-xs opacity-50 mt-0.5">Try searching or clearing the category filter.</p>
+                      <p className="text-sm font-bold opacity-70">
+                        {selectedCategory === "in_plan"
+                          ? `No sources selected for ${currentPlan?.title || "this plan"} yet.`
+                          : "No investment sources found."}
+                      </p>
+                      <p className="text-xs opacity-50 mt-0.5 max-w-xs">
+                        {selectedCategory === "in_plan"
+                          ? "Switch to All Sources or another category on the left to allot assets to this planner."
+                          : "Try searching or clearing the category filter."}
+                      </p>
                     </div>
                   ) : (
                     filteredSources.map((item) => {
@@ -676,16 +821,28 @@ export default function AllocateSourceModal({
 
                           <div className="text-right shrink-0 font-mono">
                             <div className="font-black text-xs text-base-content">
-                              Left: {formatINRCompact(stats.remainingAmt)}
+                              Left: {formatINRCompact(stats.maxAllowedAmt)}
                             </div>
                             <div className="mt-0.5">
                               {isAllottedHere ? (
-                                <span className="badge badge-xs bg-primary text-primary-content font-bold">
+                                <span
+                                  className={`badge badge-xs font-bold ${
+                                    stats.currentGoalPercent === 0
+                                      ? "bg-base-200 text-base-content/60 border border-base-300"
+                                      : "bg-primary text-primary-content"
+                                  }`}
+                                >
                                   In Plan ({stats.currentGoalPercent}%)
                                 </span>
-                              ) : stats.remainingPct < 100 ? (
-                                <span className="badge badge-xs bg-base-300 text-base-content/70 font-semibold">
-                                  {stats.remainingPct}% unallotted
+                              ) : stats.maxAllowedPct < 100 ? (
+                                <span
+                                  className={`badge badge-xs font-semibold ${
+                                    stats.maxAllowedPct === 0
+                                      ? "badge-error badge-soft text-error font-bold"
+                                      : "bg-base-300 text-base-content/70"
+                                  }`}
+                                >
+                                  {stats.maxAllowedPct === 0 ? "0% Left" : `${stats.maxAllowedPct}% left`}
                                 </span>
                               ) : (
                                 <span className="badge badge-xs bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold border-emerald-500/20">
@@ -727,7 +884,7 @@ export default function AllocateSourceModal({
                     >
                       {goals.map((g) => {
                         const isAlloc =
-                          (g.allocations?.[selectedSource?.id]?.amount > 0) ||
+                          Boolean(g.allocations && selectedSource?.id in g.allocations) ||
                           (selectedSource?.sourceType === "bank" && (g.selectedBanks || []).includes(selectedSource?.id)) ||
                           (selectedSource?.sourceType === "stock" && (g.selectedStocks || []).includes(selectedSource?.id)) ||
                           (selectedSource?.sourceType === "mf" && (g.selectedMfs || []).includes(selectedSource?.id)) ||
@@ -735,9 +892,12 @@ export default function AllocateSourceModal({
                           (selectedSource?.sourceType === "rd" && (g.selectedRds || []).includes(selectedSource?.id)) ||
                           (selectedSource?.sourceType === "pf" && g.includePf);
 
+                        const allocPct = g.allocations?.[selectedSource?.id]?.percent;
+                        const pctText = allocPct !== undefined ? ` • ${allocPct}%` : isAlloc ? " • Allocated" : "";
+
                         return (
                           <option key={g.id} value={g.id} className="text-xs font-medium py-1">
-                            {g.icon || "🎯"} {g.title} ({formatINRCompact(g.targetAmount)}){isAlloc ? " • Allocated" : ""}
+                            {g.icon || "🎯"} {g.title} ({formatINRCompact(g.targetAmount)}){pctText}
                           </option>
                         );
                       })}
@@ -776,6 +936,14 @@ export default function AllocateSourceModal({
                           </h4>
                           <div className="flex items-center gap-2 text-[11px] text-base-content/60 font-semibold flex-wrap">
                             <span>Total Value: {formatINR(selectedSource.holdingValue)}</span>
+                            {selectedSource.sourceType === "stock" && (
+                              <>
+                                <span>•</span>
+                                <span className="text-primary font-mono font-bold">
+                                  {selectedSource.holdingQty || 0} Total Shares
+                                </span>
+                              </>
+                            )}
                             {selectedSource.sourceType === "mf" && (
                               <>
                                 <span>•</span>
@@ -800,23 +968,34 @@ export default function AllocateSourceModal({
                           <SlidersHorizontal size={13} className="text-primary" />
                           Source Allocation Status
                         </span>
-                        <span className="font-mono text-[11px] font-bold text-primary">
-                          Available: {formatINR(currentStats.remainingAmt)} ({currentStats.remainingPct}%)
-                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[10px] text-base-content/50 font-bold uppercase tracking-wider">
+                            Left to Allocate:
+                          </span>
+                          <span
+                            className={`font-mono text-[11px] font-bold ${
+                              currentStats.maxAllowedPct === 0 ? "text-error" : "text-primary"
+                            }`}
+                          >
+                            {formatINR(currentStats.maxAllowedAmt)} ({currentStats.maxAllowedPct}%)
+                          </span>
+                        </div>
                       </div>
 
                       {/* Visual Multi-color Progress Distribution Bar */}
-                      <div className="w-full bg-base-300/80 rounded-full h-2 overflow-hidden flex">
-                        {currentStats.breakdown.map((b) => (
-                          <div
-                            key={b.goalId}
-                            className={`h-full ${
-                              b.goalId === currentPlan.id ? "bg-primary" : "bg-purple-500/70"
-                            }`}
-                            style={{ width: `${b.percent}%` }}
-                            title={`${b.goalTitle}: ${b.percent}% (${formatINR(b.amount)})`}
-                          />
-                        ))}
+                      <div className="w-full bg-base-300/80 rounded-full h-2.5 overflow-hidden flex">
+                        {currentStats.breakdown
+                          .filter((b) => b.percent > 0)
+                          .map((b) => (
+                            <div
+                              key={b.goalId}
+                              className={`h-full transition-all ${
+                                b.goalId === currentPlan.id ? "bg-primary" : "bg-purple-500/70"
+                              }`}
+                              style={{ width: `${b.percent}%` }}
+                              title={`${b.goalTitle}: ${b.percent}% (${formatINR(b.amount)})`}
+                            />
+                          ))}
                       </div>
 
                       {/* Distribution Items */}
@@ -830,22 +1009,35 @@ export default function AllocateSourceModal({
                           currentStats.breakdown.map((b) => (
                             <div
                               key={b.goalId}
-                              className={`flex items-center justify-between text-xs px-2.5 py-1 rounded-xl font-mono ${
+                              className={`flex items-center justify-between text-xs px-2.5 py-1.5 rounded-xl font-mono ${
                                 b.goalId === currentPlan.id
                                   ? "bg-primary/10 text-primary font-bold border border-primary/20"
                                   : "bg-base-100 text-base-content/70 border border-base-300"
                               }`}
                             >
-                              <div className="flex items-center gap-1.5">
+                              <div className="flex items-center gap-1.5 min-w-0">
                                 <span>{b.goalIcon}</span>
-                                <span className="font-sans font-extrabold truncate max-w-[140px]">
+                                <span className="font-sans font-extrabold truncate max-w-[150px]">
                                   {b.goalTitle}
                                   {b.goalId === currentPlan.id ? " (This Plan)" : ""}
                                 </span>
                               </div>
-                              <span>
-                                {formatINR(b.amount)} ({b.percent}%)
-                              </span>
+                              <div className="flex items-center gap-2 shrink-0">
+                                <span className={b.percent === 0 ? "text-base-content/40 font-bold" : "font-bold"}>
+                                  {formatINR(b.amount)}
+                                </span>
+                                <span
+                                  className={`badge badge-xs font-bold font-mono px-2 py-0.5 ${
+                                    b.percent === 0
+                                      ? "bg-base-200 text-base-content/50"
+                                      : b.goalId === currentPlan.id
+                                      ? "badge-primary"
+                                      : "bg-purple-500/20 text-purple-700 dark:text-purple-300 border border-purple-500/30"
+                                  }`}
+                                >
+                                  {b.percent}%
+                                </span>
+                              </div>
                             </div>
                           ))
                         )}
@@ -886,59 +1078,71 @@ export default function AllocateSourceModal({
                         </div>
                       </div>
 
-                      {/* Percentage Mode Controls */}
+                      {/* Percentage Mode Controls - Clamped to maxAllowedPct */}
                       {allotmentMode === "percent" ? (
                         <div className="space-y-2">
                           <div className="flex items-center gap-2">
                             <input
                               type="range"
-                              min="1"
-                              max="100"
+                              min="0"
+                              max={currentStats.maxAllowedPct}
                               value={allotPercent}
+                              disabled={currentStats.maxAllowedPct === 0}
                               onChange={(e) => handlePercentChange(e.target.value)}
-                              className="range range-primary range-xs flex-1"
+                              className="range range-primary range-xs flex-1 disabled:opacity-30"
                             />
                             <div className="w-16 shrink-0">
                               <input
                                 type="number"
-                                min="1"
-                                max="100"
+                                min="0"
+                                max={currentStats.maxAllowedPct}
                                 value={allotPercent}
+                                disabled={currentStats.maxAllowedPct === 0}
                                 onChange={(e) => handlePercentChange(e.target.value)}
-                                className="input input-xs input-bordered w-full font-mono font-bold text-center bg-base-100 rounded-lg"
+                                className="input input-xs input-bordered w-full font-mono font-bold text-center bg-base-100 rounded-lg disabled:opacity-50"
                               />
                             </div>
                             <span className="text-xs font-bold font-mono">%</span>
                           </div>
 
-                          {/* Quick Percentage Presets */}
+                          {/* Quick Percentage Presets - only show options that do not exceed maxAllowedPct */}
                           <div className="flex items-center gap-1.5 flex-wrap">
-                            {[25, 50, 75, 100].map((pct) => (
-                              <button
-                                key={pct}
-                                type="button"
-                                onClick={() => handlePercentChange(pct)}
-                                className={`btn btn-xs h-6 min-h-0 font-bold font-mono rounded-lg ${
-                                  allotPercent === pct ? "btn-primary shadow-xs" : "btn-ghost bg-base-100"
-                                }`}
-                              >
-                                {pct}%
-                              </button>
-                            ))}
-                            {currentStats.remainingPct > 0 && currentStats.remainingPct < 100 && (
-                              <button
-                                type="button"
-                                onClick={() => handlePercentChange(currentStats.remainingPct)}
-                                className="btn btn-xs h-6 min-h-0 btn-outline btn-primary font-bold font-mono rounded-lg"
-                                title="Allot exact remaining unallocated share"
-                              >
-                                Allot Left ({currentStats.remainingPct}%)
-                              </button>
-                            )}
+                            {[0, 25, 50, 75, 100]
+                              .filter((pct) => pct <= currentStats.maxAllowedPct)
+                              .map((pct) => (
+                                <button
+                                  key={pct}
+                                  type="button"
+                                  onClick={() => handlePercentChange(pct)}
+                                  className={`btn btn-xs h-6 min-h-0 font-bold font-mono rounded-lg ${
+                                    allotPercent === pct ? "btn-primary shadow-xs" : "btn-ghost bg-base-100"
+                                  }`}
+                                >
+                                  {pct}%
+                                </button>
+                              ))}
+                            {currentStats.maxAllowedPct > 0 &&
+                              ![0, 25, 50, 75, 100].includes(currentStats.maxAllowedPct) && (
+                                <button
+                                  type="button"
+                                  onClick={() => handlePercentChange(currentStats.maxAllowedPct)}
+                                  className="btn btn-xs h-6 min-h-0 btn-outline btn-primary font-bold font-mono rounded-lg"
+                                  title="Allot exact remaining unallocated share"
+                                >
+                                  Allot Left ({currentStats.maxAllowedPct}%)
+                                </button>
+                              )}
                           </div>
+
+                          {currentStats.maxAllowedPct === 0 && (
+                            <div className="text-[11px] text-error flex items-center gap-1.5 font-medium pt-1">
+                              <AlertCircle size={13} className="shrink-0" />
+                              <span>This source is 100% allocated to other planners. 0% left to allocate.</span>
+                            </div>
+                          )}
                         </div>
                       ) : (
-                        /* Amount Mode Controls */
+                        /* Amount Mode Controls - Clamped to maxAllowedAmt */
                         <div className="space-y-2">
                           <div className="relative">
                             <span className="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-xs opacity-50">
@@ -946,27 +1150,43 @@ export default function AllocateSourceModal({
                             </span>
                             <input
                               type="number"
-                              min="1"
-                              max={selectedSource.holdingValue}
+                              min="0"
+                              max={currentStats.maxAllowedAmt}
                               value={Math.round(allotAmount)}
+                              disabled={currentStats.maxAllowedAmt === 0}
                               onChange={(e) => handleAmountChange(e.target.value)}
-                              className="input input-sm input-bordered w-full pl-7 rounded-xl font-mono font-bold text-xs bg-base-100"
+                              className="input input-sm input-bordered w-full pl-7 rounded-xl font-mono font-bold text-xs bg-base-100 disabled:opacity-50"
                             />
                           </div>
 
-                          {currentStats.remainingAmt > 0 && (
-                            <button
-                              type="button"
-                              onClick={() => handleAmountChange(currentStats.remainingAmt)}
-                              className="btn btn-xs btn-ghost text-primary text-[10px] font-bold hover:underline"
-                            >
-                              Fill remaining available: {formatINR(currentStats.remainingAmt)}
-                            </button>
+                          <div className="flex items-center justify-between text-[11px]">
+                            <span className="text-base-content/50 font-medium">
+                              Max Left:{" "}
+                              <strong className="text-base-content font-mono">
+                                {formatINR(currentStats.maxAllowedAmt)}
+                              </strong>
+                            </span>
+                            {currentStats.maxAllowedAmt > 0 && (
+                              <button
+                                type="button"
+                                onClick={() => handleAmountChange(currentStats.maxAllowedAmt)}
+                                className="btn btn-xs btn-ghost text-primary text-[10px] font-bold hover:underline p-0 h-auto min-h-0"
+                              >
+                                Fill Max Left ({formatINRCompact(currentStats.maxAllowedAmt)})
+                              </button>
+                            )}
+                          </div>
+
+                          {currentStats.maxAllowedAmt === 0 && (
+                            <div className="text-[11px] text-error flex items-center gap-1.5 font-medium pt-1">
+                              <AlertCircle size={13} className="shrink-0" />
+                              <span>This source is fully allocated to other planners. 0 INR left to allocate.</span>
+                            </div>
                           )}
                         </div>
                       )}
 
-                      {/* If Stock: Shares Counter */}
+                      {/* If Stock: Shares Counter - Clamped to maxAllowedShares */}
                       {selectedSource.sourceType === "stock" && (
                         <div className="pt-2 border-t border-base-300 flex items-center justify-between gap-2">
                           <span className="text-[11px] font-bold text-base-content/70">
@@ -975,29 +1195,32 @@ export default function AllocateSourceModal({
                           <div className="join border border-base-300 rounded-lg overflow-hidden">
                             <button
                               type="button"
+                              disabled={allotShares <= 0}
                               onClick={() => handleSharesChange(allotShares - 1)}
-                              className="join-item btn btn-xs btn-neutral px-2 font-bold"
+                              className="join-item btn btn-xs btn-neutral px-2 font-bold disabled:opacity-30"
                             >
                               -
                             </button>
                             <input
                               type="number"
-                              min="1"
-                              max={selectedSource.holdingQty || 1}
+                              min="0"
+                              max={currentStats.maxAllowedShares}
                               value={allotShares}
+                              disabled={currentStats.maxAllowedShares === 0}
                               onChange={(e) => handleSharesChange(e.target.value)}
-                              className="join-item input input-xs text-center font-bold font-mono w-14 bg-base-100 focus:outline-none"
+                              className="join-item input input-xs text-center font-bold font-mono w-14 bg-base-100 focus:outline-none disabled:opacity-50"
                             />
                             <button
                               type="button"
+                              disabled={allotShares >= currentStats.maxAllowedShares}
                               onClick={() => handleSharesChange(allotShares + 1)}
-                              className="join-item btn btn-xs btn-neutral px-2 font-bold"
+                              className="join-item btn btn-xs btn-neutral px-2 font-bold disabled:opacity-30"
                             >
                               +
                             </button>
                           </div>
                           <span className="text-[10px] font-mono text-base-content/50">
-                            of {selectedSource.holdingQty} shares
+                            Max {currentStats.maxAllowedShares} of {selectedSource.holdingQty} shares left
                           </span>
                         </div>
                       )}
@@ -1019,7 +1242,10 @@ export default function AllocateSourceModal({
                       <div className="text-right font-mono text-[11px]">
                         <span className="text-base-content/50 block">Remaining Left:</span>
                         <span className="font-bold text-base-content">
-                          {formatINR(Math.max(0, currentStats.remainingAmt - (currentStats.isAllottedToCurrentGoal ? 0 : allotAmount)))}
+                          {formatINR(Math.max(0, currentStats.maxAllowedAmt - allotAmount))}
+                          <span className="text-[10px] text-base-content/60 ml-1">
+                            ({Math.max(0, Math.round((currentStats.maxAllowedPct - allotPercent) * 10) / 10)}%)
+                          </span>
                         </span>
                       </div>
                     </div>
@@ -1050,7 +1276,8 @@ export default function AllocateSourceModal({
                     <button
                       type="button"
                       onClick={handleSave}
-                      className="btn btn-sm btn-primary rounded-xl font-bold gap-1.5 text-xs flex-1 shadow-sm transition-all duration-200 cursor-pointer"
+                      disabled={currentStats.maxAllowedPct === 0 && !currentStats.isAllottedToCurrentGoal}
+                      className="btn btn-sm btn-primary rounded-xl font-bold gap-1.5 text-xs flex-1 shadow-sm transition-all duration-200 cursor-pointer disabled:opacity-40"
                     >
                       <Plus size={15} />
                       <span>

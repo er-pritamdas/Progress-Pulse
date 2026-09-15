@@ -207,30 +207,30 @@ export default function InvSettings() {
   // ----------------------------------------------------------------------
   const [goals, setGoals] = useState([]);
 
-  // Collapse / Expand state for planners (like FoodLoggingTab)
-  const [collapsedPlans, setCollapsedPlans] = useState({});
+  // Collapse / Expand state for planners (collapsed by default)
+  const [expandedPlans, setExpandedPlans] = useState({});
 
   const togglePlanCollapse = (planId) => {
-    setCollapsedPlans((prev) => ({
+    setExpandedPlans((prev) => ({
       ...prev,
       [planId]: !prev[planId],
     }));
   };
 
   const areAllPlansCollapsed = useMemo(() => {
-    if (goals.length === 0) return false;
-    return goals.every((g) => !!collapsedPlans[g.id]);
-  }, [goals, collapsedPlans]);
+    if (goals.length === 0) return true;
+    return goals.every((g) => !expandedPlans[g.id]);
+  }, [goals, expandedPlans]);
 
   const toggleAllPlansCollapse = () => {
     if (areAllPlansCollapsed) {
-      setCollapsedPlans({});
-    } else {
       const next = {};
       goals.forEach((g) => {
         next[g.id] = true;
       });
-      setCollapsedPlans(next);
+      setExpandedPlans(next);
+    } else {
+      setExpandedPlans({});
     }
   };
 
@@ -892,21 +892,21 @@ export default function InvSettings() {
     let totalAllotted = 0;
 
     goals.forEach((g) => {
-      if (g.allocations?.[sourceItem.id]) {
+      if (g.allocations && sourceItem.id in g.allocations) {
         totalAllotted += Number(g.allocations[sourceItem.id].amount) || 0;
-      } else {
-        if (sourceItem.sourceType === "bank" && (g.selectedBanks || []).includes(sourceItem.id)) {
-          totalAllotted += totalVal;
-        } else if (sourceItem.sourceType === "stock" && (g.selectedStocks || []).includes(sourceItem.id)) {
-          totalAllotted += totalVal;
-        } else if (sourceItem.sourceType === "mf" && (g.selectedMfs || []).includes(sourceItem.id)) {
-          totalAllotted += totalVal;
-        } else if (sourceItem.sourceType === "fd" && (g.selectedFds || []).includes(sourceItem.id)) {
-          totalAllotted += totalVal;
-        } else if (sourceItem.sourceType === "rd" && (g.selectedRds || []).includes(sourceItem.id)) {
-          totalAllotted += totalVal;
-        } else if (sourceItem.sourceType === "pf" && g.includePf) {
+      } else if (
+        (!g.allocations || Object.keys(g.allocations).length === 0) &&
+        ((sourceItem.sourceType === "bank" && (g.selectedBanks || []).includes(sourceItem.id)) ||
+          (sourceItem.sourceType === "stock" && (g.selectedStocks || []).includes(sourceItem.id)) ||
+          (sourceItem.sourceType === "mf" && (g.selectedMfs || []).includes(sourceItem.id)) ||
+          (sourceItem.sourceType === "fd" && (g.selectedFds || []).includes(sourceItem.id)) ||
+          (sourceItem.sourceType === "rd" && (g.selectedRds || []).includes(sourceItem.id)) ||
+          (sourceItem.sourceType === "pf" && g.includePf))
+      ) {
+        if (sourceItem.sourceType === "pf") {
           totalAllotted += (totalVal * (Number(g.pfAllocatedPercent) || 50)) / 100;
+        } else {
+          totalAllotted += totalVal;
         }
       }
     });
@@ -982,6 +982,88 @@ export default function InvSettings() {
   // Per-Planner Table Sorting State & Sorting Helpers
   // ----------------------------------------------------------------------
   const [plannerSorts, setPlannerSorts] = useState({});
+
+  // ----------------------------------------------------------------------
+  // Per-Planner Active Tab State ("sources" vs "projection")
+  // ----------------------------------------------------------------------
+  const [goalActiveTabs, setGoalActiveTabs] = useState({});
+
+  const getGoalTab = (goalId) => goalActiveTabs[goalId] || "sources";
+  const setGoalTab = (goalId, tab) => {
+    setGoalActiveTabs((prev) => ({ ...prev, [goalId]: tab }));
+  };
+
+  const getGoalSpanMonths = (targetDate) => {
+    if (!targetDate) return 0;
+    const start = dayjs().startOf("month");
+    const target = dayjs(targetDate).startOf("month");
+    const diff = target.diff(start, "month");
+    return Math.max(0, diff);
+  };
+
+  const saveDebounceTimers = useRef({});
+
+  const handleUpdateProjection = (planId, sourceId, updates) => {
+    const targetPlan = goals.find((g) => g.id === planId || g._id === planId);
+    if (!targetPlan) return;
+
+    const prevProjections = { ...(targetPlan.projections || {}) };
+    const currentProj = prevProjections[sourceId] || {};
+    const newProj = {
+      ...currentProj,
+      ...updates,
+    };
+
+    const updatedProjections = {
+      ...prevProjections,
+      [sourceId]: newProj,
+    };
+
+    const updatedPlan = {
+      ...targetPlan,
+      projections: updatedProjections,
+    };
+
+    if (updatedPlan.allocations && updatedPlan.allocations[sourceId]) {
+      updatedPlan.allocations = {
+        ...updatedPlan.allocations,
+        [sourceId]: {
+          ...updatedPlan.allocations[sourceId],
+          active: newProj.active,
+          monthlyAmount: newProj.monthlyAmount,
+        },
+      };
+    }
+
+    setGoals((prev) =>
+      prev.map((g) => (g.id === planId || g._id === planId ? updatedPlan : g))
+    );
+
+    try {
+      const saved = localStorage.getItem("pulse_investment_planner_goals");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          const newSaved = parsed.map((g) =>
+            g.id === planId || g._id === planId ? updatedPlan : g
+          );
+          localStorage.setItem("pulse_investment_planner_goals", JSON.stringify(newSaved));
+        }
+      }
+    } catch (e) {}
+
+    if (saveDebounceTimers.current[planId]) {
+      clearTimeout(saveDebounceTimers.current[planId]);
+    }
+    saveDebounceTimers.current[planId] = setTimeout(async () => {
+      try {
+        const dbId = targetPlan._id || targetPlan.id || planId;
+        await axiosInstance.put(`/v1/dashboard/investment/plans/${dbId}`, updatedPlan);
+      } catch (err) {
+        console.error("Failed to save projections to DB:", err);
+      }
+    }, 400);
+  };
 
   const handlePlannerSort = (goalId, column) => {
     setPlannerSorts((prev) => {
@@ -1227,8 +1309,10 @@ export default function InvSettings() {
 
     const newAllocations = { ...(targetPlan.allocations || {}) };
     delete newAllocations[sourceId];
+    const newProjections = { ...(targetPlan.projections || {}) };
+    delete newProjections[sourceId];
 
-    const updatedPlan = { ...targetPlan, allocations: newAllocations };
+    const updatedPlan = { ...targetPlan, allocations: newAllocations, projections: newProjections };
     if (sourceType === "bank") {
       updatedPlan.selectedBanks = (targetPlan.selectedBanks || []).filter((id) => id !== sourceId);
       updatedPlan.allocatedBanks = (targetPlan.allocatedBanks || []).filter((id) => id !== sourceId);
@@ -1272,13 +1356,17 @@ export default function InvSettings() {
 
   // Quick percent increment / decrement (like servings in FoodLoggingTab)
   const handleQuickAdjustPercent = (planId, item, delta) => {
-    const currentPct = Number(item.allocatedPercent) || 100;
-    const newPct = Math.max(5, Math.min(100, Math.round((currentPct + delta) / 5) * 5));
+    const currentPct = item.allocatedPercent !== undefined ? Number(item.allocatedPercent) : 100;
     const totalVal = Number(item.holdingValue) || 0;
+    const stats = getSourceUnallocatedStats(item);
+    const otherGoalsAllotted = Math.max(0, stats.totalAllotted - (Number(item.allocatedAmount) || 0));
+    const maxAllowedAmt = Math.max(0, totalVal - otherGoalsAllotted);
+    const maxAllowedPct = totalVal > 0 ? Math.round((maxAllowedAmt / totalVal) * 100) : 100;
+    const newPct = Math.max(0, Math.min(maxAllowedPct, Math.round((currentPct + delta) / 5) * 5));
     const newAmt = (totalVal * newPct) / 100;
     const newShares =
       item.sourceType === "stock"
-        ? Math.max(1, Math.round((item.holdingQty || 1) * (newPct / 100)))
+        ? Math.round((item.holdingQty || 1) * (newPct / 100))
         : undefined;
 
     handleSaveAllocation(planId, item, {
@@ -1424,6 +1512,7 @@ export default function InvSettings() {
         return {
           ...g,
           allocations: {},
+          projections: {},
           selectedBanks: [],
           allocatedBanks: [],
           selectedStocks: [],
@@ -1773,21 +1862,21 @@ export default function InvSettings() {
             /* Goal / Planner Cards List */
             goals.map((goal) => {
               const metrics = calculateGoalMetrics(goal);
-              const isCollapsed = !!collapsedPlans[goal.id];
+              const isCollapsed = !expandedPlans[goal.id];
               const hasItems = metrics.items.length > 0;
               const dateInfo = getRelativeDateInfo(goal.targetDate);
 
               return (
                 <div
                   key={goal.id}
-                  className="bg-base-200 rounded-2xl border border-base-300 shadow-sm overflow-hidden transition-all duration-200"
+                  className="bg-base-200 rounded-2xl border border-base-300 shadow-sm transition-all duration-200"
                 >
                   {/* ------------------------------------------------------------ */}
-                  {/* Planner Header (Clickable to Expand / Collapse)              */}
+                  {/* Planner Header (Sticky while sources scroll)                 */}
                   {/* ------------------------------------------------------------ */}
                   <div
-                    className={`p-4 bg-base-300/60 flex flex-wrap justify-between items-center cursor-pointer select-none hover:bg-base-300/90 transition-colors gap-3 ${
-                      !isCollapsed ? "border-b border-base-300" : ""
+                    className={`sticky top-[47px] z-30 p-4 bg-base-300/95 backdrop-blur-md flex flex-wrap justify-between items-center cursor-pointer select-none hover:bg-base-300 transition-colors gap-3 rounded-t-2xl shadow-xs ${
+                      isCollapsed ? "rounded-b-2xl" : "border-b border-base-300"
                     }`}
                     onClick={() => togglePlanCollapse(goal.id)}
                   >
@@ -1945,7 +2034,7 @@ export default function InvSettings() {
                   {/* Planner Body (When Expanded) - Progress Bar Removed from Body */}
                   {/* ------------------------------------------------------------ */}
                   {!isCollapsed && (
-                    <div className="p-4 space-y-4 animate-in fade-in duration-200">
+                    <div className="p-4 space-y-4 animate-in fade-in duration-200 rounded-b-2xl">
                       {/* Earmarked Breakdown by Source Type (All 6 Types: Bank, Stocks, MF, FD, RD, EPF - if 0 shows 0) */}
                       <div className="bg-base-100/80 p-3.5 rounded-2xl border border-base-300/80 space-y-2.5">
                         <div className="flex items-center justify-between px-0.5">
@@ -2024,7 +2113,67 @@ export default function InvSettings() {
                           </button>
                         </div>
                       ) : (
-                        <div className="overflow-x-auto rounded-xl border border-base-300 bg-base-100">
+                        <div className="space-y-3">
+                          {/* Tabs on top of the Table: "Allocated Sources" & "Projection" */}
+                          <div className="flex items-center justify-between gap-3 flex-wrap pt-0.5">
+                            <div className="inline-flex items-center gap-1.5 p-1 bg-base-200/90 rounded-2xl border border-base-300 shadow-2xs">
+                              <button
+                                type="button"
+                                onClick={() => setGoalTab(goal.id, "sources")}
+                                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all select-none ${
+                                  getGoalTab(goal.id) === "sources"
+                                    ? "bg-primary text-primary-content shadow-xs font-black"
+                                    : "text-base-content/70 hover:text-base-content hover:bg-base-100 font-semibold"
+                                }`}
+                              >
+                                <Layers size={13} />
+                                <span>Allocated Sources</span>
+                                <span
+                                  className={`px-1.5 py-0.5 rounded-md text-[10px] font-mono font-bold leading-none ${
+                                    getGoalTab(goal.id) === "sources"
+                                      ? "bg-primary-content/20 text-primary-content"
+                                      : "bg-base-300 text-base-content/70"
+                                  }`}
+                                >
+                                  {metrics.itemCount}
+                                </span>
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => setGoalTab(goal.id, "projection")}
+                                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs transition-all select-none ${
+                                  getGoalTab(goal.id) === "projection"
+                                    ? "bg-primary text-primary-content shadow-xs font-black"
+                                    : "text-base-content/70 hover:text-base-content hover:bg-base-100 font-semibold"
+                                }`}
+                              >
+                                <TrendingUp size={13} />
+                                <span>Projection</span>
+                                {(() => {
+                                  const activeCount = metrics.items.filter((it) => {
+                                    const p = goal.projections?.[it.id];
+                                    return p?.active !== undefined ? Boolean(p.active) : false;
+                                  }).length;
+                                  return (
+                                    <span
+                                      className={`px-1.5 py-0.5 rounded-md text-[10px] font-mono font-bold leading-none ${
+                                        getGoalTab(goal.id) === "projection"
+                                          ? "bg-primary-content/20 text-primary-content"
+                                          : "bg-base-300 text-base-content/70"
+                                      }`}
+                                    >
+                                      {activeCount} active
+                                    </span>
+                                  );
+                                })()}
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* 1. ALLOCATED SOURCES TAB */}
+                          {getGoalTab(goal.id) === "sources" && (
+                            <div className="overflow-x-auto rounded-xl border border-base-300 bg-base-100">
                           {(() => {
                             const sortedItems = getSortedPlannerItems(metrics.items, goal.id);
                             const currentSort = plannerSorts[goal.id];
@@ -2273,6 +2422,280 @@ export default function InvSettings() {
                         );
                       })()}
                     </div>
+                          )}
+
+                          {/* 2. PROJECTION TAB VIEW */}
+                          {getGoalTab(goal.id) === "projection" && (
+                            <div className="space-y-3">
+                              {/* Target Date Notice if not set */}
+                              {!goal.targetDate && (
+                                <div className="p-3 rounded-xl bg-warning/10 border border-warning/30 flex items-center justify-between gap-3 text-xs">
+                                  <div className="flex items-center gap-2 text-warning-content dark:text-warning">
+                                    <AlertCircle size={16} className="shrink-0 text-warning" />
+                                    <div>
+                                      <span className="font-bold">Target Date Required:</span> Set a target month for <strong>{goal.title}</strong> to calculate monthly projections.
+                                    </div>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => openEditGoalModal(goal)}
+                                    className="btn btn-xs btn-warning font-bold rounded-lg shrink-0 gap-1"
+                                  >
+                                    <Calendar size={12} />
+                                    Set Target Date
+                                  </button>
+                                </div>
+                              )}
+
+                              {/* Projection Table */}
+                              <div className="overflow-x-auto rounded-xl border border-base-300 bg-base-100">
+                                <table className="table table-sm w-full">
+                                  <thead>
+                                    <tr className="text-xs text-base-content/60 border-b border-base-300 bg-base-200/50">
+                                      <th className="py-3 text-left font-extrabold">Source / Asset</th>
+                                      <th className="py-3 text-center font-extrabold">Type</th>
+                                      <th className="py-3 text-center font-extrabold" title="Toggle active contribution towards this goal">
+                                        Activeness
+                                      </th>
+                                      <th className="py-3 text-right font-extrabold" title="Monthly amount you plan to put into this source">
+                                        Monthly Contribution (₹/mo)
+                                      </th>
+                                      <th className="py-3 text-center font-extrabold">Duration</th>
+                                      <th className="py-3 text-right font-extrabold" title="Projected money on target date = Span in Months * Monthly Amount">
+                                        Projected on Target Date
+                                      </th>
+                                    </tr>
+                                  </thead>
+                                  <tbody className="divide-y divide-base-200">
+                                    {metrics.items.map((item) => {
+                                      const spanMonths = getGoalSpanMonths(goal.targetDate);
+                                      const proj = goal.projections?.[item.id] || {};
+                                      const isActive = proj.active !== undefined ? Boolean(proj.active) : false;
+                                      const monthlyAmt = proj.monthlyAmount !== undefined ? proj.monthlyAmount : (item.monthlyAmount || 0);
+                                      const projectedMoney = isActive ? (spanMonths * (Number(monthlyAmt) || 0)) : 0;
+
+                                      const typeBadge =
+                                        item.sourceType === "bank"
+                                          ? { label: "Bank Account", color: "badge-success" }
+                                          : item.sourceType === "stock"
+                                          ? { label: "Stock", color: "badge-info" }
+                                          : item.sourceType === "mf"
+                                          ? { label: "Mutual Fund", color: "badge-secondary" }
+                                          : item.sourceType === "fd"
+                                          ? { label: "FD", color: "badge-warning" }
+                                          : item.sourceType === "rd"
+                                          ? { label: "RD", color: "badge-warning" }
+                                          : { label: "EPF", color: "badge-accent" };
+
+                                      return (
+                                        <tr
+                                          key={item.id}
+                                          className={`transition-colors ${
+                                            isActive
+                                              ? "hover:bg-base-200/50 bg-base-100"
+                                              : "hover:bg-base-200/30 opacity-70 bg-base-200/20"
+                                          }`}
+                                        >
+                                          {/* 1. Source / Asset */}
+                                          <td className="py-2.5 max-w-[240px]">
+                                            <div className="flex items-center gap-3">
+                                              <CompanyLogo
+                                                name={item.displayName || item.name}
+                                                type={item.sourceType === "bank" ? "bank" : item.sourceType}
+                                                size="w-8 h-8"
+                                                className="shrink-0"
+                                              />
+                                              <div className="min-w-0">
+                                                <div
+                                                  className="font-bold text-sm truncate text-base-content"
+                                                  title={item.displayName || item.name}
+                                                >
+                                                  {item.displayName || item.name}
+                                                </div>
+                                                <div className="text-[11px] text-base-content/50 truncate">
+                                                  Earmarked: <span className="font-mono font-semibold">{formatINR(item.allocatedAmount)}</span>
+                                                </div>
+                                              </div>
+                                            </div>
+                                          </td>
+
+                                          {/* 2. Type */}
+                                          <td className="text-center whitespace-nowrap py-2.5">
+                                            <span className={`badge badge-sm font-bold ${typeBadge.color}`}>
+                                              {typeBadge.label}
+                                            </span>
+                                          </td>
+
+                                          {/* 3. Activeness Column */}
+                                          <td className="text-center whitespace-nowrap py-2.5">
+                                            <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+                                              <input
+                                                type="checkbox"
+                                                checked={isActive}
+                                                onChange={(e) => {
+                                                  const checked = e.target.checked;
+                                                  handleUpdateProjection(goal.id, item.id, {
+                                                    active: checked,
+                                                    monthlyAmount: monthlyAmt,
+                                                  });
+                                                }}
+                                                className="toggle toggle-sm toggle-success"
+                                              />
+                                              <span
+                                                className={`text-xs font-bold transition-colors ${
+                                                  isActive
+                                                    ? "text-emerald-600 dark:text-emerald-400 font-extrabold"
+                                                    : "text-base-content/40"
+                                                }`}
+                                              >
+                                                {isActive ? "Active" : "Inactive"}
+                                              </span>
+                                            </label>
+                                          </td>
+
+                                          {/* 4. Monthly Contribution Input */}
+                                          <td className="text-right whitespace-nowrap py-2.5">
+                                            {isActive ? (
+                                              <div className="inline-flex items-center gap-1.5 justify-end">
+                                                <span className="text-xs font-bold text-base-content/50 font-mono">₹</span>
+                                                <input
+                                                  type="number"
+                                                  min="0"
+                                                  step="500"
+                                                  value={monthlyAmt === 0 && !proj.monthlyAmount && proj.monthlyAmount !== 0 ? "" : monthlyAmt}
+                                                  placeholder="0"
+                                                  onChange={(e) => {
+                                                    const val = e.target.value === "" ? 0 : Number(e.target.value);
+                                                    handleUpdateProjection(goal.id, item.id, {
+                                                      active: true,
+                                                      monthlyAmount: val,
+                                                    });
+                                                  }}
+                                                  className="input input-xs sm:input-sm input-bordered w-24 sm:w-32 text-right font-mono font-bold focus:input-primary bg-base-100 shadow-2xs"
+                                                />
+                                                <span className="text-[10px] text-base-content/50 font-semibold">/mo</span>
+                                              </div>
+                                            ) : (
+                                              <span className="text-xs text-base-content/30 italic font-mono pr-2">
+                                                — Paused —
+                                              </span>
+                                            )}
+                                          </td>
+
+                                          {/* 5. Duration (Span in Months) */}
+                                          <td className="text-center font-mono text-xs whitespace-nowrap py-2.5 text-base-content/70">
+                                            <span className="badge badge-xs font-mono font-bold bg-base-200">
+                                              {spanMonths} mos
+                                            </span>
+                                          </td>
+
+                                          {/* 6. Projected Money on Target Date */}
+                                          <td className="text-right whitespace-nowrap py-2.5">
+                                            {isActive ? (
+                                              <div className="flex flex-col items-end leading-tight">
+                                                <span className="font-black text-sm sm:text-base font-mono text-emerald-600 dark:text-emerald-400">
+                                                  {formatINR(projectedMoney)}
+                                                </span>
+                                                {Number(monthlyAmt) > 0 && spanMonths > 0 && (
+                                                  <span className="text-[9.5px] text-base-content/50 font-mono">
+                                                    {spanMonths} mos × {formatINR(monthlyAmt)}
+                                                  </span>
+                                                )}
+                                              </div>
+                                            ) : (
+                                              <span className="text-xs font-mono text-base-content/30">
+                                                ₹0.00
+                                              </span>
+                                            )}
+                                          </td>
+                                        </tr>
+                                      );
+                                    })}
+                                  </tbody>
+
+                                  {/* Projection Table Footer Summary */}
+                                  {(() => {
+                                    const spanMonths = getGoalSpanMonths(goal.targetDate);
+                                    const totalActive = metrics.items.filter((it) => {
+                                      const p = goal.projections?.[it.id];
+                                      return p?.active !== undefined ? Boolean(p.active) : false;
+                                    }).length;
+
+                                    const totalMonthly = metrics.items.reduce((sum, it) => {
+                                      const p = goal.projections?.[it.id];
+                                      const active = p?.active !== undefined ? Boolean(p.active) : false;
+                                      const amt = p?.monthlyAmount !== undefined ? Number(p.monthlyAmount) : (it.monthlyAmount || 0);
+                                      return sum + (active ? amt : 0);
+                                    }, 0);
+
+                                    const totalProjected = metrics.items.reduce((sum, it) => {
+                                      const p = goal.projections?.[it.id];
+                                      const active = p?.active !== undefined ? Boolean(p.active) : false;
+                                      const amt = p?.monthlyAmount !== undefined ? Number(p.monthlyAmount) : (it.monthlyAmount || 0);
+                                      return sum + (active ? (spanMonths * amt) : 0);
+                                    }, 0);
+
+                                    const totalWithEarmarked = (metrics.totalAllocated || 0) + totalProjected;
+                                    const targetAmt = Number(goal.targetAmount) || 0;
+                                    const projectedFundingPct = targetAmt > 0 ? Math.min(999, Math.round((totalWithEarmarked / targetAmt) * 100)) : 0;
+
+                                    return (
+                                      <tfoot className="border-t-2 border-primary/30 bg-base-200/80">
+                                        <tr className="text-xs">
+                                          <td className="text-left py-3 font-bold">
+                                            <span className="badge badge-primary badge-sm font-black uppercase tracking-wider px-2 py-1 shadow-xs">
+                                              PROJECTED TOTAL
+                                            </span>
+                                          </td>
+                                          <td className="text-center font-bold text-xs text-base-content/70 py-3">
+                                            <span className="badge badge-ghost badge-xs font-semibold">
+                                              {totalActive} of {metrics.itemCount} Active
+                                            </span>
+                                          </td>
+                                          <td className="text-center font-bold text-xs text-emerald-600 dark:text-emerald-400 py-3">
+                                            {totalActive} Active Sources
+                                          </td>
+                                          <td className="text-right font-mono font-bold text-xs py-3 text-primary">
+                                            {formatINR(totalMonthly)}/mo
+                                          </td>
+                                          <td className="text-center font-mono text-xs font-semibold py-3 text-base-content/70">
+                                            {spanMonths} Mos
+                                          </td>
+                                          <td className="text-right whitespace-nowrap py-3 font-black text-emerald-600 dark:text-emerald-400 text-sm font-mono tracking-tight">
+                                            {formatINR(totalProjected)}
+                                          </td>
+                                        </tr>
+                                        <tr className="text-xs bg-base-300/40 border-t border-base-300/60 font-medium">
+                                          <td colSpan={3} className="py-2.5 px-3 text-base-content/70">
+                                            <div className="flex items-center gap-2">
+                                              <Target size={13} className="text-primary shrink-0" />
+                                              <span>Target: <strong className="font-mono text-base-content">{formatINR(targetAmt)}</strong></span>
+                                              <span className="text-base-content/30">•</span>
+                                              <span>Earmarked: <strong className="font-mono text-primary">{formatINR(metrics.totalAllocated)}</strong></span>
+                                            </div>
+                                          </td>
+                                          <td colSpan={3} className="py-2.5 px-3 text-right">
+                                            <div className="flex items-center justify-end gap-2">
+                                              <span>Total at Target (Earmarked + Projected):</span>
+                                              <span className="font-mono font-black text-xs sm:text-sm text-primary">
+                                                {formatINR(totalWithEarmarked)}
+                                              </span>
+                                              <span className={`badge badge-sm font-mono font-bold ${
+                                                totalWithEarmarked >= targetAmt ? "badge-success text-white" : "badge-warning"
+                                              }`}>
+                                                {projectedFundingPct}% Funded
+                                              </span>
+                                            </div>
+                                          </td>
+                                        </tr>
+                                      </tfoot>
+                                    );
+                                  })()}
+                                </table>
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       )}
                     </div>
                   )}
@@ -2312,49 +2735,160 @@ export default function InvSettings() {
       {/* 5. CREATE / EDIT GOAL MODAL                                          */}
       {/* -------------------------------------------------------------------- */}
       {isGoalModalOpen && (
-        <div className="fixed inset-0 z-[99999] bg-black/60 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-          <div className="bg-base-100 rounded-3xl border border-base-300 shadow-2xl w-full max-w-xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 my-auto flex flex-col max-h-[92vh]">
-            {/* Modal Header */}
-            <div className="px-6 py-4 border-b border-base-300 flex items-center justify-between shrink-0 bg-base-200/30">
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="w-10 h-10 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-xl shadow-xs shrink-0">
-                  {goalForm.icon || "🎯"}
+        <div
+          className="fixed inset-0 z-[99999] bg-black/70 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 overflow-y-auto"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setIsGoalModalOpen(false);
+              setShowEmojiPicker(false);
+              setIsMonthOpen(false);
+              setIsYearOpen(false);
+            }
+          }}
+        >
+          <div className="flex flex-col md:flex-row items-stretch justify-center gap-3.5 w-full max-w-5xl max-h-[92vh] my-auto">
+            {/* 1. SEPARATE TEMPLATES POPUP / PANEL ON THE LEFT (Vertically Stacked List) */}
+            <div
+              className="hidden md:flex flex-col w-60 lg:w-64 bg-base-100 rounded-3xl border border-base-300 shadow-2xl overflow-hidden shrink-0 animate-in fade-in zoom-in-95 duration-200"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Templates Popup Header */}
+              <div className="px-5 py-4 border-b border-base-300/80 bg-base-200/50 flex items-center justify-between shrink-0">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold border border-primary/20 shadow-xs">
+                    <Sparkles size={16} />
+                  </div>
+                  <div>
+                    <h4 className="font-extrabold text-sm text-base-content leading-tight">
+                      Goal Templates
+                    </h4>
+                    <p className="text-[10px] text-base-content/50 font-medium">
+                      Select a preset to autofill
+                    </p>
+                  </div>
                 </div>
-                <div className="min-w-0">
-                  <h3 className="font-extrabold text-base text-base-content leading-tight truncate">
-                    {editingGoal ? "Edit Financial Goal" : "Create New Goal"}
-                  </h3>
-                  <p className="text-xs text-base-content/50 mt-0.5 truncate">
-                    {editingGoal
-                      ? "Update your target amount, completion date, or notes"
-                      : "Define your target capital, timeline, and life vision"}
-                  </p>
-                </div>
+                <span className="badge badge-xs font-mono font-bold bg-base-300 text-base-content/70">
+                  {GOAL_PRESETS.length}
+                </span>
               </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setIsGoalModalOpen(false);
-                  setShowEmojiPicker(false);
-                }}
-                className="btn btn-sm btn-circle btn-ghost text-base-content/60 hover:text-base-content"
-                title="Close"
-              >
-                <X size={18} />
-              </button>
+
+              {/* Vertically Stacked Templates List */}
+              <div className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-1.5 bg-base-200/25">
+                {GOAL_PRESETS.map((preset) => {
+                  const isSelected = goalForm.category === preset.id;
+                  return (
+                    <button
+                      key={preset.id}
+                      type="button"
+                      onClick={() => {
+                        setGoalForm((prev) => ({
+                          ...prev,
+                          category: preset.id,
+                          icon: preset.icon,
+                          title:
+                            preset.id === "custom"
+                              ? (prev.title || "My Goal")
+                              : (preset.id === "house" ? "Dream Home" : preset.name),
+                          targetAmount: preset.defaultAmount,
+                          targetDate: preset.defaultYears
+                            ? dayjs().add(preset.defaultYears, "year").format("YYYY-MM-DD")
+                            : prev.targetDate,
+                        }));
+                        setShowEmojiPicker(false);
+                      }}
+                      className={`w-full p-2.5 rounded-2xl text-left transition-all border flex items-start gap-2.5 group cursor-pointer ${
+                        isSelected
+                          ? "bg-primary text-primary-content border-primary shadow-sm font-bold scale-[0.99]"
+                          : "bg-base-100 hover:bg-base-200/80 border-base-300/70 text-base-content hover:border-primary/40 shadow-xs"
+                      }`}
+                    >
+                      <div
+                        className={`w-8 h-8 rounded-xl flex items-center justify-center text-lg shrink-0 border transition-all ${
+                          isSelected
+                            ? "bg-primary-content/20 border-primary-content/30 text-primary-content"
+                            : "bg-base-200/70 border-base-300 group-hover:scale-105"
+                        }`}
+                      >
+                        {preset.icon}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between gap-1">
+                          <span className="text-xs font-extrabold truncate">
+                            {preset.id === "house" ? "Dream Home" : preset.name}
+                          </span>
+                          {preset.defaultYears && (
+                            <span
+                              className={`text-[9px] font-mono px-1.5 py-0.2 rounded-md ${
+                                isSelected
+                                  ? "bg-primary-content/20 text-primary-content font-bold"
+                                  : "text-base-content/50 bg-base-200"
+                              }`}
+                            >
+                              {preset.defaultYears}Y
+                            </span>
+                          )}
+                        </div>
+                        <div
+                          className={`text-[10px] truncate font-mono mt-0.5 ${
+                            isSelected ? "text-primary-content/85" : "text-base-content/50"
+                          }`}
+                        >
+                          {preset.desc || formatINRCompact(preset.defaultAmount)}
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
-            {/* Form & Body */}
-            <form onSubmit={handleSaveGoal} className="flex-1 min-h-0 flex flex-col overflow-hidden">
-              <div className="flex-1 overflow-y-auto custom-scrollbar p-5 sm:p-6 space-y-5">
-                {/* Popular Templates Row (Shown in Create Mode) */}
-                {!editingGoal && (
-                  <div className="space-y-1.5">
+            {/* 2. MAIN CREATE / EDIT GOAL POPUP (RIGHT) */}
+            <div
+              className="flex-1 bg-base-100 rounded-3xl border border-base-300 shadow-2xl overflow-hidden flex flex-col max-h-[92vh] animate-in fade-in zoom-in-95 duration-200"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Modal Header */}
+              <div className="px-6 py-4 border-b border-base-300 flex items-center justify-between shrink-0 bg-base-200/30">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-10 h-10 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-xl shadow-xs shrink-0">
+                    {goalForm.icon || "🎯"}
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="font-extrabold text-base text-base-content leading-tight truncate">
+                      {editingGoal ? "Edit Financial Goal" : "Create New Goal"}
+                    </h3>
+                    <p className="text-xs text-base-content/50 mt-0.5 truncate">
+                      {editingGoal
+                        ? "Update your target amount, completion date, or notes"
+                        : "Define your target capital, timeline, and life vision"}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsGoalModalOpen(false);
+                    setShowEmojiPicker(false);
+                    setIsMonthOpen(false);
+                    setIsYearOpen(false);
+                  }}
+                  className="btn btn-sm btn-circle btn-ghost text-base-content/60 hover:text-base-content"
+                  title="Close"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {/* Form & Body */}
+              <form onSubmit={handleSaveGoal} className="flex-1 min-h-0 flex flex-col overflow-hidden">
+                <div className="flex-1 overflow-y-auto custom-scrollbar p-4 sm:p-5 space-y-3.5">
+                  {/* Mobile-only Templates Carousel (md:hidden) */}
+                  <div className="md:hidden space-y-1.5 p-3 rounded-2xl bg-base-200/60 border border-base-300/80">
                     <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-extrabold uppercase tracking-wider text-base-content/50 flex items-center gap-1.5">
-                        <Sparkles size={12} className="text-primary" /> Popular Templates
+                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-base-content/50 flex items-center gap-1">
+                        <Sparkles size={11} className="text-primary" /> Goal Templates
                       </span>
-                      <span className="text-[10px] text-base-content/40 font-medium">Click to autofill</span>
+                      <span className="text-[9px] text-base-content/40">Tap to autofill</span>
                     </div>
                     <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar -mx-1 px-1">
                       {GOAL_PRESETS.map((preset) => {
@@ -2368,18 +2902,20 @@ export default function InvSettings() {
                                 ...prev,
                                 category: preset.id,
                                 icon: preset.icon,
-                                title: preset.id === "custom" ? (prev.title || "") : (preset.id === "house" ? "Dream Home" : preset.name),
+                                title:
+                                  preset.id === "custom"
+                                    ? (prev.title || "My Goal")
+                                    : (preset.id === "house" ? "Dream Home" : preset.name),
                                 targetAmount: preset.defaultAmount,
                                 targetDate: preset.defaultYears
                                   ? dayjs().add(preset.defaultYears, "year").format("YYYY-MM-DD")
                                   : prev.targetDate,
                               }));
-                              setShowEmojiPicker(false);
                             }}
-                            className={`px-3 py-1.5 rounded-xl text-xs font-semibold shrink-0 transition-all flex items-center gap-1.5 border cursor-pointer ${
+                            className={`px-2.5 py-1.5 rounded-xl text-xs font-semibold shrink-0 transition-all flex items-center gap-1.5 border cursor-pointer ${
                               isSelected
                                 ? "bg-primary text-primary-content border-primary shadow-xs font-bold"
-                                : "bg-base-200/60 hover:bg-base-200 border-base-300/80 text-base-content/75 hover:border-primary/40"
+                                : "bg-base-100 border-base-300 text-base-content/80"
                             }`}
                           >
                             <span>{preset.icon}</span>
@@ -2389,162 +2925,183 @@ export default function InvSettings() {
                       })}
                     </div>
                   </div>
-                )}
 
-                {/* Goal Title & Icon */}
-                <div className="space-y-1.5">
-                  <label className="text-[11px] font-extrabold uppercase tracking-wider text-base-content/50">
-                    Goal Title <span className="text-error">*</span>
-                  </label>
-                  <div className="flex items-center gap-2">
-                    {/* Interactive Emoji Button */}
-                    <div className="relative shrink-0">
-                      <button
-                        type="button"
-                        onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                        className="w-11 h-11 rounded-2xl bg-base-200 hover:bg-base-300 border border-base-300 flex items-center justify-center text-xl transition-all cursor-pointer shadow-xs hover:border-primary/40 active:scale-95"
-                        title="Choose icon"
-                      >
-                        {goalForm.icon || "🎯"}
-                      </button>
+                  {/* -------------------------------------------------------- */}
+                  {/* SECTION 1: GOAL TITLE & CATEGORY / ICON (Darker Card)     */}
+                  {/* -------------------------------------------------------- */}
+                  <div className="p-4 rounded-2xl bg-base-200/60 border border-base-300/80 space-y-2.5 shadow-xs">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[11px] font-extrabold uppercase tracking-wider text-base-content/60 flex items-center gap-1.5">
+                        <Target size={13} className="text-primary" />
+                        <span>Goal Title & Icon</span>
+                        <span className="text-error">*</span>
+                      </label>
+                      <span className="badge badge-xs font-bold bg-base-300/80 text-base-content/70">
+                        {goalForm.category ? (
+                          GOAL_PRESETS.find((p) => p.id === goalForm.category)?.name || "Custom"
+                        ) : "Custom"}
+                      </span>
+                    </div>
 
-                      {/* Emoji Dropdown Popover */}
-                      {showEmojiPicker && (
-                        <div className="absolute top-full left-0 mt-2 z-50 p-3 bg-base-100 rounded-2xl border border-base-300 shadow-xl w-64 animate-in fade-in zoom-in-95 duration-150">
-                          <div className="text-[10px] font-bold text-base-content/50 uppercase tracking-wider mb-2 flex items-center justify-between">
-                            <span>Select Goal Icon</span>
-                            <button
-                              type="button"
-                              onClick={() => setShowEmojiPicker(false)}
-                              className="text-base-content/40 hover:text-base-content text-xs font-bold"
-                            >
-                              ✕
-                            </button>
-                          </div>
-                          <div className="grid grid-cols-6 gap-1.5 mb-2.5">
-                            {POPULAR_GOAL_ICONS.map((emoji) => (
+                    <div className="flex items-center gap-2 max-w-md">
+                      {/* Interactive Emoji Button */}
+                      <div className="relative shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                          className="w-10 h-10 rounded-xl bg-base-100 hover:bg-base-200 border border-base-300 flex items-center justify-center text-lg transition-all cursor-pointer shadow-xs hover:border-primary/40 active:scale-95"
+                          title="Choose icon"
+                        >
+                          {goalForm.icon || "🎯"}
+                        </button>
+
+                        {/* Emoji Dropdown Popover */}
+                        {showEmojiPicker && (
+                          <div className="absolute top-full left-0 mt-2 z-50 p-3 bg-base-100 rounded-2xl border border-base-300 shadow-xl w-64 animate-in fade-in zoom-in-95 duration-150">
+                            <div className="text-[10px] font-bold text-base-content/50 uppercase tracking-wider mb-2 flex items-center justify-between">
+                              <span>Select Goal Icon</span>
                               <button
-                                key={emoji}
                                 type="button"
-                                onClick={() => {
-                                  setGoalForm((prev) => ({ ...prev, icon: emoji }));
-                                  setShowEmojiPicker(false);
-                                }}
-                                className={`w-8 h-8 rounded-xl flex items-center justify-center text-lg hover:bg-primary/20 transition-all ${
-                                  goalForm.icon === emoji ? "bg-primary/20 ring-1 ring-primary" : "bg-base-200/70"
-                                }`}
+                                onClick={() => setShowEmojiPicker(false)}
+                                className="text-base-content/40 hover:text-base-content text-xs font-bold"
                               >
-                                {emoji}
+                                ✕
                               </button>
-                            ))}
+                            </div>
+                            <div className="grid grid-cols-6 gap-1.5 mb-2.5">
+                              {POPULAR_GOAL_ICONS.map((emoji) => (
+                                <button
+                                  key={emoji}
+                                  type="button"
+                                  onClick={() => {
+                                    setGoalForm((prev) => ({ ...prev, icon: emoji }));
+                                    setShowEmojiPicker(false);
+                                  }}
+                                  className={`w-8 h-8 rounded-xl flex items-center justify-center text-lg hover:bg-primary/20 transition-all ${
+                                    goalForm.icon === emoji ? "bg-primary/20 ring-1 ring-primary" : "bg-base-200/70"
+                                  }`}
+                                >
+                                  {emoji}
+                                </button>
+                              ))}
+                            </div>
+                            <div className="flex items-center gap-1.5 pt-2 border-t border-base-200">
+                              <span className="text-[10px] text-base-content/50 shrink-0">Custom:</span>
+                              <input
+                                type="text"
+                                maxLength={4}
+                                placeholder="Emoji"
+                                value={goalForm.icon}
+                                onChange={(e) => setGoalForm((prev) => ({ ...prev, icon: e.target.value }))}
+                                className="input input-xs input-bordered w-full rounded-lg text-center bg-base-100"
+                              />
+                            </div>
                           </div>
-                          <div className="flex items-center gap-1.5 pt-2 border-t border-base-200">
-                            <span className="text-[10px] text-base-content/50 shrink-0">Custom:</span>
-                            <input
-                              type="text"
-                              maxLength={4}
-                              placeholder="Emoji"
-                              value={goalForm.icon}
-                              onChange={(e) => setGoalForm((prev) => ({ ...prev, icon: e.target.value }))}
-                              className="input input-xs input-bordered w-full rounded-lg text-center"
-                            />
-                          </div>
-                        </div>
+                        )}
+                      </div>
+
+                      {/* Title Input */}
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. Wedding 2027, Dream Home Down Payment"
+                        value={goalForm.title}
+                        onChange={(e) => setGoalForm({ ...goalForm, title: e.target.value })}
+                        className="input input-bordered h-10 flex-1 rounded-xl text-xs sm:text-sm font-semibold bg-base-100 focus:border-primary transition-all shadow-2xs"
+                      />
+                    </div>
+                  </div>
+
+                  {/* -------------------------------------------------------- */}
+                  {/* SECTION 2: TARGET CAPITAL (Darker Card)                   */}
+                  {/* -------------------------------------------------------- */}
+                  <div className="p-4 rounded-2xl bg-base-200/60 border border-base-300/80 space-y-2.5 shadow-xs">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[11px] font-extrabold uppercase tracking-wider text-base-content/60 flex items-center gap-1.5">
+                        <span className="font-mono text-primary font-bold">₹</span>
+                        <span>Target Capital</span>
+                        <span className="text-error">*</span>
+                      </label>
+                      {Number(goalForm.targetAmount) > 0 && (
+                        <span className="text-xs font-mono font-bold text-primary bg-primary/10 px-2.5 py-0.5 rounded-xl border border-primary/20">
+                          {formatINR(goalForm.targetAmount)}
+                          <span className="text-base-content/50 ml-1.5 font-medium">
+                            ({formatINRCompact(goalForm.targetAmount)})
+                          </span>
+                        </span>
                       )}
                     </div>
 
-                    {/* Title Input */}
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. Wedding 2027, Dream Home Down Payment"
-                      value={goalForm.title}
-                      onChange={(e) => setGoalForm({ ...goalForm, title: e.target.value })}
-                      className="input input-bordered h-11 flex-1 rounded-2xl text-sm font-semibold bg-base-200/40 focus:bg-base-100 transition-all"
-                    />
-                  </div>
-                </div>
-
-                {/* Target Capital */}
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <label className="text-[11px] font-extrabold uppercase tracking-wider text-base-content/50">
-                      Target Capital <span className="text-error">*</span>
-                    </label>
-                    {Number(goalForm.targetAmount) > 0 && (
-                      <span className="text-xs font-mono font-bold text-primary bg-primary/10 px-2.5 py-0.5 rounded-xl border border-primary/20">
-                        {formatINR(goalForm.targetAmount)}
-                        <span className="text-base-content/50 ml-1.5 font-medium">({formatINRCompact(goalForm.targetAmount)})</span>
+                    <div className="relative max-w-md">
+                      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-mono font-bold text-sm text-base-content/40">
+                        ₹
                       </span>
-                    )}
-                  </div>
-                  <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 font-mono font-bold text-base text-base-content/40">
-                      ₹
-                    </span>
-                    <input
-                      type="number"
-                      min="0"
-                      step="any"
-                      required
-                      placeholder="Enter target amount, e.g. 2500000"
-                      value={goalForm.targetAmount === 0 ? "" : goalForm.targetAmount}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setGoalForm((prev) => ({
-                          ...prev,
-                          targetAmount: val === "" ? "" : val,
-                        }));
-                      }}
-                      className="input input-bordered h-11 w-full pl-8 rounded-2xl font-mono text-sm font-bold bg-base-200/40 focus:bg-base-100 transition-all"
-                    />
+                      <input
+                        type="number"
+                        min="0"
+                        step="any"
+                        required
+                        placeholder="Enter target amount, e.g. 2500000"
+                        value={goalForm.targetAmount === 0 ? "" : goalForm.targetAmount}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setGoalForm((prev) => ({
+                            ...prev,
+                            targetAmount: val === "" ? "" : val,
+                          }));
+                        }}
+                        className="input input-bordered h-10 w-full pl-8 rounded-xl font-mono text-xs sm:text-sm font-bold bg-base-100 focus:border-primary transition-all shadow-2xs"
+                      />
+                    </div>
+
+                    {/* Quick Amount Shortcuts */}
+                    <div className="flex items-center gap-1 sm:gap-1.5 flex-nowrap overflow-x-auto no-scrollbar pt-0.5">
+                      <span className="text-[10px] text-base-content/40 font-bold uppercase tracking-wider shrink-0">Quick:</span>
+                      {[500000, 1000000, 2000000, 2500000, 5000000, 10000000].map((amt) => {
+                        const isSelected = Number(goalForm.targetAmount) === amt;
+                        return (
+                          <button
+                            key={amt}
+                            type="button"
+                            onClick={() => setGoalForm((prev) => ({ ...prev, targetAmount: amt }))}
+                            className={`px-2 sm:px-2.5 py-0.5 sm:py-1 font-mono text-[10px] sm:text-[11px] rounded-lg transition-all shrink-0 cursor-pointer border font-semibold ${
+                              isSelected
+                                ? "bg-primary text-primary-content border-primary shadow-xs font-bold"
+                                : "bg-base-100 hover:bg-primary/10 border-base-300 text-base-content/70 hover:text-primary hover:border-primary/40"
+                            }`}
+                          >
+                            {formatINRCompact(amt)}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
 
-                  {/* Quick Amount Shortcuts */}
-                  <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
-                    <span className="text-[10px] text-base-content/40 font-bold uppercase tracking-wider shrink-0">Quick:</span>
-                    {[500000, 1000000, 2000000, 2500000, 5000000, 10000000].map((amt) => {
-                      const isSelected = Number(goalForm.targetAmount) === amt;
-                      return (
-                        <button
-                          key={amt}
-                          type="button"
-                          onClick={() => setGoalForm((prev) => ({ ...prev, targetAmount: amt }))}
-                          className={`px-2.5 py-1 font-mono text-[11px] rounded-xl transition-all shrink-0 cursor-pointer border font-semibold ${
-                            isSelected
-                              ? "bg-primary/20 border-primary text-primary shadow-xs font-bold"
-                              : "bg-base-200/60 hover:bg-primary/10 border-base-300 text-base-content/60 hover:text-primary hover:border-primary/40"
+                  {/* -------------------------------------------------------- */}
+                  {/* SECTION 3: TARGET DATE & HORIZON TIMELINE (Darker Card)   */}
+                  {/* -------------------------------------------------------- */}
+                  <div className="p-4 rounded-2xl bg-base-200/60 border border-base-300/80 space-y-3 shadow-xs">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[11px] font-extrabold uppercase tracking-wider text-base-content/60 flex items-center gap-1.5">
+                        <Calendar size={13} className="text-primary" />
+                        <span>Target Date & Timeline</span>
+                        <span className="text-error">*</span>
+                      </label>
+                      {modalDateInfo && (
+                        <span
+                          className={`badge badge-sm font-bold font-mono text-[10px] ${
+                            modalDateInfo.isPast
+                              ? "badge-error text-white"
+                              : modalDateInfo.isToday
+                              ? "badge-warning"
+                              : "badge-primary badge-soft text-primary"
                           }`}
                         >
-                          {formatINRCompact(amt)}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
+                          {modalDateInfo.text}
+                        </span>
+                      )}
+                    </div>
 
-                {/* Target Date & Timeline & Age */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <label className="text-[11px] font-extrabold uppercase tracking-wider text-base-content/50 flex items-center gap-1.5">
-                      <Calendar size={12} className="text-primary" /> Target Date & Timeline <span className="text-error">*</span>
-                    </label>
-                    {modalDateInfo && (
-                      <span
-                        className={`badge badge-sm font-bold font-mono text-[10px] ${
-                          modalDateInfo.isPast
-                            ? "badge-error text-white"
-                            : modalDateInfo.isToday
-                            ? "badge-warning"
-                            : "badge-primary badge-soft text-primary"
-                        }`}
-                      >
-                        {modalDateInfo.text}
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
                     {/* Month & Year Separate Dropdown Popups */}
                     <div className="grid grid-cols-2 gap-2 sm:gap-2.5">
                       {/* Month Dropdown Popup */}
@@ -2559,10 +3116,10 @@ export default function InvSettings() {
                             setIsYearOpen(false);
                             setShowEmojiPicker(false);
                           }}
-                          className={`h-11 w-full px-3 sm:px-3.5 rounded-2xl border flex items-center justify-between text-xs font-bold transition-all cursor-pointer shadow-2xs ${
+                          className={`h-10 w-full px-3 sm:px-3.5 rounded-xl border flex items-center justify-between text-xs font-bold transition-all cursor-pointer shadow-2xs ${
                             isMonthOpen
                               ? "bg-base-100 border-primary ring-2 ring-primary/20 text-primary"
-                              : "bg-base-200/50 hover:bg-base-200 border-base-300 text-base-content hover:border-primary/40"
+                              : "bg-base-100 hover:bg-base-200/80 border-base-300 text-base-content hover:border-primary/40"
                           }`}
                           title="Select Target Month"
                         >
@@ -2629,10 +3186,10 @@ export default function InvSettings() {
                             setIsMonthOpen(false);
                             setShowEmojiPicker(false);
                           }}
-                          className={`h-11 w-full px-3 sm:px-3.5 rounded-2xl border flex items-center justify-between text-xs font-bold transition-all cursor-pointer shadow-2xs ${
+                          className={`h-10 w-full px-3 sm:px-3.5 rounded-xl border flex items-center justify-between text-xs font-bold transition-all cursor-pointer shadow-2xs ${
                             isYearOpen
                               ? "bg-base-100 border-primary ring-2 ring-primary/20 text-primary"
-                              : "bg-base-200/50 hover:bg-base-200 border-base-300 text-base-content hover:border-primary/40"
+                              : "bg-base-100 hover:bg-base-200/80 border-base-300 text-base-content hover:border-primary/40"
                           }`}
                           title="Select Target Year"
                         >
@@ -2688,7 +3245,7 @@ export default function InvSettings() {
                     </div>
 
                     {/* Quick Horizon Buttons */}
-                    <div className="flex items-center gap-1 bg-base-200/50 border border-base-300/80 rounded-2xl p-1 justify-between">
+                    <div className="flex items-center gap-1 bg-base-100 border border-base-300 rounded-2xl p-1 justify-between shadow-2xs">
                       {[
                         { label: "+1Y", years: 1 },
                         { label: "+2Y", years: 2 },
@@ -2710,7 +3267,7 @@ export default function InvSettings() {
                             className={`flex-1 py-1.5 font-mono text-[11px] rounded-xl font-bold transition-all text-center cursor-pointer ${
                               isSelected
                                 ? "bg-primary text-primary-content shadow-xs"
-                                : "hover:bg-base-300 text-base-content/70 hover:text-base-content"
+                                : "hover:bg-base-200 text-base-content/70 hover:text-base-content"
                             }`}
                           >
                             {h.label}
@@ -2718,124 +3275,123 @@ export default function InvSettings() {
                         );
                       })}
                     </div>
-                  </div>
 
-                  {/* Age on Target Date Banner */}
-                  <div className="rounded-2xl bg-base-200/50 border border-base-300/80 p-3 flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <div className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0 border border-primary/20 overflow-hidden shadow-xs">
-                        {userProfilePic ? (
-                          <img
-                            src={userProfilePic}
-                            alt="Profile"
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <span className="text-xs font-bold text-primary font-mono">
-                            {userInitials || "U"}
-                          </span>
-                        )}
-                      </div>
-                      <div className="min-w-0">
-                        <div className="text-[10px] font-semibold text-base-content/50 uppercase tracking-wider">Age on Target Date</div>
-                        <div className="flex items-center gap-1.5 mt-0.5">
-                          {userAgeOnTargetDate ? (
-                            <span className="font-mono font-bold text-xs text-primary">
-                              {userAgeOnTargetDate.years} Yrs{userAgeOnTargetDate.months > 0 ? `, ${userAgeOnTargetDate.months} Mos` : ""}
-                            </span>
+                    {/* Age on Target Date Card */}
+                    <div className="rounded-2xl bg-base-100 border border-base-300 p-3 flex items-center justify-between gap-3 shadow-2xs">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0 border border-primary/20 overflow-hidden shadow-xs">
+                          {userProfilePic ? (
+                            <img
+                              src={userProfilePic}
+                              alt="Profile"
+                              className="w-full h-full object-cover"
+                            />
                           ) : (
-                            <span className="text-xs text-base-content/40 font-mono">
-                              {userDob ? "—" : "Set DOB to calculate age"}
-                            </span>
-                          )}
-                          {modalDateInfo && !modalDateInfo.isPast && (
-                            <span className="text-[10px] text-base-content/40 font-mono">
-                              • {dayjs(goalForm.targetDate).format("MMMM YYYY")}
+                            <span className="text-xs font-bold text-primary font-mono">
+                              {userInitials || "U"}
                             </span>
                           )}
                         </div>
+                        <div className="min-w-0">
+                          <div className="text-[10px] font-semibold text-base-content/50 uppercase tracking-wider">
+                            Age on Target Date
+                          </div>
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            {userAgeOnTargetDate ? (
+                              <span className="font-mono font-bold text-xs text-primary">
+                                {userAgeOnTargetDate.years} Yrs{userAgeOnTargetDate.months > 0 ? `, ${userAgeOnTargetDate.months} Mos` : ""}
+                              </span>
+                            ) : (
+                              <span className="text-xs text-base-content/40 font-mono">
+                                {userDob ? "—" : "Set DOB to calculate age"}
+                              </span>
+                            )}
+                            {modalDateInfo && !modalDateInfo.isPast && (
+                              <span className="text-[10px] text-base-content/40 font-mono">
+                                • {dayjs(goalForm.targetDate).format("MMMM YYYY")}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="text-right shrink-0">
+                        <div className="text-[10px] text-base-content/50 font-mono">
+                          {userDob && dayjs(userDob).isValid() ? `DOB: ${dayjs(userDob).format("DD MMM YYYY")}` : "DOB: Not set"}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsGoalModalOpen(false);
+                            navigate("/dashboard/settings/profile");
+                          }}
+                          className="text-[10px] text-primary hover:underline font-bold inline-flex items-center gap-1 mt-0.5 cursor-pointer"
+                          title="Update your Date of Birth in Profile Settings"
+                        >
+                          <span>{userDob ? "Change in Settings" : "Set in Settings"}</span>
+                          <ExternalLink size={9} className="opacity-70" />
+                        </button>
                       </div>
                     </div>
 
-                    <div className="text-right shrink-0">
-                      <div className="text-[10px] text-base-content/50 font-mono">
-                        {userDob && dayjs(userDob).isValid() ? `DOB: ${dayjs(userDob).format("DD MMM YYYY")}` : "DOB: Not set"}
+                    {modalDateInfo?.isPast && (
+                      <div className="px-3 py-2 rounded-xl bg-error/10 border border-error/20 flex items-center gap-1.5 text-xs text-error font-medium">
+                        <AlertCircle size={14} className="shrink-0" />
+                        <span>Target month is in the past. Please select a future month & year.</span>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => setIsEditingDob(!isEditingDob)}
-                        className="text-[10px] text-primary hover:underline font-bold"
-                      >
-                        {isEditingDob ? "Done" : userDob ? "Change" : "Set DOB"}
-                      </button>
-                    </div>
+                    )}
                   </div>
 
-                  {isEditingDob && (
-                    <div className="px-3 py-2 bg-base-200/80 rounded-2xl border border-base-300 flex items-center justify-between gap-3 animate-in fade-in duration-150">
-                      <span className="text-xs font-semibold text-base-content/70">Date of Birth (Profile):</span>
-                      <input
-                        type="date"
-                        max={dayjs().format("YYYY-MM-DD")}
-                        value={userDob || ""}
-                        onChange={(e) => handleUpdateDob(e.target.value)}
-                        className="input input-xs input-bordered rounded-xl font-mono text-xs"
-                      />
+                  {/* -------------------------------------------------------- */}
+                  {/* SECTION 4: NOTES & VISION (Darker Card)                   */}
+                  {/* -------------------------------------------------------- */}
+                  <div className="p-4 rounded-2xl bg-base-200/60 border border-base-300/80 space-y-2 shadow-xs">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[11px] font-extrabold uppercase tracking-wider text-base-content/60 flex items-center gap-1.5">
+                        <Layers size={13} className="text-primary" />
+                        <span>Notes & Vision</span>
+                      </label>
+                      <span className="text-[10px] text-base-content/40 font-medium">Optional</span>
                     </div>
-                  )}
-
-                  {modalDateInfo?.isPast && (
-                    <div className="px-3 py-2 rounded-xl bg-error/10 border border-error/20 flex items-center gap-1.5 text-xs text-error font-medium">
-                      <AlertCircle size={14} className="shrink-0" />
-                      <span>Target month is in the past. Please select a future month & year.</span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Notes & Vision */}
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <label className="text-[11px] font-extrabold uppercase tracking-wider text-base-content/50">
-                      Notes & Vision
-                    </label>
-                    <span className="text-[10px] text-base-content/40 font-medium">Optional</span>
+                    <textarea
+                      rows={2}
+                      placeholder="e.g. Venue, jewelry, down payment breakdown, vacation wishlist..."
+                      value={goalForm.notes}
+                      onChange={(e) => setGoalForm({ ...goalForm, notes: e.target.value })}
+                      className="textarea textarea-bordered w-full rounded-2xl text-xs bg-base-100 focus:border-primary transition-all resize-none min-h-[58px] shadow-2xs"
+                    />
                   </div>
-                  <textarea
-                    rows={2}
-                    placeholder="e.g. Venue, jewelry, down payment breakdown, vacation wishlist..."
-                    value={goalForm.notes}
-                    onChange={(e) => setGoalForm({ ...goalForm, notes: e.target.value })}
-                    className="textarea textarea-bordered w-full rounded-2xl text-xs bg-base-200/40 focus:bg-base-100 transition-all resize-none min-h-[58px]"
-                  />
                 </div>
-              </div>
 
-              {/* Modal Footer */}
-              <div className="px-6 py-4 border-t border-base-300 bg-base-200/30 flex items-center justify-between gap-2 shrink-0">
-                <p className="text-[11px] text-base-content/45 font-medium hidden sm:block">
-                  {editingGoal ? "Changes save directly to your database." : "You can allot savings & investments after creating."}
-                </p>
-                <div className="flex items-center gap-2 ml-auto">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsGoalModalOpen(false);
-                      setShowEmojiPicker(false);
-                    }}
-                    className="btn btn-sm btn-ghost rounded-xl font-semibold"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="btn btn-sm btn-primary rounded-xl font-bold gap-1.5 px-5 shadow-sm"
-                  >
-                    <Check size={14} />
-                    <span>{editingGoal ? "Save Changes" : "Create Goal"}</span>
-                  </button>
+                {/* Modal Footer */}
+                <div className="px-6 py-4 border-t border-base-300 bg-base-200/30 flex items-center justify-between gap-2 shrink-0">
+                  <p className="text-[11px] text-base-content/45 font-medium hidden sm:block">
+                    {editingGoal ? "Changes save directly to your database." : "You can allot savings & investments after creating."}
+                  </p>
+                  <div className="flex items-center gap-2 ml-auto">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsGoalModalOpen(false);
+                        setShowEmojiPicker(false);
+                        setIsMonthOpen(false);
+                        setIsYearOpen(false);
+                      }}
+                      className="btn btn-sm btn-ghost rounded-xl font-semibold"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="btn btn-sm btn-primary rounded-xl font-bold gap-1.5 px-5 shadow-sm"
+                    >
+                      <Check size={14} />
+                      <span>{editingGoal ? "Save Changes" : "Create Goal"}</span>
+                    </button>
+                  </div>
                 </div>
-              </div>
-            </form>
+              </form>
+            </div>
           </div>
         </div>
       )}

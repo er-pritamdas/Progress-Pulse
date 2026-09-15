@@ -220,6 +220,7 @@ export const clearPlanAllocations = async (req, res) => {
       {
         $set: {
           allocations: {},
+          projections: {},
           selectedBanks: [],
           allocatedBanks: [],
           selectedStocks: [],

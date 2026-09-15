@@ -54,6 +54,10 @@ const investmentPlanSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.Mixed,
       default: {},
     },
+    projections: {
+      type: mongoose.Schema.Types.Mixed,
+      default: {},
+    },
     selectedBanks: {
       type: [String],
       default: [],

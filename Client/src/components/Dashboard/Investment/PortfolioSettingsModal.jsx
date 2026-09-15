@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import dayjs from "dayjs";
 import {
   X,
@@ -12,7 +13,9 @@ import {
   CheckCircle2,
   Sparkles,
   SlidersHorizontal,
-  Info
+  Info,
+  ExternalLink,
+  User,
 } from "lucide-react";
 
 const PRESET_LIMITS = [
@@ -55,24 +58,57 @@ export default function PortfolioSettingsModal({
   onClose,
   upperLimit = 5000000,
   milestones = [],
-  dob = "1998-05-15",
+  dob = "",
+  userProfile: propUserProfile = null,
   onSave,
 }) {
+  const navigate = useNavigate();
+
   const [localLimit, setLocalLimit] = useState(upperLimit);
-  const [localDob, setLocalDob] = useState(dob);
   const [localMilestones, setLocalMilestones] = useState(milestones);
   const [newMilestoneAmount, setNewMilestoneAmount] = useState("");
   const [newMilestoneLabel, setNewMilestoneLabel] = useState("");
 
+  const [profileInfo, setProfileInfo] = useState(() => {
+    let pic = localStorage.getItem("profilePic") || "";
+    let name = localStorage.getItem("fullName") || localStorage.getItem("username") || "User";
+    let username = localStorage.getItem("username") || "";
+    try {
+      const parsed = JSON.parse(localStorage.getItem("user_profile") || "{}");
+      if (parsed.profilePic && !pic) pic = parsed.profilePic;
+      if (parsed.fullName) name = parsed.fullName;
+      if (parsed.username) username = parsed.username;
+    } catch (e) {}
+    return {
+      profilePic: propUserProfile?.profilePic || pic,
+      fullName: propUserProfile?.fullName || name,
+      username: propUserProfile?.username || username,
+    };
+  });
+
   useEffect(() => {
     if (isOpen) {
       setLocalLimit(upperLimit);
-      setLocalDob(dob);
       setLocalMilestones(milestones && milestones.length > 0 ? [...milestones] : generateDefaultMilestones(upperLimit));
       setNewMilestoneAmount("");
       setNewMilestoneLabel("");
+
+      let pic = localStorage.getItem("profilePic") || "";
+      let name = localStorage.getItem("fullName") || localStorage.getItem("username") || "User";
+      let username = localStorage.getItem("username") || "";
+      try {
+        const parsed = JSON.parse(localStorage.getItem("user_profile") || "{}");
+        if (parsed.profilePic) pic = parsed.profilePic;
+        if (parsed.fullName) name = parsed.fullName;
+        if (parsed.username) username = parsed.username;
+      } catch (e) {}
+      setProfileInfo({
+        profilePic: propUserProfile?.profilePic || pic,
+        fullName: propUserProfile?.fullName || name,
+        username: propUserProfile?.username || username,
+      });
     }
-  }, [isOpen, upperLimit, dob, milestones]);
+  }, [isOpen, upperLimit, milestones, propUserProfile]);
 
   // Handle ESC key to close
   useEffect(() => {
@@ -135,36 +171,48 @@ export default function PortfolioSettingsModal({
 
   const handleSave = () => {
     const finalLimit = Number(localLimit) || 5000000;
-    const finalDob = localDob || "1998-05-15";
     const sortedMilestones = [...localMilestones].sort((a, b) => a.amount - b.amount);
 
     onSave({
       upperLimit: finalLimit,
       milestones: sortedMilestones,
-      dob: finalDob,
+      dob: dob,
     });
     onClose();
   };
 
   const handleResetDefaults = () => {
     setLocalLimit(5000000);
-    setLocalDob("1998-05-15");
     setLocalMilestones(generateDefaultMilestones(5000000));
   };
 
-  const previewAge = calculateExactAge(localDob);
+  const userInitials = useMemo(() => {
+    const name = (profileInfo.fullName || "User").trim();
+    const parts = name.split(" ").filter(Boolean);
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return name ? name.slice(0, 2).toUpperCase() : "U";
+  }, [profileInfo.fullName]);
+
+  const previewAge = useMemo(() => calculateExactAge(dob), [dob]);
+
+  const handleRedirectToSettings = () => {
+    onClose();
+    navigate("/dashboard/settings/profile");
+  };
 
   if (!isOpen) return null;
 
   return (
     <div
-      className="fixed inset-0 z-[99999] bg-black/75 backdrop-blur-md flex items-center justify-center p-3 sm:p-5 animate-in fade-in duration-200 overflow-y-auto"
+      className="fixed inset-0 z-[99999] bg-black/75 backdrop-blur-md flex items-center justify-center p-3 sm:p-5 overflow-y-auto"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
       <div
-        className="bg-base-100 w-full max-w-2xl max-h-[92vh] rounded-3xl shadow-2xl border border-base-300/80 flex flex-col overflow-hidden animate-in zoom-in-95 duration-200 my-auto"
+        className="bg-base-100 w-full max-w-2xl max-h-[92vh] rounded-3xl shadow-2xl border border-base-300/80 flex flex-col overflow-hidden my-auto"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -178,7 +226,7 @@ export default function PortfolioSettingsModal({
                 Portfolio & Goal Settings
               </h2>
               <p className="text-xs text-base-content/60 font-medium">
-                Customize your upper limit, target milestones, and birth date
+                Customize your portfolio upper limit and milestone targets
               </p>
             </div>
           </div>
@@ -194,33 +242,91 @@ export default function PortfolioSettingsModal({
 
         {/* Modal Body */}
         <div className="p-6 overflow-y-auto space-y-6 max-h-[calc(92vh-140px)]">
-          {/* 1. Date of Birth Section */}
+          {/* 1. User Profile & Age from Settings (Read-only, redirect to settings to edit) */}
           <div className="bg-base-200/50 rounded-2xl p-4 border border-base-300/50 space-y-3">
             <div className="flex items-center justify-between gap-2">
               <label className="text-xs font-bold uppercase tracking-wider text-base-content/70 flex items-center gap-2">
-                <Calendar size={14} className="text-primary" /> User Date of Birth (DOB)
+                <User size={14} className="text-primary" /> Investor Profile & Age
               </label>
-              <span className="badge badge-sm font-mono font-bold bg-primary/10 text-primary border-primary/20">
-                {previewAge.years}y {previewAge.months}m {previewAge.days}d
-              </span>
+              {dob && dayjs(dob).isValid() ? (
+                <span className="badge badge-sm font-mono font-bold bg-primary/10 text-primary border-primary/20">
+                  {previewAge.years}y {previewAge.months}m {previewAge.days}d
+                </span>
+              ) : (
+                <span className="badge badge-sm font-bold bg-warning/10 text-warning border-warning/20">
+                  DOB Not Set
+                </span>
+              )}
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-center">
-              <div>
-                <input
-                  type="date"
-                  className="input input-bordered input-sm w-full font-bold font-mono bg-base-100 text-xs rounded-xl"
-                  value={localDob}
-                  max={dayjs().format("YYYY-MM-DD")}
-                  onChange={(e) => setLocalDob(e.target.value)}
-                />
+            <div className="bg-base-100 p-3.5 rounded-2xl border border-base-300/60 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              {/* Left: Avatar + User Info */}
+              <div className="flex items-center gap-3.5 min-w-0">
+                {profileInfo.profilePic ? (
+                  <div className="w-12 h-12 rounded-2xl overflow-hidden shrink-0 border-2 border-primary/30 shadow-xs">
+                    <img
+                      src={profileInfo.profilePic}
+                      alt={profileInfo.fullName || "User Avatar"}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                ) : (
+                  <div className="w-12 h-12 rounded-2xl bg-primary/15 text-primary font-black flex items-center justify-center text-sm shrink-0 border border-primary/25 shadow-xs">
+                    {userInitials}
+                  </div>
+                )}
+
+                <div className="min-w-0">
+                  <div className="font-extrabold text-sm text-base-content truncate">
+                    {profileInfo.fullName || "Investor Profile"}
+                  </div>
+                  {profileInfo.username && (
+                    <div className="text-[11px] text-base-content/50 font-mono truncate">
+                      @{profileInfo.username}
+                    </div>
+                  )}
+                  <div className="text-[11px] text-base-content/65 font-medium mt-0.5 flex items-center gap-1.5">
+                    <Calendar size={12} className="text-primary shrink-0" />
+                    <span>
+                      {dob && dayjs(dob).isValid()
+                        ? `Born ${dayjs(dob).format("D MMMM YYYY")}`
+                        : "DOB not configured in profile"}
+                    </span>
+                  </div>
+                </div>
               </div>
-              <div className="text-xs text-base-content/70 bg-base-100 p-2.5 rounded-xl border border-base-300/40">
-                <span className="font-bold text-base-content">Calculated Age: </span>
-                <span className="font-mono text-primary font-extrabold">
-                  {previewAge.years} Years, {previewAge.months} Months, {previewAge.days} Days
+
+              {/* Right: Calculated Age Display */}
+              <div className="bg-base-200/60 px-4 py-2 rounded-xl border border-base-300/50 flex flex-col sm:items-end justify-center shrink-0">
+                <span className="text-[10px] uppercase font-extrabold tracking-wider text-base-content/50">
+                  Current Age
+                </span>
+                <span className="font-mono text-primary font-black text-sm sm:text-base">
+                  {dob && dayjs(dob).isValid() ? (
+                    `${previewAge.years} Yrs, ${previewAge.months} Mos, ${previewAge.days} Days`
+                  ) : (
+                    <span className="text-warning text-xs font-semibold">Not Set in Settings</span>
+                  )}
                 </span>
               </div>
+            </div>
+
+            {/* Redirect / Notice Bar */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-1 text-xs">
+              <p className="text-[11px] text-base-content/60 flex items-center gap-1.5 min-w-0">
+                <Info size={13} className="text-info shrink-0" />
+                <span>Age is retrieved from your account settings and cannot be edited here.</span>
+              </p>
+              <button
+                type="button"
+                onClick={handleRedirectToSettings}
+                className="btn btn-xs btn-outline btn-primary gap-1.5 font-bold rounded-xl shrink-0 self-start sm:self-auto transition-all hover:shadow-xs"
+                title="Go to User Settings to update your Date of Birth"
+              >
+                <Settings2 size={12} />
+                <span>Change in Settings</span>
+                <ExternalLink size={11} className="opacity-70" />
+              </button>
             </div>
           </div>
 
