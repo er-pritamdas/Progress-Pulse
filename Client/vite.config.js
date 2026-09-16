@@ -1,18 +1,94 @@
-import { defineConfig } from 'vite';
-import tailwindcss from '@tailwindcss/vite';
-import react from '@vitejs/plugin-react'
-
-// https://vite.dev/config/
-export default defineConfig({
-  server:{
-    proxy:{
-      // '/api': 'http://backend:8000'
-      // '/api': 'http://localhost:8000'
-      '/api': 'https://progress-pulse-8cdj.onrender.com/'
-    },
+{
+  "name": "client",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "lint": "eslint .",
+    "preview": "vite preview"
   },
-  plugins: [react(),tailwindcss()],
-})
-
-
-
+  "dependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.0",
+    "@mui/material": "^7.0.1",
+    "@reduxjs/toolkit": "^2.8.1",
+    "@splinetool/react-spline": "^4.0.0",
+    "@tailwindcss/vite": "^4.0.14",
+    "antd": "^5.24.4",
+    "apexcharts": "^4.7.0",
+    "axios": "^1.8.4",
+    "culori": "^4.0.1",
+    "daisyui": "^5.0.6",
+    "dayjs": "^1.11.13",
+    "framer-motion": "^12.9.2",
+    "lucide-react": "^0.487.0",
+    "react": "^19.0.0",
+    "react-apexcharts": "^1.7.0",
+    "react-dom": "^19.0.0",
+    "react-icons": "^5.5.0",
+    "react-redux": "^9.2.0",
+    "react-router-dom": "^7.3.0",
+    "recharts": "^2.15.2",
+    "tailwindcss": "^4.0.14"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.21.0",
+    "@types/react": "^19.0.10",
+    "@types/react-dom": "^19.0.4",
+    "@vitejs/plugin-react": "^4.3.4",
+    "eslint": "^9.21.0",
+    "eslint-plugin-react-hooks": "^5.1.0",
+    "eslint-plugin-react-refresh": "^0.4.19",
+    "globals": "^15.15.0",
+    "vite": "^6.2.0"
+  }
+}
+{
+  "name": "client",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "lint": "eslint .",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.0",
+    "@mui/material": "^7.0.1",
+    "@reduxjs/toolkit": "^2.8.1",
+    "@splinetool/react-spline": "^4.0.0",
+    "@tailwindcss/vite": "^4.0.14",
+    "antd": "^5.24.4",
+    "apexcharts": "^4.7.0",
+    "axios": "^1.8.4",
+    "culori": "^4.0.1",
+    "daisyui": "^5.0.6",
+    "dayjs": "^1.11.13",
+    "framer-motion": "^12.9.2",
+    "lucide-react": "^0.487.0",
+    "react": "^19.0.0",
+    "react-apexcharts": "^1.7.0",
+    "react-dom": "^19.0.0",
+    "react-icons": "^5.5.0",
+    "react-redux": "^9.2.0",
+    "react-router-dom": "^7.3.0",
+    "recharts": "^2.15.2",
+    "tailwindcss": "^4.0.14"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.21.0",
+    "@types/react": "^19.0.10",
+    "@types/react-dom": "^19.0.4",
+    "@vitejs/plugin-react": "^4.3.4",
+    "eslint": "^9.21.0",
+    "eslint-plugin-react-hooks": "^5.1.0",
+    "eslint-plugin-react-refresh": "^0.4.19",
+    "globals": "^15.15.0",
+    "vite": "^6.2.0"
+  }
+}
