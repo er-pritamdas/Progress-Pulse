@@ -78,11 +78,34 @@ export const NUTRIENT_CATEGORIES = {
   ],
 };
 
-function DailyNutrientsModal({ isOpen, onClose, selectedDate, data, calorieTarget }) {
+const MEAL_ICONS = {
+  All: "📊",
+  Breakfast: "🍳",
+  Lunch: "🥗",
+  Dinner: "🍲",
+  Snacks: "🍎",
+  Other: "☕",
+};
+
+function DailyNutrientsModal({
+  isOpen,
+  onClose,
+  selectedDate,
+  data,
+  calorieTarget,
+  initialMeal = "All",
+}) {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("All");
+  const [activeMeal, setActiveMeal] = useState(initialMeal || "All");
   const [selectedWikiNutrient, setSelectedWikiNutrient] = useState(null);
   const [contributorNutrient, setContributorNutrient] = useState(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      setActiveMeal(initialMeal || "All");
+    }
+  }, [isOpen, initialMeal]);
 
   const habitState = useSelector((state) => state.habit || {});
   const age = habitState.age || 21;
@@ -111,6 +134,12 @@ function DailyNutrientsModal({ isOpen, onClose, selectedDate, data, calorieTarge
     : Object.entries(meals).flatMap(([meal, items]) =>
         items.map((item) => ({ ...item, mealType: meal }))
       );
+
+  // Active logs based on selected meal filter ("All" or specific meal)
+  const activeLogs =
+    activeMeal === "All"
+      ? allLogs
+      : (meals[activeMeal] || []).map((item) => ({ ...item, mealType: activeMeal }));
 
   // Target Calorie determination (Min & Max from settings)
   const settingsIntake = habitState.settings?.intake;
@@ -219,7 +248,7 @@ function DailyNutrientsModal({ isOpen, onClose, selectedDate, data, calorieTarge
       totals[n.id] = 0;
     });
 
-    allLogs.forEach((log) => {
+    activeLogs.forEach((log) => {
       const servings = log.servings || 1;
       const foodObj = log.foodId || log;
 
@@ -277,115 +306,289 @@ function DailyNutrientsModal({ isOpen, onClose, selectedDate, data, calorieTarge
       : [activeTab];
 
   return (
-    <div className="fixed inset-0 z-[99999] bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
-      <div className="bg-base-200 rounded-3xl max-w-7xl w-full h-[680px] border border-base-300 shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-[99999] bg-black/60 backdrop-blur-md flex items-center justify-center p-3 sm:p-4">
+      <div className="bg-base-200 rounded-3xl max-w-4xl w-full h-[700px] max-h-[92vh] border border-base-300 shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         {/* Modal Header */}
-        <div className="p-5 sm:p-6 bg-base-300/80 border-b border-base-300 flex justify-between items-center shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="p-3 bg-primary/20 text-primary rounded-2xl">
-              <BarChart3 size={26} />
+        <div className="px-5 py-4 bg-base-300/80 border-b border-base-300 flex justify-between items-center shrink-0">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="p-2 bg-info/20 text-info rounded-xl shrink-0">
+              <Info size={19} />
             </div>
-            <div>
-              <h2 className="text-xl font-bold flex items-center gap-2">
-                Complete Daily Nutrient Report & Habit Profile Limits
+            <div className="min-w-0">
+              <h2 className="text-base sm:text-lg font-bold truncate">
+                {activeMeal === "All" ? "Daily Nutrients" : `${activeMeal} Nutrients`}
               </h2>
-              <p className="text-xs text-base-content/70">
-                Nutrient breakdown for <span className="font-semibold text-primary">{selectedDate}</span> ({allLogs.length} food items logged)
+              <p className="text-[11px] text-base-content/70 truncate">
+                {activeMeal === "All" ? "Daily" : activeMeal} breakdown for{" "}
+                <span className="font-semibold text-primary">{selectedDate}</span> •{" "}
+                {activeLogs.length} {activeLogs.length === 1 ? "item" : "items"} logged
               </p>
             </div>
           </div>
           <button
-            className="btn btn-sm btn-circle btn-ghost"
+            className="btn btn-sm btn-circle btn-ghost shrink-0"
             onClick={onClose}
           >
-            <X size={20} />
+            <X size={18} />
           </button>
         </div>
 
-        {/* Modal Body */}
-        <div className="p-5 sm:p-6 space-y-6 flex-1 overflow-y-auto min-h-0">
-          {/* Macro Calorie Distribution & Target Progress Bar */}
-          <div className="bg-base-100 p-5 rounded-2xl border border-base-300 shadow-sm space-y-3">
-            <div className="flex flex-wrap justify-between items-center text-xs font-bold text-base-content/80 gap-2">
-              <span className="uppercase tracking-wider flex items-center gap-1.5 text-primary">
-                <Activity size={15} /> Daily Calorie & Macro Target Progress
-              </span>
-              <div className="flex items-center gap-3">
-                <span className="font-mono text-xs">
-                  Energy: <span className="text-primary font-bold">{nutrientTotals.calories || 0}</span> / {calorieMin} – {calorieMax} kcal
+        {/* Meal Filter Pills (All / Breakfast / Lunch / Dinner / Snacks / Other) */}
+        <div className="px-4 sm:px-5 pt-3 pb-1 shrink-0 bg-base-200 border-b border-base-300/40">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {["All", "Breakfast", "Lunch", "Dinner", "Snacks", "Other"].map((meal) => {
+              const count = meal === "All" ? allLogs.length : (meals[meal]?.length || 0);
+              const isActive = activeMeal === meal;
+              return (
+                <button
+                  key={meal}
+                  type="button"
+                  onClick={() => setActiveMeal(meal)}
+                  className={`btn btn-xs rounded-xl font-bold gap-1 transition-all ${
+                    isActive
+                      ? "btn-primary shadow-xs"
+                      : "btn-ghost border border-base-300 text-base-content/70 hover:text-base-content hover:bg-base-300/60"
+                  }`}
+                >
+                  <span className="text-xs select-none">{MEAL_ICONS[meal] || "🍴"}</span>
+                  <span>{meal}</span>
+                  {count > 0 && (
+                    <span
+                      className={`text-[9px] px-1 py-0.2 rounded-md font-mono ${
+                        isActive
+                          ? "bg-primary-content/25 text-primary-content"
+                          : "bg-base-300 text-base-content/70"
+                      }`}
+                    >
+                      {count}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Modal Body (overflow-x-hidden to strictly prevent any horizontal scrollbar) */}
+        <div className="p-4 sm:p-5 space-y-4 sm:space-y-5 flex-1 overflow-y-auto overflow-x-hidden min-h-0">
+          {/* Donut Representation for Daily / Meal Calorie & Macro Target Progress */}
+          <div className="bg-base-100 p-4 rounded-2xl border border-base-300 shadow-sm flex flex-col sm:flex-row items-center gap-4 sm:gap-5">
+            {/* Donut SVG Graphic */}
+            <div className="relative shrink-0 flex items-center justify-center">
+              {(() => {
+                const donutR = 38;
+                const donutCirc = 2 * Math.PI * donutR; // ≈ 238.76
+                const pDash = (proteinPct / 100) * donutCirc;
+                const cDash = (carbsPct / 100) * donutCirc;
+                const fDash = (fatPct / 100) * donutCirc;
+
+                const pOffset = 0;
+                const cOffset = -pDash;
+                const fOffset = -(pDash + cDash);
+
+                return (
+                  <svg viewBox="0 0 100 100" className="w-28 h-28 sm:w-32 sm:h-32 drop-shadow-xs shrink-0">
+                    <g transform="rotate(-90 50 50)">
+                      {/* Background Track */}
+                      <circle
+                        cx="50"
+                        cy="50"
+                        r={donutR}
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="8.5"
+                        opacity="0.12"
+                      />
+
+                      {/* Protein Arc */}
+                      {proteinPct > 0 && (
+                        <circle
+                          cx="50"
+                          cy="50"
+                          r={donutR}
+                          fill="none"
+                          stroke="#0ea5e9"
+                          strokeWidth="8.5"
+                          strokeDasharray={`${pDash} ${donutCirc}`}
+                          strokeDashoffset={pOffset}
+                          className="transition-all duration-500"
+                        />
+                      )}
+
+                      {/* Carbs Arc */}
+                      {carbsPct > 0 && (
+                        <circle
+                          cx="50"
+                          cy="50"
+                          r={donutR}
+                          fill="none"
+                          stroke="#f59e0b"
+                          strokeWidth="8.5"
+                          strokeDasharray={`${cDash} ${donutCirc}`}
+                          strokeDashoffset={cOffset}
+                          className="transition-all duration-500"
+                        />
+                      )}
+
+                      {/* Fat Arc */}
+                      {fatPct > 0 && (
+                        <circle
+                          cx="50"
+                          cy="50"
+                          r={donutR}
+                          fill="none"
+                          stroke="#10b981"
+                          strokeWidth="8.5"
+                          strokeDasharray={`${fDash} ${donutCirc}`}
+                          strokeDashoffset={fOffset}
+                          className="transition-all duration-500"
+                        />
+                      )}
+                    </g>
+
+                    {/* Center Text: Calories & Target */}
+                    <text
+                      x="50"
+                      y="46"
+                      textAnchor="middle"
+                      fontSize="13"
+                      fontWeight="900"
+                      fill="currentColor"
+                      className="select-none tracking-tight font-mono"
+                    >
+                      {nutrientTotals.calories || 0}
+                    </text>
+                    <text
+                      x="50"
+                      y="58"
+                      textAnchor="middle"
+                      fontSize="7"
+                      fontWeight="800"
+                      fill="currentColor"
+                      opacity="0.6"
+                      className="select-none uppercase tracking-wider"
+                    >
+                      kcal
+                    </text>
+                    <text
+                      x="50"
+                      y="68"
+                      textAnchor="middle"
+                      fontSize="6.5"
+                      fontWeight="700"
+                      fill="currentColor"
+                      opacity="0.45"
+                      className="select-none font-mono"
+                    >
+                      {activeMeal === "All" ? `/ ${calorieMax}` : `${activeMeal}`}
+                    </text>
+                  </svg>
+                );
+              })()}
+            </div>
+
+            {/* Macro Details beside Donut */}
+            <div className="flex-1 w-full space-y-2.5 min-w-0">
+              <div className="flex flex-wrap items-center justify-between gap-1 text-xs">
+                <span className="font-black text-base-content uppercase tracking-wider text-[11px] flex items-center gap-1.5 text-primary">
+                  <Activity size={14} /> {activeMeal === "All" ? "Daily Energy & Macro Split" : `${activeMeal} Energy & Macro Split`}
                 </span>
                 <button
-                  className="btn btn-xs btn-outline btn-primary gap-1 rounded-lg"
+                  className="btn btn-xs btn-outline btn-primary gap-1 rounded-lg text-[10.5px] h-6 min-h-0 px-2"
                   onClick={() => {
                     onClose();
                     navigate("/dashboard/habit/logging");
                   }}
                   title="Edit Macro Percentages in Habit Profile"
                 >
-                  <Settings size={12} /> Edit Ratios in Habit Profile
+                  <Settings size={11} /> Edit Ratios
                 </button>
               </div>
-            </div>
 
-            <div className="h-4 w-full bg-base-300 rounded-full flex overflow-hidden">
-              <div
-                style={{ width: `${proteinPct}%` }}
-                className="bg-info h-full transition-all"
-                title={`Protein: ${proteinPct}%`}
-              ></div>
-              <div
-                style={{ width: `${carbsPct}%` }}
-                className="bg-warning h-full transition-all"
-                title={`Carbs: ${carbsPct}%`}
-              ></div>
-              <div
-                style={{ width: `${fatPct}%` }}
-                className="bg-success h-full transition-all"
-                title={`Fat: ${fatPct}%`}
-              ></div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1 text-xs">
-              <div className="bg-info/10 border border-info/20 p-2.5 rounded-xl flex items-center justify-between">
-                <div className="flex items-center gap-2 font-medium">
-                  <span className="w-3 h-3 rounded-full bg-info shrink-0"></span>
-                  <span>Protein ({macroRatios.protein}%)</span>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+                {/* Protein */}
+                <div className="bg-info/10 border border-info/20 p-2 rounded-xl flex sm:flex-col justify-between items-center sm:items-start gap-1">
+                  <div className="flex items-center gap-1.5 font-bold text-info text-[11px]">
+                    <span className="w-2.5 h-2.5 rounded-full bg-info shrink-0"></span>
+                    <span>Protein ({proteinPct}%)</span>
+                  </div>
+                  <div className="font-mono text-[11px] font-bold text-base-content/90">
+                    {nutrientTotals.protein || 0}g{" "}
+                    <span className="text-[10px] font-medium text-base-content/50">
+                      {activeMeal === "All" ? `/ ${proteinMaxGrams}g` : `(${proteinPct}% energy)`}
+                    </span>
+                  </div>
                 </div>
-                <span className="font-bold font-mono text-info text-[11px]">
-                  {nutrientTotals.protein || 0}g ({proteinMinGrams}g–{proteinMaxGrams}g)
-                </span>
-              </div>
 
-              <div className="bg-warning/10 border border-warning/20 p-2.5 rounded-xl flex items-center justify-between">
-                <div className="flex items-center gap-2 font-medium">
-                  <span className="w-3 h-3 rounded-full bg-warning shrink-0"></span>
-                  <span>Carbs ({macroRatios.carbs}%)</span>
+                {/* Carbs */}
+                <div className="bg-warning/10 border border-warning/20 p-2 rounded-xl flex sm:flex-col justify-between items-center sm:items-start gap-1">
+                  <div className="flex items-center gap-1.5 font-bold text-warning text-[11px]">
+                    <span className="w-2.5 h-2.5 rounded-full bg-warning shrink-0"></span>
+                    <span>Carbs ({carbsPct}%)</span>
+                  </div>
+                  <div className="font-mono text-[11px] font-bold text-base-content/90">
+                    {nutrientTotals.carbohydrates || 0}g{" "}
+                    <span className="text-[10px] font-medium text-base-content/50">
+                      {activeMeal === "All" ? `/ ${carbsMaxGrams}g` : `(${carbsPct}% energy)`}
+                    </span>
+                  </div>
                 </div>
-                <span className="font-bold font-mono text-warning text-[11px]">
-                  {nutrientTotals.carbohydrates || 0}g ({carbsMinGrams}g–{carbsMaxGrams}g)
-                </span>
-              </div>
 
-              <div className="bg-success/10 border border-success/20 p-2.5 rounded-xl flex items-center justify-between">
-                <div className="flex items-center gap-2 font-medium">
-                  <span className="w-3 h-3 rounded-full bg-success shrink-0"></span>
-                  <span>Fat ({macroRatios.fats}%)</span>
+                {/* Fat */}
+                <div className="bg-success/10 border border-success/20 p-2 rounded-xl flex sm:flex-col justify-between items-center sm:items-start gap-1">
+                  <div className="flex items-center gap-1.5 font-bold text-success text-[11px]">
+                    <span className="w-2.5 h-2.5 rounded-full bg-success shrink-0"></span>
+                    <span>Fat ({fatPct}%)</span>
+                  </div>
+                  <div className="font-mono text-[11px] font-bold text-base-content/90">
+                    {nutrientTotals.fat || 0}g{" "}
+                    <span className="text-[10px] font-medium text-base-content/50">
+                      {activeMeal === "All" ? `/ ${fatMaxGrams}g` : `(${fatPct}% energy)`}
+                    </span>
+                  </div>
                 </div>
-                <span className="font-bold font-mono text-success text-[11px]">
-                  {nutrientTotals.fat || 0}g ({fatMinGrams}g–{fatMaxGrams}g)
-                </span>
               </div>
             </div>
           </div>
 
-          {/* Category Tabs */}
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
+          {/* Compact items list when viewing a specific meal */}
+          {activeMeal !== "All" && activeLogs.length > 0 && (
+            <div className="bg-base-100 p-3 rounded-2xl border border-base-300 shadow-xs space-y-2">
+              <div className="flex items-center justify-between text-xs font-bold text-base-content/80">
+                <span className="flex items-center gap-1.5">
+                  <span>{MEAL_ICONS[activeMeal] || "🍴"}</span>
+                  <span>Items in {activeMeal}</span>
+                </span>
+                <span className="badge badge-neutral badge-xs font-mono font-bold">
+                  {nutrientTotals.calories || 0} kcal
+                </span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-h-32 overflow-y-auto pr-1">
+                {activeLogs.map((log, idx) => (
+                  <div
+                    key={log._id || idx}
+                    className="p-2 rounded-xl bg-base-200/50 border border-base-300/60 flex items-center justify-between text-xs gap-2"
+                  >
+                    <span className="font-semibold text-base-content truncate">
+                      {log.foodName || log.foodId?.name || "Logged Item"}
+                    </span>
+                    <span className="font-bold font-mono text-primary shrink-0">
+                      {log.calories || 0} kcal
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Category Tabs (flex-wrap without any horizontal scrollbar) */}
+          <div className="flex flex-wrap items-center gap-1.5 pb-0.5">
             {["All", ...Object.keys(NUTRIENT_CATEGORIES)].map((tab) => (
               <button
                 key={tab}
-                className={`btn btn-xs sm:btn-sm rounded-xl font-bold transition-all whitespace-nowrap ${
+                className={`btn btn-xs rounded-xl font-bold transition-all ${
                   activeTab === tab
-                    ? "btn-primary shadow-md"
+                    ? "btn-primary shadow-xs"
                     : "btn-ghost border border-base-300 text-base-content/70"
                 }`}
                 onClick={() => setActiveTab(tab)}
@@ -395,22 +598,23 @@ function DailyNutrientsModal({ isOpen, onClose, selectedDate, data, calorieTarge
             ))}
           </div>
 
-          {/* Categorized Nutrient Sections */}
-          <div className="space-y-6">
+          {/* Categorized Nutrient Sections with 2-line nutrient rows (no horizontal scroll) */}
+          <div className="space-y-4">
             {categoriesToDisplay.map((category) => {
               const nutrients = NUTRIENT_CATEGORIES[category] || [];
               return (
-                <div key={category} className="space-y-3">
-                  <div className="flex items-center justify-between border-b border-base-300 pb-2">
-                    <h3 className="text-sm font-black uppercase tracking-wider text-primary flex items-center gap-2">
-                      <Sparkles size={16} /> {category}
+                <div key={category} className="space-y-2.5">
+                  <div className="flex items-center justify-between border-b border-base-300/70 pb-1.5">
+                    <h3 className="text-xs font-black uppercase tracking-wider text-primary flex items-center gap-1.5">
+                      <Sparkles size={14} /> {category}
                     </h3>
-                    <span className="text-xs text-base-content/60 font-semibold">
+                    <span className="text-[11px] text-base-content/60 font-semibold">
                       {nutrients.length} metrics
                     </span>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3.5">
+                  {/* 2-line layout grid for nutrients (1 column on mobile, 2 columns on tablet/desktop) */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                     {nutrients.map((n) => {
                       const Icon = n.icon;
                       const val = nutrientTotals[n.id] || 0;
@@ -422,17 +626,22 @@ function DailyNutrientsModal({ isOpen, onClose, selectedDate, data, calorieTarge
                       return (
                         <div
                           key={n.id}
-                          className="bg-base-100 p-3.5 rounded-2xl border border-base-300 shadow-sm hover:border-primary/50 transition-all flex flex-col justify-between"
+                          className="bg-base-100 hover:bg-base-200/50 p-2.5 rounded-xl border border-base-300 shadow-xs space-y-1.5 transition-colors"
                         >
-                          <div className="flex items-center justify-between gap-1 mb-1">
-                            <span className="text-xs font-bold text-base-content/80 truncate flex items-center gap-1.5">
-                              <Icon size={14} className={n.color} />
-                              {n.label}
-                            </span>
-                            <div className="flex items-center gap-0.5">
+                          {/* Line 1: Nutrient Name with Icon & 3 Action Icons */}
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <Icon size={14} className={`${n.color} shrink-0`} />
+                              <span className="font-bold text-xs text-base-content truncate" title={n.label}>
+                                {n.label}
+                              </span>
+                            </div>
+
+                            {/* All Three Action Icons: Contributor Filter, Wiki Info, External Reference */}
+                            <div className="flex items-center gap-0.5 shrink-0">
                               <button
                                 type="button"
-                                className="btn btn-ghost btn-xs p-1 text-primary hover:bg-primary/10 rounded-lg transition-all"
+                                className="btn btn-ghost btn-xs btn-circle text-primary hover:bg-primary/10"
                                 title={`View foods contributing to ${n.label}`}
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -443,7 +652,7 @@ function DailyNutrientsModal({ isOpen, onClose, selectedDate, data, calorieTarge
                               </button>
                               <button
                                 type="button"
-                                className="btn btn-ghost btn-xs p-1 text-info hover:bg-info/10 rounded-lg transition-all"
+                                className="btn btn-ghost btn-xs btn-circle text-info hover:bg-info/10"
                                 title={`Learn more about ${n.label}`}
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -452,42 +661,45 @@ function DailyNutrientsModal({ isOpen, onClose, selectedDate, data, calorieTarge
                               >
                                 <Info size={13} />
                               </button>
+                              <a
+                                href={`https://en.wikipedia.org/wiki/${encodeURIComponent(n.label)}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="btn btn-ghost btn-xs btn-circle text-base-content/60 hover:text-primary hover:bg-base-300/60"
+                                title={`Search ${n.label} on Wikipedia`}
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <ExternalLink size={13} />
+                              </a>
+                            </div>
+                          </div>
+
+                          {/* Line 2: Consumed Value, Small Progress Bar, Total & Percentage */}
+                          <div className="flex items-center gap-2 text-xs">
+                            <span className="font-extrabold text-xs text-base-content font-mono shrink-0">
+                              {val} <span className="text-[10px] font-medium text-base-content/60">{n.unit}</span>
+                            </span>
+
+                            <div className="flex-1 bg-base-300/80 h-1.5 rounded-full overflow-hidden min-w-[50px]">
+                              <div
+                                className={`h-full transition-all duration-500 rounded-full ${colorStyle.bg}`}
+                                style={{ width: `${Math.min(pct, 100)}%` }}
+                              />
+                            </div>
+
+                            <div className="flex items-center gap-1.5 shrink-0 font-mono text-[11px]">
+                              <span className="text-base-content/60 font-semibold">
+                                {hasTarget ? `/ ${targetVal} ${n.unit}` : `--`}
+                              </span>
                               {hasTarget && (
                                 <span
-                                  className={`text-[10px] font-bold font-mono px-1.5 py-0.5 rounded-md ${colorStyle.badge}`}
-                                  title={`${pct}% of habit profile target`}
+                                  className={`text-[9.5px] font-bold px-1.5 py-0.2 rounded-md ${colorStyle.badge}`}
                                 >
                                   {pct}%
                                 </span>
                               )}
                             </div>
                           </div>
-
-                          <div className="my-1.5">
-                            <div className="flex items-baseline flex-wrap gap-1">
-                              <span className="text-xl font-extrabold tracking-tight">
-                                {val}
-                              </span>
-                              {hasTarget ? (
-                                <span className="text-xs font-semibold text-base-content/50">
-                                  / {targetVal} {n.unit}
-                                </span>
-                              ) : (
-                                <span className="text-xs font-semibold text-base-content/50">
-                                  {n.unit}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-
-                          {hasTarget && (
-                            <div className="w-full bg-base-300/80 h-1.5 rounded-full overflow-hidden mt-1.5">
-                              <div
-                                className={`h-full transition-all duration-500 rounded-full ${colorStyle.bg}`}
-                                style={{ width: `${Math.min(pct, 100)}%` }}
-                              ></div>
-                            </div>
-                          )}
                         </div>
                       );
                     })}
@@ -495,54 +707,6 @@ function DailyNutrientsModal({ isOpen, onClose, selectedDate, data, calorieTarge
                 </div>
               );
             })}
-          </div>
-
-          {/* Per-Meal Category Summary Matrix Table */}
-          <div className="space-y-3 pt-2">
-            <h3 className="text-sm font-black uppercase tracking-wider text-secondary flex items-center gap-2 border-b border-base-300 pb-2">
-              <Utensils size={16} /> Nutrients Matrix By Meal
-            </h3>
-
-            <div className="overflow-x-auto rounded-2xl border border-base-300 bg-base-100">
-              <table className="table table-sm w-full text-xs">
-                <thead>
-                  <tr className="bg-base-300/60 text-base-content font-bold">
-                    <th>Meal Category</th>
-                    <th className="text-right">Logged</th>
-                    <th className="text-right">Calories</th>
-                    <th className="text-right">Protein</th>
-                    <th className="text-right">Carbs</th>
-                    <th className="text-right">Fat</th>
-                    <th className="text-right">Fiber</th>
-                    <th className="text-right">Sugar</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {["Breakfast", "Lunch", "Dinner", "Snacks", "Other"].map((meal) => {
-                    const mealItems = meals[meal] || [];
-                    const calories = mealItems.reduce((s, item) => s + (item.calories || 0), 0);
-                    const protein = parseFloat(mealItems.reduce((s, item) => s + (item.protein || 0), 0).toFixed(1));
-                    const carbs = parseFloat(mealItems.reduce((s, item) => s + (item.carbohydrates || 0), 0).toFixed(1));
-                    const fat = parseFloat(mealItems.reduce((s, item) => s + (item.fat || 0), 0).toFixed(1));
-                    const fiber = parseFloat(mealItems.reduce((s, item) => s + (item.fiber || 0), 0).toFixed(1));
-                    const sugar = parseFloat(mealItems.reduce((s, item) => s + (item.sugar || 0), 0).toFixed(1));
-
-                    return (
-                      <tr key={meal} className="hover:bg-base-200/50">
-                        <td className="font-bold">{meal}</td>
-                        <td className="text-right">{mealItems.length} items</td>
-                        <td className="text-right font-bold text-primary">{calories} kcal</td>
-                        <td className="text-right text-info font-semibold">{protein}g</td>
-                        <td className="text-right text-warning font-semibold">{carbs}g</td>
-                        <td className="text-right text-success font-semibold">{fat}g</td>
-                        <td className="text-right font-medium">{fiber}g</td>
-                        <td className="text-right font-medium">{sugar}g</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
           </div>
         </div>
 
@@ -564,7 +728,7 @@ function DailyNutrientsModal({ isOpen, onClose, selectedDate, data, calorieTarge
         isOpen={!!contributorNutrient}
         onClose={() => setContributorNutrient(null)}
         nutrient={contributorNutrient}
-        allLogs={allLogs}
+        allLogs={activeLogs}
         selectedDate={selectedDate}
         dayTotal={contributorNutrient ? nutrientTotals[contributorNutrient.id] || 0 : 0}
       />

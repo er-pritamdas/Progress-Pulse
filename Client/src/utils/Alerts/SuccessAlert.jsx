@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle2, X } from 'lucide-react';
 
-function SuccessAlert({ message, onClose }) {
+function SuccessAlert({ message, onClose, top }) {
   const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
@@ -17,16 +17,19 @@ function SuccessAlert({ message, onClose }) {
   return (
     <AnimatePresence>
       {message && !dismissed && (
-        <div className="fixed top-2.5 sm:top-3 left-1/2 -translate-x-1/2 z-[999999] pointer-events-none flex justify-center w-full max-w-lg px-4">
+        <div
+          className="fixed left-1/2 -translate-x-1/2 z-[999999] pointer-events-none flex justify-center w-full max-w-lg px-4"
+          style={{ top: top !== undefined ? (typeof top === "number" ? `${top}px` : top) : "12px" }}
+        >
           <motion.div
             role="alert"
-            className="pointer-events-auto flex items-center gap-3 px-4 py-2 sm:py-2.5 rounded-2xl shadow-2xl border border-success/40 bg-base-100/95 text-base-content backdrop-blur-xl ring-1 ring-success/20 w-auto max-w-full"
+            className="pointer-events-auto flex items-center gap-3 px-4 py-2 sm:py-2.5 rounded-2xl shadow-2xl border border-success/35 bg-base-100/70 text-base-content backdrop-blur-xl backdrop-saturate-150 ring-1 ring-success/25 w-auto max-w-full"
             initial={{ opacity: 0, y: -15, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -15, scale: 0.95 }}
             transition={{ duration: 0.22, ease: "easeOut" }}
           >
-            <div className="w-7 h-7 rounded-xl bg-success/20 text-success flex items-center justify-center shrink-0 shadow-2xs">
+            <div className="w-7 h-7 rounded-xl bg-success/25 text-success flex items-center justify-center shrink-0 shadow-2xs backdrop-blur-md">
               <CheckCircle2 size={16} className="stroke-[2.5]" />
             </div>
             <div className="flex flex-col min-w-0 flex-1">

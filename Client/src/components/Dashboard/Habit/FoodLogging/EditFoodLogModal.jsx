@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import axiosInstance from "../../../../Context/AxiosInstance";
+import apiCache from "../../../../utils/apiCache";
 import { Edit3, X, Check, Utensils, AlertCircle } from "lucide-react";
 
 const formatFoodPortionLabel = (item) => {
@@ -62,6 +63,15 @@ function EditFoodLogModal({ isOpen, onClose, log, onLogUpdated }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  const isExplicitlySavedRef = useRef(false);
+  const isAutoSavingRef = useRef(false);
+  const isDiscardedRef = useRef(false);
+  const pendingEditRef = useRef({ mealType, servings, log });
+
+  useEffect(() => {
+    pendingEditRef.current = { mealType, servings, log };
+  }, [mealType, servings, log]);
+
   useEffect(() => {
     if (isOpen && log) {
       let rawMeal = log.mealType || "Breakfast";
@@ -70,8 +80,96 @@ function EditFoodLogModal({ isOpen, onClose, log, onLogUpdated }) {
       setMealType(["Breakfast", "Lunch", "Dinner", "Snacks", "Other"].includes(normalized) ? normalized : "Breakfast");
       setServings(log.servings || 1);
       setError("");
+      isExplicitlySavedRef.current = false;
+      isAutoSavingRef.current = false;
+      isDiscardedRef.current = false;
     }
   }, [isOpen, log]);
+
+  const performAutoSave = async () => {
+    if (isExplicitlySavedRef.current || isAutoSavingRef.current || isDiscardedRef.current) return;
+    const { mealType: curMeal, servings: curServings, log: curLog } = pendingEditRef.current;
+    if (!curLog || !curLog._id) return;
+
+    const numServings = Number(curServings);
+    if (!numServings || numServings <= 0) return;
+
+    const origMeal = curLog.mealType || "Breakfast";
+    const origServings = Number(curLog.servings) || 1;
+    if (curMeal === origMeal && numServings === origServings) return;
+
+    isAutoSavingRef.current = true;
+    try {
+      const token = localStorage.getItem("token");
+      await fetch(`/api/v1/dashboard/habit/food/log/${curLog._id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          mealType: curMeal,
+          servings: numServings,
+        }),
+        keepalive: true,
+      });
+
+      apiCache.invalidate("/habit");
+      apiCache.invalidate("/dashboard");
+
+      window.dispatchEvent(
+        new CustomEvent("pulse-notify", {
+          detail: {
+            message: `Auto-saved changes to ${curLog.foodName || "food item"}!`,
+            type: "success",
+            duration: 4000,
+          },
+        })
+      );
+
+      window.dispatchEvent(new CustomEvent("food-logs-updated"));
+      if (onLogUpdated) onLogUpdated();
+    } catch (err) {
+      console.error("Auto-save edit food log error:", err);
+    }
+  };
+
+  const handleClose = () => {
+    performAutoSave();
+    onClose();
+  };
+
+  const handleDiscard = () => {
+    isDiscardedRef.current = true;
+    onClose();
+  };
+
+  const prevIsOpenRef = useRef(isOpen);
+  useEffect(() => {
+    if (prevIsOpenRef.current && !isOpen) {
+      performAutoSave();
+    }
+    if (!prevIsOpenRef.current && isOpen) {
+      isExplicitlySavedRef.current = false;
+      isAutoSavingRef.current = false;
+      isDiscardedRef.current = false;
+    }
+    prevIsOpenRef.current = isOpen;
+  }, [isOpen]);
+
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      performAutoSave();
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    window.addEventListener("pagehide", handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      window.removeEventListener("pagehide", handleBeforeUnload);
+      performAutoSave();
+    };
+  }, []);
 
   useEffect(() => {
     if (isOpen) {
@@ -103,14 +201,27 @@ function EditFoodLogModal({ isOpen, onClose, log, onLogUpdated }) {
     try {
       setLoading(true);
       setError("");
+      isExplicitlySavedRef.current = true;
       await axiosInstance.put(`/v1/dashboard/habit/food/log/${log._id}`, {
         mealType,
         servings: numServings,
       });
 
+      window.dispatchEvent(
+        new CustomEvent("pulse-notify", {
+          detail: {
+            message: `Updated ${log.foodName || "food item"} successfully!`,
+            type: "success",
+            duration: 4000,
+          },
+        })
+      );
+
+      window.dispatchEvent(new CustomEvent("food-logs-updated"));
       if (onLogUpdated) onLogUpdated();
       onClose();
     } catch (err) {
+      isExplicitlySavedRef.current = false;
       console.error("Failed to update log entry", err);
       setError(err.response?.data?.message || "Failed to update food entry.");
     } finally {
@@ -126,14 +237,21 @@ function EditFoodLogModal({ isOpen, onClose, log, onLogUpdated }) {
   };
 
   return (
-    <div className="fixed inset-0 z-[9999] bg-black/75 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 overflow-hidden">
+    <div
+      className="fixed inset-0 z-[9999] bg-black/75 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 overflow-hidden"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          handleClose();
+        }
+      }}
+    >
       <div className="bg-base-200 rounded-3xl max-w-lg w-full h-[75vh] sm:h-[600px] border border-base-300 shadow-2xl flex flex-col justify-between overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         {/* Header */}
         <div className="p-5 bg-base-300/80 border-b border-base-300 flex justify-between items-center shrink-0">
           <h3 className="font-bold text-lg flex items-center gap-2">
             <Edit3 className="text-primary" size={20} /> Edit Logged Food
           </h3>
-          <button className="btn btn-sm btn-circle btn-ghost" onClick={onClose}>
+          <button className="btn btn-sm btn-circle btn-ghost" onClick={handleClose} title="Close (auto-saves changes)">
             <X size={18} />
           </button>
         </div>
@@ -249,7 +367,12 @@ function EditFoodLogModal({ isOpen, onClose, log, onLogUpdated }) {
 
         {/* Footer */}
         <div className="p-4 bg-base-300/40 border-t border-base-300 flex justify-end gap-2 shrink-0">
-          <button type="button" className="btn btn-sm btn-ghost" onClick={onClose}>
+          <button
+            type="button"
+            className="btn btn-sm btn-ghost text-base-content/60 hover:text-base-content"
+            onClick={handleDiscard}
+            title="Discard changes without saving"
+          >
             Cancel
           </button>
           <button

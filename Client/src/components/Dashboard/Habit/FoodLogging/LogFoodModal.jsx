@@ -325,11 +325,175 @@ function LogFoodModal({ isOpen, onClose, selectedDate, initialMeal = "Breakfast"
     setStagedItems((prev) => prev.filter((i) => i.id !== item.id));
   };
 
+  const pendingDataRef = useRef({
+    stagedItems: [],
+    selectedFood: null,
+    mealType: initialMeal,
+    servings: 1,
+    selectedDate: selectedDate,
+  });
+
+  const isExplicitlySavedRef = useRef(false);
+  const isAutoSavingRef = useRef(false);
+  const isDiscardedRef = useRef(false);
+
+  useEffect(() => {
+    pendingDataRef.current = {
+      stagedItems,
+      selectedFood,
+      mealType,
+      servings,
+      selectedDate,
+    };
+  }, [stagedItems, selectedFood, mealType, servings, selectedDate]);
+
+  const performAutoSave = async () => {
+    if (isExplicitlySavedRef.current || isAutoSavingRef.current || isDiscardedRef.current) {
+      return;
+    }
+
+    const {
+      stagedItems: staged,
+      selectedFood: sel,
+      mealType: mType,
+      servings: serv,
+      selectedDate: sDate,
+    } = pendingDataRef.current;
+
+    const itemsToSave = [];
+
+    if (staged && staged.length > 0) {
+      staged.forEach((item) => {
+        const fId = item.food?._id || item.food?.id;
+        if (fId) {
+          itemsToSave.push({
+            date: sDate,
+            mealType: item.mealType || "Breakfast",
+            foodId: fId,
+            servings: Number(item.servings) || 1,
+            foodName: item.food?.name,
+          });
+        }
+      });
+    }
+
+    if (sel) {
+      const fId = sel._id || sel.id;
+      if (fId) {
+        itemsToSave.push({
+          date: sDate,
+          mealType: mType || "Breakfast",
+          foodId: fId,
+          servings: Number(serv) || 1,
+          foodName: sel.name,
+        });
+      }
+    }
+
+    if (itemsToSave.length === 0) return;
+
+    isAutoSavingRef.current = true;
+
+    try {
+      const token = localStorage.getItem("token");
+      const payload =
+        itemsToSave.length === 1
+          ? {
+              date: itemsToSave[0].date,
+              mealType: itemsToSave[0].mealType,
+              foodId: itemsToSave[0].foodId,
+              servings: itemsToSave[0].servings,
+            }
+          : {
+              items: itemsToSave.map(({ date, mealType, foodId, servings }) => ({
+                date,
+                mealType,
+                foodId,
+                servings,
+              })),
+            };
+
+      await fetch("/api/v1/dashboard/habit/food/log", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify(payload),
+        keepalive: true,
+      });
+
+      apiCache.invalidate("/habit");
+      apiCache.invalidate("/dashboard");
+
+      const count = itemsToSave.length;
+      const notificationMsg =
+        count === 1
+          ? `Auto-saved ${itemsToSave[0].foodName || "food item"}!`
+          : `Auto-saved ${count} food items!`;
+
+      window.dispatchEvent(
+        new CustomEvent("pulse-notify", {
+          detail: {
+            message: notificationMsg,
+            type: "success",
+            duration: 4000,
+          },
+        })
+      );
+
+      window.dispatchEvent(new CustomEvent("food-logs-updated"));
+      if (onFoodLogged) onFoodLogged();
+    } catch (err) {
+      console.error("Auto-save food entry error:", err);
+    }
+  };
+
+  const handleClose = () => {
+    performAutoSave();
+    onClose();
+  };
+
+  const handleDiscard = () => {
+    isDiscardedRef.current = true;
+    setStagedItems([]);
+    setSelectedFood(null);
+    onClose();
+  };
+
+  const prevIsOpenRef = useRef(isOpen);
+  useEffect(() => {
+    if (prevIsOpenRef.current && !isOpen) {
+      performAutoSave();
+    }
+    if (!prevIsOpenRef.current && isOpen) {
+      isExplicitlySavedRef.current = false;
+      isAutoSavingRef.current = false;
+      isDiscardedRef.current = false;
+    }
+    prevIsOpenRef.current = isOpen;
+  }, [isOpen]);
+
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      performAutoSave();
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    window.addEventListener("pagehide", handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      window.removeEventListener("pagehide", handleBeforeUnload);
+      performAutoSave();
+    };
+  }, []);
+
   const handleLogAllStaged = async () => {
     if (stagedItems.length === 0) return;
     try {
       setLogLoading(true);
       setError("");
+      isExplicitlySavedRef.current = true;
       const itemsPayload = stagedItems.map((item) => ({
         date: selectedDate,
         mealType: item.mealType,
@@ -338,10 +502,21 @@ function LogFoodModal({ isOpen, onClose, selectedDate, initialMeal = "Breakfast"
       }));
 
       await axiosInstance.post("/v1/dashboard/habit/food/log", { items: itemsPayload });
+      window.dispatchEvent(
+        new CustomEvent("pulse-notify", {
+          detail: {
+            message: `${stagedItems.length} food items logged successfully!`,
+            type: "success",
+            duration: 4000,
+          },
+        })
+      );
       setStagedItems([]);
+      window.dispatchEvent(new CustomEvent("food-logs-updated"));
       if (onFoodLogged) onFoodLogged();
       onClose();
     } catch (err) {
+      isExplicitlySavedRef.current = false;
       setError(err.response?.data?.message || "Failed to log queued food items.");
     } finally {
       setLogLoading(false);
@@ -353,6 +528,7 @@ function LogFoodModal({ isOpen, onClose, selectedDate, initialMeal = "Breakfast"
     try {
       setLogLoading(true);
       setError("");
+      isExplicitlySavedRef.current = true;
       await axiosInstance.post("/v1/dashboard/habit/food/log", {
         date: selectedDate,
         mealType,
@@ -360,9 +536,20 @@ function LogFoodModal({ isOpen, onClose, selectedDate, initialMeal = "Breakfast"
         servings: Number(servings),
       });
 
+      window.dispatchEvent(
+        new CustomEvent("pulse-notify", {
+          detail: {
+            message: `${selectedFood.name || "Food item"} logged successfully!`,
+            type: "success",
+            duration: 4000,
+          },
+        })
+      );
+      window.dispatchEvent(new CustomEvent("food-logs-updated"));
       if (onFoodLogged) onFoodLogged();
       onClose();
     } catch (err) {
+      isExplicitlySavedRef.current = false;
       setError(err.response?.data?.message || "Failed to log food item.");
     } finally {
       setLogLoading(false);
@@ -384,7 +571,14 @@ function LogFoodModal({ isOpen, onClose, selectedDate, initialMeal = "Breakfast"
 
   return (
     <>
-      <div className="fixed inset-0 z-[99999] bg-black/60 backdrop-blur-md flex items-center justify-center p-1.5 sm:p-4 overflow-y-auto">
+      <div
+        className="fixed inset-0 z-[99999] bg-black/60 backdrop-blur-md flex items-center justify-center p-1.5 sm:p-4 overflow-y-auto"
+        onClick={(e) => {
+          if (e.target === e.currentTarget) {
+            handleClose();
+          }
+        }}
+      >
         <div className="flex items-stretch justify-center gap-3 sm:gap-4 max-w-[1440px] w-full h-[95vh] sm:h-[680px]">
           
           {/* Left Popup: Food Categories */}
@@ -489,7 +683,7 @@ function LogFoodModal({ isOpen, onClose, selectedDate, initialMeal = "Breakfast"
                   Search food database or pick from history to log into your daily intake.
                 </p>
               </div>
-              <button className="btn btn-sm btn-circle btn-ghost" onClick={onClose}>
+              <button className="btn btn-sm btn-circle btn-ghost" onClick={handleClose} title="Close (auto-saves entered data)">
                 ✕
               </button>
             </div>
@@ -1094,8 +1288,13 @@ function LogFoodModal({ isOpen, onClose, selectedDate, initialMeal = "Breakfast"
                       <ChevronLeft size={16} /> Back to Queue ({stagedItems.length + (editingQueueItem ? 1 : 0)})
                     </button>
                   ) : (
-                    <button className="btn btn-sm btn-ghost flex-1" onClick={onClose}>
-                      Cancel
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-ghost flex-1 text-base-content/60 hover:text-base-content"
+                      onClick={handleDiscard}
+                      title="Discard without saving"
+                    >
+                      Discard
                     </button>
                   )}
                   {stagedItems.length > 0 ? (

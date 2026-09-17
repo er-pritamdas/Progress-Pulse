@@ -69,6 +69,7 @@ const getMoodEmoji = (mood = "") => {
   return "🙂";
 };
 
+
 function HabitTableEntry() {
   TitleChanger("Progress Pulse | Habit Logging");
   const dispatch = useDispatch();
@@ -1126,6 +1127,40 @@ function HabitTableEntry() {
     }
   };
 
+  const mobileHasChangesRef = useRef(mobileHasChanges);
+  const mobileEntryRef = useRef(mobileEntry);
+
+  useEffect(() => {
+    mobileHasChangesRef.current = mobileHasChanges;
+    mobileEntryRef.current = mobileEntry;
+  }, [mobileHasChanges, mobileEntry]);
+
+  useEffect(() => {
+    return () => {
+      if (mobileHasChangesRef.current) {
+        handleSaveMobileEntry(mobileEntryRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleFoodLogsUpdated = () => {
+      fetchHabits(currentPage, false);
+    };
+    window.addEventListener("food-logs-updated", handleFoodLogsUpdated);
+    return () => {
+      window.removeEventListener("food-logs-updated", handleFoodLogsUpdated);
+    };
+  }, [currentPage]);
+
+  const handleMainTabChange = (targetTab) => {
+    if (targetTab === activeMainTab) return;
+    if (activeMainTab === "habit" && mobileHasChanges) {
+      handleSaveMobileEntry(mobileEntry);
+    }
+    setActiveMainTab(targetTab);
+  };
+
   const handleDateShift = (delta) => {
     const nextDate = shiftDate(selectedMobileDate, delta);
     handleSelectDay(nextDate);
@@ -1442,6 +1477,34 @@ function HabitTableEntry() {
         <SuccessAlert message={alertSuccessMessage} top={20} />
       )}
 
+      {/* Mobile Top Tabs Switcher (Habits vs Food Logging on Phone) */}
+      <div className="flex md:hidden items-center justify-between p-1 bg-base-200/80 backdrop-blur-md rounded-2xl border border-base-300/80 mb-3 shadow-2xs">
+        <button
+          type="button"
+          className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 font-bold text-xs rounded-xl transition-all ${
+            activeMainTab === "habit"
+              ? "bg-primary text-primary-content shadow-sm scale-[1.01]"
+              : "text-base-content/70 hover:text-base-content"
+          }`}
+          onClick={() => handleMainTabChange("habit")}
+        >
+          <CalendarDays size={15} />
+          <span>Habits</span>
+        </button>
+        <button
+          type="button"
+          className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 font-bold text-xs rounded-xl transition-all ${
+            activeMainTab === "food"
+              ? "bg-primary text-primary-content shadow-sm scale-[1.01]"
+              : "text-base-content/70 hover:text-base-content"
+          }`}
+          onClick={() => handleMainTabChange("food")}
+        >
+          <Utensils size={15} />
+          <span>Food Logging</span>
+        </button>
+      </div>
+
       {/* Main Tabs Navigation (Desktop only) */}
       <div className="hidden md:flex border-b border-base-300 mb-4 px-2">
         <button
@@ -1450,7 +1513,7 @@ function HabitTableEntry() {
               ? "border-primary text-primary bg-primary/5 rounded-t-lg"
               : "border-transparent text-base-content/60 hover:text-base-content"
           }`}
-          onClick={() => setActiveMainTab("habit")}
+          onClick={() => handleMainTabChange("habit")}
         >
           <CalendarDays size={18} />
           Habit Logging
@@ -1461,7 +1524,7 @@ function HabitTableEntry() {
               ? "border-primary text-primary bg-primary/5 rounded-t-lg"
               : "border-transparent text-base-content/60 hover:text-base-content"
           }`}
-          onClick={() => setActiveMainTab("food")}
+          onClick={() => handleMainTabChange("food")}
         >
           <Utensils size={18} />
           Food Logging
@@ -2639,15 +2702,6 @@ function HabitTableEntry() {
                         {/* Glass Base Thickness */}
                         <line x1="28" y1="118" x2="72" y2="118" stroke="currentColor" strokeWidth="4" className="text-base-content/40" />
 
-                        {/* Glass Specular Reflection Highlight Streak (left side) */}
-                        <path
-                          d="M 26 24 L 24 112"
-                          stroke="#ffffff"
-                          strokeWidth="2.5"
-                          strokeLinecap="round"
-                          opacity="0.35"
-                        />
-
                         {/* Clear Measurement Graduation Markings on Glass (TICK LINES & LABELS) */}
                         <g className="font-mono text-[7px] font-black select-none pointer-events-none">
                           {/* 100% Mark */}
@@ -2891,7 +2945,7 @@ function HabitTableEntry() {
               );
             })()}
 
-            {/* 4. Sleep Duration (Visual Picture of Moon with Stars - Colors fill based on progress) */}
+            {/* 4. Sleep Duration (Interactive Animated Celestial Illustration) */}
             {(() => {
               const sleepVal = Number(mobileEntry.sleep) || 0;
               const sleepTarget = settings?.sleep?.max || 8;
@@ -2904,6 +2958,10 @@ function HabitTableEntry() {
               else if (sleepVal >= 6 && sleepVal < 7) sleepQuality = "Light Rest";
               else if (sleepVal >= 7 && sleepVal <= 9) sleepQuality = "Restful & Optimal";
               else if (sleepVal > 9) sleepQuality = "Deep Recovery";
+
+              // Moon geometry: height is 90px (from y=16 to y=106)
+              const moonClipH = (sleepPct / 100) * 94;
+              const moonClipY = 108 - moonClipH;
 
               return (
                 <div className="bg-base-100 border border-base-300/80 rounded-2xl p-4 shadow-2xs space-y-3">
@@ -2932,45 +2990,258 @@ function HabitTableEntry() {
                     </span>
                   </div>
 
-                  {/* Visual Picture: Moon with Stars - Colors fill based on progress */}
+                  {/* Animated Celestial Illustration: Floating Moon & Twinkling Stars */}
                   <div className="flex flex-col items-center justify-center pt-1 pb-0 relative">
-                    <div className="relative w-56 h-36 rounded-2xl overflow-hidden shadow-sm border border-base-300/80 bg-slate-950/80 select-none">
-                      {/* Base uncolored/muted layer */}
-                      <img
-                        src="/images/sleep_moon_stars.jpg"
-                        alt="Sleep celestial night"
-                        className="w-full h-full object-cover filter grayscale contrast-125 brightness-40 opacity-40 select-none pointer-events-none"
-                      />
-
-                      {/* Active colored layer: fills from bottom to top as sleep progress increases */}
-                      <div
-                        className="absolute inset-0 transition-all duration-700 ease-out pointer-events-none overflow-hidden"
-                        style={{
-                          clipPath: `inset(${100 - sleepPct}% 0 0 0)`,
-                        }}
-                      >
-                        <img
-                          src="/images/sleep_moon_stars.jpg"
-                          alt="Sleep celestial filled"
-                          className="w-full h-full object-cover filter drop-shadow-md select-none"
-                        />
-                        {/* Shimmering golden threshold line */}
-                        {sleepPct > 0 && sleepPct < 100 && (
-                          <div
-                            className="absolute left-0 right-0 h-[2px] bg-gradient-to-r from-yellow-300 via-amber-400 to-yellow-200 shadow-[0_0_10px_#facc15]"
-                            style={{ top: `${100 - sleepPct}%` }}
+                    <svg viewBox="0 0 190 120" className="w-56 h-36 overflow-visible select-none pointer-events-none">
+                      <defs>
+                        <linearGradient id="moonWhiteGrad" x1="0" y1="0" x2="0.8" y2="1">
+                          <stop offset="0%" stopColor="#ffffff" />
+                          <stop offset="60%" stopColor="#f8fafc" />
+                          <stop offset="100%" stopColor="#e2e8f0" />
+                        </linearGradient>
+                        <linearGradient id="starYellowGrad" x1="0" y1="0" x2="1" y2="1">
+                          <stop offset="0%" stopColor="#fef08a" />
+                          <stop offset="50%" stopColor="#facc15" />
+                          <stop offset="100%" stopColor="#f59e0b" />
+                        </linearGradient>
+                        <linearGradient id="shootingStarGrad" x1="0" y1="0" x2="1" y2="1">
+                          <stop offset="0%" stopColor="#facc15" stopOpacity="0" />
+                          <stop offset="80%" stopColor="#fde047" stopOpacity="0.8" />
+                          <stop offset="100%" stopColor="#ffffff" stopOpacity="1" />
+                        </linearGradient>
+                        <clipPath id="moonFillClip">
+                          <rect
+                            x="15"
+                            y={moonClipY}
+                            width="160"
+                            height={moonClipH}
+                            className="transition-all duration-700 ease-out"
                           />
-                        )}
-                      </div>
+                        </clipPath>
+                      </defs>
 
-                      {/* Corner badge with percentage formatted to at most 2 decimal points */}
-                      <div className="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-md border border-white/10 text-[10px] font-bold text-amber-300 shadow-2xs pointer-events-none">
-                        {sleepPctDisplay}%
-                      </div>
-                    </div>
+                      <style>{`
+                        @keyframes sleepMoonFloat {
+                          0%, 100% { transform: translateY(0px); }
+                          50% { transform: translateY(-4px); }
+                        }
+                        @keyframes starTwinkle1 {
+                          0%, 100% { transform: scale(1) rotate(0deg); opacity: 0.85; }
+                          50% { transform: scale(1.3) rotate(25deg); opacity: 1; filter: drop-shadow(0 0 6px #facc15); }
+                        }
+                        @keyframes starTwinkle2 {
+                          0%, 100% { transform: scale(1) rotate(0deg); opacity: 0.8; }
+                          50% { transform: scale(1.25) rotate(-20deg); opacity: 1; filter: drop-shadow(0 0 5px #facc15); }
+                        }
+                        @keyframes starTwinkle3 {
+                          0%, 100% { transform: scale(1); opacity: 0.75; }
+                          50% { transform: scale(1.28); opacity: 1; filter: drop-shadow(0 0 5px #facc15); }
+                        }
+                      `}</style>
+
+                      {/* 1. Base Unfilled Night Outlines (Matches DaisyUI theme tokens seamlessly) */}
+                      <g className="text-base-content/25">
+                        {/* Crescent Moon Outline */}
+                        <path
+                          d="M 76 18 A 43 43 0 1 0 76 104 C 98 84 98 38 76 18 Z"
+                          fill="currentColor"
+                          fillOpacity="0.04"
+                          stroke="currentColor"
+                          strokeWidth="2.5"
+                          strokeLinejoin="round"
+                        />
+                        {/* Soft Night Cloud under the Moon */}
+                        <path
+                          d="M 44 98 C 55 92 68 94 78 98 C 90 91 106 92 116 98 C 126 95 138 97 146 100"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          opacity="0.3"
+                        />
+                        {/* Star 1 Base (Diamond, top right) */}
+                        <path
+                          d="M 134 18 L 137.5 27.5 L 147 30 L 137.5 32.5 L 134 42 L 130.5 32.5 L 121 30 L 130.5 27.5 Z"
+                          fill="currentColor"
+                          fillOpacity="0.06"
+                          stroke="currentColor"
+                          strokeWidth="1.5"
+                          strokeLinejoin="round"
+                        />
+                        {/* Star 2 Base (Medium, mid right) */}
+                        <path
+                          d="M 152 56 L 154.5 63 L 162 65 L 154.5 67 L 152 74 L 149.5 67 L 142 65 L 149.5 63 Z"
+                          fill="currentColor"
+                          fillOpacity="0.06"
+                          stroke="currentColor"
+                          strokeWidth="1.5"
+                          strokeLinejoin="round"
+                        />
+                        {/* Star 3 Base (Lower right) */}
+                        <path
+                          d="M 126 84 L 128 89.5 L 134 91 L 128 92.5 L 126 98 L 124 92.5 L 118 91 L 124 89.5 Z"
+                          fill="currentColor"
+                          fillOpacity="0.06"
+                          stroke="currentColor"
+                          strokeWidth="1.5"
+                          strokeLinejoin="round"
+                        />
+                        {/* Star 4 Base (Upper left) */}
+                        <path
+                          d="M 32 20 L 33.5 24.5 L 38 26 L 33.5 27.5 L 32 32 L 30.5 27.5 L 26 26 L 30.5 24.5 Z"
+                          fill="currentColor"
+                          fillOpacity="0.06"
+                          stroke="currentColor"
+                          strokeWidth="1.2"
+                          strokeLinejoin="round"
+                        />
+                        {/* Star 5 Base (Lower left) */}
+                        <path
+                          d="M 24 82 L 25 85.5 L 29 86.5 L 25 87.5 L 24 91 L 23 87.5 L 19 86.5 L 23 85.5 Z"
+                          fill="currentColor"
+                          fillOpacity="0.06"
+                          stroke="currentColor"
+                          strokeWidth="1.2"
+                          strokeLinejoin="round"
+                        />
+                      </g>
+
+                      {/* 2. Floating Animated Moon (Filled with glowing gold as progress increases) */}
+                      <g style={{ animation: "sleepMoonFloat 4s ease-in-out infinite" }}>
+                        {sleepPct > 0 && (
+                          <g clipPath="url(#moonFillClip)">
+                            {/* Lit Crescent Moon (Pure glowing white moonlight) */}
+                            <path
+                              d="M 76 18 A 43 43 0 1 0 76 104 C 98 84 98 38 76 18 Z"
+                              fill="url(#moonWhiteGrad)"
+                              stroke="#ffffff"
+                              strokeWidth="2.5"
+                              strokeLinejoin="round"
+                              style={{ filter: "drop-shadow(0 0 10px rgba(255, 255, 255, 0.7))" }}
+                            />
+                            {/* Moon Serene Sleeping Eyelid & Smile */}
+                            <path
+                              d="M 52 56 Q 57 60 62 56"
+                              fill="none"
+                              stroke="#475569"
+                              strokeWidth="2.2"
+                              strokeLinecap="round"
+                              opacity="0.85"
+                            />
+                            <line x1="57" y1="59" x2="57" y2="62" stroke="#475569" strokeWidth="1.5" strokeLinecap="round" opacity="0.75" />
+                            {/* Rosy Dream Cheek */}
+                            <circle cx="57" cy="66" r="4" fill="#fb7185" opacity="0.4" />
+                            {/* Soft Silver Lunar Crater accents */}
+                            <circle cx="44" cy="40" r="3" fill="#cbd5e1" opacity="0.5" />
+                            <circle cx="48" cy="80" r="4.5" fill="#cbd5e1" opacity="0.45" />
+                            <circle cx="36" cy="65" r="2.5" fill="#cbd5e1" opacity="0.45" />
+                            {/* Shimmering waterline across the moon at progress threshold */}
+                            {sleepPct < 100 && (
+                              <line
+                                x1="28"
+                                y1={moonClipY}
+                                x2="98"
+                                y2={moonClipY}
+                                stroke="#ffffff"
+                                strokeWidth="2.5"
+                                strokeLinecap="round"
+                                style={{ filter: "drop-shadow(0 0 5px rgba(255, 255, 255, 0.9))" }}
+                              />
+                            )}
+                          </g>
+                        )}
+
+                        {/* Sleeping "Z z" Dream Bubbles when sleep > 0 */}
+                        {sleepVal > 0 && (
+                          <g className="fill-amber-400 font-bold select-none opacity-85">
+                            <text x="68" y="32" fontSize="9" fontWeight="900" style={{ animation: "sleepMoonFloat 3s ease-in-out infinite 0.2s" }}>z</text>
+                            <text x="75" y="24" fontSize="12" fontWeight="900" style={{ animation: "sleepMoonFloat 3s ease-in-out infinite 0.5s" }}>Z</text>
+                          </g>
+                        )}
+                      </g>
+
+                      {/* 3. Interactive Animated Stars - Light up & Twinkle as Progress increases */}
+                      {/* Star 4 (Upper left) - Wakes up at >= 15% */}
+                      {sleepPct >= 15 && (
+                        <g style={{ transformOrigin: "32px 26px", animation: "starTwinkle3 2.6s ease-in-out infinite 0.2s" }}>
+                          <path
+                            d="M 32 20 L 33.5 24.5 L 38 26 L 33.5 27.5 L 32 32 L 30.5 27.5 L 26 26 L 30.5 24.5 Z"
+                            fill="#facc15"
+                            stroke="#fde047"
+                            strokeWidth="1"
+                          />
+                        </g>
+                      )}
+
+                      {/* Star 1 (Major Diamond, top right) - Wakes up at >= 25% */}
+                      {sleepPct >= 25 && (
+                        <g style={{ transformOrigin: "134px 30px", animation: "starTwinkle1 2.2s ease-in-out infinite" }}>
+                          <path
+                            d="M 134 18 L 137.5 27.5 L 147 30 L 137.5 32.5 L 134 42 L 130.5 32.5 L 121 30 L 130.5 27.5 Z"
+                            fill="url(#starYellowGrad)"
+                            stroke="#facc15"
+                            strokeWidth="1.5"
+                          />
+                          <circle cx="134" cy="30" r="1.5" fill="#ffffff" />
+                        </g>
+                      )}
+
+                      {/* Star 2 (Medium Star, mid right) - Wakes up at >= 50% */}
+                      {sleepPct >= 50 && (
+                        <g style={{ transformOrigin: "152px 65px", animation: "starTwinkle2 1.9s ease-in-out infinite 0.4s" }}>
+                          <path
+                            d="M 152 56 L 154.5 63 L 162 65 L 154.5 67 L 152 74 L 149.5 67 L 142 65 L 149.5 63 Z"
+                            fill="#facc15"
+                            stroke="#fde047"
+                            strokeWidth="1.5"
+                          />
+                        </g>
+                      )}
+
+                      {/* Star 3 (Cozy Star, lower right) - Wakes up at >= 75% */}
+                      {sleepPct >= 75 && (
+                        <g style={{ transformOrigin: "126px 91px", animation: "starTwinkle3 2.4s ease-in-out infinite 0.8s" }}>
+                          <path
+                            d="M 126 84 L 128 89.5 L 134 91 L 128 92.5 L 126 98 L 124 92.5 L 118 91 L 124 89.5 Z"
+                            fill="#facc15"
+                            stroke="#fde047"
+                            strokeWidth="1.2"
+                          />
+                        </g>
+                      )}
+
+                      {/* Star 5 (Lower left) - Wakes up at >= 85% */}
+                      {sleepPct >= 85 && (
+                        <g style={{ transformOrigin: "24px 86.5px", animation: "starTwinkle1 2.5s ease-in-out infinite 0.5s" }}>
+                          <path
+                            d="M 24 82 L 25 85.5 L 29 86.5 L 25 87.5 L 24 91 L 23 87.5 L 19 86.5 L 23 85.5 Z"
+                            fill="#facc15"
+                            stroke="#fde047"
+                            strokeWidth="1"
+                          />
+                        </g>
+                      )}
+
+                      {/* 100% Goal Reached: Shooting Star streak across the night sky */}
+                      {sleepPct >= 100 && (
+                        <g>
+                          <line
+                            x1="112"
+                            y1="13"
+                            x2="168"
+                            y2="25"
+                            stroke="url(#shootingStarGrad)"
+                            strokeWidth="2.5"
+                            strokeLinecap="round"
+                            style={{ filter: "drop-shadow(0 0 6px #facc15)" }}
+                          />
+                          <circle cx="168" cy="25" r="2.5" fill="#ffffff" style={{ filter: "drop-shadow(0 0 4px #facc15)" }} />
+                        </g>
+                      )}
+                    </svg>
 
                     {/* Sleep Duration Value & Progress readout (percentage only till two decimal points) */}
-                    <div className="text-center mt-2 space-y-0.5">
+                    <div className="text-center mt-1 space-y-0.5">
                       <div className="text-2xl font-black text-base-content tracking-tight">
                         {sleepVal} <span className="text-xs font-semibold text-base-content/60">hrs</span>
                       </div>
@@ -3025,14 +3296,37 @@ function HabitTableEntry() {
               );
             })()}
 
-            {/* 5. Reading Time (Visual Picture of Open Book - Colors fill based on progress) */}
+            {/* 5. Reading Time (Smooth Animated Classic Hourglass: Top sand is remaining time to read, bottom sand is studied time, matching Sleep Duration) */}
             {(() => {
               const readVal = Number(mobileEntry.read) || 0;
               const readTarget = settings?.read?.max || 1.0;
               const rawReadPct = (readVal / (readTarget || 1)) * 100;
-              const readPct = Math.min(100, Math.max(0, rawReadPct));
-              const readPctDisplay = readVal > 0 ? (Number.isInteger(readPct) ? readPct : readPct.toFixed(2)) : 0;
-              const readMins = Math.round(readVal * 60);
+              const progressPct = Math.min(100, Math.max(0, rawReadPct));
+              const remainingPct = Math.max(0, 100 - progressPct);
+              const readPctDisplay = readVal > 0 ? (Number.isInteger(rawReadPct) ? rawReadPct : rawReadPct.toFixed(2)) : 0;
+
+              let readStatus = "No reading logged";
+              if (readVal === 0) readStatus = "No reading logged";
+              else if (progressPct < 25) readStatus = "Reading Started";
+              else if (progressPct < 50) readStatus = "Building Focus";
+              else if (progressPct < 75) readStatus = "Deep Reading";
+              else if (progressPct < 100) readStatus = "Almost Complete";
+              else readStatus = "Goal Mastered 🎉";
+
+              // Top sand drains down as remainingPct decreases: Y ranges from 20 (full) to 60 (empty)
+              // Chamber height is 40px
+              const topSandY = 60 - (remainingPct / 100) * 40;
+              const topSandH = 60 - topSandY;
+
+              // Bottom sand rises up as progressPct increases: Y ranges from 100 (empty) to 60 (full)
+              // Chamber height is 40px
+              const bottomSandH = (progressPct / 100) * 40;
+              const bottomSandY = 100 - bottomSandH;
+
+              // Dynamic cone/mound at the bottom beneath the stream
+              const isFlowing = readVal > 0 && progressPct < 100;
+              const moundPeakY = Math.max(62, bottomSandY - 3.5);
+              const moundW = Math.min(16, 5 + (progressPct / 100) * 11);
 
               return (
                 <div className="bg-base-100 border border-base-300/80 rounded-2xl p-4 shadow-2xs space-y-3">
@@ -3048,63 +3342,387 @@ function HabitTableEntry() {
                       className={`badge badge-xs font-bold ${
                         readVal === 0 && !mobileEntry._isExisting
                           ? "badge-ghost text-base-content/50"
+                          : progressPct >= 100
+                          ? "badge-success text-success-content"
+                          : readVal < (settings?.read?.min || 0)
+                          ? "badge-warning"
+                          : readVal > readTarget
+                          ? "badge-info"
                           : getColorClass("read", readVal, settings)
                       }`}
                     >
                       {readVal === 0 && !mobileEntry._isExisting
                         ? "Not Logged"
+                        : progressPct >= 100
+                        ? "Goal Mastered 🎉"
                         : readVal < (settings?.read?.min || 0)
                         ? "Below Min"
-                        : readVal > readTarget
-                        ? "Above Max"
-                        : "Optimal"}
+                        : "In Progress"}
                     </span>
                   </div>
 
-                  {/* Visual Picture: Open Book - Colors fill based on progress */}
+                  {/* Animated Classic Hourglass Illustration (Matches Sleep Duration size, proportions and theme) */}
                   <div className="flex flex-col items-center justify-center pt-1 pb-0 relative">
-                    <div className="relative w-56 h-36 rounded-2xl overflow-hidden shadow-sm border border-base-300/80 bg-slate-950/80 select-none">
-                      {/* Base uncolored/muted layer */}
-                      <img
-                        src="/images/read_open_book.jpg"
-                        alt="Reading book illustration"
-                        className="w-full h-full object-cover filter grayscale contrast-125 brightness-40 opacity-40 select-none pointer-events-none"
-                      />
+                    <svg viewBox="0 0 190 120" className="w-56 h-36 overflow-visible select-none pointer-events-none">
+                      <defs>
+                        {/* Radiant Blue Sand Gradient */}
+                        <linearGradient id="sandBlueGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#bae6fd" />
+                          <stop offset="35%" stopColor="#38bdf8" />
+                          <stop offset="75%" stopColor="#0284c7" />
+                          <stop offset="100%" stopColor="#0369a1" />
+                        </linearGradient>
 
-                      {/* Active colored layer: fills across pages from left to right as reading progress increases */}
-                      <div
-                        className="absolute inset-0 transition-all duration-700 ease-out pointer-events-none overflow-hidden"
-                        style={{
-                          clipPath: `inset(0 ${100 - readPct}% 0 0)`,
-                        }}
-                      >
-                        <img
-                          src="/images/read_open_book.jpg"
-                          alt="Reading book filled"
-                          className="w-full h-full object-cover filter drop-shadow-md select-none"
+                        {/* Sand Trickle Flow Gradient (Blue) */}
+                        <linearGradient id="sandStreamGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#e0f2fe" />
+                          <stop offset="50%" stopColor="#38bdf8" />
+                          <stop offset="100%" stopColor="#0284c7" />
+                        </linearGradient>
+
+                        {/* Twinkling Star Yellow Gradient */}
+                        <linearGradient id="readStarYellowGrad" x1="0" y1="0" x2="1" y2="1">
+                          <stop offset="0%" stopColor="#fef08a" />
+                          <stop offset="50%" stopColor="#facc15" />
+                          <stop offset="100%" stopColor="#f59e0b" />
+                        </linearGradient>
+
+                        {/* Upper Bulb Glass Mask */}
+                        <clipPath id="upperGlassClip">
+                          <path d="M 72 20 C 65 36, 88 54, 92 60 L 98 60 C 102 54, 125 36, 118 20 Z" />
+                        </clipPath>
+
+                        {/* Lower Bulb Glass Mask */}
+                        <clipPath id="lowerGlassClip">
+                          <path d="M 92 60 C 88 66, 65 84, 72 100 L 118 100 C 125 84, 102 66, 98 60 Z" />
+                        </clipPath>
+                      </defs>
+
+                      <style>{`
+                        @keyframes hourglassFloat {
+                          0%, 100% { transform: translateY(0px); }
+                          50% { transform: translateY(-3px); }
+                        }
+                        @keyframes sandStreamFlow {
+                          0% { stroke-dashoffset: 0; }
+                          100% { stroke-dashoffset: -12; }
+                        }
+                        @keyframes sandStreamPulse {
+                          0%, 100% { opacity: 0.95; }
+                          50% { opacity: 0.75; }
+                        }
+                        @keyframes sandParticleBounce1 {
+                          0%, 100% { transform: translateY(0px) scale(0.8); opacity: 0.9; }
+                          50% { transform: translateY(-3px) scale(1.1); opacity: 1; }
+                        }
+                        @keyframes sandParticleBounce2 {
+                          0%, 100% { transform: translateY(0px) scale(0.7); opacity: 0.8; }
+                          50% { transform: translateY(-4px) scale(1.2); opacity: 1; }
+                        }
+                        @keyframes readGoalCrownGlow {
+                          0%, 100% { filter: drop-shadow(0 0 6px rgba(250, 204, 21, 0.45)); transform: scale(1); }
+                          50% { filter: drop-shadow(0 0 12px rgba(250, 204, 21, 0.9)); transform: scale(1.05); }
+                        }
+                      `}</style>
+
+                      {/* 1. Base Unfilled Outlines (Matches DaisyUI theme tokens seamlessly) */}
+                      <g className="text-base-content/25">
+                        {/* Top Stand Plate */}
+                        <rect x="60" y="14" width="70" height="6" rx="3" fill="currentColor" fillOpacity="0.08" stroke="currentColor" strokeWidth="1.5" />
+                        {/* Bottom Stand Plate */}
+                        <rect x="60" y="100" width="70" height="6" rx="3" fill="currentColor" fillOpacity="0.08" stroke="currentColor" strokeWidth="1.5" />
+                        {/* Left & Right Support Pillars */}
+                        <line x1="65" y1="20" x2="65" y2="100" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" opacity="0.35" />
+                        <line x1="125" y1="20" x2="125" y2="100" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" opacity="0.35" />
+
+                        {/* Symmetrical Hourglass Glass Body */}
+                        <path
+                          d="M 72 20 C 65 36, 88 54, 92 60 C 88 66, 65 84, 72 100 L 118 100 C 125 84, 102 66, 98 60 C 102 54, 125 36, 118 20 Z"
+                          fill="currentColor"
+                          fillOpacity="0.04"
+                          stroke="currentColor"
+                          strokeWidth="2.2"
+                          strokeLinejoin="round"
                         />
-                        {/* Shimmering reading progress edge */}
-                        {readPct > 0 && readPct < 100 && (
-                          <div
-                            className="absolute top-0 bottom-0 w-[2px] bg-gradient-to-b from-amber-300 via-emerald-400 to-sky-400 shadow-[0_0_10px_#38bdf8]"
-                            style={{ left: `${readPct}%` }}
-                          />
+
+                        {/* Star 1 Base (Upper left) */}
+                        <path
+                          d="M 38 22 L 40.5 27.5 L 46 30 L 40.5 32.5 L 38 38 L 35.5 32.5 L 30 30 L 35.5 27.5 Z"
+                          fill="currentColor"
+                          fillOpacity="0.06"
+                          stroke="currentColor"
+                          strokeWidth="1.2"
+                          strokeLinejoin="round"
+                        />
+                        {/* Star 2 Base (Upper right) */}
+                        <path
+                          d="M 152 19 L 154.8 25.2 L 161 28 L 154.8 30.8 L 152 37 L 149.2 30.8 L 143 28 L 149.2 25.2 Z"
+                          fill="currentColor"
+                          fillOpacity="0.06"
+                          stroke="currentColor"
+                          strokeWidth="1.5"
+                          strokeLinejoin="round"
+                        />
+                        {/* Star 3 Base (Mid right) */}
+                        <path
+                          d="M 158 55 L 160.2 59.8 L 165 62 L 160.2 64.2 L 158 69 L 155.8 64.2 L 151 62 L 155.8 59.8 Z"
+                          fill="currentColor"
+                          fillOpacity="0.06"
+                          stroke="currentColor"
+                          strokeWidth="1.2"
+                          strokeLinejoin="round"
+                        />
+                        {/* Star 4 Base (Lower left) */}
+                        <path
+                          d="M 34 80 L 36 84 L 40 86 L 36 88 L 34 92 L 32 88 L 28 86 L 32 84 Z"
+                          fill="currentColor"
+                          fillOpacity="0.06"
+                          stroke="currentColor"
+                          strokeWidth="1.2"
+                          strokeLinejoin="round"
+                        />
+                        {/* Star 5 Base (Lower right) */}
+                        <path
+                          d="M 148 86 L 150 90 L 154 92 L 150 94 L 148 98 L 146 94 L 142 92 L 146 90 Z"
+                          fill="currentColor"
+                          fillOpacity="0.06"
+                          stroke="currentColor"
+                          strokeWidth="1.2"
+                          strokeLinejoin="round"
+                        />
+                      </g>
+
+                      {/* 2. Floating Animated Hourglass & Sand Simulation */}
+                      <g style={{ animation: "hourglassFloat 4s ease-in-out infinite" }}>
+                        {/* Stand accents */}
+                        <rect x="68" y="15.5" width="54" height="1" rx="0.5" fill="#ffffff" opacity="0.35" />
+                        <rect x="68" y="101.5" width="54" height="1" rx="0.5" fill="#ffffff" opacity="0.35" />
+
+                        {/* Top Bulb Sand (Remaining Reading Time: Drains Downward as Progress Increases) */}
+                        {remainingPct > 0 && (
+                          <g clipPath="url(#upperGlassClip)">
+                            {/* Sand Liquid Body */}
+                            <rect
+                              x="58"
+                              y={topSandY}
+                              width="74"
+                              height={topSandH}
+                              fill="url(#sandBlueGrad)"
+                              className="transition-all duration-700 ease-out"
+                            />
+                            {/* Fine Sand Texture Particles inside upper sand */}
+                            <circle cx="86" cy={Math.min(56, topSandY + 10)} r="0.9" fill="#ffffff" opacity="0.45" />
+                            <circle cx="102" cy={Math.min(56, topSandY + 14)} r="0.9" fill="#075985" opacity="0.3" />
+                            <circle cx="94" cy={Math.min(58, topSandY + 20)} r="0.8" fill="#ffffff" opacity="0.4" />
+
+                            {/* Sand Surface Funnel (Dips inward toward the center neck when draining) */}
+                            <path
+                              d={`M 66 ${topSandY} Q 95 ${Math.min(59, topSandY + (isFlowing ? 3 : 1))} 124 ${topSandY} L 124 ${topSandY + 2} L 66 ${topSandY + 2} Z`}
+                              fill="#0284c7"
+                              opacity="0.6"
+                              className="transition-all duration-700 ease-out"
+                            />
+                          </g>
                         )}
-                      </div>
 
-                      {/* Corner badge with percentage formatted to at most 2 decimal points */}
-                      <div className="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-md border border-white/10 text-[10px] font-bold text-sky-300 shadow-2xs pointer-events-none">
-                        {readPctDisplay}%
-                      </div>
-                    </div>
+                        {/* Bottom Bulb Sand (Time Studied: Rises Upward as Progress Increases) */}
+                        {progressPct > 0 && (
+                          <g clipPath="url(#lowerGlassClip)">
+                            {/* Accumulated Sand Body in Lower Bulb */}
+                            <rect
+                              x="58"
+                              y={bottomSandY}
+                              width="74"
+                              height={bottomSandH + 2}
+                              fill="url(#sandBlueGrad)"
+                              className="transition-all duration-700 ease-out"
+                            />
+                            {/* Fine Sand Texture Particles inside lower sand */}
+                            <circle cx="88" cy={Math.min(94, bottomSandY + 10)} r="0.9" fill="#ffffff" opacity="0.4" />
+                            <circle cx="104" cy={Math.min(96, bottomSandY + 14)} r="0.9" fill="#075985" opacity="0.25" />
+                            <circle cx="95" cy={Math.min(95, bottomSandY + 22)} r="0.8" fill="#ffffff" opacity="0.45" />
 
-                    {/* Reading Value & Readout (No emoji icon) */}
-                    <div className="text-center mt-2 space-y-0.5">
+                            {/* Sand Mound Peak directly under the stream */}
+                            {progressPct < 100 && (
+                              <path
+                                d={`M ${95 - moundW} ${bottomSandY + 1} Q 95 ${moundPeakY} ${95 + moundW} ${bottomSandY + 1} Z`}
+                                fill="#7dd3fc"
+                                className="transition-all duration-700 ease-out"
+                              />
+                            )}
+                          </g>
+                        )}
+
+                        {/* Falling Sand Stream & Droplets (Flows whenever study time is logged and not 100% full) */}
+                        {isFlowing && (
+                          <g>
+                            {/* Golden/Blue Stream */}
+                            <line
+                              x1="95"
+                              y1="59"
+                              x2="95"
+                              y2={bottomSandY}
+                              stroke="url(#sandStreamGrad)"
+                              strokeWidth="2.2"
+                              strokeLinecap="round"
+                              style={{ animation: "sandStreamPulse 0.6s linear infinite" }}
+                            />
+                            {/* Inner Shimmering Flow Dash */}
+                            <line
+                              x1="95"
+                              y1="59"
+                              x2="95"
+                              y2={bottomSandY}
+                              stroke="#ffffff"
+                              strokeWidth="0.9"
+                              strokeDasharray="3 2"
+                              opacity="0.9"
+                              style={{ animation: "sandStreamFlow 0.3s linear infinite" }}
+                            />
+
+                            {/* Bouncing Sand Grains at Landing Point */}
+                            <g>
+                              <circle
+                                cx="93"
+                                cy={bottomSandY - 1}
+                                r="1"
+                                fill="#bae6fd"
+                                style={{ animation: "sandParticleBounce1 0.65s ease-out infinite" }}
+                              />
+                              <circle
+                                cx="97"
+                                cy={bottomSandY - 1.5}
+                                r="1.2"
+                                fill="#38bdf8"
+                                style={{ animation: "sandParticleBounce2 0.8s ease-out infinite 0.15s" }}
+                              />
+                            </g>
+                          </g>
+                        )}
+
+                        {/* Outer Glass Outline */}
+                        <path
+                          d="M 72 20 C 65 36, 88 54, 92 60 C 88 66, 65 84, 72 100 L 118 100 C 125 84, 102 66, 98 60 C 102 54, 125 36, 118 20 Z"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2.2"
+                          strokeLinejoin="round"
+                          className="text-base-content/35"
+                        />
+
+                        {/* Specular Glass Highlights */}
+                        <path
+                          d="M 72 26 C 68 36, 78 48, 86 54"
+                          fill="none"
+                          stroke="#ffffff"
+                          strokeWidth="1.6"
+                          strokeLinecap="round"
+                          opacity="0.4"
+                        />
+                        <path
+                          d="M 86 66 C 78 72, 68 84, 72 94"
+                          fill="none"
+                          stroke="#ffffff"
+                          strokeWidth="1.6"
+                          strokeLinecap="round"
+                          opacity="0.4"
+                        />
+                        <path
+                          d="M 118 26 C 122 36, 112 48, 104 54"
+                          fill="none"
+                          stroke="#ffffff"
+                          strokeWidth="1"
+                          strokeLinecap="round"
+                          opacity="0.2"
+                        />
+                      </g>
+
+                      {/* 3. Interactive Animated Stars - Light up & Twinkle as Progress increases (Matches Sleep Duration) */}
+                      {/* Star 1 (Upper left) - Wakes up at >= 15% */}
+                      {progressPct >= 15 && (
+                        <g style={{ transformOrigin: "38px 30px", animation: "starTwinkle3 2.6s ease-in-out infinite 0.2s" }}>
+                          <path
+                            d="M 38 22 L 40.5 27.5 L 46 30 L 40.5 32.5 L 38 38 L 35.5 32.5 L 30 30 L 35.5 27.5 Z"
+                            fill="#facc15"
+                            stroke="#fde047"
+                            strokeWidth="1"
+                          />
+                        </g>
+                      )}
+
+                      {/* Star 2 (Major Diamond, upper right) - Wakes up at >= 25% */}
+                      {progressPct >= 25 && (
+                        <g style={{ transformOrigin: "152px 28px", animation: "starTwinkle1 2.2s ease-in-out infinite" }}>
+                          <path
+                            d="M 152 19 L 154.8 25.2 L 161 28 L 154.8 30.8 L 152 37 L 149.2 30.8 L 143 28 L 149.2 25.2 Z"
+                            fill="url(#readStarYellowGrad)"
+                            stroke="#facc15"
+                            strokeWidth="1.5"
+                          />
+                          <circle cx="152" cy="28" r="1.5" fill="#ffffff" />
+                        </g>
+                      )}
+
+                      {/* Star 3 (Mid right) - Wakes up at >= 50% */}
+                      {progressPct >= 50 && (
+                        <g style={{ transformOrigin: "158px 62px", animation: "starTwinkle2 1.9s ease-in-out infinite 0.4s" }}>
+                          <path
+                            d="M 158 55 L 160.2 59.8 L 165 62 L 160.2 64.2 L 158 69 L 155.8 64.2 L 151 62 L 155.8 59.8 Z"
+                            fill="#facc15"
+                            stroke="#fde047"
+                            strokeWidth="1.2"
+                          />
+                        </g>
+                      )}
+
+                      {/* Star 4 (Lower left) - Wakes up at >= 75% */}
+                      {progressPct >= 75 && (
+                        <g style={{ transformOrigin: "34px 86px", animation: "starTwinkle3 2.4s ease-in-out infinite 0.8s" }}>
+                          <path
+                            d="M 34 80 L 36 84 L 40 86 L 36 88 L 34 92 L 32 88 L 28 86 L 32 84 Z"
+                            fill="#facc15"
+                            stroke="#fde047"
+                            strokeWidth="1"
+                          />
+                        </g>
+                      )}
+
+                      {/* Star 5 (Lower right) - Wakes up at >= 85% */}
+                      {progressPct >= 85 && (
+                        <g style={{ transformOrigin: "148px 92px", animation: "starTwinkle1 2.5s ease-in-out infinite 0.5s" }}>
+                          <path
+                            d="M 148 86 L 150 90 L 154 92 L 150 94 L 148 98 L 146 94 L 142 92 L 146 90 Z"
+                            fill="#facc15"
+                            stroke="#fde047"
+                            strokeWidth="1.2"
+                          />
+                        </g>
+                      )}
+
+                      {/* 100% Goal Mastered: Victory Golden Star above top plate & Sparkles */}
+                      {progressPct >= 100 && (
+                        <g style={{ transformOrigin: "95px 10px", animation: "readGoalCrownGlow 3s ease-in-out infinite" }}>
+                          <path
+                            d="M 95 2 L 97 6.5 L 102 7.5 L 98 11 L 99.5 16 L 95 13 L 90.5 16 L 92 11 L 88 7.5 L 93 6.5 Z"
+                            fill="#facc15"
+                            stroke="#fde047"
+                            strokeWidth="1"
+                            style={{ filter: "drop-shadow(0 0 6px #facc15)" }}
+                          />
+                          <circle cx="70" cy="80" r="1.5" fill="#fde047" />
+                          <circle cx="120" cy="80" r="1.5" fill="#fde047" />
+                          <circle cx="95" cy="88" r="1.8" fill="#ffffff" opacity="0.8" />
+                        </g>
+                      )}
+                    </svg>
+
+                    {/* Reading Value & Progress readout (Matches Sleep Duration exact typography & format) */}
+                    <div className="text-center mt-1 space-y-0.5">
                       <div className="text-2xl font-black text-base-content tracking-tight">
                         {readVal} <span className="text-xs font-semibold text-base-content/60">hrs</span>
                       </div>
-                      <div className="text-[10px] font-bold text-amber-500 uppercase tracking-wider">
-                        {readMins} mins • {readPctDisplay}% of {readTarget}h goal
+                      <div className="text-[10px] font-bold text-sky-500 uppercase tracking-wider">
+                        {readStatus} • {readPctDisplay}% of {readTarget}h goal
                       </div>
                     </div>
                   </div>
@@ -3147,6 +3765,13 @@ function HabitTableEntry() {
                         onClick={() => handleMobileFieldChange("read", Math.round(((Number(mobileEntry.read) || 0) + 0.5) * 100) / 100)}
                       >
                         +30m
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-xs btn-soft"
+                        onClick={() => handleMobileFieldChange("read", Math.round(((Number(mobileEntry.read) || 0) + 1.0) * 100) / 100)}
+                      >
+                        +1h
                       </button>
                     </div>
                   </div>
@@ -3211,7 +3836,7 @@ function HabitTableEntry() {
                           type="button"
                           className={`p-2.5 rounded-xl text-xs font-semibold border transition-all flex items-center justify-between gap-1.5 cursor-pointer select-none active:scale-95 text-left ${
                             isChecked
-                              ? "bg-emerald-500 text-white border-emerald-500 shadow-sm font-bold"
+                              ? "bg-emerald-500/15 border-emerald-500 text-emerald-800 dark:text-emerald-200 ring-2 ring-emerald-500/30 shadow-xs font-bold"
                               : "bg-base-200/70 border-base-300 text-base-content/80 hover:bg-base-200"
                           }`}
                           onClick={() => {
@@ -3231,10 +3856,10 @@ function HabitTableEntry() {
                         >
                           <div className="flex items-center gap-1.5 min-w-0 truncate">
                             <span className="text-sm shrink-0 select-none">{emoji}</span>
-                            <span className="truncate text-[11px]">{habit}</span>
+                            <span className="truncate text-[11px] font-bold">{habit}</span>
                           </div>
                           <span className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 text-[10px] ${
-                            isChecked ? "bg-white text-emerald-600 font-black" : "border border-base-content/30 text-transparent"
+                            isChecked ? "bg-emerald-500 text-white font-black shadow-xs" : "border border-base-content/30 text-transparent"
                           }`}>
                             ✓
                           </span>

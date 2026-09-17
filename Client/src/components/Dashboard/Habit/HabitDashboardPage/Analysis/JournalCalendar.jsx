@@ -385,7 +385,7 @@ const JournalCalendar = ({ habitData = [], moodList = [], year = dayjs().year() 
                                                         key={act}
                                                         className={`badge badge-sm ${
                                                             isCompleted 
-                                                                ? 'badge-success gap-1 text-[11px] font-semibold' 
+                                                                ? 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-800 dark:text-emerald-200 gap-1 text-[11px] font-bold' 
                                                                 : 'badge-ghost opacity-40 text-[11px]'
                                                         }`}
                                                     >

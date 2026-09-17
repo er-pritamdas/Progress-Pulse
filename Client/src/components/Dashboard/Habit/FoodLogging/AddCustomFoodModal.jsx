@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import axiosInstance from "../../../../Context/AxiosInstance";
+import apiCache from "../../../../utils/apiCache";
 import { PlusCircle, Check, AlertCircle } from "lucide-react";
 
 function AddCustomFoodModal({ isOpen, onClose, onFoodAdded }) {
@@ -62,6 +63,110 @@ function AddCustomFoodModal({ isOpen, onClose, onFoodAdded }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  const isExplicitlySavedRef = useRef(false);
+  const isAutoSavingRef = useRef(false);
+  const isDiscardedRef = useRef(false);
+  const formDataRef = useRef(formData);
+
+  useEffect(() => {
+    formDataRef.current = formData;
+  }, [formData]);
+
+  useEffect(() => {
+    if (isOpen) {
+      isExplicitlySavedRef.current = false;
+      isAutoSavingRef.current = false;
+      isDiscardedRef.current = false;
+    }
+  }, [isOpen]);
+
+  const performAutoSave = async () => {
+    if (isExplicitlySavedRef.current || isAutoSavingRef.current || isDiscardedRef.current) return;
+    const currentData = formDataRef.current;
+    if (!currentData || !currentData.name || !currentData.name.trim()) return;
+
+    isAutoSavingRef.current = true;
+    try {
+      const payload = {
+        ...currentData,
+        servingSize: Number(currentData.servingSize) || 100,
+        calories: Number(currentData.calories) || 0,
+        protein: Number(currentData.protein) || 0,
+        carbohydrates: Number(currentData.carbohydrates) || 0,
+        fat: Number(currentData.fat) || 0,
+        fiber: Number(currentData.fiber) || 0,
+        sugar: Number(currentData.sugar) || 0,
+        addedSugar: Number(currentData.addedSugar) || 0,
+      };
+
+      const token = localStorage.getItem("token");
+      await fetch("/api/v1/dashboard/habit/food/database", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify(payload),
+        keepalive: true,
+      });
+
+      apiCache.invalidate("/habit");
+      apiCache.invalidate("/dashboard");
+
+      window.dispatchEvent(
+        new CustomEvent("pulse-notify", {
+          detail: {
+            message: `Auto-saved custom food "${currentData.name.trim()}"!`,
+            type: "success",
+            duration: 4000,
+          },
+        })
+      );
+
+      window.dispatchEvent(new CustomEvent("food-logs-updated"));
+      if (onFoodAdded) onFoodAdded();
+    } catch (err) {
+      console.error("Auto-save custom food failed:", err);
+    }
+  };
+
+  const handleClose = () => {
+    performAutoSave();
+    onClose();
+  };
+
+  const handleDiscard = () => {
+    isDiscardedRef.current = true;
+    onClose();
+  };
+
+  const prevIsOpenRef = useRef(isOpen);
+  useEffect(() => {
+    if (prevIsOpenRef.current && !isOpen) {
+      performAutoSave();
+    }
+    if (!prevIsOpenRef.current && isOpen) {
+      isExplicitlySavedRef.current = false;
+      isAutoSavingRef.current = false;
+      isDiscardedRef.current = false;
+    }
+    prevIsOpenRef.current = isOpen;
+  }, [isOpen]);
+
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      performAutoSave();
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    window.addEventListener("pagehide", handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      window.removeEventListener("pagehide", handleBeforeUnload);
+      performAutoSave();
+    };
+  }, []);
+
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = "hidden";
@@ -90,6 +195,7 @@ function AddCustomFoodModal({ isOpen, onClose, onFoodAdded }) {
     try {
       setLoading(true);
       setError("");
+      isExplicitlySavedRef.current = true;
       const payload = {
         ...formData,
         servingSize: Number(formData.servingSize) || 100,
@@ -104,9 +210,21 @@ function AddCustomFoodModal({ isOpen, onClose, onFoodAdded }) {
 
       await axiosInstance.post("/v1/dashboard/habit/food/database", payload);
 
+      window.dispatchEvent(
+        new CustomEvent("pulse-notify", {
+          detail: {
+            message: `Custom food "${formData.name.trim()}" added successfully!`,
+            type: "success",
+            duration: 4000,
+          },
+        })
+      );
+
+      window.dispatchEvent(new CustomEvent("food-logs-updated"));
       if (onFoodAdded) onFoodAdded();
       onClose();
     } catch (err) {
+      isExplicitlySavedRef.current = false;
       setError(err.response?.data?.message || "Failed to create custom food item.");
     } finally {
       setLoading(false);
@@ -114,14 +232,21 @@ function AddCustomFoodModal({ isOpen, onClose, onFoodAdded }) {
   };
 
   return (
-    <div className="fixed inset-0 z-[99999] bg-black/60 backdrop-blur-md flex items-center justify-center p-2 sm:p-4">
+    <div
+      className="fixed inset-0 z-[99999] bg-black/60 backdrop-blur-md flex items-center justify-center p-2 sm:p-4"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          handleClose();
+        }
+      }}
+    >
       <div className="bg-base-200 rounded-2xl sm:rounded-3xl max-w-3xl w-full h-[90vh] sm:h-[650px] border border-base-300 shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         {/* Header */}
         <div className="p-3.5 sm:p-6 bg-base-300/80 border-b border-base-300 flex justify-between items-center shrink-0">
           <h3 className="font-bold text-lg sm:text-xl flex items-center gap-2">
             <PlusCircle className="text-secondary w-5 h-5 sm:w-6 sm:h-6" /> Add Custom Food Item
           </h3>
-          <button className="btn btn-sm btn-circle btn-ghost" onClick={onClose}>
+          <button className="btn btn-sm btn-circle btn-ghost" onClick={handleClose} title="Close (auto-saves custom food)">
             ✕
           </button>
         </div>
@@ -444,7 +569,12 @@ function AddCustomFoodModal({ isOpen, onClose, onFoodAdded }) {
             </details>
 
             <div className="modal-action border-t border-base-300 pt-3">
-              <button type="button" className="btn btn-sm btn-ghost" onClick={onClose}>
+              <button
+                type="button"
+                className="btn btn-sm btn-ghost text-base-content/60 hover:text-base-content"
+                onClick={handleDiscard}
+                title="Discard custom food without saving"
+              >
                 Cancel
               </button>
               <button type="submit" className="btn btn-sm btn-secondary gap-1" disabled={loading}>

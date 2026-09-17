@@ -11,8 +11,10 @@ import NutrientWikiModal from "./NutrientWikiModal";
 import FoodItemNutrientsModal from "./FoodItemNutrientsModal";
 import EditFoodLogModal from "./EditFoodLogModal";
 import DeleteFoodLogPopUp from "./DeleteFoodLogPopUp";
+import MacroConcentricCircles from "./MacroConcentricCircles";
 import { fetchHabitSettings } from "../../../../services/redux/slice/habitSlice";
 import {
+  X,
   Utensils,
   Plus,
   PlusCircle,
@@ -258,9 +260,16 @@ function FoodLoggingTab() {
   const [isDeletePopupOpen, setIsDeletePopupOpen] = useState(false);
   const [logToDelete, setLogToDelete] = useState(null);
   const [logToEdit, setLogToEdit] = useState(null);
-  const [isCardsExpanded, setIsCardsExpanded] = useState(false);
+  const [selectedNutrientsMeal, setSelectedNutrientsMeal] = useState("All");
 
   const MEAL_CATEGORIES = ["Breakfast", "Lunch", "Dinner", "Snacks", "Other"];
+  const MEAL_ICONS = {
+    Breakfast: "🍳",
+    Lunch: "🥗",
+    Dinner: "🍲",
+    Snacks: "🍎",
+    Other: "☕",
+  };
 
   const [collapsedMeals, setCollapsedMeals] = useState(() => {
     try {
@@ -321,6 +330,7 @@ function FoodLoggingTab() {
       return ["calories", "protein", "carbs", "fat"];
     }
   });
+  const [isCardsExpanded, setIsCardsExpanded] = useState(false);
 
   const toggleCardVisibility = (cardId) => {
     setVisibleCards((prev) => {
@@ -448,6 +458,16 @@ function FoodLoggingTab() {
     fetchDailyLogs(true);
   }, [selectedDate]);
 
+  useEffect(() => {
+    const handleFoodLogsUpdated = () => {
+      fetchDailyLogs(false);
+    };
+    window.addEventListener("food-logs-updated", handleFoodLogsUpdated);
+    return () => {
+      window.removeEventListener("food-logs-updated", handleFoodLogsUpdated);
+    };
+  }, [selectedDate]);
+
   const openDeletePopup = (log) => {
     setLogToDelete(log);
     setIsDeletePopupOpen(true);
@@ -519,6 +539,7 @@ function FoodLoggingTab() {
 
   const fatTargetMin = Math.round((calorieMin * (macroRatios.fats / 100)) / 9);
   const fatTargetMax = Math.round((calorieMax * (macroRatios.fats / 100)) / 9);
+  const fiberTarget = isMale ? 38 : 25;
 
   const NUTRIENT_TARGETS = {
     calories: { min: calorieMin, max: calorieMax },
@@ -547,7 +568,12 @@ function FoodLoggingTab() {
     vitaminE: 15,
     vitaminK: isMale ? 120 : 90,
 
-    // Trace Minerals
+    // Minerals
+    calcium: 1000,
+    magnesium: isMale ? 420 : 320,
+    phosphorus: 700,
+    potassium: isMale ? 3400 : 2600,
+    sodium: 2300,
     iron: isMale ? 8 : (age > 50 ? 8 : 18),
     zinc: isMale ? 11 : 8,
     copper: 0.9,
@@ -577,8 +603,94 @@ function FoodLoggingTab() {
 
   return (
     <div className="space-y-6 pb-12">
-      {/* Sticky Top Toolbar */}
-      <div className="sticky -top-4 z-40 bg-base-200 -mt-4 -mx-4 px-4 sm:px-6 py-3.5 border-b border-base-300 shadow-md flex flex-wrap justify-between items-center gap-4 transition-all">
+      {/* Mobile / Phone Top Navigation Bar (md:hidden) */}
+      <div className="md:hidden sticky top-[-16px] z-30 bg-base-100/95 backdrop-blur-md border border-base-300/80 rounded-2xl px-3 py-2 shadow-sm mb-3">
+        {/* Date Navigation & Calendar Dropdown + Today Button + Nutrients Icon */}
+        <div className="flex items-center justify-between text-xs gap-2">
+          <div className="flex items-center gap-1.5 min-w-0">
+            {/* Previous Day (<) */}
+            <button
+              type="button"
+              className="btn btn-xs btn-circle btn-ghost border border-base-300/80 shrink-0"
+              onClick={() => changeSelectedDateByDays(-1)}
+              title="Previous Day"
+            >
+              <ChevronLeft size={15} />
+            </button>
+
+            {/* Center Date Dropdown */}
+            <div className="dropdown dropdown-bottom floating-label">
+              <div
+                tabIndex={0}
+                role="button"
+                className="px-2.5 py-1.5 rounded-xl bg-base-200/80 hover:bg-base-200 border border-base-300/80 flex items-center gap-1.5 cursor-pointer shadow-2xs"
+              >
+                <Calendar size={13} className="text-primary shrink-0" />
+                <span className="font-bold text-xs truncate max-w-[125px]">
+                  {formatDate(selectedDate)}
+                </span>
+              </div>
+              <div className="dropdown-content z-[999] bg-base-100 rounded-box shadow-2xl p-2 mt-1 border border-base-300">
+                <calendar-date
+                  class="cally"
+                  value={selectedDate}
+                  onchange={(e) => setSelectedDate(e.target.value)}
+                >
+                  <svg aria-label="Previous" className="fill-current size-4" slot="previous" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                    <path d="M15.75 19.5 8.25 12l7.5-7.5"></path>
+                  </svg>
+                  <svg aria-label="Next" className="fill-current size-4" slot="next" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                    <path d="m8.25 4.5 7.5 7.5-7.5 7.5"></path>
+                  </svg>
+                  <calendar-month></calendar-month>
+                </calendar-date>
+              </div>
+            </div>
+
+            {/* Next Day (>) */}
+            <button
+              type="button"
+              className="btn btn-xs btn-circle btn-ghost border border-base-300/80 shrink-0"
+              onClick={() => changeSelectedDateByDays(1)}
+              title="Next Day"
+            >
+              <ChevronRight size={15} />
+            </button>
+          </div>
+
+          {/* Right Controls: Today Button + Nutrients Icon */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              type="button"
+              onClick={() => setSelectedDate(getTodayDate())}
+              className={`btn btn-xs rounded-xl font-bold px-2.5 transition-all ${
+                selectedDate === getTodayDate()
+                  ? "btn-primary shadow-xs"
+                  : "btn-ghost border border-base-300/80 hover:bg-base-200 text-base-content/80"
+              }`}
+              title="Jump to Today's Food Log"
+            >
+              Today
+            </button>
+
+            {/* Nutrients Icon Button */}
+            <button
+              type="button"
+              className="btn btn-xs btn-circle btn-ghost border border-base-300/80 text-info hover:bg-info/10 shadow-2xs shrink-0"
+              onClick={() => {
+                setSelectedNutrientsMeal("All");
+                setIsNutrientsModalOpen(true);
+              }}
+              title="Daily Nutrients Breakdown"
+            >
+              <Info size={15} />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Desktop Sticky Top Toolbar (hidden on mobile) */}
+      <div className="hidden md:flex sticky -top-4 z-40 bg-base-200 -mt-4 -mx-4 px-4 sm:px-6 py-3.5 border-b border-base-300 shadow-md flex-wrap justify-between items-center gap-4 transition-all">
         <div className="flex items-center gap-3">
           <div className="p-3 bg-primary/15 text-primary rounded-xl">
             <Utensils size={26} />
@@ -591,7 +703,21 @@ function FoodLoggingTab() {
           </div>
         </div>
 
-        <div className="flex items-center gap-3 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Today Button */}
+          <button
+            type="button"
+            className={`btn btn-sm rounded-xl font-bold px-3 transition-all ${
+              selectedDate === getTodayDate()
+                ? "btn-primary shadow-xs"
+                : "btn-ghost border border-base-300 hover:bg-base-300 text-base-content/80"
+            }`}
+            title="Jump to Today's Food Log"
+            onClick={() => setSelectedDate(getTodayDate())}
+          >
+            Today
+          </button>
+
           {/* Date Selector with Yesterday (<) & Tomorrow (>) Navigation Arrows */}
           <div className="flex items-center gap-1">
             <button
@@ -650,21 +776,20 @@ function FoodLoggingTab() {
             >
               <ChevronRight size={16} />
             </button>
+
+            {/* Nutrients Icon Button incorporated with Date */}
+            <button
+              type="button"
+              className="btn btn-sm btn-circle btn-ghost border border-base-300 hover:bg-base-300 text-info ml-1"
+              onClick={() => {
+                setSelectedNutrientsMeal("All");
+                setIsNutrientsModalOpen(true);
+              }}
+              title="Daily Nutrients Breakdown"
+            >
+              <Info size={16} />
+            </button>
           </div>
-
-          <button
-            className="btn btn-sm btn-secondary gap-1"
-            onClick={() => setIsCustomModalOpen(true)}
-          >
-            <PlusCircle size={16} /> Add Custom Food
-          </button>
-
-          <button
-            className="btn btn-sm btn-primary gap-1"
-            onClick={() => openLogModal("Breakfast")}
-          >
-            <Plus size={16} /> Log Food
-          </button>
         </div>
       </div>
 
@@ -680,7 +805,29 @@ function FoodLoggingTab() {
         </div>
       ) : (
         <>
-          {/* Cards Section Header & Customize/Expand Buttons */}
+          {/* Phone View: Concentric Circles Nutrient Overview Dashboard (md:hidden) */}
+          <div className="md:hidden bg-base-100 border border-base-300/80 rounded-2xl p-3.5 shadow-2xs space-y-3 mb-2">
+            <MacroConcentricCircles
+              data={data}
+              targets={NUTRIENT_TARGETS}
+              calorieMax={calorieMax}
+              calorieMin={calorieMin}
+              habitState={habitState}
+              carbs={data.summary.totalCarbs}
+              carbsTarget={carbsTargetMax}
+              protein={data.summary.totalProtein}
+              proteinTarget={proteinTargetMax}
+              fat={data.summary.totalFat}
+              fatTarget={fatTargetMax}
+              fiber={data.summary.totalFiber}
+              fiberTarget={fiberTarget}
+              calories={data.summary.totalCalories}
+            />
+          </div>
+
+          {/* Desktop Cards Section (hidden on mobile) */}
+          <div className="hidden md:block space-y-4">
+            {/* Cards Section Header & Customize/Expand Buttons */}
       {(() => {
         const hasMoreThan8 = visibleCards.length > 8;
         const displayedCards = isCardsExpanded ? visibleCards : visibleCards.slice(0, 8);
@@ -728,10 +875,13 @@ function FoodLoggingTab() {
 
                 <button
                   className="btn btn-sm btn-ghost border border-base-300 gap-1.5 hover:bg-base-300 transition-all rounded-xl shadow-xs text-info"
-                  onClick={() => setIsNutrientsModalOpen(true)}
+                  onClick={() => {
+                    setSelectedNutrientsMeal("All");
+                    setIsNutrientsModalOpen(true);
+                  }}
                   title="View All Nutrients Summary"
                 >
-                  <BarChart3 size={15} className="text-info" />
+                  <Info size={15} className="text-info" />
                   <span>All Nutrients</span>
                 </button>
 
@@ -803,13 +953,13 @@ function FoodLoggingTab() {
             );
           }
 
-          // Special case 2: Macro Split Card
+          // Special case 2: Macro Concentric Rings & Split Card
           if (cardId === "macroSplit") {
             return (
-              <div key="macroSplit" className="bg-base-200 p-5 rounded-2xl border border-base-300 shadow-sm flex flex-col justify-between">
-                <div className="flex justify-between items-center mb-1">
-                  <span className="text-xs font-bold text-base-content/70 uppercase tracking-wider flex items-center gap-1">
-                    <BarChart3 size={16} className="text-primary" /> Macro Split Ratio
+              <div key="macroSplit" className="bg-base-200 p-4 sm:p-5 rounded-2xl border border-base-300 shadow-sm flex flex-col justify-between">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-xs font-bold text-base-content/70 uppercase tracking-wider flex items-center gap-1.5">
+                    <PieChart size={16} className="text-primary" /> Nutrient Concentric Rings
                   </span>
                   <button
                     className="text-xs text-primary hover:underline font-bold flex items-center gap-1 cursor-pointer"
@@ -820,35 +970,34 @@ function FoodLoggingTab() {
                   </button>
                 </div>
 
-                {/* Multi-segment Ratio Bar */}
-                <div className="h-3 w-full bg-base-100 rounded-full flex overflow-hidden border border-base-300 my-2">
-                  <div style={{ width: `${macroRatios.protein}%` }} className="bg-info h-full transition-all" title={`Protein ${macroRatios.protein}%`}></div>
-                  <div style={{ width: `${macroRatios.carbs}%` }} className="bg-warning h-full transition-all" title={`Carbs ${macroRatios.carbs}%`}></div>
-                  <div style={{ width: `${macroRatios.fats}%` }} className="bg-success h-full transition-all" title={`Fat ${macroRatios.fats}%`}></div>
-                </div>
+                <MacroConcentricCircles
+                  data={data}
+                  targets={NUTRIENT_TARGETS}
+                  calorieMax={calorieMax}
+                  calorieMin={calorieMin}
+                  habitState={habitState}
+                  carbs={data.summary.totalCarbs}
+                  carbsTarget={carbsTargetMax}
+                  protein={data.summary.totalProtein}
+                  proteinTarget={proteinTargetMax}
+                  fat={data.summary.totalFat}
+                  fatTarget={fatTargetMax}
+                  fiber={data.summary.totalFiber}
+                  fiberTarget={fiberTarget}
+                  calories={data.summary.totalCalories}
+                  className="my-1"
+                />
 
-                {/* Target Breakdown Grid */}
-                <div className="grid grid-cols-3 gap-1 text-[11px] font-semibold text-center my-1">
-                  <div className="bg-info/10 text-info p-1.5 rounded-xl border border-info/20">
-                    <span className="block text-[10px] opacity-70 uppercase font-bold">Protein</span>
-                    <span>{macroRatios.protein}% ({proteinTargetMin}g–{proteinTargetMax}g)</span>
-                  </div>
-                  <div className="bg-warning/10 text-warning p-1.5 rounded-xl border border-warning/20">
-                    <span className="block text-[10px] opacity-70 uppercase font-bold">Carbs</span>
-                    <span>{macroRatios.carbs}% ({carbsTargetMin}g–{carbsTargetMax}g)</span>
-                  </div>
-                  <div className="bg-success/10 text-success p-1.5 rounded-xl border border-success/20">
-                    <span className="block text-[10px] opacity-70 uppercase font-bold">Fats</span>
-                    <span>{macroRatios.fats}% ({fatTargetMin}g–{fatTargetMax}g)</span>
-                  </div>
+                <div className="flex items-center justify-between text-[10px] font-semibold text-base-content/60 pt-2 border-t border-base-300 mt-2">
+                  <span>Target: P:{macroRatios.protein}% • C:{macroRatios.carbs}% • F:{macroRatios.fats}%</span>
+                  <button
+                    type="button"
+                    className="text-primary hover:underline font-bold"
+                    onClick={() => navigate("/dashboard/habit/logging")}
+                  >
+                    Configure
+                  </button>
                 </div>
-
-                <button
-                  className="btn btn-xs btn-soft btn-primary mt-2 w-full flex items-center justify-center gap-1 rounded-xl"
-                  onClick={() => navigate("/dashboard/habit/logging")}
-                >
-                  <ExternalLink size={12} /> Edit Ratios in Habit Profile
-                </button>
               </div>
             );
           }
@@ -1033,9 +1182,10 @@ function FoodLoggingTab() {
           </>
         );
       })()}
+          </div>
 
-      {/* Meal Category Breakdown Sections */}
-      <div className="space-y-4">
+      {/* Desktop Meal Category Breakdown Sections (hidden on mobile) */}
+      <div className="hidden md:block space-y-4">
         <div className="flex flex-wrap justify-between items-center bg-base-200/80 px-4 py-3 rounded-2xl border border-base-300 shadow-xs gap-2">
           <div className="flex items-center gap-2">
             <Utensils size={18} className="text-primary" />
@@ -1086,7 +1236,7 @@ function FoodLoggingTab() {
                 }`}
                 onClick={() => toggleMealCollapse(mealType)}
               >
-                <div className="flex items-center gap-2 sm:gap-3">
+                <div className="flex items-center gap-2 sm:gap-2.5">
                   <button
                     type="button"
                     className="btn btn-xs btn-circle btn-ghost text-primary hover:bg-base-100 p-0"
@@ -1098,15 +1248,25 @@ function FoodLoggingTab() {
                   >
                     {isCollapsed ? <ChevronRight size={18} /> : <ChevronDown size={18} />}
                   </button>
-                  <h3 className="font-bold text-base flex items-center gap-2">
-                    <Clock size={16} className="text-primary" /> {mealType}
+                  <span className="text-xl select-none leading-none">{MEAL_ICONS[mealType] || "🍴"}</span>
+                  <h3 className="font-bold text-base text-base-content">
+                    {mealType}
                   </h3>
                   <span className="badge badge-neutral badge-sm font-semibold">
                     {mealCalories} kcal
                   </span>
-                  <span className="badge badge-ghost badge-sm font-semibold text-xs opacity-75">
-                    {mealLogs.length} {mealLogs.length === 1 ? "item" : "items"}
-                  </span>
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-xs btn-circle text-info hover:bg-info/10 p-0.5"
+                    title={`View ${mealType} nutrients`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedNutrientsMeal(mealType);
+                      setIsNutrientsModalOpen(true);
+                    }}
+                  >
+                    <Info size={15} />
+                  </button>
                 </div>
 
                 <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
@@ -1244,7 +1404,7 @@ function FoodLoggingTab() {
                             </td>
                             <td className="text-center font-bold text-xs text-base-content/70">
                               <span className="badge badge-ghost badge-xs font-semibold">
-                                {mealLogs.length} {mealLogs.length === 1 ? "item" : "items"}
+                                {mealCalories} kcal
                               </span>
                             </td>
                             {tableNutrients.slice(0, 5).map((nutId) => (
@@ -1270,6 +1430,230 @@ function FoodLoggingTab() {
             </div>
           );
         })}
+      </div>
+
+      {/* Phone View: Meal Category Breakdown Cards (md:hidden) */}
+      <div className="md:hidden space-y-3">
+        {MEAL_CATEGORIES.map((mealType) => {
+          const mealLogs = data.meals[mealType] || [];
+          const mealCalories = mealLogs.reduce((sum, item) => sum + item.calories, 0);
+          const isCollapsed = !!collapsedMeals[mealType];
+
+          return (
+            <div
+              key={`phone-${mealType}`}
+              className="bg-base-100 rounded-2xl border border-base-300/80 shadow-2xs overflow-hidden transition-all"
+            >
+              {/* Meal Header */}
+              <div
+                className="p-3 bg-base-200/50 flex items-center justify-between cursor-pointer select-none"
+                onClick={() => toggleMealCollapse(mealType)}
+              >
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <span className="text-base select-none leading-none shrink-0">{MEAL_ICONS[mealType] || "🍴"}</span>
+                  <h3 className="font-bold text-xs text-base-content truncate">{mealType}</h3>
+                  <span className="badge badge-neutral badge-xs font-bold text-[9.5px] shrink-0">
+                    {mealCalories} kcal
+                  </span>
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-xs btn-circle text-info hover:bg-info/10 p-0.5 shrink-0"
+                    title={`View ${mealType} nutrients`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedNutrientsMeal(mealType);
+                      setIsNutrientsModalOpen(true);
+                    }}
+                  >
+                    <Info size={13} />
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                  {/* Quick Add Button */}
+                  <button
+                    type="button"
+                    className="btn btn-xs btn-primary btn-soft font-bold gap-0.5 px-2"
+                    onClick={() => openLogModal(mealType)}
+                  >
+                    <Plus size={12} /> Add
+                  </button>
+
+                  {/* Smart Copy From Yesterday */}
+                  <button
+                    type="button"
+                    className="btn btn-xs btn-ghost btn-circle text-base-content/60 hover:text-base-content"
+                    title={`Copy ${mealType} from yesterday`}
+                    disabled={copyingMeal === mealType}
+                    onClick={() => handleCopyYesterdayMeal(mealType)}
+                  >
+                    {copyingMeal === mealType ? (
+                      <span className="loading loading-spinner loading-xs"></span>
+                    ) : (
+                      <History size={13} />
+                    )}
+                  </button>
+
+                  {/* Clear Meal if items exist */}
+                  {mealLogs.length > 0 && (
+                    <button
+                      type="button"
+                      className="btn btn-xs btn-ghost btn-circle text-error/70 hover:text-error"
+                      title={`Clear ${mealType}`}
+                      onClick={() => {
+                        setMealCategoryToDelete(mealType);
+                        setIsDeleteCategoryModalOpen(true);
+                      }}
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  )}
+
+                  {/* Collapse / Expand Chevron */}
+                  <button
+                    type="button"
+                    className="btn btn-xs btn-ghost btn-circle text-base-content/50"
+                    onClick={() => toggleMealCollapse(mealType)}
+                  >
+                    {isCollapsed ? <ChevronRight size={15} /> : <ChevronDown size={15} />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Meal Body (Items list) */}
+              {!isCollapsed && (
+                <div className="p-3 space-y-2 border-t border-base-200/70">
+                  {mealLogs.length === 0 ? (
+                    <div className="py-4 px-3 text-center border border-dashed border-base-300/80 rounded-xl bg-base-200/20 space-y-2">
+                      <p className="text-xs text-base-content/50 font-medium">
+                        No {mealType.toLowerCase()} logged for this date.
+                      </p>
+                      <div className="flex items-center justify-center gap-2">
+                        <button
+                          type="button"
+                          className="btn btn-xs btn-primary btn-soft font-bold gap-1"
+                          onClick={() => openLogModal(mealType)}
+                        >
+                          <Plus size={13} /> Log {mealType}
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-xs btn-ghost border border-base-300 text-xs font-medium gap-1"
+                          disabled={copyingMeal === mealType}
+                          onClick={() => handleCopyYesterdayMeal(mealType)}
+                        >
+                          <History size={12} /> From Yesterday
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="space-y-2">
+                        {mealLogs.map((log) => (
+                          <div
+                            key={log._id}
+                            className="bg-base-200/40 hover:bg-base-200/70 border border-base-300/60 rounded-xl p-2.5 space-y-1.5 transition-colors"
+                          >
+                            {/* Row 1: Food Title & Calories */}
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="min-w-0 flex-1">
+                                <div className="font-bold text-xs text-base-content truncate" title={log.foodName}>
+                                  {log.foodName}
+                                </div>
+                                <div className="text-[10.5px] text-base-content/60 font-medium truncate mt-0.5">
+                                  {formatServingCalc(log)}
+                                </div>
+                              </div>
+                              <span className="badge badge-primary badge-sm font-bold shrink-0">
+                                {log.calories || 0} kcal
+                              </span>
+                            </div>
+
+                            {/* Row 2: Macros Chips & Interactive Controls */}
+                            <div className="flex items-center justify-between pt-1 border-t border-base-200/70">
+                              {/* Macro badges */}
+                              <div className="flex items-center gap-1.5 text-[10px] font-semibold">
+                                <span className="text-info font-bold">P: {log.protein || 0}g</span>
+                                <span className="text-base-content/30">•</span>
+                                <span className="text-warning font-bold">C: {log.carbohydrates !== undefined ? log.carbohydrates : (log.carbs || 0)}g</span>
+                                <span className="text-base-content/30">•</span>
+                                <span className="text-success font-bold">F: {log.fat || 0}g</span>
+                              </div>
+
+                              {/* Servings Stepper & Item Actions */}
+                              <div className="flex items-center gap-2">
+                                {/* Stepper */}
+                                <div className="inline-flex join join-horizontal border border-base-300/80 rounded-lg overflow-hidden scale-90 -mr-1">
+                                  <button
+                                    type="button"
+                                    className="join-item btn btn-xs btn-ghost px-1.5 hover:bg-base-200"
+                                    onClick={() => handleUpdateServings(log, -0.25)}
+                                  >
+                                    -
+                                  </button>
+                                  <span className="join-item px-1.5 py-0.5 text-xs font-bold bg-base-100 flex items-center min-w-[24px] justify-center">
+                                    {log.servings}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    className="join-item btn btn-xs btn-ghost px-1.5 hover:bg-base-200"
+                                    onClick={() => handleUpdateServings(log, 0.25)}
+                                  >
+                                    +
+                                  </button>
+                                </div>
+
+                                {/* Actions: Info, Edit, Delete */}
+                                <div className="flex items-center gap-0.5">
+                                  <button
+                                    type="button"
+                                    className="btn btn-ghost btn-xs text-info p-1 hover:bg-info/10"
+                                    title="Nutrient details"
+                                    onClick={() => setSelectedFoodItemForModal(log)}
+                                  >
+                                    <Info size={14} />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="btn btn-ghost btn-xs text-warning p-1 hover:bg-warning/10"
+                                    title="Edit item"
+                                    onClick={() => setLogToEdit(log)}
+                                  >
+                                    <Edit3 size={14} />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="btn btn-ghost btn-xs text-error p-1 hover:bg-error/10"
+                                    title="Delete item"
+                                    onClick={() => openDeletePopup(log)}
+                                  >
+                                    <Trash2 size={14} />
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Phone View Floating Action Button (FAB) */}
+      <div className="fixed bottom-6 right-4 z-40 md:hidden">
+        <button
+          type="button"
+          onClick={() => openLogModal("Breakfast")}
+          className="btn btn-circle btn-primary btn-md shadow-2xl flex items-center justify-center border-2 border-primary-content/20 active:scale-95"
+          title="Quick Log Food"
+        >
+          <Plus size={22} />
+        </button>
       </div>
     </>
   )}
@@ -1308,6 +1692,7 @@ function FoodLoggingTab() {
         selectedDate={selectedDate}
         data={data}
         calorieTarget={calorieMax}
+        initialMeal={selectedNutrientsMeal}
       />
 
       <LogFoodModal
