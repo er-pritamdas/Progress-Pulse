@@ -3,8 +3,11 @@ import datetime
 import random
 
 # API URLs
-LOGIN_URL = "http://localhost:3000/api/v1/users/loggedin"
-HABIT_ENTRY_URL = "http://localhost:3000/api/v1/dashboard/habit/table-entry"
+# LOGIN_URL = "http://localhost:3000/api/v1/users/loggedin"
+# HABIT_ENTRY_URL = "http://localhost:3000/api/v1/dashboard/habit/table-entry"
+
+LOGIN_URL = "https://progress-pulse-8cdj.onrender.com/api/v1/users/loggedin"
+HABIT_ENTRY_URL = "https://progress-pulse-8cdj.onrender.com/api/v1/dashboard/habit/table-entry"
 
 # Credentials
 USERNAME = "Pritam"

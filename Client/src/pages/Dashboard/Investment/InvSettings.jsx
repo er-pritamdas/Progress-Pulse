@@ -201,6 +201,7 @@ export default function InvSettings() {
   const [salaryData, setSalaryData] = useState([]);
   const [pfWithdrawals, setPfWithdrawals] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   // ----------------------------------------------------------------------
   // Goals / Plans Management States (Single source of truth: MongoDB)
@@ -399,6 +400,7 @@ export default function InvSettings() {
   // ----------------------------------------------------------------------
   const fetchAllData = async () => {
     setLoading(true);
+    setError(null);
     try {
       const [
         expenseRes,
@@ -520,6 +522,7 @@ export default function InvSettings() {
       }
     } catch (err) {
       console.error("Error loading planner assets:", err);
+      setError("Failed to load investment planner assets. Please retry.");
     } finally {
       setLoading(false);
     }
@@ -1613,6 +1616,7 @@ export default function InvSettings() {
             <button
               type="button"
               onClick={openCreateGoalModal}
+              disabled={loading}
               className="btn btn-sm btn-primary rounded-xl font-bold gap-1.5 shadow-sm"
             >
               <Plus size={15} />
@@ -1623,9 +1627,29 @@ export default function InvSettings() {
       </div>
 
       <div className="px-4 md:px-6 w-full max-w-[1680px] mx-auto space-y-6">
-        {/* ------------------------------------------------------------------ */}
-        {/* 2. TOP SUMMARY METRICS CARDS (Inspired by Daily Nutrients Cards)    */}
-        {/* ------------------------------------------------------------------ */}
+        {/* Loading Spinner */}
+        {loading && (
+          <div className="h-72 flex flex-col items-center justify-center gap-3">
+            <span className="loading loading-spinner loading-lg text-primary"></span>
+            <p className="text-xs text-base-content/60 font-semibold animate-pulse">
+              Loading financial plans, life goals, and portfolio assets...
+            </p>
+          </div>
+        )}
+
+        {/* Error Alert */}
+        {error && !loading && (
+          <div className="alert alert-warning shadow-sm text-xs font-bold rounded-2xl">
+            <AlertCircle size={16} />
+            <span>{error}</span>
+          </div>
+        )}
+
+        {!loading && (
+          <>
+            {/* ------------------------------------------------------------------ */}
+            {/* 2. TOP SUMMARY METRICS CARDS (Inspired by Daily Nutrients Cards)    */}
+            {/* ------------------------------------------------------------------ */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Card 1: Total Target Capital */}
           <div className="bg-base-200 p-5 rounded-2xl border border-base-300 shadow-sm flex flex-col justify-between">
@@ -2704,6 +2728,8 @@ export default function InvSettings() {
             })
           )}
         </div>
+          </>
+        )}
       </div>
 
       {/* -------------------------------------------------------------------- */}

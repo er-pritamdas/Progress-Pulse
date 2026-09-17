@@ -10,7 +10,8 @@ import dayjs from 'dayjs';
 function ExpSettings() {
     TitleChanger("Progress Pulse | Expense Settings");
     const dispatch = useDispatch();
-    const { sources, transactions, currentMonth, salary, categories } = useSelector((state) => state.expense);
+    const { sources, transactions, currentMonth, salary, categories, loading, error } = useSelector((state) => state.expense);
+    const [initialLoading, setInitialLoading] = useState(true);
 
     const [salaryInput, setSalaryInput] = useState(salary || 0);
 
@@ -54,8 +55,22 @@ function ExpSettings() {
     }, [categories]);
 
     useEffect(() => {
-        dispatch(fetchDashboardData('all'));
+        let isMounted = true;
+        setInitialLoading(true);
+        const promise = dispatch(fetchDashboardData('all'));
+        if (promise && typeof promise.finally === "function") {
+            promise.finally(() => {
+                if (isMounted) setInitialLoading(false);
+            });
+        } else {
+            setInitialLoading(false);
+        }
+        return () => {
+            isMounted = false;
+        };
     }, [dispatch]);
+
+    const isDataLoading = loading || initialLoading;
 
     useEffect(() => {
         setSalaryInput(salary || 0);
@@ -165,6 +180,7 @@ function ExpSettings() {
                 {!isAddingSource && (
                     <button
                         onClick={() => setIsAddingSource(true)}
+                        disabled={isDataLoading}
                         className="btn btn-primary btn-sm gap-2 shadow-md hover:shadow-lg transition-all"
                     >
                         <Plus size={16} /> Add Payment Source
@@ -172,7 +188,22 @@ function ExpSettings() {
                 )}
             </div>
 
-            {/* Add Source Form / Card */}
+            {error && !isDataLoading && (
+                <div className="alert alert-error shadow-lg">
+                    <span>{typeof error === "string" ? error : "Failed to load payment sources and expense settings."}</span>
+                </div>
+            )}
+
+            {isDataLoading ? (
+                <div className="h-80 flex flex-col items-center justify-center gap-3 py-16">
+                    <span className="loading loading-spinner loading-lg text-primary"></span>
+                    <p className="text-xs text-base-content/60 font-semibold animate-pulse">
+                        Loading payment sources, accounts, and balances...
+                    </p>
+                </div>
+            ) : (
+                <>
+                    {/* Add Source Form / Card */}
             {isAddingSource && (
                 <div className="card bg-base-100 shadow-xl border border-primary/40 animate-in fade-in zoom-in-95 duration-200">
                     <div className="card-body p-6">
@@ -503,6 +534,8 @@ function ExpSettings() {
                     )}
                 </div>
             </div>
+        </>
+    )}
 
             {/* Source Transaction History Modal */}
             {showHistoryModal && (() => {

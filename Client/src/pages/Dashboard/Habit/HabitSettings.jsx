@@ -6,7 +6,6 @@ import ErrorAlert from "../../../utils/Alerts/ErrorAlert";
 import SuccessAlert from "../../../utils/Alerts/SuccessAlert";
 import { setFieldRange, setSelfcareHabits, setMoodList, toggleSubscribeToNewsletter, toggleEmailNotification, toggleDarkMode, toggleStreakReminders } from "../../../services/redux/slice/habitSlice";
 import { Flame, Droplet, Moon, BookOpen, Utensils, Smile, UserCheck, X, Info, Download, SaveAll, ListRestart, Play, Calculator, Target, Mail, FileSpreadsheet, Plus, Trash2 } from "lucide-react";
-import { useLoading } from "../../../Context/LoadingContext";
 import { fetchHabitSettings, updateHabitSettings, resetHabitSettings } from "../../../services/redux/slice/habitSlice";
 import store from "../../../services/redux/store/store";
 import axiosInstance from "../../../Context/AxiosInstance";
@@ -15,8 +14,6 @@ import AddCustomFoodModal from "../../../components/Dashboard/Habit/FoodLogging/
 
 function HabitSettings() {
   TitleChanger("Progress Pulse | Habit Settings");
-
-  const { setLoading } = useLoading();
 
   // redux Variables
   const dispatch = useDispatch();
@@ -32,8 +29,12 @@ function HabitSettings() {
     height: reduxHeight,
     activityLevel: reduxActivityLevel,
     maintenanceCalories: reduxMaintenanceCalories,
-    bmr: reduxBmr
+    bmr: reduxBmr,
+    loading: reduxLoading,
   } = useSelector((state) => state.habit);
+
+  const [pageLoading, setPageLoading] = useState(true);
+  const isDataLoading = pageLoading || reduxLoading;
 
   // Alerts
   const [showErrorAlert, setShowErrorAlert] = useState(false);
@@ -96,7 +97,6 @@ function HabitSettings() {
   };
 
   const saveRange = async (field) => {
-    setLoading(true);
     // Step 1: Update local Redux state
     dispatch(
       setFieldRange({
@@ -105,7 +105,6 @@ function HabitSettings() {
         max: Number(ranges[field].max),
       })
     );
-    // setLoading(false);
     UpdateSettings()
   };
 
@@ -133,8 +132,6 @@ function HabitSettings() {
       setAlertErrorMessage("Failed to Save Data");
       setShowErrorAlert(true);
       setTimeout(() => setShowErrorAlert(false), 4000);
-    } finally {
-      setLoading(false);
     }
   }
 
@@ -148,8 +145,6 @@ function HabitSettings() {
       setAlertErrorMessage("Failed to Reset Data");
       setShowErrorAlert(true);
       setTimeout(() => setShowErrorAlert(false), 4000);
-    } finally {
-      setLoading(false);
     }
   }
 
@@ -256,7 +251,6 @@ function HabitSettings() {
   const handleExportData = async () => {
     try {
       setIsExporting(true);
-      setLoading(true);
       const response = await axiosInstance.post("/v1/dashboard/habit/export");
       const msg = response.data?.message || "Export sent! Please check your registered email inbox.";
       setalertSuccessMessage(msg);
@@ -269,7 +263,6 @@ function HabitSettings() {
       setTimeout(() => setShowErrorAlert(false), 5000);
     } finally {
       setIsExporting(false);
-      setLoading(false);
     }
   };
 
@@ -292,10 +285,6 @@ function HabitSettings() {
       setCustomFoodsLoading(false);
     }
   };
-
-  useEffect(() => {
-    fetchCustomFoods();
-  }, []);
 
   const handleDeleteCustomFood = async (foodId) => {
     try {
@@ -338,22 +327,30 @@ function HabitSettings() {
 
 
   useEffect(() => {
-    console.log("Running First useEffect")
-    const fetchSettings = async () => {
+    let isMounted = true;
+    const fetchAllSettings = async () => {
       try {
-        setLoading(true);
-        await dispatch(fetchHabitSettings()).unwrap();
+        setPageLoading(true);
+        await Promise.allSettled([
+          dispatch(fetchHabitSettings()).unwrap(),
+          fetchCustomFoods(),
+        ]);
       } catch (err) {
         setAlertErrorMessage("Failed to load settings");
         setShowErrorAlert(true);
         setTimeout(() => setShowErrorAlert(false), 4000);
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setPageLoading(false);
+        }
       }
     };
 
-    fetchSettings();
-  }, []);
+    fetchAllSettings();
+    return () => {
+      isMounted = false;
+    };
+  }, [dispatch]);
 
   useEffect(() => {
     console.log("Running First Setting UseEffect")
@@ -484,11 +481,11 @@ function HabitSettings() {
             Habit Settings
           </h1>
           <div className="join join-vertical lg:join-horizontal">
-            <button className="btn btn-info join-item" onClick={UpdateSettings}>
+            <button className="btn btn-info join-item" onClick={UpdateSettings} disabled={isDataLoading}>
               <SaveAll size={17} />
               Save
             </button>
-            <button className="btn btn-soft join-item" onClick={ResetSettings}>
+            <button className="btn btn-soft join-item" onClick={ResetSettings} disabled={isDataLoading}>
               <ListRestart size={17} />
               Reset to Default
             </button>
@@ -496,9 +493,16 @@ function HabitSettings() {
         </div>
       </div>
 
-
       {/* Settings Container */}
-      <div className="bg-base-300 rounded-xl p-6 shadow-md">
+      {isDataLoading ? (
+        <div className="h-96 flex flex-col items-center justify-center gap-3 py-16 bg-base-300 rounded-xl shadow-md">
+          <span className="loading loading-spinner loading-lg text-primary"></span>
+          <p className="text-xs text-base-content/60 font-semibold animate-pulse">
+            Loading habit settings, ranges, and preferences...
+          </p>
+        </div>
+      ) : (
+        <div className="bg-base-300 rounded-xl p-6 shadow-md">
 
 
 
@@ -753,6 +757,7 @@ function HabitSettings() {
           )}
         </div>
       </div>
+    )}
 
       {/* Export Food Log Modal */}
       <ExportFoodLogModal

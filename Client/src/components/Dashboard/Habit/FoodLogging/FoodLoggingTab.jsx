@@ -245,7 +245,8 @@ function FoodLoggingTab() {
     },
   });
 
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [isLogModalOpen, setIsLogModalOpen] = useState(false);
   const [isCustomModalOpen, setIsCustomModalOpen] = useState(false);
   const [isNutrientsModalOpen, setIsNutrientsModalOpen] = useState(false);
@@ -335,9 +336,10 @@ function FoodLoggingTab() {
     });
   };
 
-  const fetchDailyLogs = async () => {
+  const fetchDailyLogs = async (showLoadingSpinner = true) => {
     try {
-      setLoading(true);
+      if (showLoadingSpinner) setLoading(true);
+      setError(null);
       const res = await axiosInstance.get("/v1/dashboard/habit/food/log", {
         params: { date: selectedDate },
       });
@@ -346,8 +348,9 @@ function FoodLoggingTab() {
       }
     } catch (err) {
       console.error("Failed to fetch daily logs", err);
+      setError(err.response?.data?.message || "Failed to fetch food logs");
     } finally {
-      setLoading(false);
+      if (showLoadingSpinner) setLoading(false);
     }
   };
 
@@ -363,7 +366,7 @@ function FoodLoggingTab() {
       await axiosInstance.delete("/v1/dashboard/habit/food/meal-category", {
         params: { date: selectedDate, mealType: mealCategoryToDelete },
       });
-      fetchDailyLogs();
+      fetchDailyLogs(false);
     } catch (err) {
       console.error("Failed to clear meal category", err);
     } finally {
@@ -432,7 +435,7 @@ function FoodLoggingTab() {
         });
       }
 
-      fetchDailyLogs();
+      fetchDailyLogs(false);
     } catch (err) {
       console.error("Failed to copy yesterday's meal", err);
       alert("Failed to copy yesterday's food logs.");
@@ -442,7 +445,7 @@ function FoodLoggingTab() {
   };
 
   useEffect(() => {
-    fetchDailyLogs();
+    fetchDailyLogs(true);
   }, [selectedDate]);
 
   const openDeletePopup = (log) => {
@@ -453,13 +456,11 @@ function FoodLoggingTab() {
   const confirmDeleteLog = async () => {
     if (!logToDelete) return;
     try {
-      setLoading(true);
       await axiosInstance.delete(`/v1/dashboard/habit/food/log/${logToDelete._id}`);
-      fetchDailyLogs();
+      fetchDailyLogs(false);
     } catch (err) {
       console.error("Failed to delete log entry", err);
     } finally {
-      setLoading(false);
       setIsDeletePopupOpen(false);
       setLogToDelete(null);
     }
@@ -473,15 +474,12 @@ function FoodLoggingTab() {
       return;
     }
     try {
-      setLoading(true);
       await axiosInstance.put(`/v1/dashboard/habit/food/log/${log._id}`, {
         servings: newServings,
       });
-      fetchDailyLogs();
+      fetchDailyLogs(false);
     } catch (err) {
       console.error("Failed to update servings", err);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -670,7 +668,22 @@ function FoodLoggingTab() {
         </div>
       </div>
 
-      {/* Cards Section Header & Customize/Expand Buttons */}
+      {error && !loading && (
+        <div className="alert alert-error shadow-lg">
+          <span>{error}</span>
+        </div>
+      )}
+
+      {loading ? (
+        <div className="h-96 flex flex-col items-center justify-center gap-3 py-16">
+          <span className="loading loading-spinner loading-lg text-primary"></span>
+          <p className="text-xs text-base-content/60 font-semibold animate-pulse">
+            Loading food logs, nutrients, and daily totals...
+          </p>
+        </div>
+      ) : (
+        <>
+          {/* Cards Section Header & Customize/Expand Buttons */}
       {(() => {
         const hasMoreThan8 = visibleCards.length > 8;
         const displayedCards = isCardsExpanded ? visibleCards : visibleCards.slice(0, 8);
@@ -1261,6 +1274,8 @@ function FoodLoggingTab() {
           );
         })}
       </div>
+    </>
+  )}
 
       {/* Modals */}
       <CustomizeTableColumnsModal

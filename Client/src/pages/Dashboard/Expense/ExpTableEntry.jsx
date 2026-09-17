@@ -68,8 +68,9 @@ export const getReimbursableBreakdown = (t, splitsMap = {}) => {
 
 const ExpTableEntry = () => {
   const dispatch = useDispatch();
-  const { transactions, loading, currentMonth, salary, sources, categories } = useSelector((state) => state.expense);
+  const { transactions, loading, error, currentMonth, salary, sources, categories } = useSelector((state) => state.expense);
   const { user } = useAuth();
+  const [initialLoading, setInitialLoading] = useState(true);
   const sidebarScrollRef = useRef(null);
   const cardScrollRef = useRef(null);
 
@@ -170,8 +171,22 @@ const ExpTableEntry = () => {
   }, [dispatch]);
 
   useEffect(() => {
-    dispatch(fetchDashboardData(currentMonth));
+    let isMounted = true;
+    setInitialLoading(true);
+    const promise = dispatch(fetchDashboardData(currentMonth));
+    if (promise && typeof promise.finally === "function") {
+      promise.finally(() => {
+        if (isMounted) setInitialLoading(false);
+      });
+    } else {
+      setInitialLoading(false);
+    }
+    return () => {
+      isMounted = false;
+    };
   }, [currentMonth, user, dispatch]);
+
+  const isDataLoading = loading || initialLoading;
 
   // Sidebar Stats & Sorted Sources
   const debitTransactions = transactions.filter(t => t.type === 'Debit');
@@ -307,7 +322,21 @@ const ExpTableEntry = () => {
   return (
     <div className="p-4 md:p-2 w-full max-w-[1600px] mx-auto pb-20">
 
-      <div className="flex flex-col lg:flex-row gap-6 items-start">
+      {error && !isDataLoading && (
+        <div className="alert alert-error shadow-lg mb-6">
+          <span>{typeof error === "string" ? error : "Failed to load expense data. Please try again."}</span>
+        </div>
+      )}
+
+      {isDataLoading ? (
+        <div className="h-80 flex flex-col items-center justify-center gap-3 py-16">
+          <span className="loading loading-spinner loading-lg text-primary"></span>
+          <p className="text-xs text-base-content/60 font-semibold animate-pulse">
+            Loading expense records, balances, and categories...
+          </p>
+        </div>
+      ) : (
+        <div className="flex flex-col lg:flex-row gap-6 items-start">
 
         {/* Sidebar Controls (Left) - Sticky & Scrollable (Hidden scrollbar) */}
         <div className="w-full lg:w-72 shrink-0 space-y-4 lg:sticky lg:top-2 lg:max-h-[calc(100vh-9.5rem)] lg:overflow-y-auto lg:overflow-x-hidden overscroll-contain scroll-hidden [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden p-1 pb-8">
@@ -674,8 +703,8 @@ const ExpTableEntry = () => {
             onOpenHeatmap={() => setShowHeatmapModal(true)}
           />
         </div>
-
       </div>
+    )}
 
       {/* Heatmap Modal */}
       {showHeatmapModal && (

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import axios from "axios";
 import ErrorAlert from "../../utils/Alerts/ErrorAlert";
@@ -13,6 +13,16 @@ function Login() {
   TitleChanger("Progress Pulse | Login");
   const navigate = useNavigate();
   const { validToken, setvalidToken } = useAuth();
+  const loginTimersRef = useRef([]);
+
+  const clearLoginTimers = () => {
+    loginTimersRef.current.forEach(clearTimeout);
+    loginTimersRef.current = [];
+  };
+
+  useEffect(() => {
+    return () => clearLoginTimers();
+  }, []);
 
   useEffect(() => {
     if (validToken) {
@@ -37,7 +47,7 @@ function Login() {
   const loginUser = async (e) => {
     e.preventDefault();
     try {
-      setLoading(true);
+      setLoading(true, "Logging in... Please wait");
       setDisableButton(true);
       const response = await axios.post("/api/v1/users/loggedin", formData);
 
@@ -63,13 +73,36 @@ function Login() {
       setalertSuccessMessage("User Logged In Successfully");
       setShowSuccessAlert(true);
 
-      setTimeout(() => {
-        setShowSuccessAlert(false);
-        setvalidToken(true);
-        setLoading(false);
-        navigate("/dashboard", { state: { formData } });
-      }, 4000);
+      clearLoginTimers();
+
+      loginTimersRef.current.push(
+        setTimeout(() => {
+          setLoading(true, "Logged in!");
+        }, 1000)
+      );
+
+      loginTimersRef.current.push(
+        setTimeout(() => {
+          setLoading(true, "Gathering your data...");
+        }, 2000)
+      );
+
+      loginTimersRef.current.push(
+        setTimeout(() => {
+          setLoading(true, "Building your dashboard...");
+        }, 3000)
+      );
+
+      loginTimersRef.current.push(
+        setTimeout(() => {
+          setShowSuccessAlert(false);
+          setvalidToken(true);
+          setLoading(false);
+          navigate("/dashboard", { state: { formData } });
+        }, 4200)
+      );
     } catch (err) {
+      clearLoginTimers();
       setLoading(false);
       setDisableButton(false);
       const errorMessage =

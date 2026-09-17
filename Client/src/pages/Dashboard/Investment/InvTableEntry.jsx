@@ -149,7 +149,7 @@ export default function InvTableEntry() {
 
   // Salary State
   const [salaryData, setSalaryData] = useState([]);
-  const [loadingSalary, setLoadingSalary] = useState(false);
+  const [loadingSalary, setLoadingSalary] = useState(true);
   const [salarySearchTerm, setSalarySearchTerm] = useState("");
   const [salaryCompanyFilter, setSalaryCompanyFilter] = useState("all");
   const [salaryYearFilter, setSalaryYearFilter] = useState("all");
@@ -171,7 +171,7 @@ export default function InvTableEntry() {
   const [pfYearFilter, setPfYearFilter] = useState("all");
   const [pfSubTab, setPfSubTab] = useState("deposits"); // "deposits" | "withdrawals"
   const [pfWithdrawals, setPfWithdrawals] = useState([]);
-  const [loadingPfWithdrawals, setLoadingPfWithdrawals] = useState(false);
+  const [loadingPfWithdrawals, setLoadingPfWithdrawals] = useState(true);
   const [isAddPfWithdrawalModalOpen, setIsAddPfWithdrawalModalOpen] = useState(false);
   const [editingPfWithdrawal, setEditingPfWithdrawal] = useState(null);
 
@@ -1352,11 +1352,17 @@ export default function InvTableEntry() {
 
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
   const [infoStock, setInfoStock] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [loadingStocks, setLoadingStocks] = useState(true);
+  const [loadingMf, setLoadingMf] = useState(true);
+  const [loadingFd, setLoadingFd] = useState(true);
+  const [loadingRd, setLoadingRd] = useState(true);
+  const loadingPf = loadingSalary || loadingPfWithdrawals;
 
   // Fetch stocks & mutual funds data from DB on mount
   const fetchStockTrades = async () => {
     setLoading(true);
+    setLoadingStocks(true);
     try {
       const res = await axiosInstance.get("/v1/dashboard/investment/stocks");
       if (res.data && res.data.success) {
@@ -1366,10 +1372,12 @@ export default function InvTableEntry() {
       console.error("Error fetching stock trades:", error);
     } finally {
       setLoading(false);
+      setLoadingStocks(false);
     }
   };
 
   const fetchMutualFunds = async () => {
+    setLoadingMf(true);
     try {
       const res = await axiosInstance.get("/v1/dashboard/investment/mf");
       if (res.data && res.data.success) {
@@ -1389,6 +1397,8 @@ export default function InvTableEntry() {
       }
     } catch (error) {
       console.error("Error fetching mutual funds:", error);
+    } finally {
+      setLoadingMf(false);
     }
   };
 
@@ -1424,6 +1434,7 @@ export default function InvTableEntry() {
   };
 
   const fetchFixedDeposits = async () => {
+    setLoadingFd(true);
     try {
       const res = await axiosInstance.get("/v1/dashboard/investment/fd");
       if (res.data && res.data.success) {
@@ -1431,6 +1442,8 @@ export default function InvTableEntry() {
       }
     } catch (error) {
       console.error("Error fetching fixed deposits:", error);
+    } finally {
+      setLoadingFd(false);
     }
   };
 
@@ -1446,6 +1459,7 @@ export default function InvTableEntry() {
   };
 
   const fetchRecurringDeposits = async () => {
+    setLoadingRd(true);
     try {
       const res = await axiosInstance.get("/v1/dashboard/investment/rd");
       if (res.data && res.data.success) {
@@ -1453,6 +1467,8 @@ export default function InvTableEntry() {
       }
     } catch (error) {
       console.error("Error fetching recurring deposits:", error);
+    } finally {
+      setLoadingRd(false);
     }
   };
 
@@ -4278,7 +4294,14 @@ export default function InvTableEntry() {
       {/* ------------------------------------------------------------------ */}
       {activeTab === "stocks" && (
         <div className="space-y-4 animate-in fade-in duration-300">
-          {filteredStocks.length === 0 ? (
+          {loadingStocks ? (
+            <div className="h-72 flex flex-col items-center justify-center gap-3">
+              <span className="loading loading-spinner loading-lg text-primary"></span>
+              <p className="text-xs text-base-content/60 font-semibold animate-pulse">
+                Loading stock trades and holdings...
+              </p>
+            </div>
+          ) : filteredStocks.length === 0 ? (
             <div className="bg-base-100 rounded-3xl border border-base-200 p-12 text-center shadow-sm">
               <div className="flex flex-col items-center justify-center gap-2 text-base-content/60">
                 <Layers size={32} className="text-base-content/30" />
@@ -4524,8 +4547,15 @@ export default function InvTableEntry() {
       {/* ------------------------------------------------------------------ */}
       {activeTab === "mf" && (
         <div className="space-y-5 animate-in fade-in duration-300">
-          {/* Empty State */}
-          {mfData.length === 0 ? (
+          {/* Loading Spinner */}
+          {loadingMf ? (
+            <div className="h-72 flex flex-col items-center justify-center gap-3">
+              <span className="loading loading-spinner loading-lg text-secondary"></span>
+              <p className="text-xs text-base-content/60 font-semibold animate-pulse">
+                Loading mutual funds and SIP portfolios...
+              </p>
+            </div>
+          ) : mfData.length === 0 ? (
             <div className="bg-base-100 p-12 rounded-3xl border border-base-200 shadow-sm text-center">
               <div className="max-w-md mx-auto flex flex-col items-center gap-4">
                 <div className="p-4 bg-secondary/10 text-secondary rounded-3xl">
@@ -4665,8 +4695,15 @@ export default function InvTableEntry() {
       {/* ------------------------------------------------------------------ */}
       {activeTab === "fd" && (
         <div className="space-y-5 animate-in fade-in duration-300">
-          {/* Empty State */}
-          {fdData.length === 0 ? (
+          {/* Loading Spinner */}
+          {loadingFd ? (
+            <div className="h-72 flex flex-col items-center justify-center gap-3">
+              <span className="loading loading-spinner loading-lg text-primary"></span>
+              <p className="text-xs text-base-content/60 font-semibold animate-pulse">
+                Loading fixed deposits and investments...
+              </p>
+            </div>
+          ) : fdData.length === 0 ? (
             <div className="bg-base-100 p-12 rounded-3xl border border-base-200 shadow-sm text-center">
               <div className="max-w-md mx-auto flex flex-col items-center gap-4">
                 <div className="p-4 bg-primary/10 text-primary rounded-3xl">
@@ -4792,8 +4829,15 @@ export default function InvTableEntry() {
       {/* ------------------------------------------------------------------ */}
       {activeTab === "rd" && (
         <div className="space-y-5 animate-in fade-in duration-300">
-          {/* Empty State */}
-          {rdData.length === 0 ? (
+          {/* Loading Spinner */}
+          {loadingRd ? (
+            <div className="h-72 flex flex-col items-center justify-center gap-3">
+              <span className="loading loading-spinner loading-lg text-primary"></span>
+              <p className="text-xs text-base-content/60 font-semibold animate-pulse">
+                Loading recurring deposits and installments...
+              </p>
+            </div>
+          ) : rdData.length === 0 ? (
             <div className="bg-base-100 p-12 rounded-3xl border border-base-200 shadow-sm text-center">
               <div className="max-w-md mx-auto flex flex-col items-center gap-4">
                 <div className="p-4 bg-primary/10 text-primary rounded-3xl">
@@ -4920,7 +4964,16 @@ export default function InvTableEntry() {
       {/* ------------------------------------------------------------------ */}
       {activeTab === "salary" && (
         <div className="space-y-5 animate-in fade-in duration-300">
-          {/* Summary Stat Cards */}
+          {loadingSalary ? (
+            <div className="h-72 flex flex-col items-center justify-center gap-3">
+              <span className="loading loading-spinner loading-lg text-primary"></span>
+              <p className="text-xs text-base-content/60 font-semibold animate-pulse">
+                Loading salary records and payslips...
+              </p>
+            </div>
+          ) : (
+            <>
+              {/* Summary Stat Cards */}
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3.5">
             <div className="bg-base-100 p-4 rounded-3xl border border-base-200 shadow-sm space-y-1">
               <span className="text-[11px] font-semibold text-base-content/60 uppercase tracking-wider block">
@@ -5461,6 +5514,8 @@ export default function InvTableEntry() {
               </div>
             </div>
           )}
+            </>
+          )}
         </div>
       )}
 
@@ -5469,7 +5524,16 @@ export default function InvTableEntry() {
       {/* ------------------------------------------------------------------ */}
       {activeTab === "pf" && (
         <div className="space-y-5 animate-in fade-in duration-300">
-          {/* Summary Stat Cards */}
+          {loadingPf ? (
+            <div className="h-72 flex flex-col items-center justify-center gap-3">
+              <span className="loading loading-spinner loading-lg text-primary"></span>
+              <p className="text-xs text-base-content/60 font-semibold animate-pulse">
+                Loading provident fund and withdrawal history...
+              </p>
+            </div>
+          ) : (
+            <>
+              {/* Summary Stat Cards */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
             <div className="bg-base-100 p-4 rounded-3xl border border-base-200 shadow-sm space-y-1">
               <div className="flex items-center justify-between">
@@ -5809,6 +5873,8 @@ export default function InvTableEntry() {
                   </div>
                 </div>
               )}
+            </>
+          )}
             </>
           )}
         </div>

@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useSelector } from "react-redux";
 import axiosInstance from "../../../../../Context/AxiosInstance";
-import { useLoading } from "../../../../../Context/LoadingContext";
 import {
   Sparkles,
   SlidersHorizontal,
@@ -170,7 +169,6 @@ function NutrientAnalysis({
   activeCategoryTab: externalCategoryTab,
   setActiveCategoryTab: setExternalCategoryTab,
 }) {
-  const { setLoading } = useLoading();
   const habitState = useSelector((state) => state.habit || {});
   const [internalCategoryTab, setInternalCategoryTab] = useState("Macronutrients");
   const activeCategoryTab = externalCategoryTab || internalCategoryTab;
@@ -282,7 +280,6 @@ function NutrientAnalysis({
     const fetchRangeLogs = async () => {
       if (!effectiveStartDate || !effectiveEndDate) return;
       try {
-        setLoading(true);
         const res = await axiosInstance.get("/v1/dashboard/habit/food/range-logs", {
           params: { startDate: effectiveStartDate, endDate: effectiveEndDate },
         });
@@ -290,13 +287,11 @@ function NutrientAnalysis({
       } catch (err) {
         console.error("Failed to fetch food logs for date range:", err);
         setFoodLogs([]);
-      } finally {
-        setLoading(false);
       }
     };
 
     fetchRangeLogs();
-  }, [effectiveStartDate, effectiveEndDate, setLoading]);
+  }, [effectiveStartDate, effectiveEndDate]);
 
   // Generate date list between startStr and endStr (inclusive) using local date components
   const generateDateList = (startStr, endStr) => {

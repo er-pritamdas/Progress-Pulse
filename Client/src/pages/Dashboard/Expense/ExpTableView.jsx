@@ -13,9 +13,10 @@ import { message } from "antd";
 // This view contains the Expense Dashboard UI
 const ExpTableView = () => {
   const dispatch = useDispatch();
-  const { categories, loading, currentMonth } = useSelector((state) => state.expense);
+  const { categories, loading, error, currentMonth } = useSelector((state) => state.expense);
   const { user } = useAuth();
 
+  const [initialLoading, setInitialLoading] = useState(true);
   const [showAddCategoryModal, setShowAddCategoryModal] = useState(false);
   const [showReorderModal, setShowReorderModal] = useState(false);
 
@@ -28,12 +29,22 @@ const ExpTableView = () => {
   }, [dispatch]);
 
   useEffect(() => {
-    dispatch(fetchDashboardData(currentMonth));
+    let isMounted = true;
+    setInitialLoading(true);
+    const promise = dispatch(fetchDashboardData(currentMonth));
+    if (promise && typeof promise.finally === "function") {
+      promise.finally(() => {
+        if (isMounted) setInitialLoading(false);
+      });
+    } else {
+      setInitialLoading(false);
+    }
+    return () => {
+      isMounted = false;
+    };
   }, [currentMonth, user, dispatch]);
 
-  if (loading && categories.length === 0) {
-    return <div className="min-h-screen flex items-center justify-center">Loading Expense Data...</div>;
-  }
+  const isDataLoading = loading || initialLoading;
 
   return (
     <div className="w-full space-y-6 pb-20">
@@ -66,38 +77,87 @@ const ExpTableView = () => {
         </div>
       </div>
 
-      <div className="px-4 md:px-6 w-full max-w-[1600px] mx-auto space-y-6">
-
-      {/* Stats Header */}
-      <section>
-        <HeaderSection />
-      </section>
-
-      {/* Separator / Title */}
-      <div className="flex items-center justify-between pb-2 border-b border-base-200">
-        <h2 className="text-xl font-bold opacity-80">Expense Categories</h2>
-
-        {/* Category Actions */}
-        <div className="flex items-center gap-2">
-          {categories.length > 1 && (
-            <button
-              onClick={() => setShowReorderModal(true)}
-              className="btn btn-sm btn-ghost border border-base-300 gap-2 shadow-sm hover:shadow transition-all"
-              title="Reorder Expense Categories"
-            >
-              <ArrowUpDown size={16} />
-              Reorder Categories
-            </button>
-          )}
-          <button
-            onClick={() => setShowAddCategoryModal(true)}
-            className="btn btn-sm btn-primary gap-2 shadow-sm hover:shadow transition-all"
-          >
-            <FolderPlus size={16} />
-            Add Category
-          </button>
+      {error && !isDataLoading && (
+        <div className="px-4 md:px-6 w-full max-w-[1600px] mx-auto">
+          <div className="alert alert-error shadow-lg">
+            <span>{typeof error === "string" ? error : "Failed to load expense data. Please try again."}</span>
+          </div>
         </div>
-      </div>
+      )}
+
+      {isDataLoading ? (
+        <div className="h-96 flex flex-col items-center justify-center gap-3 py-16">
+          <span className="loading loading-spinner loading-lg text-primary"></span>
+          <p className="text-xs text-base-content/60 font-semibold animate-pulse">
+            Loading expense categories and data...
+          </p>
+        </div>
+      ) : (
+        <div className="px-4 md:px-6 w-full max-w-[1600px] mx-auto space-y-6">
+
+          {/* Stats Header */}
+          <section>
+            <HeaderSection />
+          </section>
+
+          {/* Separator / Title */}
+          <div className="flex items-center justify-between pb-2 border-b border-base-200">
+            <h2 className="text-xl font-bold opacity-80">Expense Categories</h2>
+
+            {/* Category Actions */}
+            <div className="flex items-center gap-2">
+              {categories.length > 1 && (
+                <button
+                  onClick={() => setShowReorderModal(true)}
+                  className="btn btn-sm btn-ghost border border-base-300 gap-2 shadow-sm hover:shadow transition-all"
+                  title="Reorder Expense Categories"
+                >
+                  <ArrowUpDown size={16} />
+                  Reorder Categories
+                </button>
+              )}
+              <button
+                onClick={() => setShowAddCategoryModal(true)}
+                className="btn btn-sm btn-primary gap-2 shadow-sm hover:shadow transition-all"
+              >
+                <FolderPlus size={16} />
+                Add Category
+              </button>
+            </div>
+          </div>
+
+          {/* Category Grid Section */}
+          <section className="relative w-full">
+            {(() => {
+              const monthCategories = categories.filter(c => !c.month || c.month === currentMonth);
+
+              return (
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 pb-4">
+                  {monthCategories.map((cat) => (
+                    <div key={cat._id} className="min-w-0">
+                      <CategoryCard category={cat} />
+                    </div>
+                  ))}
+
+                  {/* Empty State / Add Helper */}
+                  {monthCategories.length === 0 && (
+                    <div className="col-span-1 xl:col-span-2 h-[300px] flex flex-col items-center justify-center border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl text-gray-400 gap-4">
+                      <p className="text-lg font-medium">No Categories Yet for {dayjs(currentMonth).format("MMMM YYYY")}</p>
+
+                      <div className="flex flex-col items-center gap-2">
+                        <button onClick={() => setShowAddCategoryModal(true)} className="btn btn-primary btn-sm">Create One</button>
+                        <span className="text-xs opacity-50">- OR -</span>
+                        <CopyFromLastMonthButton currentMonth={currentMonth} />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+          </section>
+
+        </div>
+      )}
 
       {/* Add Category Popup Modal */}
       <AddCategoryModal
@@ -111,38 +171,6 @@ const ExpTableView = () => {
         isOpen={showReorderModal}
         onClose={() => setShowReorderModal(false)}
       />
-
-      {/* Category Grid Section */}
-      <section className="relative w-full">
-        {(() => {
-          const monthCategories = categories.filter(c => !c.month || c.month === currentMonth);
-
-          return (
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 pb-4">
-              {monthCategories.map((cat) => (
-                <div key={cat._id} className="min-w-0">
-                  <CategoryCard category={cat} />
-                </div>
-              ))}
-
-              {/* Empty State / Add Helper */}
-              {monthCategories.length === 0 && (
-                <div className="col-span-1 xl:col-span-2 h-[300px] flex flex-col items-center justify-center border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl text-gray-400 gap-4">
-                  <p className="text-lg font-medium">No Categories Yet for {dayjs(currentMonth).format("MMMM YYYY")}</p>
-
-                  <div className="flex flex-col items-center gap-2">
-                    <button onClick={() => setShowAddCategoryModal(true)} className="btn btn-primary btn-sm">Create One</button>
-                    <span className="text-xs opacity-50">- OR -</span>
-                    <CopyFromLastMonthButton currentMonth={currentMonth} />
-                  </div>
-                </div>
-              )}
-            </div>
-          );
-        })()}
-      </section>
-
-      </div>
     </div>
   );
 };

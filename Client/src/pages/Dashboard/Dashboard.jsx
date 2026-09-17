@@ -3,7 +3,6 @@ import { useSelector, useDispatch } from "react-redux";
 import { fetchHabitSettings } from "../../services/redux/slice/habitSlice.js";
 import { TitleChanger } from "../../utils/TitleChanger.jsx";
 import axiosInstance from "../../Context/AxiosInstance.jsx";
-import { useLoading } from "../../Context/LoadingContext.jsx";
 import {
   Droplet,
   Moon,

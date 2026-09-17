@@ -15,7 +15,6 @@ import Cancel from "../../../utils/Icons/Cancel";
 import ErrorAlert from "../../../utils/Alerts/ErrorAlert";
 import SuccessAlert from "../../../utils/Alerts/SuccessAlert";
 import axiosInstance from "../../../Context/AxiosInstance";
-import { useLoading } from "../../../Context/LoadingContext";
 import Refresh from "../../../utils/Icons/Refresh";
 import { TitleChanger } from "../../../utils/TitleChanger";
 import { useSelector, useDispatch } from "react-redux";
@@ -72,7 +71,7 @@ function HabitTableEntry() {
 
   // variables
   const [itemToDelete, setItemToDelete] = useState(null);
-  const { setLoading } = useLoading();
+  const [habitLoading, setHabitLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [habitToDelete, setHabitToDelete] = useState(null);
@@ -588,8 +587,8 @@ function HabitTableEntry() {
     );
   };
 
-  const fetchHabits = async (page = currentPage) => {
-    setLoading(true);
+  const fetchHabits = async (page = currentPage, showSpinner = true) => {
+    if (showSpinner) setHabitLoading(true);
 
     // declare response here so it's visible in finally
     let response;
@@ -623,7 +622,7 @@ function HabitTableEntry() {
       if (response?.data?.data?.totalEntries != null) {
         setTotalPages(Math.ceil(response.data.data.totalEntries / itemPerPage));
       }
-      setLoading(false);
+      if (showSpinner) setHabitLoading(false);
     }
   };
 
@@ -910,9 +909,18 @@ function HabitTableEntry() {
             />
           </div>
 
-          {/* Table */}
-          <div>
-        <table className="bg-base-300 table table-fixed table-md">
+          {habitLoading ? (
+            <div className="h-96 flex flex-col items-center justify-center gap-3 py-16 bg-base-300 rounded-xl shadow-md mt-2">
+              <span className="loading loading-spinner loading-lg text-primary"></span>
+              <p className="text-xs text-base-content/60 font-semibold animate-pulse">
+                Loading habit records, ranges, and scores...
+              </p>
+            </div>
+          ) : (
+            <>
+              {/* Table */}
+              <div>
+                <table className="bg-base-300 table table-fixed table-md">
           <thead className="sticky top-[40px] z-30 bg-base-300 [&_th]:bg-base-300">
             {/* ToolBar */}
             <tr className="border-b-0 border-none">
@@ -1522,6 +1530,8 @@ function HabitTableEntry() {
           fetchHabits={fetchHabits}
         />
       </div>
+    </>
+  )}
 
       {/* Add Habit Popup */}
       <AddHabitPopUp

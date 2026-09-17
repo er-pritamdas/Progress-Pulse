@@ -8,7 +8,6 @@ import GoalProgressCard from "../../../components/Dashboard/Habit/HabitDashboard
 import HabitScoreCard from "../../../components/Dashboard/Habit/HabitDashboardPage/HabitScoreCard";
 import HabitSummaryCard from "../../../components/Dashboard/Habit/HabitDashboardPage/HabitSummaryCard";
 import CurrentStreakCard from "../../../components/Dashboard/Habit/HabitDashboardPage/CurrentStreakCard";
-import { useLoading } from "../../../Context/LoadingContext";
 import axiosInstance from "../../../Context/AxiosInstance";
 
 // Analysis Components
@@ -30,7 +29,7 @@ function HabitDashboard() {
   const dispatch = useDispatch();
   const { fromDate, toDate } = useSelector((state) => state.habit.filters);
 
-  const { setLoading } = useLoading();
+  const [dashboardLoading, setDashboardLoading] = useState(true);
   const [habitData, setHabitData] = useState([]);
   const [totalEntries, setTotalEntries] = useState(0)
   const [activeTab, setActiveTab] = useState('calorie');
@@ -83,7 +82,6 @@ function HabitDashboard() {
 
   const fetchHabitSettings = async () => {
     try {
-      setLoading(true);
       const res = await axiosInstance.get("/v1/dashboard/habit/settings");
       setWaterMin(res.data.data.settings.water.min);
       setWaterMax(res.data.data.settings.water.max);
@@ -98,16 +96,14 @@ function HabitDashboard() {
       setbasalMetabolicRate(res.data.data.bmr);
       setMoodList(res.data.data.settings.mood || []);
       setSelfCareList(res.data.data.settings.selfcare || []);
-      setTimeout(() => setLoading(false), 4000);
     } catch (err) {
       console.error("Error fetching heatmap Settings data:", err);
-      setLoading(false);
     }
   };
 
   const fetchData = async () => {
     try {
-      setLoading(true);
+      setDashboardLoading(true);
       const res = await axiosInstance.get("/v1/dashboard/habit/table-entry", {
         params: {
           startDate: fromDate,
@@ -115,15 +111,15 @@ function HabitDashboard() {
         },
       });
       setHabitData(res.data.data.formattedEntries);
-      setTotalEntries(res.data.data.totalEntries)
-      setLoading(false);
+      setTotalEntries(res.data.data.totalEntries);
     } catch (err) {
       console.error("Error fetching heatmap data:", err);
       if (err.response && (err.response.status === 404 || err.response.status === 400)) {
         setHabitData([]);
         setTotalEntries(0);
       }
-      setLoading(false);
+    } finally {
+      setDashboardLoading(false);
     }
   };
 
@@ -327,7 +323,14 @@ function HabitDashboard() {
 
 
       <div className="w-full h-full overflow-y-auto overflow-x-hidden p-6 bg-base-200">
-      {activeTab === 'nutrients' ? (
+      {dashboardLoading ? (
+        <div className="h-[60vh] flex flex-col items-center justify-center gap-3">
+          <span className="loading loading-spinner loading-lg text-primary"></span>
+          <p className="text-xs text-base-content/60 font-semibold animate-pulse">
+            Loading habit analytics, metrics, and streaks...
+          </p>
+        </div>
+      ) : activeTab === 'nutrients' ? (
         <NutrientAnalysis
           habitData={habitData}
           fromDate={fromDate}

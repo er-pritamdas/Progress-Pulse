@@ -971,7 +971,16 @@ const ExpenseTable = ({
     };
 
 
-    if (loading && transactions.length === 0) return <div className="p-8 text-center opacity-50">Loading transactions...</div>;
+    if (loading && transactions.length === 0) {
+        return (
+            <div className="w-full bg-base-100 rounded-2xl shadow-lg border border-base-200 p-16 flex flex-col items-center justify-center gap-3">
+                <span className="loading loading-spinner loading-lg text-primary"></span>
+                <p className="text-xs text-base-content/60 font-semibold animate-pulse">
+                    Loading transactions...
+                </p>
+            </div>
+        );
+    }
 
     return (
         <div className="w-full bg-base-100 rounded-2xl shadow-lg border border-base-200 flex flex-col min-h-[500px]">

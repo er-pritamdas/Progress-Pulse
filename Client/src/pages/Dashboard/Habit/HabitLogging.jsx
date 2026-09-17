@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { TitleChanger } from "../../../utils/TitleChanger";
 import { updateHabitSettings, fetchHabitSettings, fetchPhysicalLogs, addPhysicalLog, deletePhysicalLog } from "../../../services/redux/slice/habitSlice";
-import { useLoading } from "../../../Context/LoadingContext";
 import { Calculator, Play, UserCheck, Plus, History, Trash2, Info } from "lucide-react";
 import ReactApexChart from "react-apexcharts";
 import ErrorAlert from "../../../utils/Alerts/ErrorAlert";
@@ -11,7 +10,6 @@ import MacroMicroCalculator from "../../../components/Dashboard/Habit/MacroMicro
 
 function HabitLogging() {
     TitleChanger("Progress Pulse | Habit Profile");
-    const { setLoading } = useLoading();
     const dispatch = useDispatch();
 
     // Redux State
@@ -43,6 +41,7 @@ function HabitLogging() {
     const [logHeight, setLogHeight] = useState("");
 
     // Alerts
+    const [pageLoading, setPageLoading] = useState(true);
     const [showErrorAlert, setShowErrorAlert] = useState(false);
     const [alertErrorMessage, setAlertErrorMessage] = useState("");
     const [showSuccessAlert, setShowSuccessAlert] = useState(false);
@@ -67,8 +66,20 @@ function HabitLogging() {
     }, [reduxAge, reduxGender, reduxWeight, reduxHeight, reduxActivityLevel, reduxMaintenanceCalories, reduxBmr, reduxBmi]);
 
     useEffect(() => {
-        dispatch(fetchHabitSettings());
-        dispatch(fetchPhysicalLogs());
+        const fetchInitialData = async () => {
+            try {
+                setPageLoading(true);
+                await Promise.allSettled([
+                    dispatch(fetchHabitSettings()).unwrap(),
+                    dispatch(fetchPhysicalLogs()).unwrap(),
+                ]);
+            } catch (err) {
+                console.error("Error loading habit profile data:", err);
+            } finally {
+                setPageLoading(false);
+            }
+        };
+        fetchInitialData();
     }, [dispatch]);
 
 
@@ -111,7 +122,6 @@ function HabitLogging() {
             bmi: parseFloat(bmiValue.toFixed(1))
         };
 
-        setLoading(true);
         dispatch(updateHabitSettings(localState)).unwrap()
             .then(() => {
                 setalertSuccessMessage("Calculated & Saved");
@@ -122,9 +132,6 @@ function HabitLogging() {
                 setAlertErrorMessage("Failed to Save Calculation");
                 setShowErrorAlert(true);
                 setTimeout(() => setShowErrorAlert(false), 4000);
-            })
-            .finally(() => {
-                setLoading(false);
             });
     };
 
@@ -154,7 +161,6 @@ function HabitLogging() {
             bmi: parseFloat(bmiValue.toFixed(1))
         };
 
-        setLoading(true);
         dispatch(addPhysicalLog(logData)).unwrap()
             .then(() => {
                 setalertSuccessMessage("Log Added Successfully");
@@ -167,15 +173,11 @@ function HabitLogging() {
                 setAlertErrorMessage(err || "Failed to add log");
                 setShowErrorAlert(true);
                 setTimeout(() => setShowErrorAlert(false), 3000);
-            })
-            .finally(() => {
-                setLoading(false);
             });
     };
 
     const handleDeleteLog = (logId) => {
         if (window.confirm("Are you sure you want to delete this log?")) {
-            setLoading(true);
             dispatch(deletePhysicalLog(logId)).unwrap()
                 .then(() => {
                     setalertSuccessMessage("Log Deleted Successfully");
@@ -186,9 +188,6 @@ function HabitLogging() {
                     setAlertErrorMessage(err || "Failed to delete log");
                     setShowErrorAlert(true);
                     setTimeout(() => setShowErrorAlert(false), 3000);
-                })
-                .finally(() => {
-                    setLoading(false);
                 });
         }
     };
@@ -277,7 +276,16 @@ function HabitLogging() {
                 Habit Profile
             </h1>
 
-            <div className="bg-base-300 rounded-xl p-6 shadow-md">
+            {pageLoading ? (
+                <div className="h-96 flex flex-col items-center justify-center gap-3 bg-base-300 rounded-xl p-12 shadow-md">
+                    <span className="loading loading-spinner loading-lg text-primary"></span>
+                    <p className="text-xs text-base-content/60 font-semibold animate-pulse">
+                        Loading habit profile, physical metrics, and logs...
+                    </p>
+                </div>
+            ) : (
+                <>
+                <div className="bg-base-300 rounded-xl p-6 shadow-md">
                 <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
                     <Calculator size={22} /> Physical Settings & Calculator
                 </h2>
@@ -743,6 +751,8 @@ function HabitLogging() {
                     </div>
                 </div>
             </div>
+            </>
+            )}
 
 
             {/* BMR Info Modal */}

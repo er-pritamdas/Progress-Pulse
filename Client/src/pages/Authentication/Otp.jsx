@@ -112,7 +112,7 @@ const LoginAfterSignup = async () =>{
         }
 
         try {
-            setLoading(true)
+            setLoading(true, "Verifying and logging in...");
             setDisableButton(true);
             const response = await axios.post("/api/v1/users/registered/verify-otp", {
                 ...formData,

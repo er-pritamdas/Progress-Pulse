@@ -1,5 +1,4 @@
 // Imports
-import { useLoading } from "./LoadingContext";
 import React, {createContext,useContext,useState,useEffect,useRef} from "react";
 import axiosInstance from "./AxiosInstance";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -9,7 +8,6 @@ const AuthContext = createContext();
 export const AuthProvider = ({ children }) => {
 
   // Variables
-  const { setLoading } = useLoading(true);
   const [user, setUser] = useState(null);
   const [validToken, setvalidToken] = useState(false);
   // const isFirstRun = useRef(true); //Prevent double execution in StrictMode
@@ -17,11 +15,9 @@ export const AuthProvider = ({ children }) => {
   const validateToken = async () => {
     const storedToken = localStorage.getItem("token");
     if (!storedToken) {
-      setLoading(false);
       return;
     }
     try {
-      setLoading(true);
       const res = await axiosInstance.get("/v1/dashboard/auto-login");
       const userData = res.data?.data;
       const username = userData?.username;
@@ -51,11 +47,8 @@ export const AuthProvider = ({ children }) => {
       } catch (e) {}
 
       setvalidToken(true);
-      setLoading(true);
     } catch (err) {
       console.log("JWT validation failed:", err?.response?.data?.message);
-    } finally {
-      setLoading(false);
     }
   };
 

@@ -112,7 +112,7 @@ function Navbar() {
         const username = localStorage.getItem("username");
         try {
             setDisableButton(true);
-            setLoading(true);
+            setLoading(true, "Logging out... See you soon!");
 
             const formData = { username };
             await axios.post("/api/v1/users/logout", formData);
