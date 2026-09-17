@@ -192,8 +192,8 @@ const JournalPopUp = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[99999] bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
-      <div className="bg-base-100 rounded-3xl shadow-2xl w-full max-w-4xl h-[680px] flex flex-col overflow-hidden border border-base-300 animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-[99999] bg-black/60 backdrop-blur-md flex items-center justify-center p-2 sm:p-4">
+      <div className="bg-base-100 rounded-3xl shadow-2xl w-full max-w-4xl h-[92vh] sm:h-[680px] max-h-[92vh] flex flex-col overflow-hidden border border-base-300 animate-in fade-in zoom-in-95 duration-200">
         
         {/* Header Bar */}
         <div className="bg-base-200/80 border-b border-base-300 p-3 sm:p-4 flex items-center justify-between gap-4 shrink-0">

@@ -10,10 +10,9 @@ const readHabitTableData = asynchandler(async (req, res, next) => {
   const user = req.user;
   if (!user) throw new ApiError(401, "Username Required");
 
-  const page = parseInt(req.query.page) || null;
+  const page = Math.max(1, parseInt(req.query.page) || 1);
   const limit = parseInt(req.query.limit) || null;
-  const skip = (page - 1) * limit;
-  console.log(skip)
+  const skip = limit ? (page - 1) * limit : 0;
 
   // Parse optional date filters
   const startDate = req.query.startDate ?? null;
@@ -92,51 +91,54 @@ const createHabitTableEntry = asynchandler(async (req, res, next) => {
   const user = req.user;
 
   if (!user || !user._id) {
-    throw new ApiError(401, "Unauthorized: User Not Found")
+    throw new ApiError(401, "Unauthorized: User Not Found");
   }
 
-  const getStatusFromProgress = (progress) => {
-    if (progress < 25) return "inconsistent";
-    if (progress < 50) return "uncertain";
-    if (progress < 75) return "moderate";
+  if (!date) {
+    throw new ApiError(400, "Date is required");
+  }
+
+  const numProgress = Number(progress) || 0;
+  const numScore = Number(score) || 0;
+
+  const getStatusFromProgress = (progressVal) => {
+    if (progressVal < 25) return "inconsistent";
+    if (progressVal < 50) return "uncertain";
+    if (progressVal < 75) return "moderate";
     return "consistent";
   };
 
-  const status = getStatusFromProgress(progress);
+  const status = getStatusFromProgress(numProgress);
 
   try {
     const newHabit = await HabitTracker.create({
       userId: user._id,
       date,
       habits: {
-        burned,
-        water,
-        sleep,
-        read,
-        intake,
-        selfcare,
-        mood,
-        journal,
+        burned: Number(burned) || 0,
+        water: Number(water) || 0,
+        sleep: Number(sleep) || 0,
+        read: Number(read) || 0,
+        intake: Number(intake) || 0,
+        selfcare: selfcare ? String(selfcare) : "",
+        mood: mood ? String(mood) : "",
+        journal: journal ? String(journal) : "",
       },
-      progress,
+      progress: numProgress,
       status,
-      score
-      // score, completionRate, streak will take default values
+      score: numScore,
+      // completionRate, streak will take default values
     });
 
     return res.status(201).json(
       new ApiResponse(201, newHabit, "Habit Logged Successfully")
-    )
-    // res.status(201).json({
-    //   message: "Habit entry created successfully!",
-    //   data: newHabit,
-    // });
+    );
   } catch (err) {
     if (err.code === 11000) {
       // duplicate entry error due to unique index on userId + date
-      throw new ApiError(400, "You've already submitted a habit log for this date.")
+      throw new ApiError(400, "You've already submitted a habit log for this date.");
     }
-    throw new ApiError(500, "Something went wrong while creating habit entry.", [err.message])
+    throw new ApiError(500, err.message || "Something went wrong while creating habit entry.");
   }
 });
 
@@ -145,7 +147,7 @@ const deleteHabitTableEntry = asynchandler(async (req, res, next) => {
   const userId = req.user._id;
 
   if (!date) {
-    throw new ApiError(400, "Date query parameter is required")
+    throw new ApiError(400, "Date query parameter is required");
   }
 
   const deletedDoc = await HabitTracker.findOneAndDelete({
@@ -154,12 +156,11 @@ const deleteHabitTableEntry = asynchandler(async (req, res, next) => {
   });
 
   if (!deletedDoc) {
-    throw new ApiError(404, "Habit entry not found for this date")
+    throw new ApiError(404, "Habit entry not found for this date");
   }
   return res.status(200).json(
     new ApiResponse(200, `Habit entry for ${date} deleted successfully`)
-  )
-
+  );
 });
 
 const updateHabitTableEntry = asynchandler(async (req, res, next) => {
@@ -182,31 +183,39 @@ const updateHabitTableEntry = asynchandler(async (req, res, next) => {
   if (!date) {
     throw new ApiError(400, "Date query parameter is required");
   }
-  const getStatusFromProgress = (progress) => {
-    if (progress < 25) return "inconsistent";
-    if (progress < 50) return "uncertain";
-    if (progress < 75) return "moderate"; // short form for "partially consistent"
+
+  const numProgress = Number(progress) || 0;
+  const numScore = Number(score) || 0;
+
+  const getStatusFromProgress = (progressVal) => {
+    if (progressVal < 25) return "inconsistent";
+    if (progressVal < 50) return "uncertain";
+    if (progressVal < 75) return "moderate"; // short form for "partially consistent"
     return "consistent";
   };
 
-  const status = getStatusFromProgress(progress);
+  const status = getStatusFromProgress(numProgress);
+
+  const updateFields = {
+    "habits.burned": Number(burned) || 0,
+    "habits.water": Number(water) || 0,
+    "habits.sleep": Number(sleep) || 0,
+    "habits.read": Number(read) || 0,
+    "habits.intake": Number(intake) || 0,
+    "habits.selfcare": selfcare !== undefined ? String(selfcare) : "",
+    "habits.mood": mood !== undefined ? String(mood) : "",
+    progress: numProgress,
+    status: status,
+    score: numScore,
+  };
+
+  if (journal !== undefined) {
+    updateFields["habits.journal"] = String(journal);
+  }
+
   const updatedDoc = await HabitTracker.findOneAndUpdate(
     { userId, date },
-    {
-      $set: {
-        "habits.burned": burned,
-        "habits.water": water,
-        "habits.sleep": sleep,
-        "habits.read": read,
-        "habits.intake": intake,
-        "habits.selfcare": selfcare,
-        "habits.mood": mood,
-        "habits.journal": journal,
-        progress: progress,
-        status: status,
-        score: score,
-      },
-    },
+    { $set: updateFields },
     { new: true } // return the updated document
   );
 

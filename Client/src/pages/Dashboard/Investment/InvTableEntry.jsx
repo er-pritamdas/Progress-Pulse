@@ -4295,11 +4295,8 @@ export default function InvTableEntry() {
       {activeTab === "stocks" && (
         <div className="space-y-4 animate-in fade-in duration-300">
           {loadingStocks ? (
-            <div className="h-72 flex flex-col items-center justify-center gap-3">
+            <div className="h-72 flex items-center justify-center">
               <span className="loading loading-spinner loading-lg text-primary"></span>
-              <p className="text-xs text-base-content/60 font-semibold animate-pulse">
-                Loading stock trades and holdings...
-              </p>
             </div>
           ) : filteredStocks.length === 0 ? (
             <div className="bg-base-100 rounded-3xl border border-base-200 p-12 text-center shadow-sm">
@@ -4549,11 +4546,8 @@ export default function InvTableEntry() {
         <div className="space-y-5 animate-in fade-in duration-300">
           {/* Loading Spinner */}
           {loadingMf ? (
-            <div className="h-72 flex flex-col items-center justify-center gap-3">
+            <div className="h-72 flex items-center justify-center">
               <span className="loading loading-spinner loading-lg text-secondary"></span>
-              <p className="text-xs text-base-content/60 font-semibold animate-pulse">
-                Loading mutual funds and SIP portfolios...
-              </p>
             </div>
           ) : mfData.length === 0 ? (
             <div className="bg-base-100 p-12 rounded-3xl border border-base-200 shadow-sm text-center">
@@ -4697,11 +4691,8 @@ export default function InvTableEntry() {
         <div className="space-y-5 animate-in fade-in duration-300">
           {/* Loading Spinner */}
           {loadingFd ? (
-            <div className="h-72 flex flex-col items-center justify-center gap-3">
+            <div className="h-72 flex items-center justify-center">
               <span className="loading loading-spinner loading-lg text-primary"></span>
-              <p className="text-xs text-base-content/60 font-semibold animate-pulse">
-                Loading fixed deposits and investments...
-              </p>
             </div>
           ) : fdData.length === 0 ? (
             <div className="bg-base-100 p-12 rounded-3xl border border-base-200 shadow-sm text-center">
@@ -4831,11 +4822,8 @@ export default function InvTableEntry() {
         <div className="space-y-5 animate-in fade-in duration-300">
           {/* Loading Spinner */}
           {loadingRd ? (
-            <div className="h-72 flex flex-col items-center justify-center gap-3">
+            <div className="h-72 flex items-center justify-center">
               <span className="loading loading-spinner loading-lg text-primary"></span>
-              <p className="text-xs text-base-content/60 font-semibold animate-pulse">
-                Loading recurring deposits and installments...
-              </p>
             </div>
           ) : rdData.length === 0 ? (
             <div className="bg-base-100 p-12 rounded-3xl border border-base-200 shadow-sm text-center">
@@ -4965,11 +4953,8 @@ export default function InvTableEntry() {
       {activeTab === "salary" && (
         <div className="space-y-5 animate-in fade-in duration-300">
           {loadingSalary ? (
-            <div className="h-72 flex flex-col items-center justify-center gap-3">
+            <div className="h-72 flex items-center justify-center">
               <span className="loading loading-spinner loading-lg text-primary"></span>
-              <p className="text-xs text-base-content/60 font-semibold animate-pulse">
-                Loading salary records and payslips...
-              </p>
             </div>
           ) : (
             <>
@@ -5525,11 +5510,8 @@ export default function InvTableEntry() {
       {activeTab === "pf" && (
         <div className="space-y-5 animate-in fade-in duration-300">
           {loadingPf ? (
-            <div className="h-72 flex flex-col items-center justify-center gap-3">
+            <div className="h-72 flex items-center justify-center">
               <span className="loading loading-spinner loading-lg text-primary"></span>
-              <p className="text-xs text-base-content/60 font-semibold animate-pulse">
-                Loading provident fund and withdrawal history...
-              </p>
             </div>
           ) : (
             <>

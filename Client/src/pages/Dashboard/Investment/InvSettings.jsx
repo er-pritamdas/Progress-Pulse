@@ -42,6 +42,7 @@ import { TitleChanger } from "../../../utils/TitleChanger";
 import CompanyLogo from "../../../components/Dashboard/Investment/CompanyLogo";
 import AllocateSourceModal from "../../../components/Dashboard/Investment/AllocateSourceModal";
 import axiosInstance from "../../../Context/AxiosInstance";
+import apiCache from "../../../utils/apiCache";
 
 // ----------------------------------------------------------------------
 // Currency Formatting Helpers
@@ -1604,7 +1605,10 @@ export default function InvSettings() {
             {/* Refresh Data */}
             <button
               type="button"
-              onClick={fetchAllData}
+              onClick={() => {
+                apiCache.invalidate("/investment");
+                fetchAllData();
+              }}
               disabled={loading}
               className="btn btn-circle btn-sm bg-base-200 hover:bg-base-300 border border-base-300/50"
               title="Refresh all investment sources"
@@ -1629,11 +1633,8 @@ export default function InvSettings() {
       <div className="px-4 md:px-6 w-full max-w-[1680px] mx-auto space-y-6">
         {/* Loading Spinner */}
         {loading && (
-          <div className="h-72 flex flex-col items-center justify-center gap-3">
+          <div className="h-72 flex items-center justify-center">
             <span className="loading loading-spinner loading-lg text-primary"></span>
-            <p className="text-xs text-base-content/60 font-semibold animate-pulse">
-              Loading financial plans, life goals, and portfolio assets...
-            </p>
           </div>
         )}
 

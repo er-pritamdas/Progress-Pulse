@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import dayjs from "dayjs";
 import axiosInstance from "../../../Context/AxiosInstance";
+import apiCache from "../../../utils/apiCache";
 import { TitleChanger } from "../../../utils/TitleChanger";
 import Chart from "react-apexcharts";
 import StocksDashboard from "../../../components/Dashboard/Investment/StocksDashboard";
@@ -2929,7 +2930,10 @@ export default function InvDashboard() {
 
             {/* Refresh Button */}
             <button
-              onClick={fetchData}
+              onClick={() => {
+                apiCache.invalidate("/investment");
+                fetchData();
+              }}
               disabled={loading}
               className="btn btn-circle btn-xs bg-base-200/70 hover:bg-base-200"
               title="Refresh Data"
@@ -2950,11 +2954,8 @@ export default function InvDashboard() {
 
         {/* Loading Spinner */}
         {loading && (
-          <div className="h-64 flex flex-col items-center justify-center gap-3">
+          <div className="h-64 flex items-center justify-center">
             <span className="loading loading-spinner loading-lg text-primary"></span>
-            <p className="text-xs text-base-content/60 font-semibold animate-pulse">
-              Loading {currentDashboardMeta.title} analytics & portfolios...
-            </p>
           </div>
         )}
 

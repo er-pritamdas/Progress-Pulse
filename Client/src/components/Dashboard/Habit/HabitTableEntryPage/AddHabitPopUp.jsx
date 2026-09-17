@@ -72,15 +72,13 @@ const AddHabitPopUp = ({
   };
 
   const handleSubmit = () => {
-    const progressPercentage = progress(formData);
+    if (!formData.date) return;
+    const progressPercentage = typeof progress === "function" ? progress(formData) : 0;
     const newItem = {
       ...formData,
       progress: progressPercentage,
     };
-    console.log(newItem);
     onAdd(newItem);
-    // Reset form to defaults for next time, though useEffect will likely handle it on re-open. 
-    // But if we want it to reset immediately after submit even if still open (though onClose is called):
     onClose();
   };
 
@@ -98,14 +96,14 @@ const AddHabitPopUp = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[99999] bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
-      <div className="bg-base-200 p-6 rounded-3xl shadow-2xl w-full max-w-2xl h-[640px] flex flex-col justify-between overflow-hidden border border-base-300 animate-in fade-in zoom-in-95 duration-200">
-        <h2 className="text-2xl font-bold text-center shrink-0">
+    <div className="fixed inset-0 z-[99999] bg-black/60 backdrop-blur-md flex items-center justify-center p-3 sm:p-4">
+      <div className="bg-base-200 p-4 sm:p-6 rounded-3xl shadow-2xl w-full max-w-2xl max-h-[92vh] h-auto flex flex-col justify-between overflow-hidden border border-base-300 animate-in fade-in zoom-in-95 duration-200">
+        <h2 className="text-xl sm:text-2xl font-bold text-center shrink-0">
           Add New Habit Entry
         </h2>
-        <div className="flex justify-center mt-4 mb-4 shrink-0">
+        <div className="flex justify-center mt-3 mb-3 shrink-0">
           <progress
-            className={`progress w-150 ${progresscolor(progress(formData))}`}
+            className={`progress w-full max-w-sm ${progresscolor(progress(formData))}`}
             value={progress(formData)}
             max="100"
           ></progress>
@@ -304,16 +302,16 @@ const AddHabitPopUp = ({
                 className="input input-bordered w-full cursor-pointer"
               >
                 {formData.selfcare ||
-                  "_".repeat(settings.selfcare?.length || 3)}
+                  "_".repeat(settings?.selfcare?.length || 3)}
               </div>
 
               <ul
                 tabIndex={0}
                 className="dropdown-content z-[999] menu p-2 shadow bg-base-300 rounded-box w-full max-w-xs"
               >
-                {settings.selfcare && settings.selfcare.length > 0 ? (
+                {settings?.selfcare && settings.selfcare.length > 0 ? (
                   settings.selfcare.map((habit, index) => {
-                    const currentValue = formData.selfcare.padEnd(
+                    const currentValue = String(formData.selfcare || "").padEnd(
                       settings.selfcare.length,
                       "_"
                     );

@@ -7,6 +7,7 @@ import Navbar from '../components/Dashboard/Navbar/Navbar'
 import Footer from '../components/Homepage/Footer'
 import Sidebar from '../components/Dashboard/Sidebar/Sidebar';
 import ActiveLastBreadcrumb from '../components/Dashboard/ActiveLastBreadcrumb';
+import MobileBottomNav from '../components/Dashboard/MobileBottomNav/MobileBottomNav';
 import { useAuth } from '../Context/JwtAuthContext';
 
 
@@ -34,12 +35,19 @@ const DashboardLayout = () => {
       
       {/* Sidebar and Outlet */}
       {isAuthenticated ? (
-        <div className="flex h-[calc(100vh-4rem)]">
-          <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} />
-          <main className="flex-1 transition-all duration-300 overflow-y-auto p-4">
+        <div className="flex h-[calc(100vh-4rem)] relative overflow-hidden">
+          {/* Desktop Sidebar (hidden on mobile, visible on md+) */}
+          <div className="hidden md:block h-full shrink-0">
+            <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} />
+          </div>
+
+          <main className="flex-1 transition-all duration-300 overflow-y-auto p-2 sm:p-4 w-full min-w-0 pb-28 md:pb-6">
             <ActiveLastBreadcrumb />
             <Outlet />
           </main>
+
+          {/* Mobile Bottom Navigation Bar */}
+          <MobileBottomNav />
         </div>
       ) : (
         <Navigate to="/login" />

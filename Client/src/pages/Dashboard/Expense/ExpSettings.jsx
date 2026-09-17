@@ -195,11 +195,8 @@ function ExpSettings() {
             )}
 
             {isDataLoading ? (
-                <div className="h-80 flex flex-col items-center justify-center gap-3 py-16">
+                <div className="h-80 flex items-center justify-center py-16">
                     <span className="loading loading-spinner loading-lg text-primary"></span>
-                    <p className="text-xs text-base-content/60 font-semibold animate-pulse">
-                        Loading payment sources, accounts, and balances...
-                    </p>
                 </div>
             ) : (
                 <>

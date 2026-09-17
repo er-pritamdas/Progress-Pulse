@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import axiosInstance from "../../../../Context/AxiosInstance";
+import apiCache from "../../../../utils/apiCache";
 import { 
   Search, 
   Plus, 
@@ -383,11 +384,11 @@ function LogFoodModal({ isOpen, onClose, selectedDate, initialMeal = "Breakfast"
 
   return (
     <>
-      <div className="fixed inset-0 z-[99999] bg-black/60 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 overflow-x-auto">
-        <div className="flex items-stretch justify-center gap-3 sm:gap-4 max-w-[1440px] w-full h-[680px]">
+      <div className="fixed inset-0 z-[99999] bg-black/60 backdrop-blur-md flex items-center justify-center p-1.5 sm:p-4 overflow-y-auto">
+        <div className="flex items-stretch justify-center gap-3 sm:gap-4 max-w-[1440px] w-full h-[95vh] sm:h-[680px]">
           
           {/* Left Popup: Food Categories */}
-          <div className="bg-base-100 rounded-3xl border border-base-300 shadow-2xl h-[680px] w-60 sm:w-68 flex flex-col overflow-hidden shrink-0 animate-in fade-in zoom-in-95 duration-200">
+          <div className="hidden md:flex bg-base-100 rounded-3xl border border-base-300 shadow-2xl h-full w-60 sm:w-68 flex-col overflow-hidden shrink-0 animate-in fade-in zoom-in-95 duration-200">
             {/* Header */}
             <div className="p-4 border-b border-base-300 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-2">
@@ -477,14 +478,14 @@ function LogFoodModal({ isOpen, onClose, selectedDate, initialMeal = "Breakfast"
           </div>
 
           {/* Main Popup: Log Food Modal */}
-          <div className="bg-base-200 rounded-3xl flex-1 h-[680px] border border-base-300 shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200 min-w-0 max-w-5xl">
+          <div className="bg-base-200 rounded-2xl sm:rounded-3xl flex-1 h-full border border-base-300 shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200 min-w-0 max-w-5xl">
             {/* Header */}
-            <div className="p-4 border-b border-base-300 flex justify-between items-center shrink-0">
+            <div className="p-3 sm:p-4 border-b border-base-300 flex justify-between items-center shrink-0">
               <div>
-                <h3 className="font-extrabold text-xl flex items-center gap-2">
-                  <Utensils size={22} className="text-primary" /> Log Food
+                <h3 className="font-extrabold text-lg sm:text-xl flex items-center gap-2">
+                  <Utensils className="text-primary w-5 h-5 sm:w-6 sm:h-6" /> Log Food
                 </h3>
-                <p className="text-xs text-base-content/70">
+                <p className="text-[11px] sm:text-xs text-base-content/70">
                   Search food database or pick from history to log into your daily intake.
                 </p>
               </div>
@@ -494,7 +495,7 @@ function LogFoodModal({ isOpen, onClose, selectedDate, initialMeal = "Breakfast"
             </div>
 
             {/* Modal Body */}
-            <div className="p-4 flex-1 min-h-0 flex flex-col overflow-hidden">
+            <div className="p-3 sm:p-4 flex-1 min-h-0 flex flex-col overflow-hidden">
               {error && (
                 <div className="alert alert-error text-xs py-2 px-3 mb-3 flex items-center gap-2 shrink-0">
                   <AlertCircle size={14} />
@@ -502,9 +503,9 @@ function LogFoodModal({ isOpen, onClose, selectedDate, initialMeal = "Breakfast"
                 </div>
               )}
 
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-4 flex-1 min-h-0 overflow-hidden">
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-3 sm:gap-4 flex-1 min-h-0 overflow-y-auto md:overflow-hidden">
                 {/* Left Column: Search, Filter & List (6 cols) */}
-                <div className="md:col-span-6 flex flex-col gap-3 h-full min-h-0 overflow-hidden">
+                <div className="md:col-span-6 flex flex-col gap-3 min-h-[280px] md:h-full md:min-h-0 overflow-hidden">
                   {/* Source Selection Tabs: Database vs Logged History */}
                   <div className="tabs tabs-boxed bg-base-100 p-1 rounded-xl border border-base-300 shrink-0">
                     <button
@@ -559,8 +560,8 @@ function LogFoodModal({ isOpen, onClose, selectedDate, initialMeal = "Breakfast"
                     {/* Food Items List */}
                     <div className="flex-1 min-h-0 overflow-y-auto bg-base-100 rounded-xl p-2 border border-base-300 space-y-1.5">
                       {loading ? (
-                        <div className="flex justify-center items-center h-full text-sm opacity-60">
-                          <span className="loading loading-spinner loading-md mr-2"></span> Loading foods...
+                        <div className="flex justify-center items-center h-full">
+                          <span className="loading loading-spinner loading-md text-primary"></span>
                         </div>
                       ) : foods.length === 0 ? (
                         <div className="flex flex-col items-center justify-center h-full text-center p-4">
@@ -666,7 +667,10 @@ function LogFoodModal({ isOpen, onClose, selectedDate, initialMeal = "Breakfast"
                         <button
                           type="button"
                           className="btn btn-xs btn-ghost gap-1 text-primary"
-                          onClick={() => fetchHistoryLogs(historyDate)}
+                          onClick={() => {
+                            apiCache.invalidate("/v1/dashboard/habit/food/log");
+                            fetchHistoryLogs(historyDate);
+                          }}
                         >
                           <RotateCcw size={12} /> Refresh
                         </button>
@@ -714,8 +718,8 @@ function LogFoodModal({ isOpen, onClose, selectedDate, initialMeal = "Breakfast"
 
                     <div className="flex-1 min-h-0 overflow-y-auto bg-base-100 rounded-xl p-2 border border-base-300 space-y-1.5">
                       {yesterdayLoading ? (
-                        <div className="flex justify-center items-center h-full text-sm opacity-60">
-                          <span className="loading loading-spinner loading-md mr-2"></span> Loading foods for {historyDate}...
+                        <div className="flex justify-center items-center h-full">
+                          <span className="loading loading-spinner loading-md text-primary"></span>
                         </div>
                       ) : yesterdayLogs.length === 0 ? (
                         <div className="flex flex-col items-center justify-center h-full text-center p-4">
@@ -793,7 +797,7 @@ function LogFoodModal({ isOpen, onClose, selectedDate, initialMeal = "Breakfast"
               </div>
 
               {/* Right Column: Logging Details & Batch Queue (6 cols) */}
-              <div className="md:col-span-6 bg-base-100 rounded-xl p-4 border border-base-300 flex flex-col justify-between h-full min-h-0 overflow-y-auto">
+              <div className="md:col-span-6 bg-base-100 rounded-xl p-3 sm:p-4 border border-base-300 flex flex-col justify-between min-h-[300px] md:h-full md:min-h-0 overflow-y-auto">
                 <div className="space-y-4 flex-1 min-h-0 overflow-y-auto">
                   {selectedFood ? (
                     <>

@@ -3,6 +3,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import dayjs from "dayjs";
 import Chart from "react-apexcharts";
 import axiosInstance from "../../../Context/AxiosInstance";
+import apiCache from "../../../utils/apiCache";
 import { TitleChanger } from "../../../utils/TitleChanger";
 import PortfolioSettingsModal, {
   calculateExactAge,
@@ -1862,7 +1863,10 @@ export default function InvTableView() {
             {/* Real-time Refresh Button */}
             <button
               type="button"
-              onClick={fetchAllPortfolioData}
+              onClick={() => {
+                apiCache.invalidate("/investment");
+                fetchAllPortfolioData();
+              }}
               disabled={loading}
               className="btn btn-circle btn-xs bg-base-200/70 hover:bg-base-200 border border-base-300/50 shrink-0"
               title="Refresh Portfolio Data"

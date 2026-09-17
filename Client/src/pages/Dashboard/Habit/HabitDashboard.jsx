@@ -324,11 +324,8 @@ function HabitDashboard() {
 
       <div className="w-full h-full overflow-y-auto overflow-x-hidden p-6 bg-base-200">
       {dashboardLoading ? (
-        <div className="h-[60vh] flex flex-col items-center justify-center gap-3">
+        <div className="h-[60vh] flex items-center justify-center">
           <span className="loading loading-spinner loading-lg text-primary"></span>
-          <p className="text-xs text-base-content/60 font-semibold animate-pulse">
-            Loading habit analytics, metrics, and streaks...
-          </p>
         </div>
       ) : activeTab === 'nutrients' ? (
         <NutrientAnalysis

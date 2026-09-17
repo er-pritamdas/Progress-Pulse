@@ -13,9 +13,10 @@ import { Calendar, Clock, User, Settings, LogOut, Globe, Palette, ShieldCheck, A
 import ThemeSwitcher from '../../../utils/ThemeSwitches'
 import QuickCalculator from '../../Expense/QuickCalculator';
 import { getGeoDateTime } from '../../../utils/geoDateTime';
+import apiCache from '../../../utils/apiCache';
 
 
-function Navbar() {
+function Navbar({ onToggleSidebar, isSidebarOpen }) {
 
     const {validToken, setvalidToken} = useAuth();
 
@@ -122,6 +123,7 @@ function Navbar() {
             localStorage.removeItem("fullName");
             localStorage.removeItem("profilePic");
             localStorage.removeItem("user_profile");
+            apiCache.clear();
 
             setSuccessMsg("User Logged Out Successfully");
             setShowSuccessAlert(true);
@@ -152,16 +154,16 @@ function Navbar() {
             <div className="navbar bg-base-200 shadow-sm sticky top-0 px-3 sm:px-4 py-0 z-[1000] flex justify-between items-center">
 
                 {/* Left: Progress Pulse Logo + Name + Live IST Date/Time */}
-                <div className="flex-1 flex items-center gap-3 sm:gap-4 min-w-0">
-                    <Link to="/" className="btn btn-ghost px-2 hover:bg-base-300/60 flex items-center gap-2.5 normal-case rounded-xl shrink-0">
-                        <div className="w-8 h-8 rounded-xl bg-base-100 border border-base-300 flex items-center justify-center overflow-hidden shadow-xs shrink-0">
+                <div className="flex-1 flex items-center gap-2 sm:gap-4 min-w-0">
+                    <Link to="/" className="btn btn-ghost px-1.5 sm:px-2 hover:bg-base-300/60 flex items-center gap-2 sm:gap-2.5 normal-case rounded-xl shrink-0">
+                        <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-base-100 border border-base-300 flex items-center justify-center overflow-hidden shadow-xs shrink-0">
                             <img
                                 src="/favicon/favicon.svg"
                                 alt="Progress Pulse Logo"
                                 className="w-full h-full object-contain p-0.5"
                             />
                         </div>
-                        <span className="text-lg sm:text-xl font-black tracking-tight text-base-content">
+                        <span className="text-base sm:text-xl font-black tracking-tight text-base-content">
                             Progress Pulse
                         </span>
                     </Link>
@@ -172,7 +174,7 @@ function Navbar() {
 
                     {/* Geographic Location Date & Time (Placed after Theme Dropdown) */}
                     <div 
-                        className="flex items-center gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl bg-base-100/80 border border-base-300 shadow-2xs shrink-0 cursor-default"
+                        className="hidden sm:flex items-center gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl bg-base-100/80 border border-base-300 shadow-2xs shrink-0 cursor-default"
                         title={`Geographic Location: ${dateTime.city} (${dateTime.timeZone})`}
                     >
                         <div className="hidden md:flex items-center gap-1.5 text-xs font-bold text-base-content/80 font-mono">

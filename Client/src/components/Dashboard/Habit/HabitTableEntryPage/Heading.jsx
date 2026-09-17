@@ -1,4 +1,5 @@
 import Refresh from "../../../../utils/Icons/Refresh";
+import apiCache from "../../../../utils/apiCache";
 
 function Heading({
   handleAddEntryClick,
@@ -23,6 +24,7 @@ function Heading({
         <button
           className="btn btn-soft join-item"
           onClick={() => {
+            apiCache.invalidate("/habit");
             fetchHabits(currentPage);
             setAlertSuccessMessage("Refreshed!");
             setShowSuccessAlert(true);
@@ -37,3 +39,4 @@ function Heading({
 }
 
 export default Heading;
+

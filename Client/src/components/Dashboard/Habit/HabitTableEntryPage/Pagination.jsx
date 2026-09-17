@@ -2,7 +2,7 @@ import React from "react";
 
 function Pagination({ currentPage, totalPages, setCurrentPage, fetchHabits }) {
   return (
-    <div className="mt-4 flex justify-end gap-2">
+    <div className="mt-4 flex justify-between sm:justify-end items-center gap-2 px-1">
       {/* Previous Button */}
       <button
         className="btn btn-soft btn-secondary btn-sm"

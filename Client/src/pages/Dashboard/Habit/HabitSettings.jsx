@@ -495,11 +495,8 @@ function HabitSettings() {
 
       {/* Settings Container */}
       {isDataLoading ? (
-        <div className="h-96 flex flex-col items-center justify-center gap-3 py-16 bg-base-300 rounded-xl shadow-md">
+        <div className="h-96 flex items-center justify-center py-16 bg-base-300 rounded-xl shadow-md">
           <span className="loading loading-spinner loading-lg text-primary"></span>
-          <p className="text-xs text-base-content/60 font-semibold animate-pulse">
-            Loading habit settings, ranges, and preferences...
-          </p>
         </div>
       ) : (
         <div className="bg-base-300 rounded-xl p-6 shadow-md">

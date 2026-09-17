@@ -277,11 +277,8 @@ function HabitLogging() {
             </h1>
 
             {pageLoading ? (
-                <div className="h-96 flex flex-col items-center justify-center gap-3 bg-base-300 rounded-xl p-12 shadow-md">
+                <div className="h-96 flex items-center justify-center bg-base-300 rounded-xl p-12 shadow-md">
                     <span className="loading loading-spinner loading-lg text-primary"></span>
-                    <p className="text-xs text-base-content/60 font-semibold animate-pulse">
-                        Loading habit profile, physical metrics, and logs...
-                    </p>
                 </div>
             ) : (
                 <>

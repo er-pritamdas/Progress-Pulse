@@ -114,12 +114,12 @@ function AddCustomFoodModal({ isOpen, onClose, onFoodAdded }) {
   };
 
   return (
-    <div className="fixed inset-0 z-[99999] bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
-      <div className="bg-base-200 rounded-3xl max-w-3xl w-full h-[650px] border border-base-300 shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-[99999] bg-black/60 backdrop-blur-md flex items-center justify-center p-2 sm:p-4">
+      <div className="bg-base-200 rounded-2xl sm:rounded-3xl max-w-3xl w-full h-[90vh] sm:h-[650px] border border-base-300 shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         {/* Header */}
-        <div className="p-5 sm:p-6 bg-base-300/80 border-b border-base-300 flex justify-between items-center shrink-0">
-          <h3 className="font-bold text-xl flex items-center gap-2">
-            <PlusCircle className="text-secondary" size={22} /> Add Custom Food Item
+        <div className="p-3.5 sm:p-6 bg-base-300/80 border-b border-base-300 flex justify-between items-center shrink-0">
+          <h3 className="font-bold text-lg sm:text-xl flex items-center gap-2">
+            <PlusCircle className="text-secondary w-5 h-5 sm:w-6 sm:h-6" /> Add Custom Food Item
           </h3>
           <button className="btn btn-sm btn-circle btn-ghost" onClick={onClose}>
             ✕
@@ -127,7 +127,7 @@ function AddCustomFoodModal({ isOpen, onClose, onFoodAdded }) {
         </div>
 
         {/* Scrollable Body */}
-        <div className="p-5 sm:p-6 flex-1 overflow-y-auto min-h-0">
+        <div className="p-3.5 sm:p-6 flex-1 overflow-y-auto min-h-0">
           {error && (
             <div className="alert alert-error mb-4 text-sm py-2 px-3 flex items-center gap-2">
               <AlertCircle size={16} />

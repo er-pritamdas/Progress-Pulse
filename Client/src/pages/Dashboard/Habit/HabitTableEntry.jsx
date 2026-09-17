@@ -1,5 +1,4 @@
-// Import Statements
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocation, useSearchParams } from "react-router-dom";
 import Heading from "../../../components/Dashboard/Habit/HabitTableEntryPage/Heading.jsx";
 import Pagination from "../../../components/Dashboard/Habit/HabitTableEntryPage/Pagination.jsx";
@@ -29,9 +28,46 @@ import {
   Book,
   Search,
   Filter,
+  Plus,
+  Calendar,
+  Sparkles,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  RotateCcw,
+  Check,
+  X,
 } from "lucide-react";
 
 import FoodLoggingTab from "../../../components/Dashboard/Habit/FoodLogging/FoodLoggingTab.jsx";
+
+const getSelfCareEmoji = (name = "") => {
+  const lower = name.toLowerCase();
+  if (lower.includes("work") || lower.includes("gym") || lower.includes("exercise") || lower.includes("fitness")) return "🏃";
+  if (lower.includes("meditat") || lower.includes("mindful") || lower.includes("breath") || lower.includes("yoga")) return "🧘";
+  if (lower.includes("water") || lower.includes("hydrat")) return "💧";
+  if (lower.includes("read") || lower.includes("book")) return "📖";
+  if (lower.includes("walk") || lower.includes("step")) return "🚶";
+  if (lower.includes("skin") || lower.includes("shower") || lower.includes("bath")) return "🧖";
+  if (lower.includes("journal") || lower.includes("writ") || lower.includes("diary")) return "✍️";
+  if (lower.includes("vitamin") || lower.includes("med") || lower.includes("pill") || lower.includes("supplement")) return "💊";
+  if (lower.includes("sleep") || lower.includes("rest") || lower.includes("nap")) return "😴";
+  if (lower.includes("fruit") || lower.includes("diet") || lower.includes("salad") || lower.includes("eat")) return "🥗";
+  return "✨";
+};
+
+const getMoodEmoji = (mood = "") => {
+  const lower = mood.toLowerCase();
+  if (lower.includes("great") || lower.includes("awesome") || lower.includes("fantastic") || lower.includes("amazing")) return "🤩";
+  if (lower.includes("good") || lower.includes("happy") || lower.includes("fine")) return "😊";
+  if (lower.includes("neutral") || lower.includes("okay") || lower.includes("normal") || lower.includes("average")) return "😐";
+  if (lower.includes("sad") || lower.includes("low") || lower.includes("bad") || lower.includes("depress")) return "😔";
+  if (lower.includes("stress") || lower.includes("anxious") || lower.includes("rough") || lower.includes("angry") || lower.includes("terrible")) return "😫";
+  if (lower.includes("tired") || lower.includes("exhaust")) return "🥱";
+  if (lower.includes("calm") || lower.includes("relax")) return "😌";
+  if (lower.includes("focus") || lower.includes("product")) return "🎯";
+  return "🙂";
+};
 
 function HabitTableEntry() {
   TitleChanger("Progress Pulse | Habit Logging");
@@ -69,9 +105,70 @@ function HabitTableEntry() {
     return `${weekday}, ${day}-${month}-${year}`;
   };
 
+  const getTodayStr = () => {
+    const d = new Date();
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
+  };
+
+  const shiftDate = (dateStr, days) => {
+    if (!dateStr) return getTodayStr();
+    const [y, m, d] = dateStr.split("-").map(Number);
+    const dt = new Date(y, m - 1, d);
+    dt.setDate(dt.getDate() + days);
+    const yyyy = dt.getFullYear();
+    const mm = String(dt.getMonth() + 1).padStart(2, "0");
+    const dd = String(dt.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
+  };
+
+  const formatDayDisplay = (dateStr) => {
+    if (!dateStr) return { full: "", isToday: false };
+    const todayStr = getTodayStr();
+
+    const [y, m, d] = dateStr.split("-").map(Number);
+    const dt = new Date(y, m - 1, d);
+    const weekday = dt.toLocaleDateString("en-US", { weekday: "short" });
+    const day = String(dt.getDate()).padStart(2, "0");
+    const month = dt.toLocaleDateString("en-US", { month: "short" });
+    const year = dt.getFullYear();
+
+    return { full: `${weekday}, ${day} ${month} ${year}`, isToday: dateStr === todayStr };
+  };
+
+  // Mobile Day View State
+  const [selectedMobileDate, setSelectedMobileDate] = useState(() => getTodayStr());
+  const [mobileEntry, setMobileEntry] = useState({
+    date: getTodayStr(),
+    burned: 0,
+    water: 0,
+    sleep: 0,
+    read: 0,
+    intake: 0,
+    selfcare: "",
+    mood: "",
+    journal: "",
+    _isExisting: false,
+  });
+  const [mobileLoading, setMobileLoading] = useState(false);
+  const [mobileSaving, setMobileSaving] = useState(false);
+  const [mobileHasChanges, setMobileHasChanges] = useState(false);
+  const [isFetchingFoodMobile, setIsFetchingFoodMobile] = useState(false);
+  const [mobileDaysCache, setMobileDaysCache] = useState({});
+  const [extraFutureDays, setExtraFutureDays] = useState(0);
+  const daysScrollRef = useRef(null);
+  const isInitialScrollDone = useRef(false);
+  const mobileDatePickerRef = useRef(null);
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const [calendarViewDate, setCalendarViewDate] = useState(() => new Date());
+  const [isSelfCareExpanded, setIsSelfCareExpanded] = useState(false);
+
   // variables
   const [itemToDelete, setItemToDelete] = useState(null);
   const [habitLoading, setHabitLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [habitToDelete, setHabitToDelete] = useState(null);
@@ -94,6 +191,8 @@ function HabitTableEntry() {
     mood: [],
     progress: [],
   });
+
+  const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
 
   //Error Alert Variables
   const [showErrorAlert, setShowErrorAlert] = useState(false);
@@ -156,7 +255,7 @@ function HabitTableEntry() {
     const filled = fields.filter((key) => {
       const value = item[key];
       if (key === "selfcare") {
-        const requiredLength = settings.selfcare ? settings.selfcare.length : 0;
+        const requiredLength = settings?.selfcare ? settings.selfcare.length : 0;
         const emptySelfcare = "_".repeat(requiredLength);
         return value && value !== emptySelfcare;
       }
@@ -187,7 +286,7 @@ function HabitTableEntry() {
     const filled = fields.filter((key) => {
       const value = item[key];
       if (key === "selfcare") {
-        const requiredLength = settings.selfcare ? settings.selfcare.length : 0;
+        const requiredLength = settings?.selfcare ? settings.selfcare.length : 0;
         const emptySelfcare = "_".repeat(requiredLength);
         return value && value !== emptySelfcare;
       }
@@ -699,6 +798,11 @@ function HabitTableEntry() {
       setShowSuccessAlert(true);
       setTimeout(() => setShowSuccessAlert(false), 4000);
       setEditingItem(null);
+      setMobileDaysCache((prev) => {
+        const next = { ...prev };
+        delete next[itemToDelete];
+        return next;
+      });
       fetchHabits(currentPage);
     } catch (err) {
       const errorMessage =
@@ -729,8 +833,11 @@ function HabitTableEntry() {
 
   // Save Data Function
   const handleSave = async () => {
+    if (!editingItem) return;
     const originalItem = data.find((item) => item.date === editingItem.date);
-    if (JSON.stringify(originalItem) === JSON.stringify(editingItem)) {
+    const keys = ["burned", "water", "sleep", "read", "intake", "selfcare", "mood"];
+    const hasChanges = !originalItem || keys.some((k) => String(originalItem[k] ?? "") !== String(editingItem[k] ?? ""));
+    if (!hasChanges) {
       setAlertSuccessMessage("Already up to date!");
       setShowSuccessAlert(true);
       setTimeout(() => setShowSuccessAlert(false), 4000);
@@ -739,29 +846,38 @@ function HabitTableEntry() {
     }
     try {
       setLoading(true);
+      calculateProgress(editingItem);
+
+      const payload = {
+        ...editingItem,
+        burned: Number(editingItem.burned) || 0,
+        water: Number(editingItem.water) || 0,
+        sleep: Number(editingItem.sleep) || 0,
+        read: Number(editingItem.read) || 0,
+        intake: Number(editingItem.intake) || 0,
+        progress: Number(editingItem.progress) || 0,
+        score: Number(editingItem.score) || 0,
+      };
+
       const response = await axiosInstance.put(
         "/v1/dashboard/habit/table-entry",
-        { ...editingItem }
+        payload
       );
-      console.log(response.data.message);
-      setAlertSuccessMessage(response.data.message);
+      setAlertSuccessMessage(response.data?.message || `Habit entry for ${editingItem.date} updated successfully`);
       setShowSuccessAlert(true);
       setTimeout(() => setShowSuccessAlert(false), 4000);
+      await fetchHabits(currentPage);
+      setEditingItem(null);
     } catch (err) {
-      setLoading(false);
+      console.error(err);
       const errorMessage =
         err.response?.data?.message || "Failed To Save Entry!";
       setAlertErrorMessage(errorMessage);
       setShowErrorAlert(true);
       setTimeout(() => setShowErrorAlert(false), 4000);
     } finally {
-      fetchHabits(currentPage);
       setLoading(false);
-      setEditingItem(null);
     }
-    // setData((prev) =>
-    //   prev.map((item) => (item.date === editingItem.date ? editingItem : item))
-    // );
   };
 
   // On Change function
@@ -787,6 +903,456 @@ function HabitTableEntry() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Sync selectedMobileDate with data/backend
+  useEffect(() => {
+    if (!selectedMobileDate) return;
+    const today = getTodayStr();
+
+    // Check if entry exists in data prop
+    const found = data.find((item) => item.date === selectedMobileDate);
+    if (found) {
+      setMobileEntry({
+        ...found,
+        burned: Number(found.burned) || 0,
+        water: Number(found.water) || 0,
+        sleep: Number(found.sleep) || 0,
+        read: Number(found.read) || 0,
+        intake: Number(found.intake) || 0,
+        selfcare: found.selfcare || "",
+        mood: found.mood || "",
+        journal: found.journal || "",
+        _isExisting: true,
+      });
+      setMobileHasChanges(false);
+      return;
+    }
+
+    // If future date and not marked as existing in cache: keep strictly empty (no network call needed)
+    if (selectedMobileDate > today && !mobileDaysCache[selectedMobileDate]?._isExisting) {
+      setMobileEntry({
+        date: selectedMobileDate,
+        burned: 0,
+        water: 0,
+        sleep: 0,
+        read: 0,
+        intake: 0,
+        selfcare: "",
+        mood: "",
+        journal: "",
+        _isExisting: false,
+      });
+      setMobileHasChanges(false);
+      return;
+    }
+
+    let isMounted = true;
+    const fetchDay = async () => {
+      try {
+        setMobileLoading(true);
+        const res = await axiosInstance.get("/v1/dashboard/habit/table-entry", {
+          params: {
+            page: 1,
+            startDate: selectedMobileDate,
+            endDate: selectedMobileDate,
+            limit: 1,
+          },
+        });
+        const entry = res.data?.data?.formattedEntries?.[0];
+        if (isMounted) {
+          if (entry) {
+            setMobileEntry({
+              ...entry,
+              burned: Number(entry.burned) || 0,
+              water: Number(entry.water) || 0,
+              sleep: Number(entry.sleep) || 0,
+              read: Number(entry.read) || 0,
+              intake: Number(entry.intake) || 0,
+              selfcare: entry.selfcare || "",
+              mood: entry.mood || "",
+              journal: entry.journal || "",
+              _isExisting: true,
+            });
+            setMobileDaysCache((prev) => ({
+              ...prev,
+              [selectedMobileDate]: { ...entry, _isExisting: true },
+            }));
+          } else {
+            // Day has no record: strictly empty, zero prefill!
+            setMobileEntry({
+              date: selectedMobileDate,
+              burned: 0,
+              water: 0,
+              sleep: 0,
+              read: 0,
+              intake: 0,
+              selfcare: "",
+              mood: "",
+              journal: "",
+              _isExisting: false,
+            });
+          }
+          setMobileHasChanges(false);
+        }
+      } catch (err) {
+        if (isMounted) {
+          setMobileEntry({
+            date: selectedMobileDate,
+            burned: 0,
+            water: 0,
+            sleep: 0,
+            read: 0,
+            intake: 0,
+            selfcare: "",
+            mood: "",
+            journal: "",
+            _isExisting: false,
+          });
+          setMobileHasChanges(false);
+        }
+      } finally {
+        if (isMounted) setMobileLoading(false);
+      }
+    };
+    fetchDay();
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedMobileDate, data]);
+
+  const handleMobileFieldChange = (field, value) => {
+    setMobileEntry((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+    setMobileHasChanges(true);
+  };
+
+  const handleMobileFetchFoodIntake = async () => {
+    if (!selectedMobileDate) return;
+    try {
+      setIsFetchingFoodMobile(true);
+      const res = await axiosInstance.get("/v1/dashboard/habit/food/log", {
+        params: { date: selectedMobileDate },
+      });
+      const totalCals = res.data?.data?.summary?.totalCalories;
+      const cals = totalCals !== undefined && totalCals !== null ? totalCals : 0;
+      handleMobileFieldChange("intake", cals);
+      setAlertSuccessMessage(`Fetched ${cals} kcal from Food Logging!`);
+      setShowSuccessAlert(true);
+      setTimeout(() => setShowSuccessAlert(false), 3000);
+    } catch (err) {
+      console.error("Failed to fetch food log", err);
+      setAlertErrorMessage("No food logs found for this date");
+      setShowErrorAlert(true);
+      setTimeout(() => setShowErrorAlert(false), 3000);
+    } finally {
+      setIsFetchingFoodMobile(false);
+    }
+  };
+
+  const handleSaveMobileEntry = async (entryToSave = mobileEntry) => {
+    if (!entryToSave?.date) return;
+    try {
+      setMobileSaving(true);
+      const progress = calculateProgress(entryToSave);
+      const score = calculateScore(entryToSave);
+
+      const payload = {
+        date: entryToSave.date,
+        burned: Number(entryToSave.burned) || 0,
+        water: Number(entryToSave.water) || 0,
+        sleep: Number(entryToSave.sleep) || 0,
+        read: Number(entryToSave.read) || 0,
+        intake: Number(entryToSave.intake) || 0,
+        selfcare: entryToSave.selfcare || "",
+        mood: entryToSave.mood || "",
+        journal: entryToSave.journal || "",
+        progress: Number(progress) || 0,
+        score: Number(score) || 0,
+      };
+
+      if (entryToSave._isExisting) {
+        await axiosInstance.put("/v1/dashboard/habit/table-entry", payload);
+        setAlertSuccessMessage(`Habit entry for ${entryToSave.date} updated!`);
+      } else {
+        await axiosInstance.post("/v1/dashboard/habit/table-entry", payload);
+        setAlertSuccessMessage(`Habit entry for ${entryToSave.date} saved!`);
+        setMobileEntry((prev) => ({ ...prev, _isExisting: true }));
+      }
+
+      setShowSuccessAlert(true);
+      setTimeout(() => setShowSuccessAlert(false), 3000);
+      setMobileHasChanges(false);
+      setMobileDaysCache((prev) => ({
+        ...prev,
+        [entryToSave.date]: { ...payload, _isExisting: true },
+      }));
+      fetchHabits(currentPage, false);
+    } catch (err) {
+      console.error("Save mobile habit error:", err);
+      if (!entryToSave._isExisting && err?.response?.data?.message?.includes("already")) {
+        try {
+          await axiosInstance.put("/v1/dashboard/habit/table-entry", {
+            ...entryToSave,
+            burned: Number(entryToSave.burned) || 0,
+            water: Number(entryToSave.water) || 0,
+            sleep: Number(entryToSave.sleep) || 0,
+            read: Number(entryToSave.read) || 0,
+            intake: Number(entryToSave.intake) || 0,
+            progress: calculateProgress(entryToSave),
+            score: calculateScore(entryToSave),
+          });
+          setMobileEntry((prev) => ({ ...prev, _isExisting: true }));
+          setAlertSuccessMessage(`Habit entry for ${entryToSave.date} updated!`);
+          setShowSuccessAlert(true);
+          setTimeout(() => setShowSuccessAlert(false), 3000);
+          setMobileHasChanges(false);
+          setMobileDaysCache((prev) => ({
+            ...prev,
+            [entryToSave.date]: { ...entryToSave, _isExisting: true },
+          }));
+          fetchHabits(currentPage, false);
+          return;
+        } catch (e2) {}
+      }
+      const msg = err?.response?.data?.message || "Failed to save habit entry";
+      setAlertErrorMessage(msg);
+      setShowErrorAlert(true);
+      setTimeout(() => setShowErrorAlert(false), 4000);
+    } finally {
+      setMobileSaving(false);
+    }
+  };
+
+  const handleDateShift = (delta) => {
+    const nextDate = shiftDate(selectedMobileDate, delta);
+    handleSelectDay(nextDate);
+  };
+
+  const handleSelectDay = (targetDate) => {
+    if (!targetDate || targetDate === selectedMobileDate) return;
+    if (mobileHasChanges) {
+      const snapshot = { ...mobileEntry };
+      handleSaveMobileEntry(snapshot).catch((err) => {
+        console.error("Auto-save on date change error:", err);
+      });
+    }
+
+    const today = getTodayStr();
+    if (targetDate > today) {
+      const [ty, tm, td] = today.split("-").map(Number);
+      const [ny, nm, nd] = targetDate.split("-").map(Number);
+      const diffDays = Math.round((new Date(ny, nm - 1, nd) - new Date(ty, tm - 1, td)) / (1000 * 60 * 60 * 24));
+      if (diffDays > extraFutureDays) {
+        setExtraFutureDays(diffDays);
+      }
+    }
+
+    // Check if targetDate already exists in data or cache
+    const existingInData = data.find((item) => item.date === targetDate);
+    const existingInCache = mobileDaysCache[targetDate];
+    const source = existingInData || existingInCache;
+
+    if (source && (source._isExisting || source.burned !== undefined || source.water !== undefined)) {
+      setMobileEntry({
+        ...source,
+        date: targetDate,
+        burned: Number(source.burned) || 0,
+        water: Number(source.water) || 0,
+        sleep: Number(source.sleep) || 0,
+        read: Number(source.read) || 0,
+        intake: Number(source.intake) || 0,
+        selfcare: source.selfcare || "",
+        mood: source.mood || "",
+        journal: source.journal || "",
+        _isExisting: true,
+      });
+    } else {
+      // Empty slate for new / future date - ZERO prefill!
+      setMobileEntry({
+        date: targetDate,
+        burned: 0,
+        water: 0,
+        sleep: 0,
+        read: 0,
+        intake: 0,
+        selfcare: "",
+        mood: "",
+        journal: "",
+        _isExisting: false,
+      });
+    }
+    setMobileHasChanges(false);
+    setSelectedMobileDate(targetDate);
+  };
+
+  const handleOpenMobileDatePicker = (e) => {
+    e?.stopPropagation?.();
+    if (mobileDatePickerRef.current) {
+      try {
+        if (typeof mobileDatePickerRef.current.showPicker === "function") {
+          mobileDatePickerRef.current.showPicker();
+          return;
+        }
+      } catch (err) {
+        // Fallback for older browsers
+      }
+      mobileDatePickerRef.current.focus();
+    }
+  };
+
+  // Auto-scroll selected day into view in horizontal strip
+  useEffect(() => {
+    if (habitLoading || !daysScrollRef.current || !selectedMobileDate) return;
+    const today = getTodayStr();
+
+    const doScroll = () => {
+      const container = daysScrollRef.current;
+      if (!container) return;
+
+      if (selectedMobileDate === today) {
+        // Position Today in 3rd spot (Today - 2 at start, Today - 1 second, Today third, Add Day fourth)
+        const twoDaysAgo = shiftDate(today, -2);
+        const elTwoAgo = container.querySelector(`[data-date="${twoDaysAgo}"]`);
+        if (elTwoAgo) {
+          const containerLeft = container.getBoundingClientRect().left;
+          const targetLeft = elTwoAgo.getBoundingClientRect().left;
+          const offsetDiff = targetLeft - containerLeft;
+          container.scrollLeft += (offsetDiff - 6);
+          return;
+        }
+
+        const elToday = container.querySelector(`[data-date="${today}"]`);
+        if (elToday) {
+          elToday.scrollIntoView({ inline: "center", block: "nearest" });
+          return;
+        }
+      }
+
+      // If other date selected, center that date
+      const el = container.querySelector(`[data-date="${selectedMobileDate}"]`);
+      if (el) {
+        el.scrollIntoView({
+          behavior: isInitialScrollDone.current ? "smooth" : "auto",
+          inline: "center",
+          block: "nearest",
+        });
+      }
+    };
+
+    // Execute immediately and across ticks to guarantee exact alignment after loading completes
+    doScroll();
+    const rafId = requestAnimationFrame(doScroll);
+    const t1 = setTimeout(doScroll, 80);
+    const t2 = setTimeout(doScroll, 250);
+
+    isInitialScrollDone.current = true;
+
+    return () => {
+      cancelAnimationFrame(rafId);
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
+  }, [selectedMobileDate, extraFutureDays, habitLoading]);
+
+  // Sync data into mobileDaysCache
+  useEffect(() => {
+    if (data && data.length > 0) {
+      setMobileDaysCache((prev) => {
+        const next = { ...prev };
+        data.forEach((item) => {
+          if (item?.date) next[item.date] = item;
+        });
+        return next;
+      });
+    }
+  }, [data]);
+
+  // Fetch recent habit entries for horizontal strip concentric rings (1 month history)
+  useEffect(() => {
+    const today = getTodayStr();
+    const startDate = shiftDate(today, -35);
+    const endDate = shiftDate(today, 10);
+    axiosInstance
+      .get("/v1/dashboard/habit/table-entry", {
+        params: { page: 1, startDate, endDate, limit: 50 },
+      })
+      .then((res) => {
+        const entries = res.data?.data?.formattedEntries || [];
+        if (entries.length > 0) {
+          setMobileDaysCache((prev) => {
+            const next = { ...prev };
+            entries.forEach((e) => {
+              if (e?.date) next[e.date] = e;
+            });
+            return next;
+          });
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  // Keep mobileDaysCache updated with current mobileEntry edits in real time
+  useEffect(() => {
+    if (!selectedMobileDate || !mobileEntry || mobileEntry.date !== selectedMobileDate) return;
+    if (!mobileHasChanges && !mobileEntry._isExisting) return;
+    setMobileDaysCache((prev) => ({
+      ...prev,
+      [selectedMobileDate]: {
+        ...(prev[selectedMobileDate] || {}),
+        ...mobileEntry,
+      },
+    }));
+  }, [mobileEntry, selectedMobileDate, mobileHasChanges]);
+
+  // Generate days list: up to 1 Month (30 days) of scrollable past history, plus future days
+  const mobileDaysList = (() => {
+    const today = getTodayStr();
+    const dateSet = new Set();
+
+    let pastDaysLimit = 30; // 1 full month of past days
+    if (selectedMobileDate && selectedMobileDate < today) {
+      const [ty, tm, td] = today.split("-").map(Number);
+      const [sy, sm, sd] = selectedMobileDate.split("-").map(Number);
+      const diffPast = Math.round((new Date(ty, tm - 1, td) - new Date(sy, sm - 1, sd)) / (1000 * 60 * 60 * 24));
+      if (diffPast > pastDaysLimit) {
+        pastDaysLimit = Math.min(120, diffPast + 2);
+      }
+    }
+
+    for (let i = -pastDaysLimit; i <= extraFutureDays; i++) {
+      dateSet.add(shiftDate(today, i));
+    }
+
+    if (selectedMobileDate) {
+      dateSet.add(selectedMobileDate);
+      for (let offset = -2; offset <= 2; offset++) {
+        dateSet.add(shiftDate(selectedMobileDate, offset));
+      }
+    }
+
+    if (data && data.length > 0) {
+      data.forEach((item) => {
+        if (item?.date) dateSet.add(item.date);
+      });
+    }
+
+    const list = Array.from(dateSet);
+    list.sort();
+    return list;
+  })();
+
+  const handleAddFutureDay = () => {
+    const today = getTodayStr();
+    const latestDate = mobileDaysList.length > 0 ? mobileDaysList[mobileDaysList.length - 1] : today;
+    const nextDate = shiftDate(latestDate, 1);
+    const [ty, tm, td] = today.split("-").map(Number);
+    const [ny, nm, nd] = nextDate.split("-").map(Number);
+    const diffDays = Math.max(1, Math.round((new Date(ny, nm - 1, nd) - new Date(ty, tm - 1, td)) / (1000 * 60 * 60 * 24)));
+    setExtraFutureDays((prev) => Math.max(prev + 1, diffDays));
+    handleSelectDay(nextDate);
   };
 
   const handleSyncAllIntake = async () => {
@@ -817,7 +1383,6 @@ function HabitTableEntry() {
 
   // Add Data Function
   const handleAdd = async (newItem) => {
-    // Check if the date already exists
     try {
       setLoading(true);
       const dateExists = data.some((entry) => entry.date === newItem.date);
@@ -828,26 +1393,37 @@ function HabitTableEntry() {
         setTimeout(() => setShowErrorAlert(false), 4000);
         return;
       }
-      const sortedNewData = [...data, newItem].sort(
-        (a, b) => new Date(b.date) - new Date(a.date)
-      );
+
+      calculateProgress(newItem);
+
+      const payload = {
+        ...newItem,
+        burned: Number(newItem.burned) || 0,
+        water: Number(newItem.water) || 0,
+        sleep: Number(newItem.sleep) || 0,
+        read: Number(newItem.read) || 0,
+        intake: Number(newItem.intake) || 0,
+        progress: Number(newItem.progress) || 0,
+        score: Number(newItem.score) || 0,
+        currentPage,
+      };
+
       const response = await axiosInstance.post(
         "/v1/dashboard/habit/table-entry",
-        { ...newItem, currentPage }
+        payload
       );
-      setData(sortedNewData);
-      setAlertSuccessMessage(response.data.message);
+      setAlertSuccessMessage(response.data?.message || "Habit Logged Successfully");
       setShowSuccessAlert(true);
       setTimeout(() => setShowSuccessAlert(false), 4000);
+      await fetchHabits(currentPage);
     } catch (err) {
-      setLoading(false);
+      console.error(err);
       const errorMessage =
         err.response?.data?.message || "Failed To Add Entry!";
       setAlertErrorMessage(errorMessage);
       setShowErrorAlert(true);
       setTimeout(() => setShowErrorAlert(false), 4000);
     } finally {
-      fetchHabits(currentPage);
       setLoading(false);
     }
   };
@@ -859,15 +1435,15 @@ function HabitTableEntry() {
 
   // -------------------------------------------------------- Habit Table HTML Data -----------------------------------------------------------
   return (
-    <div className="p-1">
+    <div className="p-1 pb-24 md:pb-6">
       {/* // Alerts Messages */}
       {showErrorAlert && <ErrorAlert message={alertErrorMessage} top={20} />}
       {showSuccessAlert && (
         <SuccessAlert message={alertSuccessMessage} top={20} />
       )}
 
-      {/* Main Tabs Navigation */}
-      <div className="flex border-b border-base-300 mb-4 px-2">
+      {/* Main Tabs Navigation (Desktop only) */}
+      <div className="hidden md:flex border-b border-base-300 mb-4 px-2">
         <button
           className={`flex items-center gap-2 py-3 px-5 font-bold text-sm border-b-2 transition-all ${
             activeMainTab === "habit"
@@ -896,8 +1472,8 @@ function HabitTableEntry() {
         <FoodLoggingTab />
       ) : (
         <>
-          {/* Headings */}
-          <div className="sticky top-[-20px] z-30 bg-base-300 h-[60px] flex items-center px-4">
+          {/* Headings (Desktop only) */}
+          <div className="hidden md:flex sticky top-[-20px] z-30 bg-base-300 h-[60px] items-center px-4">
             <Heading
               handleAddEntryClick={handleAddEntryClick}
               currentPage={currentPage}
@@ -909,17 +1485,15 @@ function HabitTableEntry() {
             />
           </div>
 
+
           {habitLoading ? (
-            <div className="h-96 flex flex-col items-center justify-center gap-3 py-16 bg-base-300 rounded-xl shadow-md mt-2">
+            <div className="h-96 flex items-center justify-center py-16 bg-base-300 rounded-xl shadow-md mt-2">
               <span className="loading loading-spinner loading-lg text-primary"></span>
-              <p className="text-xs text-base-content/60 font-semibold animate-pulse">
-                Loading habit records, ranges, and scores...
-              </p>
             </div>
           ) : (
             <>
-              {/* Table */}
-              <div>
+              {/* Desktop Table */}
+              <div className="hidden md:block">
                 <table className="bg-base-300 table table-fixed table-md">
           <thead className="sticky top-[40px] z-30 bg-base-300 [&_th]:bg-base-300">
             {/* ToolBar */}
@@ -1370,6 +1944,7 @@ function HabitTableEntry() {
                         <button
                           className="btn btn-soft btn-circle btn-success btn-sm"
                           onClick={handleSave}
+                          disabled={loading}
                         >
                           <Save />
                         </button>
@@ -1521,8 +2096,1300 @@ function HabitTableEntry() {
         </table>
       </div>
 
-      {/* Pagination */}
-      <div>
+      {/* Mobile Day-by-Day View (md:hidden) */}
+      <div className="md:hidden space-y-3 mt-1 pb-6">
+        {/* Mobile Concentric Rings Day Navigator Header (Horizontal Scrollable) */}
+        {(() => {
+          const dayMeta = formatDayDisplay(selectedMobileDate);
+          const score = calculateScore(mobileEntry);
+          const progress = calculateProgress(mobileEntry);
+          const todayStr = getTodayStr();
+
+          return (
+            <div className="sticky top-[-16px] z-30 bg-base-100/95 backdrop-blur-xl border border-base-300/80 rounded-2xl p-2.5 shadow-sm mb-3 space-y-2">
+              {/* Top row: Date first, then button to scroll back to today, and arrow marks */}
+              <div className="flex items-center justify-between px-1 text-xs">
+                {/* Date first */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    const [y, m, d] = (selectedMobileDate || getTodayStr()).split("-").map(Number);
+                    setCalendarViewDate(new Date(y, m - 1, d || 1));
+                    setIsCalendarOpen(true);
+                  }}
+                  className="relative inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-base-200/80 hover:bg-base-200 border border-base-300/80 cursor-pointer transition-all active:scale-95 group shadow-2xs select-none"
+                  title="Open Calendar"
+                >
+                  <Calendar size={13} className="text-primary shrink-0" />
+                  <span className="font-extrabold text-base-content text-xs tracking-tight">
+                    {dayMeta.full}
+                  </span>
+                  <ChevronDown size={11} className="text-base-content/40 group-hover:text-primary transition-colors shrink-0" />
+                </button>
+
+                {/* Button to scroll back to today and arrow marks */}
+                <div className="flex items-center gap-1">
+                  {!dayMeta.isToday && (
+                    <button
+                      type="button"
+                      className="text-[11px] font-bold text-primary hover:underline flex items-center gap-1 bg-primary/10 hover:bg-primary/20 px-2 py-0.5 rounded-full cursor-pointer transition-all active:scale-95 border border-primary/20"
+                      onClick={() => handleSelectDay(todayStr)}
+                      title="Scroll back to Today"
+                    >
+                      <RotateCcw size={10} /> Today
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-circle btn-xs text-base-content/70 hover:bg-base-200"
+                    onClick={() => handleDateShift(-1)}
+                    title="Previous Day"
+                  >
+                    <ChevronLeft size={16} />
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-circle btn-xs text-base-content/70 hover:bg-base-200"
+                    onClick={() => handleDateShift(1)}
+                    title="Next Day"
+                  >
+                    <ChevronRight size={16} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Rings Legend Bar */}
+              <div className="flex items-center justify-between px-2 py-1 rounded-lg bg-base-200/50 text-[10px] font-semibold text-base-content/70 border border-base-content/5">
+                <span className="flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full bg-orange-500 inline-block shrink-0 shadow-2xs" />
+                  <span>Burned</span>
+                </span>
+                <span className="flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block shrink-0 shadow-2xs" />
+                  <span>Intake</span>
+                </span>
+                <span className="flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full bg-cyan-500 inline-block shrink-0 shadow-2xs" />
+                  <span>Water</span>
+                </span>
+                <span className="flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full bg-violet-500 inline-block shrink-0 shadow-2xs" />
+                  <span>Sleep</span>
+                </span>
+              </div>
+
+              {/* Horizontal Scrollable Strip of Days */}
+              <div
+                ref={daysScrollRef}
+                className="flex items-center gap-2 overflow-x-auto py-1 px-0.5 scroll-smooth scroll-hidden select-none"
+                style={{ WebkitOverflowScrolling: "touch" }}
+              >
+                {mobileDaysList.map((dStr) => {
+                  const isSelected = dStr === selectedMobileDate;
+                  const isToday = dStr === todayStr;
+                  const entry = dStr === selectedMobileDate ? mobileEntry : (mobileDaysCache[dStr] || {});
+
+                  // Goals from settings
+                  const burnedGoal = settings?.burned?.min || 500;
+                  const intakeGoal = settings?.intake?.min || 2000;
+                  const waterGoal = settings?.water?.min || 3;
+                  const sleepGoal = settings?.sleep?.min || 7;
+
+                  // Values
+                  const burnedVal = Number(entry.burned) || 0;
+                  const intakeVal = Number(entry.intake) || 0;
+                  const waterVal = Number(entry.water) || 0;
+                  const sleepVal = Number(entry.sleep) || 0;
+
+                  // Percentages (0 to 100)
+                  const pctBurned = Math.min(100, Math.max(0, Math.round((burnedVal / burnedGoal) * 100)));
+                  const pctIntake = Math.min(100, Math.max(0, Math.round((intakeVal / intakeGoal) * 100)));
+                  const pctWater = Math.min(100, Math.max(0, Math.round((waterVal / waterGoal) * 100)));
+                  const pctSleep = Math.min(100, Math.max(0, Math.round((sleepVal / sleepGoal) * 100)));
+
+                  // Date breakdown (Day, Date, Month - no year)
+                  const [y, m, d] = dStr.split("-").map(Number);
+                  const dt = new Date(y, m - 1, d);
+                  const dayName = dt.toLocaleDateString("en-US", { weekday: "short" }).toUpperCase();
+                  const dateNum = dt.getDate();
+                  const monthName = dt.toLocaleDateString("en-US", { month: "short" });
+
+                  // Circumferences for 92x92 viewBox:
+                  // r1=41 (Burned) -> 257.61
+                  // r2=35 (Intake) -> 219.91
+                  // r3=29 (Water)  -> 182.21
+                  // r4=23 (Sleep)  -> 144.51
+                  const c1 = 257.61;
+                  const c2 = 219.91;
+                  const c3 = 182.21;
+                  const c4 = 144.51;
+
+                  const off1 = c1 - (pctBurned / 100) * c1;
+                  const off2 = c2 - (pctIntake / 100) * c2;
+                  const off3 = c3 - (pctWater / 100) * c3;
+                  const off4 = c4 - (pctSleep / 100) * c4;
+
+                  return (
+                    <div
+                      key={dStr}
+                      data-date={dStr}
+                      onClick={() => handleSelectDay(dStr)}
+                      className={`shrink-0 flex flex-col items-center justify-center py-2 px-1.5 rounded-2xl transition-all cursor-pointer select-none active:scale-95 ${
+                        isSelected
+                          ? "bg-base-200 border-2 border-primary shadow-md scale-105"
+                          : "bg-base-100 hover:bg-base-200/50 border border-base-300/70 opacity-80 hover:opacity-100"
+                      }`}
+                      style={{ width: "80px" }}
+                    >
+                      {/* Concentric Circles SVG (4 Rings + Day Date Month in middle) */}
+                      <svg viewBox="0 0 92 92" className="w-[70px] h-[70px] my-0.5 pointer-events-none">
+                        <g transform="rotate(-90 46 46)">
+                          {/* Ring 1 (Upper/Outer): Calories Burned (#f97316) */}
+                          <circle cx="46" cy="46" r="41" fill="none" stroke="currentColor" strokeWidth="3" opacity="0.12" />
+                          {pctBurned > 0 && (
+                            <circle
+                              cx="46"
+                              cy="46"
+                              r="41"
+                              fill="none"
+                              stroke="#f97316"
+                              strokeWidth="3"
+                              strokeDasharray={c1}
+                              strokeDashoffset={off1}
+                              strokeLinecap="round"
+                              className="transition-all duration-500 ease-out"
+                            />
+                          )}
+
+                          {/* Ring 2: Calorie Intake (#10b981) */}
+                          <circle cx="46" cy="46" r="35" fill="none" stroke="currentColor" strokeWidth="3" opacity="0.12" />
+                          {pctIntake > 0 && (
+                            <circle
+                              cx="46"
+                              cy="46"
+                              r="35"
+                              fill="none"
+                              stroke="#10b981"
+                              strokeWidth="3"
+                              strokeDasharray={c2}
+                              strokeDashoffset={off2}
+                              strokeLinecap="round"
+                              className="transition-all duration-500 ease-out"
+                            />
+                          )}
+
+                          {/* Ring 3: Water Intake (#06b6d4) */}
+                          <circle cx="46" cy="46" r="29" fill="none" stroke="currentColor" strokeWidth="3" opacity="0.12" />
+                          {pctWater > 0 && (
+                            <circle
+                              cx="46"
+                              cy="46"
+                              r="29"
+                              fill="none"
+                              stroke="#06b6d4"
+                              strokeWidth="3"
+                              strokeDasharray={c3}
+                              strokeDashoffset={off3}
+                              strokeLinecap="round"
+                              className="transition-all duration-500 ease-out"
+                            />
+                          )}
+
+                          {/* Ring 4 (Inner): Sleep Duration (#8b5cf6) */}
+                          <circle cx="46" cy="46" r="23" fill="none" stroke="currentColor" strokeWidth="3" opacity="0.12" />
+                          {pctSleep > 0 && (
+                            <circle
+                              cx="46"
+                              cy="46"
+                              r="23"
+                              fill="none"
+                              stroke="#8b5cf6"
+                              strokeWidth="3"
+                              strokeDasharray={c4}
+                              strokeDashoffset={off4}
+                              strokeLinecap="round"
+                              className="transition-all duration-500 ease-out"
+                            />
+                          )}
+                        </g>
+
+                        {/* Middle text: Day, Date, Month (No year) */}
+                        <text
+                          x="46"
+                          y="38"
+                          textAnchor="middle"
+                          className="fill-base-content/60 font-bold"
+                          fontSize="7.5"
+                          letterSpacing="0.04em"
+                        >
+                          {dayName}
+                        </text>
+                        <text
+                          x="46"
+                          y="50"
+                          textAnchor="middle"
+                          className={`font-black ${isSelected ? "fill-primary" : "fill-base-content"}`}
+                          fontSize="13"
+                        >
+                          {dateNum}
+                        </text>
+                        <text
+                          x="46"
+                          y="60"
+                          textAnchor="middle"
+                          className="fill-base-content/60 font-semibold"
+                          fontSize="7.5"
+                        >
+                          {monthName}
+                        </text>
+                      </svg>
+
+                      {/* Bottom Status / Score */}
+                      <div className="text-[10px] font-bold truncate text-center pointer-events-none">
+                        {entry?.score !== undefined && entry?.score !== null && String(entry?.score) !== "" ? (
+                          <span className={getScoreColor(Number(entry.score))}>
+                            ★ {entry.score}/7
+                          </span>
+                        ) : (
+                          <span className="text-base-content/30 text-[9px] font-normal">--</span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {/* "+" Button at the end of the list to add future dates */}
+                <button
+                  type="button"
+                  onClick={handleAddFutureDay}
+                  title="Add next future date"
+                  className="shrink-0 flex flex-col items-center justify-center p-2 rounded-2xl border-2 border-dashed border-primary/40 hover:border-primary hover:bg-primary/5 bg-base-100/60 text-primary transition-all cursor-pointer active:scale-95 group shadow-2xs"
+                  style={{ width: "80px", height: "114px" }}
+                >
+                  <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-primary-content transition-all shadow-2xs">
+                    <Plus size={18} className="stroke-[2.5]" />
+                  </div>
+                  <span className="text-[10px] font-black uppercase tracking-wider text-center mt-2 group-hover:text-primary transition-colors">
+                    Add Day
+                  </span>
+                  <span className="text-[8px] font-bold text-base-content/50 text-center">
+                    + Future
+                  </span>
+                </button>
+              </div>
+            </div>
+          );
+        })()}
+
+        {mobileLoading ? (
+          <div className="h-64 flex items-center justify-center bg-base-200/50 rounded-2xl border border-base-300">
+            <span className="loading loading-spinner loading-lg text-primary"></span>
+          </div>
+        ) : (
+          <>
+            {/* 1. Calorie Intake (Visual Semi-Circle Energy Arc) */}
+            {(() => {
+              const intakeVal = Number(mobileEntry.intake) || 0;
+              const intakeTarget = settings?.intake?.max || 2500;
+              const intakePct = Math.min(100, Math.max(0, (intakeVal / (intakeTarget || 1)) * 100));
+              const arcLen = 213.63;
+              const strokeOffset = arcLen - (intakePct / 100) * arcLen;
+
+              return (
+                <div className="bg-base-100 border border-base-300/80 rounded-2xl p-4 shadow-2xs space-y-3">
+                  {/* Header */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xl">🍽️</span>
+                      <div>
+                        <h4 className="text-xs font-bold text-base-content">Calorie Intake</h4>
+                        <span className="text-[10px] text-base-content/60 font-medium">
+                          Goal: {settings?.intake?.min || 0} - {intakeTarget} kcal
+                        </span>
+                      </div>
+                    </div>
+                    <span
+                      className={`badge badge-xs font-bold ${
+                        intakeVal === 0 && !mobileEntry._isExisting
+                          ? "badge-ghost text-base-content/50"
+                          : getColorClass("intake", intakeVal, settings)
+                      }`}
+                    >
+                      {intakeVal === 0 && !mobileEntry._isExisting
+                        ? "Not Logged"
+                        : intakeVal < (settings?.intake?.min || 0)
+                        ? "Below Min"
+                        : intakeVal > intakeTarget
+                        ? "Above Max"
+                        : "Optimal"}
+                    </span>
+                  </div>
+
+                  {/* Visual Semi-Circle Energy Gauge (Enlarged Arc + Well-Proportioned Number) */}
+                  <div className="flex flex-col items-center justify-center pt-1 pb-0 relative">
+                    <svg viewBox="0 0 180 102" className="w-56 max-w-full overflow-visible">
+                      <defs>
+                        <linearGradient id="intakeSemiGrad" x1="0" y1="0" x2="1" y2="0">
+                          <stop offset="0%" stopColor="#10b981" />
+                          <stop offset="100%" stopColor="#14b8a6" />
+                        </linearGradient>
+                      </defs>
+                      {/* Background Track */}
+                      <path
+                        d="M 22 88 A 68 68 0 0 1 158 88"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="9.5"
+                        strokeLinecap="round"
+                        className="text-base-300/70 dark:text-base-content/10"
+                      />
+                      {/* Progress Arc */}
+                      <path
+                        d="M 22 88 A 68 68 0 0 1 158 88"
+                        fill="none"
+                        stroke="url(#intakeSemiGrad)"
+                        strokeWidth="9.5"
+                        strokeLinecap="round"
+                        strokeDasharray={arcLen}
+                        strokeDashoffset={strokeOffset}
+                        className="transition-all duration-300 ease-out"
+                      />
+                      {/* Center Value (Shortened & Proportioned) */}
+                      <text
+                        x="90"
+                        y="68"
+                        textAnchor="middle"
+                        fontSize="18"
+                        fontWeight="900"
+                        className="fill-current tracking-tight text-base-content font-mono"
+                      >
+                        {intakeVal}
+                      </text>
+                      <text
+                        x="90"
+                        y="80"
+                        textAnchor="middle"
+                        fontSize="7.5"
+                        fontWeight="700"
+                        letterSpacing="0.05em"
+                        className="fill-emerald-500 uppercase"
+                      >
+                        kcal consumed
+                      </text>
+                      {/* Left/Right labels */}
+                      <text x="22" y="98" textAnchor="middle" fontSize="7.5" fontWeight="600" className="fill-base-content/40">
+                        0
+                      </text>
+                      <text x="158" y="98" textAnchor="middle" fontSize="7.5" fontWeight="600" className="fill-base-content/40">
+                        {intakeTarget}
+                      </text>
+                    </svg>
+                  </div>
+
+                  {/* Input & "From Food" Auto-Fetch Icon */}
+                  <div className="pt-1">
+                    <div className="flex items-center gap-2">
+                      <div className="relative flex-1">
+                        <input
+                          type="number"
+                          min="0"
+                          max="100000"
+                          className="input input-sm input-bordered w-full font-bold text-base bg-base-200/50 pr-12"
+                          value={mobileEntry.intake === 0 && !mobileHasChanges ? "" : mobileEntry.intake}
+                          placeholder="0"
+                          onChange={(e) => handleMobileFieldChange("intake", e.target.value === "" ? 0 : Number(e.target.value))}
+                        />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-base-content/50 pointer-events-none">
+                          kcal
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-circle btn-soft btn-primary shrink-0 transition-transform active:scale-95 shadow-2xs"
+                        onClick={handleMobileFetchFoodIntake}
+                        disabled={isFetchingFoodMobile}
+                        title="Fetch & sync calories from Food Logging for this date"
+                        aria-label="Sync from Food Logging"
+                      >
+                        <Utensils size={15} className={isFetchingFoodMobile ? "animate-spin text-primary" : "text-primary"} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* 2. Water Intake (Visual Filling Glass with Fixed Position & Clear Markings) */}
+            {(() => {
+              const waterVal = Number(mobileEntry.water) || 0;
+              const targetWater = settings?.water?.max || 3.0;
+              const waterPct = Math.min(100, Math.max(0, (waterVal / (targetWater || 1)) * 100));
+
+              // Fixed glass geometry in viewBox 0 0 100 135:
+              const fillHeight = (waterPct / 100) * 100;
+              const waterY = 118 - fillHeight;
+              const widthAtY = 44 + (fillHeight / 100) * 16;
+
+              const mark100 = targetWater % 1 === 0 ? `${targetWater}L` : `${targetWater.toFixed(1)}L`;
+              const mark75 = `${(targetWater * 0.75).toFixed(1)}L`;
+              const mark50 = `${(targetWater * 0.5).toFixed(1)}L`;
+              const mark25 = `${(targetWater * 0.25).toFixed(1)}L`;
+
+              return (
+                <div className="bg-base-100 border border-base-300/80 rounded-2xl p-4 shadow-2xs space-y-3">
+                  {/* Header */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xl">💧</span>
+                      <div>
+                        <h4 className="text-xs font-bold text-base-content">Water Intake</h4>
+                        <span className="text-[10px] text-base-content/60 font-medium">
+                          Goal: {settings?.water?.min || 0} - {targetWater} Ltr
+                        </span>
+                      </div>
+                    </div>
+                    <span
+                      className={`badge badge-xs font-bold ${
+                        waterVal === 0 && !mobileEntry._isExisting
+                          ? "badge-ghost text-base-content/50"
+                          : getColorClass("water", waterVal, settings)
+                      }`}
+                    >
+                      {waterVal === 0 && !mobileEntry._isExisting
+                        ? "Not Logged"
+                        : waterVal < (settings?.water?.min || 0)
+                        ? "Below Min"
+                        : waterVal > targetWater
+                        ? "Above Max"
+                        : "Optimal"}
+                    </span>
+                  </div>
+
+                  {/* Visual Filling Glass (Rock-Solid Fixed Layout, will never shift or move) */}
+                  <div className="grid grid-cols-[100px_1fr] items-center gap-3 py-1">
+                    {/* Left Column: Fixed Width Glass Container (100px wide, perfectly fixed) */}
+                    <div className="w-[100px] h-[135px] shrink-0 flex items-center justify-center select-none">
+                      <svg viewBox="0 0 100 135" className="w-full h-full overflow-visible drop-shadow-sm pointer-events-none">
+                        <defs>
+                          <clipPath id="glassInteriorClip">
+                            <polygon points="20,18 80,18 72,118 28,118" />
+                          </clipPath>
+                          <linearGradient id="waterFlowGrad2" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#38bdf8" />
+                            <stop offset="60%" stopColor="#0284c7" />
+                            <stop offset="100%" stopColor="#0369a1" />
+                          </linearGradient>
+                        </defs>
+
+                        {/* Empty Glass Inner Background */}
+                        <polygon
+                          points="20,18 80,18 72,118 28,118"
+                          fill="currentColor"
+                          className="text-base-200/60 dark:text-base-content/5"
+                        />
+
+                        {/* Animated Rising Water Liquid */}
+                        {waterPct > 0 && (
+                          <g clipPath="url(#glassInteriorClip)">
+                            <rect
+                              x="15"
+                              y={waterY}
+                              width="70"
+                              height="115"
+                              fill="url(#waterFlowGrad2)"
+                              className="transition-all duration-500 ease-out"
+                            />
+                            {/* Water Surface Ellipse */}
+                            <ellipse
+                              cx="50"
+                              cy={waterY}
+                              rx={widthAtY / 2}
+                              ry="3"
+                              fill="#7dd3fc"
+                              opacity="0.9"
+                              className="transition-all duration-500 ease-out"
+                            />
+                            {/* Subtle bubble accents */}
+                            <circle cx="42" cy={Math.min(110, waterY + 25)} r="1.5" fill="#ffffff" opacity="0.6" />
+                            <circle cx="58" cy={Math.min(112, waterY + 45)} r="2" fill="#ffffff" opacity="0.5" />
+                          </g>
+                        )}
+
+                        {/* Glass Physical Body Outline */}
+                        <polygon
+                          points="20,18 80,18 72,118 28,118"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="3.5"
+                          strokeLinejoin="round"
+                          className="text-base-content/35"
+                        />
+                        {/* Top Rim Ellipse */}
+                        <ellipse
+                          cx="50"
+                          cy="18"
+                          rx="30"
+                          ry="4"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="3"
+                          className="text-base-content/35"
+                        />
+                        {/* Glass Base Thickness */}
+                        <line x1="28" y1="118" x2="72" y2="118" stroke="currentColor" strokeWidth="4" className="text-base-content/40" />
+
+                        {/* Glass Specular Reflection Highlight Streak (left side) */}
+                        <path
+                          d="M 26 24 L 24 112"
+                          stroke="#ffffff"
+                          strokeWidth="2.5"
+                          strokeLinecap="round"
+                          opacity="0.35"
+                        />
+
+                        {/* Clear Measurement Graduation Markings on Glass (TICK LINES & LABELS) */}
+                        <g className="font-mono text-[7px] font-black select-none pointer-events-none">
+                          {/* 100% Mark */}
+                          <line x1="60" y1="20" x2="76" y2="20" stroke="currentColor" strokeWidth="1.8" className="text-base-content/70" />
+                          <text x="57" y="22.5" textAnchor="end" fill="currentColor" className="fill-base-content/80 font-bold">
+                            {mark100}
+                          </text>
+
+                          {/* 75% Mark */}
+                          <line x1="62" y1="44.5" x2="74" y2="44.5" stroke="currentColor" strokeWidth="1.5" className="text-base-content/60" />
+                          <text x="59" y="47" textAnchor="end" fill="currentColor" className="fill-base-content/70">
+                            {mark75}
+                          </text>
+
+                          {/* 50% Mark */}
+                          <line x1="64" y1="69" x2="73" y2="69" stroke="currentColor" strokeWidth="1.5" className="text-base-content/60" />
+                          <text x="61" y="71.5" textAnchor="end" fill="currentColor" className="fill-base-content/70">
+                            {mark50}
+                          </text>
+
+                          {/* 25% Mark */}
+                          <line x1="66" y1="93.5" x2="72" y2="93.5" stroke="currentColor" strokeWidth="1.5" className="text-base-content/60" />
+                          <text x="63" y="96" textAnchor="end" fill="currentColor" className="fill-base-content/70">
+                            {mark25}
+                          </text>
+                        </g>
+                      </svg>
+                    </div>
+
+                    {/* Right Column: Statistics & Goal Readout (Isolated, cannot move or shift the glass!) */}
+                    <div className="min-w-0 space-y-1.5 pl-1">
+                      <div className="flex items-baseline gap-1.5">
+                        <span className="text-3xl font-black text-base-content tracking-tight">
+                          {waterVal}
+                        </span>
+                        <span className="text-xs font-bold text-base-content/60">
+                          / {targetWater} Ltr
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <div className="w-24 h-2 bg-base-200 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-cyan-500 rounded-full transition-all duration-500"
+                            style={{ width: `${waterPct}%` }}
+                          />
+                        </div>
+                        <span className="text-xs font-extrabold text-cyan-600 dark:text-cyan-400">
+                          {Math.round(waterPct)}%
+                        </span>
+                      </div>
+
+                      <p className="text-[11px] text-base-content/70 font-medium truncate">
+                        {waterPct >= 100
+                          ? "Hydration Goal Achieved! 🎉"
+                          : `${Math.max(0, Math.round((targetWater - waterVal) * 10) / 10)} Ltr remaining`}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Input & Quick Steppers */}
+                  <div className="space-y-2 pt-1">
+                    <div className="flex items-center gap-2">
+                      <div className="relative flex-1">
+                        <input
+                          type="number"
+                          min="0"
+                          max="20"
+                          step="0.1"
+                          className="input input-sm input-bordered w-full font-bold text-base bg-base-200/50 pr-10"
+                          value={mobileEntry.water === 0 && !mobileHasChanges ? "" : mobileEntry.water}
+                          placeholder="0.0"
+                          onChange={(e) => handleMobileFieldChange("water", e.target.value === "" ? 0 : Number(e.target.value))}
+                        />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-base-content/50 pointer-events-none">
+                          Ltr
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          className="btn btn-xs btn-soft text-[11px] font-semibold text-sky-600 dark:text-sky-400"
+                          onClick={() => handleMobileFieldChange("water", Math.round(((Number(mobileEntry.water) || 0) + 0.25) * 100) / 100)}
+                        >
+                          +0.25L 🥛
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-xs btn-soft text-[11px] font-semibold text-sky-600 dark:text-sky-400"
+                          onClick={() => handleMobileFieldChange("water", Math.round(((Number(mobileEntry.water) || 0) + 0.5) * 100) / 100)}
+                        >
+                          +0.5L 🍶
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* 3. Calories Burned (Enlarged Arc + Well-Proportioned Number) */}
+            {(() => {
+              const burnedVal = Number(mobileEntry.burned) || 0;
+              const burnedTarget = settings?.burned?.max || 500;
+              const burnedPct = Math.min(100, Math.max(0, (burnedVal / (burnedTarget || 1)) * 100));
+              const arcLen = 213.63;
+              const strokeOffset = arcLen - (burnedPct / 100) * arcLen;
+
+              return (
+                <div className="bg-base-100 border border-base-300/80 rounded-2xl p-4 shadow-2xs space-y-3">
+                  {/* Header */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xl">🔥</span>
+                      <div>
+                        <h4 className="text-xs font-bold text-base-content">Calories Burned</h4>
+                        <span className="text-[10px] text-base-content/60 font-medium">
+                          Goal: {settings?.burned?.min || 0} - {burnedTarget} kcal
+                        </span>
+                      </div>
+                    </div>
+                    <span
+                      className={`badge badge-xs font-bold ${
+                        burnedVal === 0 && !mobileEntry._isExisting
+                          ? "badge-ghost text-base-content/50"
+                          : getColorClass("burned", burnedVal, settings)
+                      }`}
+                    >
+                      {burnedVal === 0 && !mobileEntry._isExisting
+                        ? "Not Logged"
+                        : burnedVal < (settings?.burned?.min || 0)
+                        ? "Below Min"
+                        : burnedVal > burnedTarget
+                        ? "Above Max"
+                        : "Optimal"}
+                    </span>
+                  </div>
+
+                  {/* Visual Semi-Circle Gauge (Enlarged Arc + Well-Proportioned Number) */}
+                  <div className="flex flex-col items-center justify-center pt-1 pb-0 relative">
+                    <svg viewBox="0 0 180 102" className="w-56 max-w-full overflow-visible">
+                      <defs>
+                        <linearGradient id="burnedSemiGrad" x1="0" y1="0" x2="1" y2="0">
+                          <stop offset="0%" stopColor="#f97316" />
+                          <stop offset="100%" stopColor="#ef4444" />
+                        </linearGradient>
+                      </defs>
+                      {/* Background Track */}
+                      <path
+                        d="M 22 88 A 68 68 0 0 1 158 88"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="9.5"
+                        strokeLinecap="round"
+                        className="text-base-300/70 dark:text-base-content/10"
+                      />
+                      {/* Progress Arc */}
+                      <path
+                        d="M 22 88 A 68 68 0 0 1 158 88"
+                        fill="none"
+                        stroke="url(#burnedSemiGrad)"
+                        strokeWidth="9.5"
+                        strokeLinecap="round"
+                        strokeDasharray={arcLen}
+                        strokeDashoffset={strokeOffset}
+                        className="transition-all duration-300 ease-out"
+                      />
+                      {/* Center Value (Shortened & Proportioned) */}
+                      <text
+                        x="90"
+                        y="68"
+                        textAnchor="middle"
+                        fontSize="18"
+                        fontWeight="900"
+                        className="fill-current tracking-tight text-base-content font-mono"
+                      >
+                        {burnedVal}
+                      </text>
+                      <text
+                        x="90"
+                        y="80"
+                        textAnchor="middle"
+                        fontSize="7.5"
+                        fontWeight="700"
+                        letterSpacing="0.05em"
+                        className="fill-orange-500 uppercase"
+                      >
+                        kcal burned
+                      </text>
+                      {/* Left/Right labels */}
+                      <text x="22" y="98" textAnchor="middle" fontSize="7.5" fontWeight="600" className="fill-base-content/40">
+                        0
+                      </text>
+                      <text x="158" y="98" textAnchor="middle" fontSize="7.5" fontWeight="600" className="fill-base-content/40">
+                        {burnedTarget}
+                      </text>
+                    </svg>
+                  </div>
+
+                  {/* Input & Quick Steppers */}
+                  <div className="flex items-center gap-2 pt-1">
+                    <div className="relative flex-1">
+                      <input
+                        type="number"
+                        min="0"
+                        max="10000"
+                        className="input input-sm input-bordered w-full font-bold text-base bg-base-200/50 pr-12"
+                        value={mobileEntry.burned === 0 && !mobileHasChanges ? "" : mobileEntry.burned}
+                        placeholder="0"
+                        onChange={(e) => handleMobileFieldChange("burned", e.target.value === "" ? 0 : Number(e.target.value))}
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-base-content/50 pointer-events-none">
+                        kcal
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        className="btn btn-xs btn-soft"
+                        onClick={() => handleMobileFieldChange("burned", Math.max(0, (Number(mobileEntry.burned) || 0) - 50))}
+                      >
+                        -50
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-xs btn-soft"
+                        onClick={() => handleMobileFieldChange("burned", (Number(mobileEntry.burned) || 0) + 50)}
+                      >
+                        +50
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-xs btn-soft"
+                        onClick={() => handleMobileFieldChange("burned", (Number(mobileEntry.burned) || 0) + 100)}
+                      >
+                        +100
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* 4. Sleep Duration (Visual Picture of Moon with Stars - Colors fill based on progress) */}
+            {(() => {
+              const sleepVal = Number(mobileEntry.sleep) || 0;
+              const sleepTarget = settings?.sleep?.max || 8;
+              const rawSleepPct = (sleepVal / (sleepTarget || 1)) * 100;
+              const sleepPct = Math.min(100, Math.max(0, rawSleepPct));
+              const sleepPctDisplay = sleepVal > 0 ? (Number.isInteger(sleepPct) ? sleepPct : sleepPct.toFixed(2)) : 0;
+
+              let sleepQuality = "No sleep logged";
+              if (sleepVal > 0 && sleepVal < 6) sleepQuality = "Short Sleep";
+              else if (sleepVal >= 6 && sleepVal < 7) sleepQuality = "Light Rest";
+              else if (sleepVal >= 7 && sleepVal <= 9) sleepQuality = "Restful & Optimal";
+              else if (sleepVal > 9) sleepQuality = "Deep Recovery";
+
+              return (
+                <div className="bg-base-100 border border-base-300/80 rounded-2xl p-4 shadow-2xs space-y-3">
+                  {/* Header (No emoji icon) */}
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="text-xs font-bold text-base-content">Sleep Duration</h4>
+                      <span className="text-[10px] text-base-content/60 font-medium">
+                        Goal: {settings?.sleep?.min || 0} - {sleepTarget} hrs
+                      </span>
+                    </div>
+                    <span
+                      className={`badge badge-xs font-bold ${
+                        sleepVal === 0 && !mobileEntry._isExisting
+                          ? "badge-ghost text-base-content/50"
+                          : getColorClass("sleep", sleepVal, settings)
+                      }`}
+                    >
+                      {sleepVal === 0 && !mobileEntry._isExisting
+                        ? "Not Logged"
+                        : sleepVal < (settings?.sleep?.min || 0)
+                        ? "Below Min"
+                        : sleepVal > sleepTarget
+                        ? "Above Max"
+                        : "Optimal"}
+                    </span>
+                  </div>
+
+                  {/* Visual Picture: Moon with Stars - Colors fill based on progress */}
+                  <div className="flex flex-col items-center justify-center pt-1 pb-0 relative">
+                    <div className="relative w-56 h-36 rounded-2xl overflow-hidden shadow-sm border border-base-300/80 bg-slate-950/80 select-none">
+                      {/* Base uncolored/muted layer */}
+                      <img
+                        src="/images/sleep_moon_stars.jpg"
+                        alt="Sleep celestial night"
+                        className="w-full h-full object-cover filter grayscale contrast-125 brightness-40 opacity-40 select-none pointer-events-none"
+                      />
+
+                      {/* Active colored layer: fills from bottom to top as sleep progress increases */}
+                      <div
+                        className="absolute inset-0 transition-all duration-700 ease-out pointer-events-none overflow-hidden"
+                        style={{
+                          clipPath: `inset(${100 - sleepPct}% 0 0 0)`,
+                        }}
+                      >
+                        <img
+                          src="/images/sleep_moon_stars.jpg"
+                          alt="Sleep celestial filled"
+                          className="w-full h-full object-cover filter drop-shadow-md select-none"
+                        />
+                        {/* Shimmering golden threshold line */}
+                        {sleepPct > 0 && sleepPct < 100 && (
+                          <div
+                            className="absolute left-0 right-0 h-[2px] bg-gradient-to-r from-yellow-300 via-amber-400 to-yellow-200 shadow-[0_0_10px_#facc15]"
+                            style={{ top: `${100 - sleepPct}%` }}
+                          />
+                        )}
+                      </div>
+
+                      {/* Corner badge with percentage formatted to at most 2 decimal points */}
+                      <div className="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-md border border-white/10 text-[10px] font-bold text-amber-300 shadow-2xs pointer-events-none">
+                        {sleepPctDisplay}%
+                      </div>
+                    </div>
+
+                    {/* Sleep Duration Value & Progress readout (percentage only till two decimal points) */}
+                    <div className="text-center mt-2 space-y-0.5">
+                      <div className="text-2xl font-black text-base-content tracking-tight">
+                        {sleepVal} <span className="text-xs font-semibold text-base-content/60">hrs</span>
+                      </div>
+                      <div className="text-[10px] font-bold text-amber-500 uppercase tracking-wider">
+                        {sleepQuality} • {sleepPctDisplay}% of {sleepTarget}h goal
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Input & Quick Steppers */}
+                  <div className="flex items-center gap-2 pt-1">
+                    <div className="relative flex-1">
+                      <input
+                        type="number"
+                        min="0"
+                        max="24"
+                        step="0.5"
+                        className="input input-sm input-bordered w-full font-bold text-base bg-base-200/50 pr-10"
+                        value={mobileEntry.sleep === 0 && !mobileHasChanges ? "" : mobileEntry.sleep}
+                        placeholder="0.0"
+                        onChange={(e) => handleMobileFieldChange("sleep", e.target.value === "" ? 0 : Number(e.target.value))}
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-base-content/50 pointer-events-none">
+                        hrs
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        className="btn btn-xs btn-soft"
+                        onClick={() => handleMobileFieldChange("sleep", Math.max(0, Math.round(((Number(mobileEntry.sleep) || 0) - 0.5) * 10) / 10))}
+                      >
+                        -0.5h
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-xs btn-soft"
+                        onClick={() => handleMobileFieldChange("sleep", Math.round(((Number(mobileEntry.sleep) || 0) + 0.5) * 10) / 10)}
+                      >
+                        +0.5h
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-xs btn-soft"
+                        onClick={() => handleMobileFieldChange("sleep", Math.round(((Number(mobileEntry.sleep) || 0) + 1) * 10) / 10)}
+                      >
+                        +1h
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* 5. Reading Time (Visual Picture of Open Book - Colors fill based on progress) */}
+            {(() => {
+              const readVal = Number(mobileEntry.read) || 0;
+              const readTarget = settings?.read?.max || 1.0;
+              const rawReadPct = (readVal / (readTarget || 1)) * 100;
+              const readPct = Math.min(100, Math.max(0, rawReadPct));
+              const readPctDisplay = readVal > 0 ? (Number.isInteger(readPct) ? readPct : readPct.toFixed(2)) : 0;
+              const readMins = Math.round(readVal * 60);
+
+              return (
+                <div className="bg-base-100 border border-base-300/80 rounded-2xl p-4 shadow-2xs space-y-3">
+                  {/* Header (No emoji icon) */}
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="text-xs font-bold text-base-content">Reading Time</h4>
+                      <span className="text-[10px] text-base-content/60 font-medium">
+                        Goal: {settings?.read?.min || 0} - {readTarget} hrs
+                      </span>
+                    </div>
+                    <span
+                      className={`badge badge-xs font-bold ${
+                        readVal === 0 && !mobileEntry._isExisting
+                          ? "badge-ghost text-base-content/50"
+                          : getColorClass("read", readVal, settings)
+                      }`}
+                    >
+                      {readVal === 0 && !mobileEntry._isExisting
+                        ? "Not Logged"
+                        : readVal < (settings?.read?.min || 0)
+                        ? "Below Min"
+                        : readVal > readTarget
+                        ? "Above Max"
+                        : "Optimal"}
+                    </span>
+                  </div>
+
+                  {/* Visual Picture: Open Book - Colors fill based on progress */}
+                  <div className="flex flex-col items-center justify-center pt-1 pb-0 relative">
+                    <div className="relative w-56 h-36 rounded-2xl overflow-hidden shadow-sm border border-base-300/80 bg-slate-950/80 select-none">
+                      {/* Base uncolored/muted layer */}
+                      <img
+                        src="/images/read_open_book.jpg"
+                        alt="Reading book illustration"
+                        className="w-full h-full object-cover filter grayscale contrast-125 brightness-40 opacity-40 select-none pointer-events-none"
+                      />
+
+                      {/* Active colored layer: fills across pages from left to right as reading progress increases */}
+                      <div
+                        className="absolute inset-0 transition-all duration-700 ease-out pointer-events-none overflow-hidden"
+                        style={{
+                          clipPath: `inset(0 ${100 - readPct}% 0 0)`,
+                        }}
+                      >
+                        <img
+                          src="/images/read_open_book.jpg"
+                          alt="Reading book filled"
+                          className="w-full h-full object-cover filter drop-shadow-md select-none"
+                        />
+                        {/* Shimmering reading progress edge */}
+                        {readPct > 0 && readPct < 100 && (
+                          <div
+                            className="absolute top-0 bottom-0 w-[2px] bg-gradient-to-b from-amber-300 via-emerald-400 to-sky-400 shadow-[0_0_10px_#38bdf8]"
+                            style={{ left: `${readPct}%` }}
+                          />
+                        )}
+                      </div>
+
+                      {/* Corner badge with percentage formatted to at most 2 decimal points */}
+                      <div className="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-md border border-white/10 text-[10px] font-bold text-sky-300 shadow-2xs pointer-events-none">
+                        {readPctDisplay}%
+                      </div>
+                    </div>
+
+                    {/* Reading Value & Readout (No emoji icon) */}
+                    <div className="text-center mt-2 space-y-0.5">
+                      <div className="text-2xl font-black text-base-content tracking-tight">
+                        {readVal} <span className="text-xs font-semibold text-base-content/60">hrs</span>
+                      </div>
+                      <div className="text-[10px] font-bold text-amber-500 uppercase tracking-wider">
+                        {readMins} mins • {readPctDisplay}% of {readTarget}h goal
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Input & Quick Steppers */}
+                  <div className="flex items-center gap-2 pt-1">
+                    <div className="relative flex-1">
+                      <input
+                        type="number"
+                        min="0"
+                        max="24"
+                        step="0.25"
+                        className="input input-sm input-bordered w-full font-bold text-base bg-base-200/50 pr-10"
+                        value={mobileEntry.read === 0 && !mobileHasChanges ? "" : mobileEntry.read}
+                        placeholder="0.0"
+                        onChange={(e) => handleMobileFieldChange("read", e.target.value === "" ? 0 : Number(e.target.value))}
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-base-content/50 pointer-events-none">
+                        hrs
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        className="btn btn-xs btn-soft"
+                        onClick={() => handleMobileFieldChange("read", Math.max(0, Math.round(((Number(mobileEntry.read) || 0) - 0.25) * 100) / 100))}
+                      >
+                        -15m
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-xs btn-soft"
+                        onClick={() => handleMobileFieldChange("read", Math.round(((Number(mobileEntry.read) || 0) + 0.25) * 100) / 100)}
+                      >
+                        +15m
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-xs btn-soft"
+                        onClick={() => handleMobileFieldChange("read", Math.round(((Number(mobileEntry.read) || 0) + 0.5) * 100) / 100)}
+                      >
+                        +30m
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* 6. Self Care Habits (Structured 2-Column Grid + Expand Arrow if >10) */}
+            {settings?.selfcare && settings.selfcare.length > 0 && (() => {
+              const raw = String(mobileEntry.selfcare || "");
+              const total = settings.selfcare.length;
+              const doneCount = settings.selfcare.filter((h, idx) => raw[idx] === h[0].toUpperCase()).length;
+              const completionPct = total > 0 ? Math.round((doneCount / total) * 100) : 0;
+
+              const visibleHabits = isSelfCareExpanded
+                ? settings.selfcare
+                : settings.selfcare.slice(0, 10);
+
+              return (
+                <div className="bg-base-100 border border-base-300/80 rounded-2xl p-4 shadow-2xs space-y-3">
+                  {/* Header */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xl">🧘</span>
+                      <div>
+                        <h4 className="text-xs font-bold text-base-content">Self Care Habits</h4>
+                        <span className="text-[10px] text-base-content/60 font-medium">
+                          Tap each activity to mark done
+                        </span>
+                      </div>
+                    </div>
+                    <span className={`badge badge-xs font-bold ${doneCount === total ? "badge-success text-success-content" : "badge-primary"}`}>
+                      {doneCount} / {total} done
+                    </span>
+                  </div>
+
+                  {/* Visual Completion Progress Bar */}
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between text-[10px] font-bold text-base-content/70">
+                      <span>Daily Progress</span>
+                      <span>{completionPct}%</span>
+                    </div>
+                    <div className="w-full h-2 rounded-full bg-base-200 overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full transition-all duration-300"
+                        style={{ width: `${completionPct}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Structured Habits Grid (2 equal columns) */}
+                  <div className="grid grid-cols-2 gap-2 pt-1">
+                    {visibleHabits.map((habit) => {
+                      const index = settings.selfcare.indexOf(habit);
+                      const currentValue = mobileEntry.selfcare || "_".repeat(total);
+                      const isChecked = currentValue[index] === habit[0].toUpperCase();
+                      const emoji = getSelfCareEmoji(habit);
+
+                      return (
+                        <button
+                          key={habit}
+                          type="button"
+                          className={`p-2.5 rounded-xl text-xs font-semibold border transition-all flex items-center justify-between gap-1.5 cursor-pointer select-none active:scale-95 text-left ${
+                            isChecked
+                              ? "bg-emerald-500 text-white border-emerald-500 shadow-sm font-bold"
+                              : "bg-base-200/70 border-base-300 text-base-content/80 hover:bg-base-200"
+                          }`}
+                          onClick={() => {
+                            const updated = currentValue
+                              .padEnd(total, "_")
+                              .split("")
+                              .map((char, i) =>
+                                i === index
+                                  ? !isChecked
+                                    ? habit[0].toUpperCase()
+                                    : "_"
+                                  : char
+                              )
+                              .join("");
+                            handleMobileFieldChange("selfcare", updated);
+                          }}
+                        >
+                          <div className="flex items-center gap-1.5 min-w-0 truncate">
+                            <span className="text-sm shrink-0 select-none">{emoji}</span>
+                            <span className="truncate text-[11px]">{habit}</span>
+                          </div>
+                          <span className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 text-[10px] ${
+                            isChecked ? "bg-white text-emerald-600 font-black" : "border border-base-content/30 text-transparent"
+                          }`}>
+                            ✓
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Expand / Collapse Button if more than 10 habits */}
+                  {settings.selfcare.length > 10 && (
+                    <button
+                      type="button"
+                      onClick={() => setIsSelfCareExpanded(!isSelfCareExpanded)}
+                      className="w-full py-2 px-3 rounded-xl bg-base-200/60 hover:bg-base-200 text-xs font-bold text-primary flex items-center justify-center gap-1.5 border border-base-300/80 transition-all active:scale-98 cursor-pointer mt-1"
+                    >
+                      <span>
+                        {isSelfCareExpanded
+                          ? "Show Less Habits"
+                          : `Show More (${settings.selfcare.length - 10} more)`}
+                      </span>
+                      <ChevronDown
+                        size={14}
+                        className={`transition-transform duration-200 ${isSelfCareExpanded ? "rotate-180" : ""}`}
+                      />
+                    </button>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* 7. Daily Mood (Expressive Mood Cards) */}
+            {settings?.mood && settings.mood.length > 0 && (
+              <div className="bg-base-100 border border-base-300/80 rounded-2xl p-4 shadow-2xs space-y-3">
+                {/* Header */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xl">😊</span>
+                    <div>
+                      <h4 className="text-xs font-bold text-base-content">Daily Mood</h4>
+                      <span className="text-[10px] text-base-content/60 font-medium">
+                        How was your day?
+                      </span>
+                    </div>
+                  </div>
+                  {mobileEntry.mood && (
+                    <span className="badge badge-accent badge-xs font-bold">
+                      {mobileEntry.mood}
+                    </span>
+                  )}
+                </div>
+
+                {/* Expressive Mood Buttons */}
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 pt-1">
+                  {settings.mood.map((m) => {
+                    const isSelected = (mobileEntry.mood || "").toLowerCase() === m.toLowerCase();
+                    const emoji = getMoodEmoji(m);
+
+                    return (
+                      <button
+                        key={m}
+                        type="button"
+                        className={`p-2.5 rounded-xl text-xs font-semibold border transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer active:scale-95 ${
+                          isSelected
+                            ? "bg-accent/15 border-accent text-accent font-bold ring-2 ring-accent/30 shadow-xs scale-105"
+                            : "bg-base-200/70 border-base-300 text-base-content/75 hover:bg-base-200"
+                        }`}
+                        onClick={() => {
+                          handleMobileFieldChange("mood", isSelected ? "" : m);
+                        }}
+                      >
+                        <span className="text-2xl select-none">{emoji}</span>
+                        <span className="truncate max-w-full text-[11px]">{m}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* 8. Daily Journal (Reflections Notebook Card - Bigger in vertical) */}
+            {(() => {
+              const journalText = mobileEntry.journal || "";
+              const wordCount = journalText.trim() ? journalText.trim().split(/\s+/).length : 0;
+              const charCount = journalText.length;
+
+              return (
+                <div className="bg-base-100 border border-base-300/80 rounded-2xl p-4 shadow-2xs space-y-3">
+                  {/* Header */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xl">✍️</span>
+                      <div>
+                        <h4 className="text-xs font-bold text-base-content">Daily Journal</h4>
+                        <span className="text-[10px] text-base-content/60 font-medium">
+                          Thoughts, wins & reflections
+                        </span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      className="btn btn-xs btn-ghost text-primary gap-1 font-semibold"
+                      onClick={() => handleJournalClick(mobileEntry)}
+                    >
+                      <Book size={12} /> Full Editor
+                    </button>
+                  </div>
+
+                  {/* Styled Note Box - Bigger in vertical */}
+                  <div className="space-y-1.5">
+                    <textarea
+                      rows={6}
+                      className="textarea textarea-bordered w-full min-h-[150px] text-xs bg-base-200/50 resize-y font-medium placeholder:text-base-content/40 focus:bg-base-100 transition-colors leading-relaxed"
+                      placeholder="Write your daily wins, thoughts, or reflections here..."
+                      value={journalText}
+                      onChange={(e) => handleMobileFieldChange("journal", e.target.value)}
+                    />
+                    <div className="flex items-center justify-between text-[10px] text-base-content/50 font-medium px-1">
+                      <span>📝 {wordCount} {wordCount === 1 ? "word" : "words"}</span>
+                      <span>{charCount} characters</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Mobile Bottom Save & Actions Bar */}
+            <div className="space-y-2 pt-2">
+              <button
+                type="button"
+                className={`btn btn-primary w-full shadow-lg font-bold flex items-center justify-center gap-2 ${
+                  mobileSaving ? "loading" : ""
+                }`}
+                onClick={() => handleSaveMobileEntry(mobileEntry)}
+                disabled={mobileSaving}
+              >
+                <Save size={16} />
+                <span>{mobileSaving ? "Saving..." : mobileHasChanges ? "Save Changes" : "Save Day Entry"}</span>
+              </button>
+
+              {mobileEntry._isExisting && (
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-sm text-error w-full gap-1.5 font-semibold"
+                  onClick={() => handleDeleteClick(selectedMobileDate)}
+                >
+                  <Trash size={14} /> Delete Entry for this Day
+                </button>
+              )}
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Desktop Pagination (hidden on mobile) */}
+      <div className="hidden md:block">
         <Pagination
           currentPage={currentPage}
           totalPages={totalPages}
@@ -1532,6 +3399,8 @@ function HabitTableEntry() {
       </div>
     </>
   )}
+
+
 
       {/* Add Habit Popup */}
       <AddHabitPopUp
@@ -1559,6 +3428,214 @@ function HabitTableEntry() {
         onSave={handleJournalSave}
         moodList={settings?.mood}
       />
+
+      {/* Theme-Matched Calendar Modal */}
+      {isCalendarOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-all"
+          onClick={() => setIsCalendarOpen(false)}
+        >
+          <div
+            className="bg-base-100 border border-base-300/80 rounded-3xl p-4 shadow-2xl w-full max-w-[340px] space-y-3.5 transition-all text-base-content"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Top Header */}
+            <div className="flex items-center justify-between pb-2 border-b border-base-200">
+              <div className="flex items-center gap-2">
+                <span className="p-1.5 rounded-xl bg-primary/10 text-primary">
+                  <Calendar size={16} />
+                </span>
+                <div>
+                  <h3 className="text-xs font-black uppercase tracking-wider text-base-content">
+                    Jump to Date
+                  </h3>
+                  <p className="text-[10px] text-base-content/60 font-medium">
+                    Select any day to view or edit habits
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsCalendarOpen(false)}
+                className="btn btn-ghost btn-circle btn-xs text-base-content/60 hover:text-base-content hover:bg-base-200"
+                title="Close"
+              >
+                <X size={15} />
+              </button>
+            </div>
+
+            {/* Month & Year Navigation and Days Grid */}
+            {(() => {
+              const viewYear = calendarViewDate.getFullYear();
+              const viewMonth = calendarViewDate.getMonth();
+              const monthName = calendarViewDate.toLocaleDateString("en-US", { month: "long" });
+
+              const handlePrevMonth = () => {
+                setCalendarViewDate(new Date(viewYear, viewMonth - 1, 1));
+              };
+
+              const handleNextMonth = () => {
+                setCalendarViewDate(new Date(viewYear, viewMonth + 1, 1));
+              };
+
+              // 0=Sun, 1=Mon, ..., 6=Sat
+              const firstDayIndex = new Date(viewYear, viewMonth, 1).getDay();
+              const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+              const daysInPrevMonth = new Date(viewYear, viewMonth, 0).getDate();
+
+              const formatCellDate = (y, m, d) => {
+                const mm = String(m + 1).padStart(2, "0");
+                const dd = String(d).padStart(2, "0");
+                return `${y}-${mm}-${dd}`;
+              };
+
+              const cells = [];
+
+              // Leading days from previous month
+              for (let i = firstDayIndex - 1; i >= 0; i--) {
+                const dayNum = daysInPrevMonth - i;
+                const prevM = viewMonth === 0 ? 11 : viewMonth - 1;
+                const prevY = viewMonth === 0 ? viewYear - 1 : viewYear;
+                cells.push({
+                  dayNum,
+                  dateStr: formatCellDate(prevY, prevM, dayNum),
+                  isCurrentMonth: false,
+                });
+              }
+
+              // Days of current month
+              for (let dayNum = 1; dayNum <= daysInMonth; dayNum++) {
+                cells.push({
+                  dayNum,
+                  dateStr: formatCellDate(viewYear, viewMonth, dayNum),
+                  isCurrentMonth: true,
+                });
+              }
+
+              // Trailing days from next month to fill grid
+              const remaining = (7 - (cells.length % 7)) % 7;
+              for (let dayNum = 1; dayNum <= remaining; dayNum++) {
+                const nextM = viewMonth === 11 ? 0 : viewMonth + 1;
+                const nextY = viewMonth === 11 ? viewYear + 1 : viewYear;
+                cells.push({
+                  dayNum,
+                  dateStr: formatCellDate(nextY, nextM, dayNum),
+                  isCurrentMonth: false,
+                });
+              }
+
+              const todayStr = getTodayStr();
+
+              return (
+                <>
+                  {/* Month navigation */}
+                  <div className="flex items-center justify-between px-1">
+                    <button
+                      type="button"
+                      onClick={handlePrevMonth}
+                      className="btn btn-ghost btn-circle btn-xs hover:bg-base-200 text-base-content/80"
+                      title="Previous Month"
+                    >
+                      <ChevronLeft size={16} />
+                    </button>
+
+                    <div className="text-center">
+                      <span className="font-extrabold text-sm text-base-content tracking-tight">
+                        {monthName} {viewYear}
+                      </span>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleNextMonth}
+                      className="btn btn-ghost btn-circle btn-xs hover:bg-base-200 text-base-content/80"
+                      title="Next Month"
+                    >
+                      <ChevronRight size={16} />
+                    </button>
+                  </div>
+
+                  {/* Weekdays */}
+                  <div className="grid grid-cols-7 text-center text-[10px] font-black uppercase text-base-content/40 tracking-wider">
+                    <span>Su</span>
+                    <span>Mo</span>
+                    <span>Tu</span>
+                    <span>We</span>
+                    <span>Th</span>
+                    <span>Fr</span>
+                    <span>Sa</span>
+                  </div>
+
+                  {/* Calendar Days */}
+                  <div className="grid grid-cols-7 gap-1">
+                    {cells.map((cell) => {
+                      const isSelected = cell.dateStr === selectedMobileDate;
+                      const isToday = cell.dateStr === todayStr;
+                      const hasLoggedData = Boolean(
+                        mobileDaysCache[cell.dateStr]?._isExisting ||
+                        data.some((item) => item.date === cell.dateStr)
+                      );
+
+                      return (
+                        <button
+                          key={cell.dateStr}
+                          type="button"
+                          onClick={() => {
+                            handleSelectDay(cell.dateStr);
+                            setIsCalendarOpen(false);
+                          }}
+                          className={`relative h-10 w-full flex flex-col items-center justify-center rounded-xl text-xs transition-all cursor-pointer select-none active:scale-90 ${
+                            isSelected
+                              ? "bg-primary text-primary-content font-black shadow-md scale-105"
+                              : isToday
+                              ? "border-2 border-primary text-primary font-black bg-primary/5 hover:bg-primary/10"
+                              : cell.isCurrentMonth
+                              ? "text-base-content hover:bg-base-200 hover:text-primary font-semibold"
+                              : "text-base-content/30 opacity-40 hover:bg-base-200/50 hover:opacity-100 font-normal"
+                          }`}
+                        >
+                          <span>{cell.dayNum}</span>
+                          {hasLoggedData && (
+                            <span
+                              className={`w-1.5 h-1.5 rounded-full mt-0.5 ${
+                                isSelected ? "bg-primary-content" : "bg-emerald-500"
+                              }`}
+                            />
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Footer */}
+                  <div className="flex items-center justify-between pt-2 border-t border-base-200 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const today = getTodayStr();
+                        handleSelectDay(today);
+                        setCalendarViewDate(new Date());
+                        setIsCalendarOpen(false);
+                      }}
+                      className="text-xs font-bold text-primary hover:underline flex items-center gap-1 bg-primary/10 hover:bg-primary/20 px-2.5 py-1 rounded-xl transition-all active:scale-95 border border-primary/20"
+                    >
+                      <RotateCcw size={11} /> Today
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setIsCalendarOpen(false)}
+                      className="btn btn-ghost btn-xs text-base-content/70 hover:bg-base-200 rounded-xl"
+                    >
+                      Close
+                    </button>
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+        </div>
+      )}
         </>
       )}
     </div>

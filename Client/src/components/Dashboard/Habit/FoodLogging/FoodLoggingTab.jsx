@@ -675,11 +675,8 @@ function FoodLoggingTab() {
       )}
 
       {loading ? (
-        <div className="h-96 flex flex-col items-center justify-center gap-3 py-16">
+        <div className="h-96 flex items-center justify-center py-16">
           <span className="loading loading-spinner loading-lg text-primary"></span>
-          <p className="text-xs text-base-content/60 font-semibold animate-pulse">
-            Loading food logs, nutrients, and daily totals...
-          </p>
         </div>
       ) : (
         <>

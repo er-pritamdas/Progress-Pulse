@@ -1,50 +1,30 @@
 import React, { useState, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
+import dayjs from "dayjs";
 import { fetchHabitSettings } from "../../services/redux/slice/habitSlice.js";
 import { TitleChanger } from "../../utils/TitleChanger.jsx";
 import axiosInstance from "../../Context/AxiosInstance.jsx";
 import {
+  Quote,
+  Calendar,
+  Sparkles,
+  Plus,
+  CreditCard,
+  Table,
+  TrendingUp,
+  Heart,
+  Wallet,
   Droplet,
   Moon,
-  BookOpen,
-  ArrowRight,
-  Zap,
-  Quote,
-  Activity,
-  Calendar,
   Flame,
-  Utensils,
-  Heart,
-  Smile,
-  BarChart2,
-  Trophy,
-  Settings,
-  Table,
-  Plus,
-  Minus,
-  ChevronDown,
-  CheckSquare,
-  Square,
-  CalendarDays,
-  PlusCircle,
-  Trash2,
-  Coffee,
-  Sun,
-  Apple,
-  Dumbbell,
-  Wheat,
-  PieChart,
-  ExternalLink,
-  RefreshCw,
-  Sparkles,
-  SlidersHorizontal,
-  Pencil,
+  ArrowRight,
+  ArrowUpRight,
+  LayoutGrid,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import LogFoodModal from "../../components/Dashboard/Habit/FoodLogging/LogFoodModal.jsx";
 import AddCustomFoodModal from "../../components/Dashboard/Habit/FoodLogging/AddCustomFoodModal.jsx";
-import EditFoodLogModal from "../../components/Dashboard/Habit/FoodLogging/EditFoodLogModal.jsx";
 
 const Dashboard = () => {
   TitleChanger("Progress Pulse | Dashboard");
@@ -53,9 +33,6 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const habitState = useSelector((state) => state.habit || {});
   const settings = habitState.settings || {};
-
-  // Active Main Tab ("habit" | "food")
-  const [activeTab, setActiveTab] = useState("habit");
 
   // State - Habit
   const [greeting, setGreeting] = useState("");
@@ -79,7 +56,24 @@ const Dashboard = () => {
   const [isLogFoodModalOpen, setIsLogFoodModalOpen] = useState(false);
   const [isCustomFoodModalOpen, setIsCustomFoodModalOpen] = useState(false);
   const [selectedMealForModal, setSelectedMealForModal] = useState("Breakfast");
-  const [editingFoodLog, setEditingFoodLog] = useState(null);
+
+  // State - Expense Pulse
+  const [expenseData, setExpenseData] = useState({
+    todaySpend: 0,
+    monthSpend: 0,
+    monthlySalary: 0,
+    recentTransactions: [],
+  });
+  const [loadingExpense, setLoadingExpense] = useState(true);
+
+  // State - Investment Pulse
+  const [investmentData, setInvestmentData] = useState({
+    totalInvested: 0,
+    stocksCount: 0,
+    mfCount: 0,
+    fdCount: 0,
+  });
+  const [loadingInvestment, setLoadingInvestment] = useState(true);
 
   // Quotes Database
   const quotes = [
@@ -118,13 +112,105 @@ const Dashboard = () => {
 
     // 4. Fetch Today's Food Data
     fetchTodayFoodData();
+
+    // 5. Fetch Today's Expense Pulse
+    fetchExpenseData();
+
+    // 6. Fetch Today's Investment Pulse
+    fetchInvestmentData();
   }, []);
 
-  useEffect(() => {
-    if (activeTab === "food") {
-      fetchTodayFoodData();
+  const fetchExpenseData = async () => {
+    try {
+      setLoadingExpense(true);
+      const currentMonth = dayjs().format("YYYY-MM");
+      const todayStr = getTodayDateStr();
+
+      const res = await axiosInstance.get("/v1/dashboard/expense/get-all-data", {
+        params: { month: currentMonth },
+      });
+
+      if (res.data?.data) {
+        const { transactions = [], salary = 0 } = res.data.data;
+        const debits = transactions.filter((t) => t.type === "Debit");
+        const monthSpend = debits.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
+
+        const todayDebits = debits.filter((t) => {
+          if (!t.date) return false;
+          return t.date.slice(0, 10) === todayStr;
+        });
+        const todaySpend = todayDebits.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
+
+        const recent = [...debits].reverse().slice(0, 3);
+
+        setExpenseData({
+          todaySpend,
+          monthSpend,
+          monthlySalary: Number(salary) || 0,
+          recentTransactions: recent,
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching expense summary on dashboard:", error);
+    } finally {
+      setLoadingExpense(false);
     }
-  }, [activeTab]);
+  };
+
+  const fetchInvestmentData = async () => {
+    try {
+      setLoadingInvestment(true);
+      const [stocksRes, mfRes, fdRes] = await Promise.allSettled([
+        axiosInstance.get("/v1/dashboard/investment/stocks"),
+        axiosInstance.get("/v1/dashboard/investment/mf"),
+        axiosInstance.get("/v1/dashboard/investment/fd"),
+      ]);
+
+      let totalInvested = 0;
+      let stocksCount = 0;
+      let mfCount = 0;
+      let fdCount = 0;
+
+      if (stocksRes.status === "fulfilled" && Array.isArray(stocksRes.value?.data?.data)) {
+        const stocks = stocksRes.value.data.data;
+        stocksCount = stocks.length;
+        stocks.forEach((s) => {
+          const qty = Number(s.quantity) || 0;
+          const price = Number(s.bPrice || s.buyPrice || s.currentPrice) || 0;
+          totalInvested += qty * price;
+        });
+      }
+
+      if (mfRes.status === "fulfilled" && Array.isArray(mfRes.value?.data?.data)) {
+        const mfs = mfRes.value.data.data;
+        mfCount = mfs.length;
+        mfs.forEach((m) => {
+          const invested = Number(m.totalInvestment || m.currentValue || 0);
+          totalInvested += invested;
+        });
+      }
+
+      if (fdRes.status === "fulfilled" && Array.isArray(fdRes.value?.data?.data)) {
+        const fds = fdRes.value.data.data;
+        fdCount = fds.length;
+        fds.forEach((f) => {
+          const principal = Number(f.principalAmount || f.amount || 0);
+          totalInvested += principal;
+        });
+      }
+
+      setInvestmentData({
+        totalInvested: Math.round(totalInvested),
+        stocksCount,
+        mfCount,
+        fdCount,
+      });
+    } catch (error) {
+      console.error("Error fetching investment summary on dashboard:", error);
+    } finally {
+      setLoadingInvestment(false);
+    }
+  };
 
   const fetchTodayData = async () => {
     try {
@@ -168,184 +254,9 @@ const Dashboard = () => {
     }
   };
 
-  const handleDeleteFoodLog = async (logId) => {
-    try {
-      await axiosInstance.delete(`/v1/dashboard/habit/food/log/${logId}`);
-      fetchTodayFoodData();
-    } catch (error) {
-      console.error("Failed to delete food log:", error);
-    }
-  };
-
   const openLogFoodModal = (mealType = "Breakfast") => {
     setSelectedMealForModal(mealType);
     setIsLogFoodModalOpen(true);
-  };
-
-  // Shared Logic for deleting empty entries
-  const recalculateStats = (entry) => {
-    if (!entry) return entry;
-    const fields = ["burned", "water", "sleep", "read", "intake", "selfcare", "mood"];
-    let filledCount = 0;
-
-    fields.forEach(field => {
-      const val = entry[field];
-      if (field === 'selfcare') {
-        const emptyStr = "_".repeat(settings?.selfcare?.length || 3);
-        if (val && val !== emptyStr) filledCount++;
-      } else if (field === 'mood') {
-        if (val) filledCount++;
-      } else {
-        if (val && Number(val) > 0) filledCount++;
-      }
-    });
-
-    entry.score = filledCount;
-    entry.progress = Math.round((filledCount / fields.length) * 100);
-    return entry;
-  };
-
-  const checkAndDelete = async (entry, isNewEntry) => {
-    const isZero = (val) => !val || val === 0;
-    const isSelfCareEmpty = (val) => !val || val === "_".repeat(settings?.selfcare?.length || 3);
-
-    const isEmpty =
-      isZero(entry.burned) &&
-      isZero(entry.intake) &&
-      isZero(entry.water) &&
-      isZero(entry.sleep) &&
-      isZero(entry.read) &&
-      isSelfCareEmpty(entry.selfcare);
-
-    if (isEmpty) {
-      if (!isNewEntry) {
-        try {
-          await axiosInstance.delete("/v1/dashboard/habit/table-entry", { params: { date: entry.date } });
-        } catch (e) { console.error("Delete failed", e); }
-      }
-      setTodayHabits(null);
-      return true;
-    }
-    return false;
-  };
-
-  const handleUpdateHabit = async (field, change) => {
-    const dateString = getTodayDateStr();
-    const isNewEntry = !todayHabits;
-
-    const currentVal = Number(todayHabits?.[field]) || 0;
-    let newVal = currentVal + change;
-
-    if (newVal < 0) newVal = 0;
-    if (field === 'water' || field === 'read' || field === 'sleep') {
-      newVal = Math.round(newVal * 100) / 100;
-    }
-
-    let updatedEntry = { ...todayHabits };
-
-    if (isNewEntry) {
-      updatedEntry = {
-        date: dateString,
-        burned: 0, intake: 0, water: 0, sleep: 0, read: 0,
-        mood: "Average",
-        selfcare: "_".repeat(settings?.selfcare?.length || 3),
-        ...updatedEntry
-      };
-    }
-
-    updatedEntry[field] = newVal;
-    updatedEntry.date = updatedEntry.date || dateString;
-
-    updatedEntry = recalculateStats(updatedEntry);
-    setTodayHabits(updatedEntry);
-
-    try {
-      if (await checkAndDelete(updatedEntry, isNewEntry)) return;
-
-      if (!isNewEntry) {
-        await axiosInstance.put("/v1/dashboard/habit/table-entry", updatedEntry);
-      } else {
-        const res = await axiosInstance.post("/v1/dashboard/habit/table-entry", updatedEntry);
-        if (res.data?.data) {
-          setTodayHabits(prev => ({ ...prev, ...res.data.data }));
-        }
-      }
-    } catch (error) {
-      console.error(`Failed to update ${field}:`, error);
-      await fetchTodayData();
-    }
-  };
-
-  const handleSelfCareUpdate = async (index, isChecked, label) => {
-    const dateString = getTodayDateStr();
-    const isNewEntry = !todayHabits;
-
-    const requiredLength = settings?.selfcare?.length || 3;
-    const currentString = todayHabits?.selfcare || "_".repeat(requiredLength);
-    const char = label[0].toUpperCase();
-
-    const newStringArr = currentString.padEnd(requiredLength, "_").split("");
-    newStringArr[index] = isChecked ? char : "_";
-    const newString = newStringArr.join("");
-
-    let updatedEntry = {
-      ...todayHabits,
-      selfcare: newString,
-      date: todayHabits?.date || dateString
-    };
-
-    if (isNewEntry) {
-      updatedEntry = {
-        burned: 0, intake: 0, water: 0, sleep: 0, read: 0, mood: "Average",
-        ...updatedEntry
-      };
-    }
-
-    updatedEntry = recalculateStats(updatedEntry);
-    setTodayHabits(updatedEntry);
-
-    try {
-      if (await checkAndDelete(updatedEntry, isNewEntry)) return;
-
-      if (!isNewEntry) {
-        await axiosInstance.put("/v1/dashboard/habit/table-entry", updatedEntry);
-      } else {
-        const res = await axiosInstance.post("/v1/dashboard/habit/table-entry", updatedEntry);
-        if (res.data?.data) setTodayHabits(prev => ({ ...prev, ...res.data.data }));
-      }
-    } catch (error) { console.error("Selfcare update failed", error); await fetchTodayData(); }
-  };
-
-  const handleMoodUpdate = async (newMood) => {
-    const dateString = getTodayDateStr();
-    const isNewEntry = !todayHabits;
-
-    let updatedEntry = {
-      ...todayHabits,
-      mood: newMood,
-      date: todayHabits?.date || dateString
-    };
-
-    if (isNewEntry) {
-      updatedEntry = {
-        burned: 0, intake: 0, water: 0, sleep: 0, read: 0, selfcare: "_".repeat(settings?.selfcare?.length || 3),
-        ...updatedEntry
-      };
-    }
-
-    updatedEntry = recalculateStats(updatedEntry);
-    setTodayHabits(updatedEntry);
-
-    try {
-      if (await checkAndDelete(updatedEntry, isNewEntry)) return;
-
-      if (!isNewEntry) {
-        await axiosInstance.put("/v1/dashboard/habit/table-entry", updatedEntry);
-      } else {
-        const res = await axiosInstance.post("/v1/dashboard/habit/table-entry", updatedEntry);
-        if (res.data?.data) setTodayHabits(prev => ({ ...prev, ...res.data.data }));
-      }
-    } catch (error) { console.error("Mood update failed", error); await fetchTodayData(); }
   };
 
   // Safe Checks & Data Parsing for Habit
@@ -360,15 +271,6 @@ const Dashboard = () => {
 
   const selfCareRaw = todayHabits?.selfcare || "";
   const selfCareCount = selfCareRaw.replace(/_/g, "").length;
-
-  // Meal categories metadata
-  const mealCategories = [
-    { key: "Breakfast", icon: Coffee, color: "text-amber-500", bg: "bg-amber-500/10", border: "border-amber-500/20" },
-    { key: "Lunch", icon: Sun, color: "text-orange-500", bg: "bg-orange-500/10", border: "border-orange-500/20" },
-    { key: "Dinner", icon: Moon, color: "text-indigo-500", bg: "bg-indigo-500/10", border: "border-indigo-500/20" },
-    { key: "Snacks", icon: Apple, color: "text-emerald-500", bg: "bg-emerald-500/10", border: "border-emerald-500/20" },
-    { key: "Other", icon: Utensils, color: "text-pink-500", bg: "bg-pink-500/10", border: "border-pink-500/20" },
-  ];
 
   const settingsIntake = settings?.intake;
   const maintenanceCalories = habitState.maintenanceCalories || 2000;
@@ -411,6 +313,34 @@ const Dashboard = () => {
   const loggedFat = todayFoodData?.summary?.totalFat || 0;
   const fatPercent = Math.min(100, Math.round((loggedFat / fatMax) * 100));
 
+  // Daily Pulse Composite Score Calculation
+  const habitScore = progress || 0;
+  const budgetSafePercent =
+    expenseData.monthlySalary > 0
+      ? Math.max(
+          0,
+          Math.min(
+            100,
+            Math.round(
+              ((expenseData.monthlySalary - expenseData.monthSpend) /
+                expenseData.monthlySalary) *
+                100
+            )
+          )
+        )
+      : expenseData.monthSpend > 0
+      ? 75
+      : 100;
+
+  const overallPulseScore = Math.round(
+    habitScore * 0.55 + budgetSafePercent * 0.45
+  );
+
+  const totalHoldingsCount =
+    (investmentData.stocksCount || 0) +
+    (investmentData.mfCount || 0) +
+    (investmentData.fdCount || 0);
+
   return (
     <div className="min-h-screen bg-base-100 font-sans selection:bg-primary/30 selection:text-primary pb-20">
 
@@ -420,22 +350,22 @@ const Dashboard = () => {
         <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-secondary/20 blur-[120px]" />
       </div>
 
-      <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 space-y-12">
+      <div className="relative z-10 max-w-6xl mx-auto px-2 sm:px-6 lg:px-8 pt-4 sm:pt-8 md:pt-12 space-y-6 sm:space-y-10 md:space-y-12">
 
         {/* 1. Hero Header Section */}
-        <header className="flex flex-col items-center text-center space-y-8 animate-fade-in-down">
+        <header className="flex flex-col items-center text-center space-y-4 sm:space-y-6 md:space-y-8 animate-fade-in-down">
           {/* Date Badge */}
-          <div className="inline-flex items-center gap-3 px-5 py-2 rounded-full bg-base-200/50 border border-base-content/5 backdrop-blur-md shadow-sm">
-            <Calendar className="w-4 h-4 text-primary" />
-            <span className="text-sm font-medium text-base-content/60 tracking-wide">
+          <div className="inline-flex items-center gap-2 sm:gap-3 px-3.5 sm:px-5 py-1.5 sm:py-2 rounded-full bg-base-200/50 border border-base-content/5 backdrop-blur-md shadow-sm">
+            <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary" />
+            <span className="text-xs sm:text-sm font-medium text-base-content/60 tracking-wide">
               {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
             </span>
           </div>
 
           {/* Greeting */}
-          <div className="space-y-4">
-            <h1 className="text-6xl md:text-7xl font-black tracking-tighter text-base-content leading-tight">
-              {greeting}, <br className="md:hidden" />
+          <div className="space-y-2 sm:space-y-4">
+            <h1 className="text-3xl sm:text-5xl md:text-7xl font-black tracking-tight text-base-content leading-tight">
+              {greeting}, <br className="sm:hidden" />
               <span className="bg-clip-text text-transparent bg-gradient-to-r from-primary via-secondary to-accent animate-gradient-x">
                 {user}
               </span>
@@ -447,691 +377,440 @@ const Dashboard = () => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.3 }}
-              className="max-w-2xl mx-auto"
+              className="max-w-2xl mx-auto px-2"
             >
-              <div className="flex items-center justify-center gap-3 text-base-content/50">
-                <Quote className="w-4 h-4 opacity-50 rotate-180" />
-                <p className="text-lg md:text-xl font-serif italic text-base-content/70">
+              <div className="flex items-center justify-center gap-2 sm:gap-3 text-base-content/50">
+                <Quote className="w-3.5 h-3.5 sm:w-4 sm:h-4 opacity-50 rotate-180 shrink-0" />
+                <p className="text-xs sm:text-base md:text-lg font-serif italic text-base-content/70">
                   {quote.text}
                 </p>
-                <Quote className="w-4 h-4 opacity-50" />
+                <Quote className="w-3.5 h-3.5 sm:w-4 sm:h-4 opacity-50 shrink-0" />
               </div>
             </motion.div>
           </div>
         </header>
 
-        {/* 2. Side-by-Side Main Navigation Tabs */}
-        <div className="flex justify-center">
-          <div className="inline-flex p-1.5 bg-base-200/70 backdrop-blur-xl rounded-2xl border border-base-content/10 shadow-inner">
-            <button
-              onClick={() => setActiveTab("habit")}
-              className={`flex items-center gap-2.5 px-6 py-3 rounded-xl font-bold text-sm transition-all duration-300 ${
-                activeTab === "habit"
-                  ? "bg-primary text-primary-content shadow-lg scale-102"
-                  : "text-base-content/60 hover:text-base-content hover:bg-base-100/50"
-              }`}
+        {/* 2. Daily Pulse Executive Dashboard */}
+        <section className="space-y-6 sm:space-y-8 animate-fade-in">
+            {/* Executive Hero Pulse Score Banner */}
+            <motion.div
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="p-4 sm:p-6 rounded-3xl bg-gradient-to-br from-primary/10 via-base-100/90 to-secondary/10 backdrop-blur-xl border border-primary/20 shadow-xl"
             >
-              <CalendarDays size={18} />
-              Today's Habit Logs
-            </button>
-            <button
-              onClick={() => setActiveTab("food")}
-              className={`flex items-center gap-2.5 px-6 py-3 rounded-xl font-bold text-sm transition-all duration-300 ${
-                activeTab === "food"
-                  ? "bg-primary text-primary-content shadow-lg scale-102"
-                  : "text-base-content/60 hover:text-base-content hover:bg-base-100/50"
-              }`}
-            >
-              <Utensils size={18} />
-              Today's Food Logs
-            </button>
-          </div>
-        </div>
-
-        {/* 3. Main Content Section based on Active Tab */}
-        {activeTab === "habit" ? (
-          /* HABIT LOGGING TAB CONTENT */
-          <section>
-            <div className="flex items-end justify-between px-2 mb-8">
-              <div className="space-y-1">
-                <h2 className="text-3xl font-bold tracking-tight text-base-content">Today's Habit Logs</h2>
-                <div className="flex items-center gap-2 text-sm font-medium text-base-content/60">
-                  <Calendar className="w-4 h-4" />
-                  <span>{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</span>
-                </div>
-              </div>
-
-              <div className="h-px bg-base-content/10 flex-1 mx-6 mb-3"></div>
-
-              {/* Quick Actions Dropdown */}
-              <div className="dropdown dropdown-end mb-1">
-                <div tabIndex={0} role="button" className="btn btn-circle btn-ghost btn-md hover:bg-base-200 transition-colors">
-                  <Settings className="w-6 h-6 text-base-content/70" />
-                </div>
-                <ul tabIndex={0} className="dropdown-content z-[100] menu p-2 shadow-xl bg-base-100/80 backdrop-blur-xl rounded-2xl w-72 border border-base-content/5 mt-2">
-                  <li className="menu-title px-4 py-2 text-xs font-bold text-base-content/40 uppercase tracking-wider">Quick Actions</li>
-                  <li>
-                    <a onClick={() => navigate('/dashboard/habit/table-entry')} className="group flex gap-3 py-3 rounded-xl hover:bg-base-200/50">
-                      <div className="p-2 rounded-lg bg-primary/10 text-primary group-hover:bg-primary/20 transition-colors">
-                        <Table size={18} />
-                      </div>
-                      <span className="font-medium">Table View</span>
-                    </a>
-                  </li>
-                  <li>
-                    <a onClick={() => navigate('/dashboard/habit/table-entry?tab=food')} className="group flex gap-3 py-3 rounded-xl hover:bg-base-200/50">
-                      <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-500 group-hover:bg-emerald-500/20 transition-colors">
-                        <Utensils size={18} />
-                      </div>
-                      <div className="flex flex-col">
-                        <span className="font-medium">Detailed Food Logging Page</span>
-                        <span className="text-[10px] text-base-content/50">Full food logs & database</span>
-                      </div>
-                    </a>
-                  </li>
-                  <li>
-                    <a onClick={() => navigate('/dashboard/habit/dashboard')} className="group flex gap-3 py-3 rounded-xl hover:bg-base-200/50">
-                      <div className="p-2 rounded-lg bg-secondary/10 text-secondary group-hover:bg-secondary/20 transition-colors">
-                        <BarChart2 size={18} />
-                      </div>
-                      <span className="font-medium">Analytics</span>
-                    </a>
-                  </li>
-                  <li>
-                    <a onClick={() => navigate('/dashboard/habit/logging')} className="group flex gap-3 py-3 rounded-xl hover:bg-base-200/50">
-                      <div className="p-2 rounded-lg bg-accent/10 text-accent group-hover:bg-accent/20 transition-colors">
-                        <Zap size={18} />
-                      </div>
-                      <span className="font-medium">Log Habits</span>
-                    </a>
-                  </li>
-                  <div className="divider my-1 opacity-10"></div>
-                  <li>
-                    <a onClick={() => navigate('/dashboard/habit/settings')} className="group flex gap-3 py-3 rounded-xl hover:bg-base-200/50">
-                      <div className="p-2 rounded-lg bg-info/10 text-info group-hover:bg-info/20 transition-colors">
-                        <Settings size={18} />
-                      </div>
-                      <span className="font-medium">Settings</span>
-                    </a>
-                  </li>
-                </ul>
-              </div>
-            </div>
-
-            {!loadingHabits ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {/* Row 1: Physical Essentials */}
-                <StatCard
-                  label="Burned Calories"
-                  value={burned}
-                  unit="kcal"
-                  icon={Flame}
-                  color="text-orange-500"
-                  borderColor="border-orange-500/20"
-                  delay={0.1}
-                  onIncrease={() => handleUpdateHabit('burned', 50)}
-                  onDecrease={() => handleUpdateHabit('burned', -50)}
-                  min={settings?.burned?.min || 0}
-                  max={settings?.burned?.max || 2000}
-                />
-                <StatCard
-                  label="Calorie Intake"
-                  value={intake}
-                  unit="kcal"
-                  icon={Utensils}
-                  color="text-emerald-500"
-                  borderColor="border-emerald-500/20"
-                  delay={0.15}
-                  onIncrease={() => handleUpdateHabit('intake', 50)}
-                  onDecrease={() => handleUpdateHabit('intake', -50)}
-                  min={settings?.intake?.min || 1500}
-                  max={settings?.intake?.max || 2500}
-                />
-                <StatCard
-                  label="Water Intake"
-                  value={water}
-                  unit="L"
-                  icon={Droplet}
-                  color="text-cyan-500"
-                  borderColor="border-cyan-500/20"
-                  delay={0.2}
-                  onIncrease={() => handleUpdateHabit('water', 0.25)}
-                  onDecrease={() => handleUpdateHabit('water', -0.25)}
-                  min={settings?.water?.min || 2}
-                  max={settings?.water?.max || 4}
-                />
-
-                {/* Row 2: Regeneration & Growth */}
-                <StatCard
-                  label="Sleep Duration"
-                  value={sleep}
-                  unit="hrs"
-                  icon={Moon}
-                  color="text-indigo-500"
-                  borderColor="border-indigo-500/20"
-                  delay={0.25}
-                  onIncrease={() => handleUpdateHabit('sleep', 0.5)}
-                  onDecrease={() => handleUpdateHabit('sleep', -0.5)}
-                  min={settings?.sleep?.min || 6}
-                  max={settings?.sleep?.max || 9}
-                />
-                <StatCard
-                  label="Reading Time"
-                  value={read}
-                  unit="hrs"
-                  icon={BookOpen}
-                  color="text-amber-500"
-                  borderColor="border-amber-500/20"
-                  delay={0.3}
-                  onIncrease={() => handleUpdateHabit('read', 0.5)}
-                  onDecrease={() => handleUpdateHabit('read', -0.5)}
-                  min={settings?.read?.min || 1}
-                  max={settings?.read?.max || 4}
-                />
-                {/* Self Care Dropdown Card */}
-                <div className="dropdown dropdown-top dropdown-end w-full group">
-                  <div tabIndex={0} role="button" className="w-full h-full">
-                    <StatCard
-                      label="Self Care Acts"
-                      value={selfCareCount}
-                      unit="Count"
-                      icon={Heart}
-                      color="text-pink-500"
-                      borderColor="border-pink-500/20"
-                      delay={0.35}
-                    />
-                    <div className="absolute top-6 right-6 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <ChevronDown size={20} className="text-base-content/50" />
+              <div className="flex flex-col lg:flex-row items-center justify-between gap-5 sm:gap-6">
+                {/* Left: Score Ring + Motivational message */}
+                <div className="flex items-center gap-4 sm:gap-6 w-full lg:w-auto">
+                  <div className="relative shrink-0 flex items-center justify-center">
+                    <svg className="w-20 h-20 sm:w-24 sm:h-24 transform -rotate-90">
+                      <circle
+                        cx="50%"
+                        cy="50%"
+                        r="34"
+                        className="stroke-base-content/10"
+                        strokeWidth="8"
+                        fill="transparent"
+                      />
+                      <circle
+                        cx="50%"
+                        cy="50%"
+                        r="34"
+                        className="stroke-primary transition-all duration-1000 ease-out"
+                        strokeWidth="8"
+                        strokeDasharray={2 * Math.PI * 34}
+                        strokeDashoffset={2 * Math.PI * 34 * (1 - overallPulseScore / 100)}
+                        strokeLinecap="round"
+                        fill="transparent"
+                      />
+                    </svg>
+                    <div className="absolute flex flex-col items-center justify-center text-center">
+                      <span className="text-xl sm:text-2xl font-black text-base-content">{overallPulseScore}%</span>
+                      <span className="text-[9px] uppercase font-bold text-base-content/50 tracking-wider">Pulse</span>
                     </div>
                   </div>
-                  <ul tabIndex={0} className="dropdown-content z-[100] menu p-2 shadow-xl bg-base-100 rounded-box w-64 border border-base-content/5">
-                    <li className="menu-title text-xs uppercase opacity-50 px-2 py-1">Select completed acts</li>
-                    {settings?.selfcare?.map((habit, index) => {
-                      const currentString = todayHabits?.selfcare || "_".repeat(settings.selfcare.length);
-                      const isChecked = currentString[index] !== '_';
-                      return (
-                        <li key={habit}>
-                          <a onClick={() => handleSelfCareUpdate(index, !isChecked, habit)} className="flex items-center gap-3">
-                            {isChecked ?
-                              <CheckSquare size={18} className="text-pink-500" /> :
-                              <Square size={18} className="text-base-content/30" />
-                            }
-                            <span className={isChecked ? "opacity-100 font-medium" : "opacity-60"}>{habit}</span>
-                          </a>
-                        </li>
-                      )
-                    })}
-                    {!settings?.selfcare?.length && <li className="text-xs opacity-50 p-2">No habits configured in settings.</li>}
-                  </ul>
-                </div>
 
-                {/* Row 3: Wellness & Metrics */}
-                <div className="dropdown dropdown-top dropdown-end w-full group">
-                  <div tabIndex={0} role="button" className="w-full h-full">
-                    <StatCard
-                      label="Current Mood"
-                      value={mood}
-                      unit=""
-                      icon={Smile}
-                      color="text-yellow-400"
-                      borderColor="border-yellow-500/20"
-                      delay={0.4}
-                    />
-                    <div className="absolute top-6 right-6 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <ChevronDown size={20} className="text-base-content/50" />
+                  <div className="space-y-1 min-w-0">
+                    <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-primary/15 text-primary text-xs font-semibold">
+                      <Sparkles size={12} />
+                      <span>Daily Pulse Overview</span>
                     </div>
-                  </div>
-                  <ul tabIndex={0} className="dropdown-content z-[100] menu p-2 shadow-xl bg-base-100 rounded-box w-52 border border-base-content/5 h-64 overflow-y-auto block">
-                    <li className="menu-title text-xs uppercase opacity-50 px-2 py-1 sticky top-0 bg-base-100 z-10">Select Mood</li>
-                    {settings?.mood?.map((m) => (
-                      <li key={m}>
-                        <a onClick={() => handleMoodUpdate(m)} className={mood === m ? "active font-bold" : ""}>
-                          {m}
-                        </a>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-                <StatCard
-                  label="Daily Progress"
-                  value={progress}
-                  unit="%"
-                  icon={Activity}
-                  color="text-teal-500"
-                  borderColor="border-teal-500/20"
-                  delay={0.45}
-                />
-                <StatCard
-                  label="Overall Score"
-                  value={score}
-                  unit="pts"
-                  icon={Trophy}
-                  color="text-primary"
-                  borderColor="border-primary/20"
-                  delay={0.5}
-                />
-              </div>
-            ) : (
-              <div className="h-96 flex items-center justify-center">
-                <span className="loading loading-bars loading-lg text-primary opacity-50"></span>
-              </div>
-            )}
-          </section>
-        ) : (
-          /* FOOD LOGGING TAB CONTENT */
-          <section className="space-y-8 animate-fade-in">
-            {/* Food Section Header */}
-            <div className="flex flex-col sm:flex-row sm:items-end justify-between px-2 gap-4">
-              <div className="space-y-1">
-                <h2 className="text-3xl font-bold tracking-tight text-base-content flex items-center gap-3">
-                  <Utensils className="text-primary" size={28} /> Today's Food Logs
-                </h2>
-                <div className="flex items-center gap-2 text-sm font-medium text-base-content/60">
-                  <Calendar className="w-4 h-4" />
-                  <span>{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</span>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => setIsCustomFoodModalOpen(true)}
-                  className="btn btn-sm btn-ghost border border-base-content/10 gap-2 hover:bg-base-200"
-                >
-                  <PlusCircle size={16} className="text-secondary" /> Add Custom Food
-                </button>
-                <button
-                  onClick={() => openLogFoodModal("Breakfast")}
-                  className="btn btn-sm btn-primary gap-2 shadow-md hover:scale-105 transition-transform"
-                >
-                  <Plus size={16} /> Log Food
-                </button>
-
-                {/* Quick Actions / Settings Dropdown for Food */}
-                <div className="dropdown dropdown-end">
-                  <div tabIndex={0} role="button" className="btn btn-circle btn-ghost btn-md hover:bg-base-200 transition-colors">
-                    <Settings className="w-6 h-6 text-base-content/70" />
-                  </div>
-                  <ul tabIndex={0} className="dropdown-content z-[100] menu p-2 shadow-xl bg-base-100/90 backdrop-blur-xl rounded-2xl w-72 border border-base-content/5 mt-2">
-                    <li className="menu-title px-4 py-2 text-xs font-bold text-base-content/40 uppercase tracking-wider">Food Logging Options</li>
-                    <li>
-                      <a onClick={() => navigate('/dashboard/habit/table-entry?tab=food')} className="group flex gap-3 py-3 rounded-xl hover:bg-base-200/50">
-                        <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-500 group-hover:bg-emerald-500/20 transition-colors">
-                          <ExternalLink size={18} />
-                        </div>
-                        <div className="flex flex-col">
-                          <span className="font-bold text-sm text-primary">Detailed Food Logging Page</span>
-                          <span className="text-[10px] text-base-content/50">View full history & custom nutrient columns</span>
-                        </div>
-                      </a>
-                    </li>
-                    <div className="divider my-1 opacity-10"></div>
-                    <li>
-                      <a onClick={() => openLogFoodModal("Breakfast")} className="group flex gap-3 py-2.5 rounded-xl hover:bg-base-200/50">
-                        <div className="p-2 rounded-lg bg-primary/10 text-primary group-hover:bg-primary/20 transition-colors">
-                          <Plus size={18} />
-                        </div>
-                        <span className="font-medium">Log Food Item</span>
-                      </a>
-                    </li>
-                    <li>
-                      <a onClick={() => setIsCustomFoodModalOpen(true)} className="group flex gap-3 py-2.5 rounded-xl hover:bg-base-200/50">
-                        <div className="p-2 rounded-lg bg-secondary/10 text-secondary group-hover:bg-secondary/20 transition-colors">
-                          <PlusCircle size={18} />
-                        </div>
-                        <span className="font-medium">Add Custom Food</span>
-                      </a>
-                    </li>
-                    <li>
-                      <a onClick={() => navigate('/dashboard/habit/dashboard')} className="group flex gap-3 py-2.5 rounded-xl hover:bg-base-200/50">
-                        <div className="p-2 rounded-lg bg-info/10 text-info group-hover:bg-info/20 transition-colors">
-                          <BarChart2 size={18} />
-                        </div>
-                        <span className="font-medium">Nutrient Analytics</span>
-                      </a>
-                    </li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-
-            {/* Macro Overview Cards */}
-            {!loadingFood ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                {/* Calories Card */}
-                <div className="p-6 rounded-[2rem] bg-gradient-to-br from-base-100/80 to-base-200/50 backdrop-blur-xl border border-white/5 shadow-lg flex flex-col justify-between">
-                  <div className="flex justify-between items-start mb-3">
-                    <div className="p-3 rounded-2xl bg-orange-500/10 text-orange-500 ring-1 ring-inset ring-white/5">
-                      <Flame size={24} />
-                    </div>
-                    <button
-                      onClick={() => openLogFoodModal("Breakfast")}
-                      className="btn btn-xs btn-ghost btn-square hover:bg-base-200 text-primary"
-                      title="Log Food"
-                    >
-                      <Plus size={16} />
-                    </button>
-                  </div>
-                  <div>
-                    <div className="flex items-baseline gap-1">
-                      <h4 className="text-4xl font-bold tracking-tight text-base-content antialiased">
-                        {loggedCalories}
-                      </h4>
-                      <span className="text-xs font-semibold text-base-content/40 uppercase tracking-wider">/ {calorieMin}–{calorieMax} kcal</span>
-                    </div>
-                    <p className="text-xs font-medium text-base-content/50 uppercase tracking-widest mt-1">
-                      Calorie Intake
+                    <h3 className="text-base sm:text-xl font-bold text-base-content truncate">
+                      {overallPulseScore >= 70
+                        ? "Thriving Rhythm!"
+                        : overallPulseScore >= 40
+                        ? "Building Momentum"
+                        : "Ready for a Fresh Start"}
+                    </h3>
+                    <p className="text-xs sm:text-sm text-base-content/60 line-clamp-2">
+                      Habits {habitScore}% complete • Budget safe ratio {budgetSafePercent}% • {totalHoldingsCount} tracked assets
                     </p>
-                    <div className="w-full h-1.5 bg-base-content/5 rounded-full overflow-hidden mt-4">
-                      <div className="h-full bg-orange-500 rounded-full transition-all duration-500" style={{ width: `${caloriePercent}%` }} />
-                    </div>
                   </div>
                 </div>
 
-                {/* Protein Card */}
-                <div className="p-6 rounded-[2rem] bg-gradient-to-br from-base-100/80 to-base-200/50 backdrop-blur-xl border border-white/5 shadow-lg flex flex-col justify-between">
-                  <div className="flex justify-between items-start mb-3">
-                    <div className="p-3 rounded-2xl bg-info/10 text-info ring-1 ring-inset ring-white/5">
-                      <Dumbbell size={24} />
-                    </div>
-                  </div>
-                  <div>
-                    <div className="flex items-baseline gap-1">
-                      <h4 className="text-4xl font-bold tracking-tight text-base-content antialiased">
-                        {todayFoodData?.summary?.totalProtein || 0}
-                      </h4>
-                      <span className="text-xs font-semibold text-base-content/40 uppercase tracking-wider">/ {proteinMin}–{proteinMax} g</span>
-                    </div>
-                    <p className="text-xs font-medium text-base-content/50 uppercase tracking-widest mt-1">
-                      Protein
-                    </p>
-                    <div className="w-full h-1.5 bg-base-content/5 rounded-full overflow-hidden mt-4">
-                      <div className="h-full bg-info rounded-full transition-all duration-500" style={{ width: `${proteinPercent}%` }} />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Carbs Card */}
-                <div className="p-6 rounded-[2rem] bg-gradient-to-br from-base-100/80 to-base-200/50 backdrop-blur-xl border border-white/5 shadow-lg flex flex-col justify-between">
-                  <div className="flex justify-between items-start mb-3">
-                    <div className="p-3 rounded-2xl bg-warning/10 text-warning ring-1 ring-inset ring-white/5">
-                      <Wheat size={24} />
-                    </div>
-                  </div>
-                  <div>
-                    <div className="flex items-baseline gap-1">
-                      <h4 className="text-4xl font-bold tracking-tight text-base-content antialiased">
-                        {todayFoodData?.summary?.totalCarbs || 0}
-                      </h4>
-                      <span className="text-xs font-semibold text-base-content/40 uppercase tracking-wider">/ {carbsMin}–{carbsMax} g</span>
-                    </div>
-                    <p className="text-xs font-medium text-base-content/50 uppercase tracking-widest mt-1">
-                      Carbohydrates
-                    </p>
-                    <div className="w-full h-1.5 bg-base-content/5 rounded-full overflow-hidden mt-4">
-                      <div className="h-full bg-warning rounded-full transition-all duration-500" style={{ width: `${carbsPercent}%` }} />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Fats Card */}
-                <div className="p-6 rounded-[2rem] bg-gradient-to-br from-base-100/80 to-base-200/50 backdrop-blur-xl border border-white/5 shadow-lg flex flex-col justify-between">
-                  <div className="flex justify-between items-start mb-3">
-                    <div className="p-3 rounded-2xl bg-success/10 text-success ring-1 ring-inset ring-white/5">
-                      <PieChart size={24} />
-                    </div>
-                  </div>
-                  <div>
-                    <div className="flex items-baseline gap-1">
-                      <h4 className="text-4xl font-bold tracking-tight text-base-content antialiased">
-                        {todayFoodData?.summary?.totalFat || 0}
-                      </h4>
-                      <span className="text-xs font-semibold text-base-content/40 uppercase tracking-wider">/ {fatMin}–{fatMax} g</span>
-                    </div>
-                    <p className="text-xs font-medium text-base-content/50 uppercase tracking-widest mt-1">
-                      Fats
-                    </p>
-                    <div className="w-full h-1.5 bg-base-content/5 rounded-full overflow-hidden mt-4">
-                      <div className="h-full bg-success rounded-full transition-all duration-500" style={{ width: `${fatPercent}%` }} />
-                    </div>
-                  </div>
+                {/* Right: Quick Action Triggers */}
+                <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 w-full lg:w-auto">
+                  <button
+                    onClick={() => openLogFoodModal("Breakfast")}
+                    className="btn btn-sm btn-primary rounded-xl gap-1.5 shadow-md hover:scale-105 transition-transform"
+                  >
+                    <Plus size={15} /> Log Meal
+                  </button>
+                  <button
+                    onClick={() => navigate('/dashboard/expense/transaction')}
+                    className="btn btn-sm btn-outline btn-primary rounded-xl gap-1.5 hover:scale-105 transition-transform"
+                  >
+                    <CreditCard size={15} /> Add Expense
+                  </button>
+                  <button
+                    onClick={() => navigate('/dashboard/habit/table-entry')}
+                    className="btn btn-sm btn-ghost bg-base-200/60 rounded-xl gap-1.5 hover:bg-base-200"
+                  >
+                    <Table size={15} /> Habits Table
+                  </button>
+                  <button
+                    onClick={() => navigate('/dashboard/investment/stocks')}
+                    className="btn btn-sm btn-ghost bg-base-200/60 rounded-xl gap-1.5 hover:bg-base-200"
+                  >
+                    <TrendingUp size={15} /> Portfolio
+                  </button>
                 </div>
               </div>
-            ) : (
-              <div className="h-48 flex items-center justify-center">
-                <span className="loading loading-bars loading-md text-primary opacity-50"></span>
-              </div>
-            )}
+            </motion.div>
 
-            {/* Meal Breakdown Cards Grid */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between px-1">
-                <h3 className="text-xl font-bold text-base-content">Today's Logged Meals</h3>
-                <span className="text-xs text-base-content/50">Click "+" on any meal to quickly log items</span>
-              </div>
+            {/* The Three Pillars Cards Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
+              {/* Pillar 1: Health & Habits */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+                className="rounded-3xl p-4 sm:p-6 bg-gradient-to-br from-emerald-500/10 via-base-100/80 to-base-200/50 backdrop-blur-xl border border-emerald-500/20 shadow-lg flex flex-col justify-between"
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2.5">
+                      <div className="p-2.5 rounded-2xl bg-emerald-500/15 text-emerald-500 ring-1 ring-emerald-500/30">
+                        <Heart size={20} />
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-base text-base-content">Health & Habits</h3>
+                        <p className="text-[11px] text-base-content/50">Daily physical vitals</p>
+                      </div>
+                    </div>
+                    <span className="badge badge-sm font-bold bg-emerald-500/20 text-emerald-500 border-none">
+                      {progress}% Done
+                    </span>
+                  </div>
 
-              {!loadingFood ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {mealCategories.map((meal) => {
-                    const MealIcon = meal.icon;
-                    const items = todayFoodData?.meals?.[meal.key] || [];
-                    const mealCalories = items.reduce((acc, curr) => acc + (curr.calories || 0), 0);
-
-                    return (
+                  {/* Nutrition Progress */}
+                  <div className="space-y-2 mb-4 p-3 rounded-2xl bg-base-200/40 border border-base-content/5">
+                    <div className="flex justify-between items-baseline text-xs">
+                      <span className="font-semibold text-base-content/70">Calories</span>
+                      <span className="font-bold font-mono text-emerald-500">
+                        {loggedCalories} <span className="text-[10px] text-base-content/40">/ {calorieMax} kcal</span>
+                      </span>
+                    </div>
+                    <div className="w-full h-2 bg-base-content/10 rounded-full overflow-hidden">
                       <div
-                        key={meal.key}
-                        className="rounded-3xl bg-base-100/80 backdrop-blur-xl border border-base-content/10 p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
-                      >
-                        <div>
-                          {/* Meal Header */}
-                          <div className="flex justify-between items-center pb-3 border-b border-base-content/5 mb-3">
-                            <div className="flex items-center gap-3">
-                              <div className={`p-2.5 rounded-xl ${meal.bg} ${meal.color}`}>
-                                <MealIcon size={20} />
-                              </div>
-                              <div>
-                                <h4 className="font-bold text-base text-base-content">{meal.key}</h4>
-                                <p className="text-xs text-base-content/50">{items.length} item{items.length !== 1 ? 's' : ''}</p>
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <span className="font-extrabold text-sm text-primary">{mealCalories}</span>
-                              <span className="text-[10px] text-base-content/50 block font-semibold">kcal</span>
-                            </div>
-                          </div>
+                        className="h-full bg-emerald-500 rounded-full transition-all duration-500"
+                        style={{ width: `${caloriePercent}%` }}
+                      />
+                    </div>
+                    <div className="flex justify-between text-[10px] text-base-content/60 pt-1 font-medium">
+                      <span>P: {loggedProtein}g</span>
+                      <span>C: {loggedCarbs}g</span>
+                      <span>F: {loggedFat}g</span>
+                    </div>
+                  </div>
 
-                          {/* Logged Food Items List */}
-                          {items.length > 0 ? (
-                            <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-                              {items.map((item) => (
-                                <div
-                                  key={item._id}
-                                  className="group flex justify-between items-center p-2.5 rounded-xl bg-base-200/40 hover:bg-base-200/80 transition-colors text-xs border border-base-content/5"
-                                >
-                                  <div className="flex-1 min-w-0 pr-2">
-                                    <div className="font-bold text-base-content truncate">
-                                      {item.foodName || item.foodId?.name || "Food Item"}
-                                    </div>
-                                    <div className="text-[11px] text-base-content/60 flex items-center gap-2 mt-0.5">
-                                      <span>{item.servings || 1} serving(s)</span>
-                                      <span>•</span>
-                                      <span className="font-mono text-primary">{item.calories || 0} kcal</span>
-                                    </div>
-                                  </div>
+                  {/* Vitals Summary Pill Grid */}
+                  <div className="grid grid-cols-3 gap-2 text-center text-xs">
+                    <div className="p-2 rounded-xl bg-base-200/30 border border-base-content/5">
+                      <Droplet size={14} className="mx-auto text-cyan-500 mb-1" />
+                      <div className="font-bold text-base-content">{water} L</div>
+                      <div className="text-[9px] text-base-content/40 uppercase">Water</div>
+                    </div>
+                    <div className="p-2 rounded-xl bg-base-200/30 border border-base-content/5">
+                      <Moon size={14} className="mx-auto text-indigo-500 mb-1" />
+                      <div className="font-bold text-base-content">{sleep} h</div>
+                      <div className="text-[9px] text-base-content/40 uppercase">Sleep</div>
+                    </div>
+                    <div className="p-2 rounded-xl bg-base-200/30 border border-base-content/5">
+                      <Flame size={14} className="mx-auto text-orange-500 mb-1" />
+                      <div className="font-bold text-base-content">{burned}</div>
+                      <div className="text-[9px] text-base-content/40 uppercase">Burned</div>
+                    </div>
+                  </div>
+                </div>
 
-                                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <button
-                                      onClick={() => setEditingFoodLog(item)}
-                                      className="btn btn-xs btn-ghost btn-square text-primary hover:bg-primary/10"
-                                      title="Edit Log"
-                                    >
-                                      <Pencil size={14} />
-                                    </button>
-                                    <button
-                                      onClick={() => handleDeleteFoodLog(item._id)}
-                                      className="btn btn-xs btn-ghost btn-square text-error hover:bg-error/10"
-                                      title="Delete Log"
-                                    >
-                                      <Trash2 size={14} />
-                                    </button>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          ) : (
-                            <div className="py-6 text-center text-xs text-base-content/40 bg-base-200/20 rounded-2xl border border-dashed border-base-content/10">
-                              No {meal.key.toLowerCase()} logged yet
-                            </div>
-                          )}
-                        </div>
+                <div className="flex items-center gap-2 mt-4 pt-3 border-t border-base-content/5">
+                  <button
+                    onClick={() => openLogFoodModal("Breakfast")}
+                    className="btn btn-xs sm:btn-sm btn-ghost bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 rounded-xl flex-1 font-bold text-xs"
+                  >
+                    + Log Meal
+                  </button>
+                  <button
+                    onClick={() => navigate('/dashboard/habit/table-entry')}
+                    className="btn btn-xs sm:btn-sm btn-ghost hover:bg-base-200 rounded-xl text-base-content/70 text-xs gap-1"
+                  >
+                    Habit Table <ArrowRight size={13} />
+                  </button>
+                </div>
+              </motion.div>
 
-                        {/* Add to Meal Button */}
-                        <button
-                          onClick={() => openLogFoodModal(meal.key)}
-                          className="btn btn-sm btn-ghost hover:bg-primary/10 hover:text-primary w-full border border-base-content/10 mt-4 rounded-xl gap-2 font-bold text-xs"
-                        >
-                          <Plus size={14} /> Log {meal.key}
-                        </button>
+              {/* Pillar 2: Expenses & Budget */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="rounded-3xl p-4 sm:p-6 bg-gradient-to-br from-indigo-500/10 via-base-100/80 to-base-200/50 backdrop-blur-xl border border-indigo-500/20 shadow-lg flex flex-col justify-between"
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2.5">
+                      <div className="p-2.5 rounded-2xl bg-indigo-500/15 text-indigo-500 ring-1 ring-indigo-500/30">
+                        <Wallet size={20} />
                       </div>
-                    );
-                  })}
+                      <div>
+                        <h3 className="font-bold text-base text-base-content">Expenses & Budget</h3>
+                        <p className="text-[11px] text-base-content/50">Cashflow tracking</p>
+                      </div>
+                    </div>
+                    <span className="badge badge-sm font-bold bg-indigo-500/20 text-indigo-500 border-none">
+                      ₹{expenseData.todaySpend.toLocaleString('en-IN')} Today
+                    </span>
+                  </div>
+
+                  {/* Monthly Spend Metric */}
+                  <div className="space-y-2 mb-4 p-3 rounded-2xl bg-base-200/40 border border-base-content/5">
+                    <div className="flex justify-between items-baseline">
+                      <span className="text-xs font-semibold text-base-content/70">Month Debits</span>
+                      <span className="text-base sm:text-lg font-extrabold text-indigo-500">
+                        ₹{expenseData.monthSpend.toLocaleString('en-IN')}
+                      </span>
+                    </div>
+                    {expenseData.monthlySalary > 0 ? (
+                      <>
+                        <div className="w-full h-2 bg-base-content/10 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-indigo-500 rounded-full transition-all duration-500"
+                            style={{
+                              width: `${Math.min(
+                                100,
+                                Math.round((expenseData.monthSpend / expenseData.monthlySalary) * 100)
+                              )}%`,
+                            }}
+                          />
+                        </div>
+                        <div className="flex justify-between text-[10px] text-base-content/60 font-medium">
+                          <span>Salary: ₹{expenseData.monthlySalary.toLocaleString('en-IN')}</span>
+                          <span>Safe: {budgetSafePercent}%</span>
+                        </div>
+                      </>
+                    ) : (
+                      <p className="text-[10px] text-base-content/50 italic">
+                        Configure monthly income in Expense settings
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Recent Transactions List */}
+                  <div className="space-y-1.5">
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-base-content/40 px-1">
+                      Recent Outflows
+                    </div>
+                    {expenseData.recentTransactions.length > 0 ? (
+                      expenseData.recentTransactions.map((t, idx) => (
+                        <div key={idx} className="flex justify-between items-center px-2.5 py-1 rounded-xl bg-base-200/30 text-xs">
+                          <span className="truncate max-w-[120px] font-medium text-base-content/80">
+                            {t.title || t.category || "Expense"}
+                          </span>
+                          <span className="font-mono font-bold text-error text-[11px]">
+                            -₹{Number(t.amount || 0).toLocaleString('en-IN')}
+                          </span>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-center py-2 text-[11px] text-base-content/40 italic">
+                        No transactions recorded this month
+                      </div>
+                    )}
+                  </div>
                 </div>
-              ) : (
-                <div className="h-64 flex items-center justify-center">
-                  <span className="loading loading-bars loading-lg text-primary opacity-50"></span>
+
+                <div className="flex items-center gap-2 mt-4 pt-3 border-t border-base-content/5">
+                  <button
+                    onClick={() => navigate('/dashboard/expense/transaction')}
+                    className="btn btn-xs sm:btn-sm btn-ghost bg-indigo-500/10 text-indigo-600 hover:bg-indigo-500/20 rounded-xl flex-1 font-bold text-xs"
+                  >
+                    + Add Expense
+                  </button>
+                  <button
+                    onClick={() => navigate('/dashboard/expense/dashboard')}
+                    className="btn btn-xs sm:btn-sm btn-ghost hover:bg-base-200 rounded-xl text-base-content/70 text-xs gap-1"
+                  >
+                    Budget <ArrowRight size={13} />
+                  </button>
                 </div>
-              )}
+              </motion.div>
+
+              {/* Pillar 3: Investments & Growth */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+                className="rounded-3xl p-4 sm:p-6 bg-gradient-to-br from-amber-500/10 via-base-100/80 to-base-200/50 backdrop-blur-xl border border-amber-500/20 shadow-lg flex flex-col justify-between"
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2.5">
+                      <div className="p-2.5 rounded-2xl bg-amber-500/15 text-amber-500 ring-1 ring-amber-500/30">
+                        <TrendingUp size={20} />
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-base text-base-content">Investments</h3>
+                        <p className="text-[11px] text-base-content/50">Portfolio growth</p>
+                      </div>
+                    </div>
+                    <span className="badge badge-sm font-bold bg-amber-500/20 text-amber-500 border-none">
+                      {totalHoldingsCount} Assets
+                    </span>
+                  </div>
+
+                  {/* Portfolio Value Metric */}
+                  <div className="space-y-1.5 mb-4 p-3 rounded-2xl bg-base-200/40 border border-base-content/5">
+                    <span className="text-xs font-semibold text-base-content/70">Total Capital Tracked</span>
+                    <div className="text-xl sm:text-2xl font-black text-amber-500">
+                      ₹{investmentData.totalInvested.toLocaleString('en-IN')}
+                    </div>
+                    <p className="text-[10px] text-base-content/50">Across Stocks, Mutual Funds & FDs</p>
+                  </div>
+
+                  {/* Asset Allocation Counts */}
+                  <div className="grid grid-cols-3 gap-2 text-center text-xs">
+                    <div className="p-2 rounded-xl bg-base-200/30 border border-base-content/5">
+                      <div className="font-bold text-base-content">{investmentData.stocksCount}</div>
+                      <div className="text-[9px] text-base-content/50 uppercase">Stocks</div>
+                    </div>
+                    <div className="p-2 rounded-xl bg-base-200/30 border border-base-content/5">
+                      <div className="font-bold text-base-content">{investmentData.mfCount}</div>
+                      <div className="text-[9px] text-base-content/50 uppercase">Funds</div>
+                    </div>
+                    <div className="p-2 rounded-xl bg-base-200/30 border border-base-content/5">
+                      <div className="font-bold text-base-content">{investmentData.fdCount}</div>
+                      <div className="text-[9px] text-base-content/50 uppercase">FDs</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 mt-4 pt-3 border-t border-base-content/5">
+                  <button
+                    onClick={() => navigate('/dashboard/investment/stocks')}
+                    className="btn btn-xs sm:btn-sm btn-ghost bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 rounded-xl flex-1 font-bold text-xs"
+                  >
+                    View Stocks
+                  </button>
+                  <button
+                    onClick={() => navigate('/dashboard/investment/mf')}
+                    className="btn btn-xs sm:btn-sm btn-ghost hover:bg-base-200 rounded-xl text-base-content/70 text-xs gap-1"
+                  >
+                    Funds <ArrowRight size={13} />
+                  </button>
+                </div>
+              </motion.div>
             </div>
+
+            {/* Quick Trackers Direct Access */}
+            <motion.div
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.35 }}
+              className="p-4 sm:p-6 rounded-3xl bg-base-100/60 backdrop-blur-xl border border-base-content/10 shadow-sm"
+            >
+              <div className="flex items-center justify-between mb-4 px-1">
+                <div className="flex items-center gap-2">
+                  <LayoutGrid size={18} className="text-primary" />
+                  <span className="font-bold text-sm sm:text-base text-base-content">Explore Your Trackers</span>
+                </div>
+                <span className="text-xs text-base-content/50">Direct module navigation</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <button
+                  onClick={() => navigate('/dashboard/habit/table-entry')}
+                  className="flex items-center justify-between p-3.5 rounded-2xl bg-base-200/40 hover:bg-emerald-500/10 hover:border-emerald-500/20 border border-base-content/5 transition-all group text-left"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-500 group-hover:scale-110 transition-transform">
+                      <Heart size={18} />
+                    </div>
+                    <div>
+                      <div className="font-bold text-xs sm:text-sm text-base-content group-hover:text-emerald-500 transition-colors">Habit Tracker</div>
+                      <div className="text-[11px] text-base-content/50">Table Entry & Analytics</div>
+                    </div>
+                  </div>
+                  <ArrowUpRight size={16} className="text-base-content/40 group-hover:text-emerald-500 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
+                </button>
+
+                <button
+                  onClick={() => navigate('/dashboard/expense/dashboard')}
+                  className="flex items-center justify-between p-3.5 rounded-2xl bg-base-200/40 hover:bg-indigo-500/10 hover:border-indigo-500/20 border border-base-content/5 transition-all group text-left"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-500 group-hover:scale-110 transition-transform">
+                      <Wallet size={18} />
+                    </div>
+                    <div>
+                      <div className="font-bold text-xs sm:text-sm text-base-content group-hover:text-indigo-500 transition-colors">Expense Tracker</div>
+                      <div className="text-[11px] text-base-content/50">Budget & Outflows</div>
+                    </div>
+                  </div>
+                  <ArrowUpRight size={16} className="text-base-content/40 group-hover:text-indigo-500 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
+                </button>
+
+                <button
+                  onClick={() => navigate('/dashboard/investment/stocks')}
+                  className="flex items-center justify-between p-3.5 rounded-2xl bg-base-200/40 hover:bg-amber-500/10 hover:border-amber-500/20 border border-base-content/5 transition-all group text-left"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 rounded-xl bg-amber-500/10 text-amber-500 group-hover:scale-110 transition-transform">
+                      <TrendingUp size={18} />
+                    </div>
+                    <div>
+                      <div className="font-bold text-xs sm:text-sm text-base-content group-hover:text-amber-500 transition-colors">Investment Tracker</div>
+                      <div className="text-[11px] text-base-content/50">Stocks, Funds & FDs</div>
+                    </div>
+                  </div>
+                  <ArrowUpRight size={16} className="text-base-content/40 group-hover:text-amber-500 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
+                </button>
+              </div>
+            </motion.div>
           </section>
-        )}
-      </div>
-
-      {/* Modals for Food Logging on Home */}
-      <LogFoodModal
-        isOpen={isLogFoodModalOpen}
-        onClose={() => setIsLogFoodModalOpen(false)}
-        selectedDate={getTodayDateStr()}
-        initialMeal={selectedMealForModal}
-        onFoodLogged={() => fetchTodayFoodData()}
-        onOpenCustomFoodModal={() => setIsCustomFoodModalOpen(true)}
-      />
-
-      <AddCustomFoodModal
-        isOpen={isCustomFoodModalOpen}
-        onClose={() => setIsCustomFoodModalOpen(false)}
-        onFoodAdded={() => fetchTodayFoodData()}
-      />
-
-      <EditFoodLogModal
-        isOpen={!!editingFoodLog}
-        onClose={() => setEditingFoodLog(null)}
-        log={editingFoodLog}
-        onLogUpdated={() => fetchTodayFoodData()}
-      />
-    </div>
-  );
-};
-
-// Helper Stats Component (Extracted to prevent re-renders)
-const StatCard = ({ label, value, unit, icon: Icon, color, borderColor, delay, onIncrease, onDecrease, min, max }) => {
-  let progressPercent = 0;
-  let barColor = "bg-base-content/20";
-  let minPercent = 0;
-
-  const scaleMax = max ? max : (value > 0 ? value * 1.5 : 100);
-
-  if (min !== undefined && max !== undefined) {
-    progressPercent = Math.min(100, (value / scaleMax) * 100);
-    minPercent = (min / scaleMax) * 100;
-
-    if (value < min) barColor = "bg-warning";
-    else if (value > max) barColor = "bg-error";
-    else barColor = "bg-success";
-
-    if (value > max) barColor = "bg-blue-500";
-    if (unit === 'kcal' && value > max) barColor = "bg-error";
-
-  } else if (unit === "%") {
-    progressPercent = Math.min(100, value);
-    barColor = "bg-teal-500";
-  }
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: delay, duration: 0.4, ease: "easeOut" }}
-      className={`relative group overflow-hidden p-6 rounded-[2rem] bg-gradient-to-br from-base-100/80 to-base-200/50 backdrop-blur-xl border border-white/5 shadow-lg hover:shadow-xl transition-all duration-300`}
-    >
-      <div className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-br ${color.replace('text-', 'from-')}/20 to-transparent blur-3xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500`} />
-
-      <div className="relative z-10 flex flex-col h-full justify-between">
-        <div className="flex justify-between items-start mb-4">
-          <div className={`p-3 rounded-2xl ${color.replace('text-', 'bg-')}/10 ${color} ring-1 ring-inset ring-white/5`}>
-            <Icon size={24} strokeWidth={2} />
-          </div>
-
-          {onIncrease && onDecrease && (
-            <div className="flex items-center gap-1 bg-base-100/50 rounded-lg p-1 border border-base-content/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-              <button
-                onClick={(e) => { e.stopPropagation(); onDecrease(); }}
-                className="btn btn-xs btn-ghost btn-square w-6 h-6 hover:bg-base-200 hover:text-error"
-                title={`Decrease`}
-              >
-                <Minus size={14} />
-              </button>
-              <div className="w-px h-3 bg-base-content/10"></div>
-              <button
-                onClick={(e) => { e.stopPropagation(); onIncrease(); }}
-                className="btn btn-xs btn-ghost btn-square w-6 h-6 hover:bg-base-200 hover:text-success"
-                title={`Increase`}
-              >
-                <Plus size={14} />
-              </button>
-            </div>
-          )}
-
-          {unit === "%" && !min && (
-            <div className="badge badge-lg font-bold opacity-80">{value}%</div>
-          )}
         </div>
 
-        <div>
-          <div className="flex items-baseline gap-1">
-            <h4 className="text-4xl font-bold tracking-tight text-base-content antialiased">
-              {value || (value === 0 ? 0 : "—")}
-            </h4>
-            {unit !== "%" && (
-              <span className="text-sm font-semibold text-base-content/40 uppercase tracking-wider">{unit}</span>
-            )}
-          </div>
-          <p className="text-xs font-medium text-base-content/50 uppercase tracking-widest mt-1 group-hover:text-base-content/80 transition-colors">
-            {label}
-          </p>
+        {/* Modals for Food Logging on Home */}
+        <LogFoodModal
+          isOpen={isLogFoodModalOpen}
+          onClose={() => setIsLogFoodModalOpen(false)}
+          selectedDate={getTodayDateStr()}
+          initialMeal={selectedMealForModal}
+          onFoodLogged={() => {
+            fetchTodayFoodData();
+            fetchTodayData();
+          }}
+          onOpenCustomFoodModal={() => setIsCustomFoodModalOpen(true)}
+        />
 
-          {min !== undefined && max !== undefined && (
-            <div className="relative mt-5">
-              <div className="w-full h-1.5 bg-base-content/5 rounded-full overflow-hidden relative">
-                <div className="absolute top-0 bottom-0 w-[2px] bg-base-content/20 z-10" style={{ left: `${minPercent}%` }} />
-                <div className={`h-full ${barColor} transition-all duration-500 rounded-full`} style={{ width: `${progressPercent}%` }} />
-              </div>
-
-              <div className="flex justify-between items-center text-[9px] font-semibold text-base-content/60 mt-2 uppercase tracking-wider">
-                <span>0</span>
-                <span className="absolute -translate-x-1/2 flex flex-col items-center" style={{ left: `${minPercent}%` }}>
-                  <span className="w-1 h-1 bg-current rounded-full mb-1 opacity-50"></span>
-                  min: {min}
-                </span>
-                <span className="flex flex-col items-end">
-                  <span className="w-1 h-1 bg-current rounded-full mb-1 opacity-50"></span>
-                  max: {max}
-                </span>
-              </div>
-            </div>
-          )}
-        </div>
+        <AddCustomFoodModal
+          isOpen={isCustomFoodModalOpen}
+          onClose={() => setIsCustomFoodModalOpen(false)}
+          onFoodAdded={() => {
+            fetchTodayFoodData();
+            fetchTodayData();
+          }}
+        />
       </div>
-    </motion.div>
-  );
-};
+    );
+  };
 
-export default Dashboard;
+  export default Dashboard;

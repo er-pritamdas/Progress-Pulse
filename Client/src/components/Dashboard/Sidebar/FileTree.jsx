@@ -37,6 +37,12 @@ function FileTree({ open, setOpen }) {
         return isActive(path) ? `${baseClass} btn-active` : baseClass;
     };
 
+    const handleLinkClick = () => {
+        if (window.innerWidth < 768 && setOpen) {
+            setOpen(false);
+        }
+    };
+
     // DaisyUI style for MUI Tooltip
     const tooltipSlotProps = {
         tooltip: {
@@ -68,6 +74,7 @@ function FileTree({ open, setOpen }) {
                                 <Tooltip title={!open ? "Logging" : ""} placement="right" arrow slotProps={tooltipSlotProps}>
                                     <Link
                                         to="/dashboard/habit/table-entry"
+                                        onClick={handleLinkClick}
                                         className={getLinkClass("/dashboard/habit/table-entry")}
                                     >
                                         <TableEntry />
@@ -79,6 +86,7 @@ function FileTree({ open, setOpen }) {
                                 <Tooltip title={!open ? "Dashboard" : ""} placement="right" arrow slotProps={tooltipSlotProps}>
                                     <Link
                                         to="/dashboard/habit/dashboard"
+                                        onClick={handleLinkClick}
                                         className={getLinkClass("/dashboard/habit/dashboard")}
                                     >
                                         <Dashboard />
@@ -90,6 +98,7 @@ function FileTree({ open, setOpen }) {
                                 <Tooltip title={!open ? "Habit Profile" : ""} placement="right" arrow slotProps={tooltipSlotProps}>
                                     <Link
                                         to="/dashboard/habit/logging"
+                                        onClick={handleLinkClick}
                                         className={getLinkClass("/dashboard/habit/logging")}
                                     >
                                         <TableView />
@@ -101,6 +110,7 @@ function FileTree({ open, setOpen }) {
                                 <Tooltip title={!open ? "Settings" : ""} placement="right" arrow slotProps={tooltipSlotProps}>
                                     <Link
                                         to="/dashboard/habit/settings"
+                                        onClick={handleLinkClick}
                                         className={getLinkClass("/dashboard/habit/settings")}
                                     >
                                         <Settings />
@@ -132,6 +142,7 @@ function FileTree({ open, setOpen }) {
                                 <Tooltip title={!open ? "Table Entry" : ""} placement="right" arrow slotProps={tooltipSlotProps}>
                                     <Link
                                         to="/dashboard/expense/table-entry"
+                                        onClick={handleLinkClick}
                                         className={getLinkClass("/dashboard/expense/table-entry")}
                                     >
                                         <TableEntry />
@@ -143,6 +154,7 @@ function FileTree({ open, setOpen }) {
                                 <Tooltip title={!open ? "Dashboard" : ""} placement="right" arrow slotProps={tooltipSlotProps}>
                                     <Link
                                         to="/dashboard/expense/dashboard"
+                                        onClick={handleLinkClick}
                                         className={getLinkClass("/dashboard/expense/dashboard")}
                                     >
                                         <Dashboard />
@@ -154,6 +166,7 @@ function FileTree({ open, setOpen }) {
                                 <Tooltip title={!open ? "Table View" : ""} placement="right" arrow slotProps={tooltipSlotProps}>
                                     <Link
                                         to="/dashboard/expense/table-view"
+                                        onClick={handleLinkClick}
                                         className={getLinkClass("/dashboard/expense/table-view")}
                                     >
                                         <TableView />
@@ -165,6 +178,7 @@ function FileTree({ open, setOpen }) {
                                 <Tooltip title={!open ? "Settings" : ""} placement="right" arrow slotProps={tooltipSlotProps}>
                                     <Link
                                         to="/dashboard/expense/settings"
+                                        onClick={handleLinkClick}
                                         className={getLinkClass("/dashboard/expense/settings")}
                                     >
                                         <Settings />
@@ -196,6 +210,7 @@ function FileTree({ open, setOpen }) {
                                 <Tooltip title={!open ? "Table Entry" : ""} placement="right" arrow slotProps={tooltipSlotProps}>
                                     <Link
                                         to="/dashboard/investment/table-entry"
+                                        onClick={handleLinkClick}
                                         className={getLinkClass("/dashboard/investment/table-entry")}
                                     >
                                         <TableEntry />
@@ -207,6 +222,7 @@ function FileTree({ open, setOpen }) {
                                 <Tooltip title={!open ? "Dashboard" : ""} placement="right" arrow slotProps={tooltipSlotProps}>
                                     <Link
                                         to="/dashboard/investment/dashboard"
+                                        onClick={handleLinkClick}
                                         className={getLinkClass("/dashboard/investment/dashboard")}
                                     >
                                         <Dashboard />
@@ -218,6 +234,7 @@ function FileTree({ open, setOpen }) {
                                 <Tooltip title={!open ? "Portfolio" : ""} placement="right" arrow slotProps={tooltipSlotProps}>
                                     <Link
                                         to="/dashboard/investment/portfolio"
+                                        onClick={handleLinkClick}
                                         className={getLinkClass("/dashboard/investment/portfolio")}
                                     >
                                         <TableView />
@@ -229,6 +246,7 @@ function FileTree({ open, setOpen }) {
                                 <Tooltip title={!open ? "Planner" : ""} placement="right" arrow slotProps={tooltipSlotProps}>
                                     <Link
                                         to="/dashboard/investment/planner"
+                                        onClick={handleLinkClick}
                                         className={getLinkClass("/dashboard/investment/planner")}
                                     >
                                         <Planner />

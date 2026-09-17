@@ -90,5 +90,3 @@ const Loader = ({ message = "Please wait..." }) => {
 };
 
 export default Loader;
-  
-  
