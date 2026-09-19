@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import Chart from "react-apexcharts";
+import ScrollableChartWrapper from "../ScrollableChartWrapper";
 
 const EffectiveMixedStackChart = ({ habitData, ConsumedCalorieMax }) => {
   const [series, setSeries] = useState([]);
@@ -175,7 +176,14 @@ const EffectiveMixedStackChart = ({ habitData, ConsumedCalorieMax }) => {
     ],
   };
 
-  return <Chart options={options} series={series} type="line" height={520} />;
+  return (
+    <ScrollableChartWrapper
+      minWidth={`max(100%, ${sortedData.length * 48}px)`}
+      showScrollHint={sortedData.length > 7}
+    >
+      <Chart options={options} series={series} type="line" height={520} />
+    </ScrollableChartWrapper>
+  );
 };
 
 export default EffectiveMixedStackChart;

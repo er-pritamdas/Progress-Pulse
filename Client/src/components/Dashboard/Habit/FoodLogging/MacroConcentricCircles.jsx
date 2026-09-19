@@ -23,7 +23,7 @@ import {
 import { NUTRIENT_CATEGORIES } from "./DailyNutrientsModal";
 
 export const CATEGORY_OPTIONS = [
-  { id: "Macronutrients", label: "Macronutrients (Macros)", shortLabel: "Macros", icon: "🍽️" },
+  { id: "Macronutrients", label: "Macros", shortLabel: "Macros", icon: "🍽️" },
   { id: "Vitamins", label: "Vitamins", shortLabel: "Vitamins", icon: "⚡" },
   { id: "Minerals", label: "Minerals", shortLabel: "Minerals", icon: "🪨" },
   { id: "Fatty Acids", label: "Fatty Acids", shortLabel: "Fatty Acids", icon: "🥑" },
@@ -603,7 +603,7 @@ export default function MacroConcentricCircles({
           onClick={() => setIsPickerOpen(false)}
         >
           <div
-            className="bg-base-100 w-full max-w-md rounded-3xl p-5 shadow-2xl border border-base-300 space-y-4 max-h-[85vh] flex flex-col"
+            className="bg-base-100 w-full max-w-md h-[490px] max-h-[88vh] rounded-3xl p-5 shadow-2xl border border-base-300 space-y-4 flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
@@ -614,7 +614,7 @@ export default function MacroConcentricCircles({
                   <span>Choose 4 Nutrients</span>
                 </h3>
                 <p className="text-xs text-base-content/60 mt-0.5">
-                  Pick exactly 4 <span className="font-bold text-primary">{activeCategory}</span> for the concentric rings ({currentSelected.length}/4 selected).
+                  Pick exactly 4 <span className="font-bold text-primary">{activeCategory === "Macronutrients" ? "Macros" : activeCategory}</span> for the concentric rings ({currentSelected.length}/4 selected).
                 </p>
               </div>
               <button
@@ -626,11 +626,46 @@ export default function MacroConcentricCircles({
               </button>
             </div>
 
+            {/* Nutrient Category Button Tabs (without wrapping & without scrollbar) */}
+            <div className="flex items-center gap-1.5 overflow-x-auto py-1 px-0.5 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden scroll-hidden shrink-0 select-none border-b border-base-200/60 pb-2.5">
+              {CATEGORY_OPTIONS.map((cat) => {
+                const isActive = activeCategory === cat.id;
+                const count = (selectedByCategory[cat.id] || DEFAULT_SELECTED_BY_CATEGORY[cat.id] || []).length;
+                return (
+                  <button
+                    key={cat.id}
+                    type="button"
+                    onClick={() => {
+                      setActiveCategory(cat.id);
+                      setHoveredIndex(null);
+                    }}
+                    className={`btn btn-xs rounded-xl font-bold gap-1.5 transition-all shrink-0 whitespace-nowrap ${
+                      isActive
+                        ? "btn-primary text-primary-content shadow-xs"
+                        : "btn-ghost bg-base-200/80 hover:bg-base-200 border border-base-300/70 text-base-content/80"
+                    }`}
+                  >
+                    <span className="text-xs select-none">{cat.icon}</span>
+                    <span>{cat.label}</span>
+                    <span
+                      className={`text-[9px] px-1.5 py-0.2 rounded-md font-mono ${
+                        isActive
+                          ? "bg-primary-content/25 text-primary-content"
+                          : "bg-base-300 text-base-content/70"
+                      }`}
+                    >
+                      {count}/4
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
             {/* Modal Body: Nutrient Chips Grid */}
             <div className="flex-1 overflow-y-auto space-y-3 pr-1">
               <div className="flex items-center justify-between text-xs">
                 <span className="font-bold text-base-content/70">
-                  Available in {activeCategory}:
+                  Available in {activeCategory === "Macronutrients" ? "Macros" : activeCategory}:
                 </span>
                 <button
                   type="button"
@@ -691,12 +726,6 @@ export default function MacroConcentricCircles({
                   );
                 })}
               </div>
-
-              <div className="p-2.5 bg-base-200/50 rounded-xl text-[11px] text-base-content/60 space-y-1">
-                <div className="font-semibold text-base-content/80">How it works:</div>
-                <div>• Exactly 4 nutrients map to Ring 1 (Outer), 2, 3, and 4 (Inner).</div>
-                <div>• Tap a selected nutrient to remove it, or tap any other nutrient to swap.</div>
-              </div>
             </div>
 
             {/* Modal Footer */}
@@ -716,8 +745,8 @@ export default function MacroConcentricCircles({
         </div>
       )}
 
-      {/* Concentric Circles & 4-Nutrient Breakdown Container */}
-      <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-5 p-3.5 sm:p-4 bg-base-200/40 rounded-2xl border border-base-300/70">
+      {/* Main Card View: Responsive side-by-side or stacked representation */}
+      <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-5 p-3.5 sm:p-4 bg-base-200 border border-base-300 rounded-2xl shadow-sm">
         {/* Concentric Circles SVG Graphic - Sized up bigger as requested */}
         <div className="relative shrink-0 flex items-center justify-center">
           <svg

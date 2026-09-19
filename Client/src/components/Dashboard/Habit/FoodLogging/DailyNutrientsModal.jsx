@@ -307,7 +307,7 @@ function DailyNutrientsModal({
 
   return (
     <div className="fixed inset-0 z-[99999] bg-black/60 backdrop-blur-md flex items-center justify-center p-3 sm:p-4">
-      <div className="bg-base-200 rounded-3xl max-w-4xl w-full h-[700px] max-h-[92vh] border border-base-300 shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      <div className="bg-base-200 rounded-3xl max-w-4xl w-full max-h-[92vh] border border-base-300 shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         {/* Modal Header */}
         <div className="px-5 py-4 bg-base-300/80 border-b border-base-300 flex justify-between items-center shrink-0">
           <div className="flex items-center gap-2.5 min-w-0">
@@ -334,8 +334,8 @@ function DailyNutrientsModal({
         </div>
 
         {/* Meal Filter Pills (All / Breakfast / Lunch / Dinner / Snacks / Other) */}
-        <div className="px-4 sm:px-5 pt-3 pb-1 shrink-0 bg-base-200 border-b border-base-300/40">
-          <div className="flex items-center gap-1.5 flex-wrap">
+        <div className="px-4 sm:px-5 pt-2.5 pb-2 shrink-0 bg-base-200 border-b border-base-300/40">
+          <div className="flex items-center gap-1.5 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden scroll-hidden select-none py-0.5">
             {["All", "Breakfast", "Lunch", "Dinner", "Snacks", "Other"].map((meal) => {
               const count = meal === "All" ? allLogs.length : (meals[meal]?.length || 0);
               const isActive = activeMeal === meal;
@@ -344,7 +344,7 @@ function DailyNutrientsModal({
                   key={meal}
                   type="button"
                   onClick={() => setActiveMeal(meal)}
-                  className={`btn btn-xs rounded-xl font-bold gap-1 transition-all ${
+                  className={`btn btn-xs rounded-xl font-bold gap-1 transition-all shrink-0 whitespace-nowrap ${
                     isActive
                       ? "btn-primary shadow-xs"
                       : "btn-ghost border border-base-300 text-base-content/70 hover:text-base-content hover:bg-base-300/60"
@@ -494,14 +494,15 @@ function DailyNutrientsModal({
                   <Activity size={14} /> {activeMeal === "All" ? "Daily Energy & Macro Split" : `${activeMeal} Energy & Macro Split`}
                 </span>
                 <button
-                  className="btn btn-xs btn-outline btn-primary gap-1 rounded-lg text-[10.5px] h-6 min-h-0 px-2"
+                  type="button"
+                  className="btn btn-xs btn-circle bg-primary/10 hover:bg-primary/20 active:bg-primary/30 border border-primary/25 text-primary h-6 w-6 min-h-0 shadow-2xs transition-all active:scale-95 shrink-0"
                   onClick={() => {
                     onClose();
                     navigate("/dashboard/habit/logging");
                   }}
                   title="Edit Macro Percentages in Habit Profile"
                 >
-                  <Settings size={11} /> Edit Ratios
+                  <Settings size={12} />
                 </button>
               </div>
 
@@ -581,19 +582,19 @@ function DailyNutrientsModal({
             </div>
           )}
 
-          {/* Category Tabs (flex-wrap without any horizontal scrollbar) */}
-          <div className="flex flex-wrap items-center gap-1.5 pb-0.5">
+          {/* Category Tabs (continuous, horizontally scrollable without wrapping or scrollbar) */}
+          <div className="flex items-center gap-1.5 overflow-x-auto py-1 px-0.5 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden scroll-hidden select-none shrink-0">
             {["All", ...Object.keys(NUTRIENT_CATEGORIES)].map((tab) => (
               <button
                 key={tab}
-                className={`btn btn-xs rounded-xl font-bold transition-all ${
+                className={`btn btn-xs rounded-xl font-bold transition-all shrink-0 whitespace-nowrap ${
                   activeTab === tab
                     ? "btn-primary shadow-xs"
-                    : "btn-ghost border border-base-300 text-base-content/70"
+                    : "btn-ghost bg-base-100 hover:bg-base-300/60 border border-base-300 text-base-content/70"
                 }`}
                 onClick={() => setActiveTab(tab)}
               >
-                {tab}
+                {tab === "Macronutrients" ? "Macros" : tab}
               </button>
             ))}
           </div>

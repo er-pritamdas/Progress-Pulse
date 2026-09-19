@@ -16,10 +16,9 @@ import WaterAnalysis from "../../../components/Dashboard/Habit/HabitDashboardPag
 import SleepAnalysis from "../../../components/Dashboard/Habit/HabitDashboardPage/Analysis/SleepAnalysis";
 import ReadAnalysis from "../../../components/Dashboard/Habit/HabitDashboardPage/Analysis/ReadAnalysis";
 
-import { Flame, Droplet, Moon, BookOpen, Smile, Heart, Book, ChevronDown, ChevronUp, Trophy, Apple, CalendarCheck } from "lucide-react";
+import { Flame, Droplet, Moon, BookOpen, Smile, Heart, Book, ChevronDown, ChevronUp, Trophy, Apple, Calendar, Filter, X } from "lucide-react";
 import MoodAnalysis from "../../../components/Dashboard/Habit/HabitDashboardPage/Analysis/MoodAnalysis.jsx";
 import SelfCareAnalysis from "../../../components/Dashboard/Habit/HabitDashboardPage/Analysis/SelfCareAnalysis.jsx";
-import JournalAnalysis from "../../../components/Dashboard/Habit/HabitDashboardPage/Analysis/JournalAnalysis.jsx";
 import ScoreAnalysis from "../../../components/Dashboard/Habit/HabitDashboardPage/Analysis/ScoreAnalysis.jsx";
 import NutrientAnalysis from "../../../components/Dashboard/Habit/HabitDashboardPage/Analysis/NutrientAnalysis.jsx";
 
@@ -33,7 +32,8 @@ function HabitDashboard() {
   const [habitData, setHabitData] = useState([]);
   const [totalEntries, setTotalEntries] = useState(0)
   const [activeTab, setActiveTab] = useState('calorie');
-  const [isOverviewOpen, setIsOverviewOpen] = useState(true);
+  const [isOverviewOpen, setIsOverviewOpen] = useState(false);
+  const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
 
   const [nutrientCategory, setNutrientCategory] = useState("Macronutrients");
   const [waterMin, setWaterMin] = useState(0);
@@ -58,7 +58,6 @@ function HabitDashboard() {
     { id: "selfcare", label: "Self Care", icon: Heart, color: "text-secondary" },
     { id: "mood", label: "Mood", icon: Smile, color: "text-accent" },
     { id: "scores", label: "Scores", icon: Trophy, color: "text-amber-400" },
-    { id: "journal", label: "Daily Overview", icon: CalendarCheck, color: "text-info" },
     { id: "nutrients", label: "Nutrients", icon: Apple, color: "text-success" },
   ];
 
@@ -135,8 +134,8 @@ function HabitDashboard() {
 
   return (
     <>
-      {/* Sticky Heading */}
-      <div className="sticky top-[-20px] z-30 bg-opacity-90 backdrop-blur-md shadow-sm border-b border-base-300/30">
+      {/* Sticky Heading - Desktop View (Hidden on Phone) */}
+      <div className="hidden md:block sticky top-[-20px] z-30 bg-opacity-90 backdrop-blur-md shadow-sm border-b border-base-300/30">
         {/* Top Row: Heading and Filter Controls */}
         <div className="flex items-center justify-between p-3 flex-wrap gap-3">
           <div className="flex items-center gap-1.5 flex-wrap">
@@ -321,8 +320,157 @@ function HabitDashboard() {
 
       </div>
 
+      {/* Sticky Header - Mobile Phone View (Hidden on Desktop) */}
+      <div className="block md:hidden sticky top-0 z-30 bg-base-100/95 backdrop-blur-md border-b border-base-300 px-3 py-2 shadow-xs space-y-2">
+        {/* Row 1: Active Category Badge + Compact Date Filter Button */}
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-base-200 border border-base-300/60 shadow-xs">
+            <ActiveIcon className={`${activeTabObj.color} w-4 h-4 shrink-0`} />
+            <span className="font-bold text-xs tracking-tight text-base-content">{activeTabObj.label}</span>
+          </div>
 
-      <div className="w-full h-full overflow-y-auto overflow-x-hidden p-6 bg-base-200">
+          <button
+            type="button"
+            onClick={() => setIsMobileFilterOpen(true)}
+            className="btn btn-xs h-7 px-2.5 rounded-xl font-medium bg-base-200 hover:bg-base-300 border border-base-300/80 shadow-xs flex items-center gap-1.5 text-xs text-base-content cursor-pointer"
+            title="Filter by Date"
+          >
+            <Calendar className="w-3.5 h-3.5 text-primary shrink-0" />
+            <span className="truncate max-w-[140px] font-semibold text-[11px]">
+              {fromDate && toDate ? `${formatDate(fromDate)} - ${formatDate(toDate)}` : "Select Date"}
+            </span>
+            <Filter className="w-3 h-3 opacity-60 shrink-0" />
+          </button>
+        </div>
+
+        {/* Row 2: Horizontal Scrollable Category Pills */}
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 -mx-1 px-1">
+          {DASHBOARD_TABS.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold shrink-0 transition-all cursor-pointer ${
+                  isActive
+                    ? "bg-primary text-primary-content shadow-xs font-bold"
+                    : "bg-base-200/80 hover:bg-base-200 text-base-content/75 border border-base-300/50"
+                }`}
+              >
+                <Icon className={`w-3.5 h-3.5 ${isActive ? "text-primary-content" : tab.color}`} />
+                <span>{tab.label}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Row 3: Nutrient Category Pills (Visible only when Nutrients tab is active) */}
+        {activeTab === "nutrients" && (
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pt-1.5 pb-0.5 border-t border-base-300/50">
+            <span className="text-[10px] uppercase font-bold text-base-content/50 shrink-0 mr-1">Category:</span>
+            {["Macronutrients", "Vitamins", "Minerals", "Fatty Acids", "Others"].map((cat) => (
+              <button
+                key={cat}
+                type="button"
+                onClick={() => setNutrientCategory(cat)}
+                className={`px-2.5 py-1 rounded-lg text-xs font-semibold shrink-0 transition-all cursor-pointer ${
+                  nutrientCategory === cat
+                    ? "bg-primary text-primary-content shadow-xs font-bold"
+                    : "bg-base-200/70 hover:bg-base-200 text-base-content/70 border border-base-300/40"
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Mobile Date Filter Modal Popup */}
+      {isMobileFilterOpen && (
+        <div 
+          className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-xs p-0 sm:p-4 animate-fade-in"
+          onClick={() => setIsMobileFilterOpen(false)}
+        >
+          <div
+            className="bg-base-100 rounded-t-3xl sm:rounded-2xl border border-base-300 shadow-2xl w-full max-w-md p-5 space-y-4 max-h-[85vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-base-300 pb-3">
+              <div className="flex items-center gap-2">
+                <Calendar className="w-5 h-5 text-primary" />
+                <h3 className="font-bold text-base text-base-content">Filter Date Range</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsMobileFilterOpen(false)}
+                className="btn btn-sm btn-circle btn-ghost"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Quick Select */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-base-content/60 uppercase tracking-wider">
+                Quick Select (Year & Month)
+              </label>
+              <div className="flex items-center justify-start">
+                <HabitDateQuickSelect />
+              </div>
+            </div>
+
+            {/* Custom Date Inputs */}
+            <div className="grid grid-cols-2 gap-3 pt-2 border-t border-base-300/60">
+              <div>
+                <label className="text-xs font-semibold text-base-content/70 mb-1 block">From Date</label>
+                <input
+                  type="date"
+                  value={fromDate || ""}
+                  onChange={(e) => dispatch(setHabitFilters({ fromDate: e.target.value }))}
+                  className="input input-sm w-full bg-base-200 border-base-300 rounded-xl"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-base-content/70 mb-1 block">To Date</label>
+                <input
+                  type="date"
+                  value={toDate || ""}
+                  onChange={(e) => dispatch(setHabitFilters({ toDate: e.target.value }))}
+                  className="input input-sm w-full bg-base-200 border-base-300 rounded-xl"
+                />
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex items-center justify-between gap-3 pt-3 border-t border-base-300">
+              <button
+                type="button"
+                onClick={() => {
+                  resetFilters();
+                }}
+                className="btn btn-sm btn-ghost border border-base-300 rounded-xl px-4 cursor-pointer"
+              >
+                Reset
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  fetchData();
+                  setIsMobileFilterOpen(false);
+                }}
+                className="btn btn-sm btn-primary rounded-xl px-6 font-bold shadow-sm cursor-pointer"
+              >
+                Apply Filter
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="w-full h-full overflow-y-auto overflow-x-hidden p-2 sm:p-4 md:p-6 bg-base-200">
       {dashboardLoading ? (
         <div className="h-[60vh] flex items-center justify-center">
           <span className="loading loading-spinner loading-lg text-primary"></span>
@@ -338,46 +486,46 @@ function HabitDashboard() {
       ) : habitData.length > 0 ? (
         <>
             {/* Overview Section */}
-            <section className="mb-12">
+            <section className="mb-8 md:mb-12">
             <div 
-                className="flex items-center justify-between cursor-pointer mb-4 hover:bg-base-300/50 p-2 rounded-lg transition-colors"
+                className="flex items-center justify-between cursor-pointer mb-3 md:mb-4 hover:bg-base-300/50 p-2 rounded-lg transition-colors"
                 onClick={() => setIsOverviewOpen(!isOverviewOpen)}
             >
-                <h2 className="text-xl font-semibold flex items-center gap-2">Overview</h2>
+                <h2 className="text-lg md:text-xl font-semibold flex items-center gap-2">Overview</h2>
                 <button className="btn btn-sm btn-ghost btn-circle">
                     {isOverviewOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                 </button>
             </div>
             
             {isOverviewOpen && (
-                <div className="grid grid-cols-15 gap-3 mb-8 animate-fade-in-down">
-                    <div className="col-span-3 bg-base-100 rounded-2xl shadow-lg p-6">
+                <div className="grid grid-cols-2 md:grid-cols-15 gap-2.5 sm:gap-3 mb-6 md:mb-8 animate-fade-in-down">
+                    <div className="col-span-1 md:col-span-3 bg-base-100 rounded-2xl shadow-sm md:shadow-lg p-3 sm:p-4 md:p-6 border border-base-300/60 md:border-transparent">
                     <HabitSummaryCard
                         habitData={habitData}
                     />
                     </div>
-                    <div className="col-span-3 bg-base-100 rounded-2xl shadow-lg p-6">
+                    <div className="col-span-1 md:col-span-3 bg-base-100 rounded-2xl shadow-sm md:shadow-lg p-3 sm:p-4 md:p-6 border border-base-300/60 md:border-transparent">
                     <CurrentStreakCard
                         habitData={habitData}
                         fromDate={fromDate}
                         toDate={toDate}
                     />
                     </div>
-                    <div className="col-span-3 bg-base-100 rounded-2xl shadow-lg p-6">
+                    <div className="col-span-1 md:col-span-3 bg-base-100 rounded-2xl shadow-sm md:shadow-lg p-3 sm:p-4 md:p-6 border border-base-300/60 md:border-transparent">
                     <LongestStreakCard
                         habitData={habitData}
                         fromDate={fromDate}
                         toDate={toDate}
                     />
                     </div>
-                    <div className="col-span-3 bg-base-100 rounded-2xl shadow-lg p-6">
+                    <div className="col-span-1 md:col-span-3 bg-base-100 rounded-2xl shadow-sm md:shadow-lg p-3 sm:p-4 md:p-6 border border-base-300/60 md:border-transparent">
                     <GoalProgressCard
                         habitData={habitData}
                         fromDate={fromDate}
                         toDate={toDate}
                     />
                     </div>
-                    <div className="col-span-3 bg-base-100 rounded-2xl shadow-lg p-6">
+                    <div className="hidden md:block md:col-span-3 bg-base-100 rounded-2xl shadow-lg p-6">
                     <HabitScoreCard
                         habitData={habitData}
                         fromDate={fromDate}
@@ -466,15 +614,6 @@ function HabitDashboard() {
                 toDate={toDate}
               />
             )}
-
-            {activeTab === 'journal' && (
-            <JournalAnalysis
-              habitData={habitData}
-              moodList={moodList}
-              fromDate={fromDate}
-              toDate={toDate}
-            />
-          )}
             </div>
         </>
       ) : (

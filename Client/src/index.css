@@ -189,6 +189,64 @@ input[type="number"] {
 }
 
 /* -------------------------------------------------------------------------- */
+/* Custom Scrollbar Utility                                                  */
+/* -------------------------------------------------------------------------- */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(156, 163, 175, 0.4) transparent;
+}
+.custom-scrollbar::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(156, 163, 175, 0.45);
+  border-radius: 9999px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(156, 163, 175, 0.85);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Mobile Chart Scrollable Container & Desktop Immunity                      */
+/* -------------------------------------------------------------------------- */
+.phone-chart-scroll-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (min-width: 768px) {
+  .phone-chart-scroll-wrapper {
+    overflow-x: visible !important;
+  }
+  .phone-chart-inner {
+    width: 100% !important;
+    min-width: 100% !important;
+    max-width: 100% !important;
+  }
+}
+
+.sticky-yaxis-bg {
+  fill: var(--color-base-100, var(--fallback-b1, #1d232a)) !important;
+  fill-opacity: 1 !important;
+  opacity: 1 !important;
+  stroke: var(--color-base-300, rgba(255, 255, 255, 0.12)) !important;
+  stroke-width: 1px !important;
+}
+
+.apexcharts-yaxis-label {
+  fill: var(--color-base-content, #ffffff) !important;
+}
+
+.apexcharts-yaxis-title-text {
+  fill: var(--color-base-content, #ffffff) !important;
+}
+
+/* -------------------------------------------------------------------------- */
 /* Full Area Date Picker Trigger                                              */
 /* -------------------------------------------------------------------------- */
 .date-input-trigger::-webkit-calendar-picker-indicator {
@@ -202,4 +260,5 @@ input[type="number"] {
   opacity: 0;
   cursor: pointer;
 }
+
 

@@ -1,7 +1,8 @@
 // Import Statements
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Chart from 'react-apexcharts';
 import dayjs from 'dayjs';
+import HabitMonthCalendar from '../HabitMonthCalendar';
 
 const SleepHeatMap = ({ habitData, sleepMin, sleepMax }) => {
 
@@ -20,15 +21,18 @@ const SleepHeatMap = ({ habitData, sleepMin, sleepMax }) => {
         }));
 
         // Fill in values from the API
-        habitData.forEach(entry => {
-            const date = dayjs(entry.date);
-            const day = date.date();       // 1–31
-            const monthIndex = date.month(); // 0–11
+        if (Array.isArray(habitData)) {
+            habitData.forEach(entry => {
+                const date = dayjs(entry.date);
+                const day = date.date();       // 1–31
+                const monthIndex = date.month(); // 0–11
 
-            const sleepHours = parseFloat(entry.sleep ?? "0");
-            dataByMonth[monthIndex].data[day - 1].y = isNaN(sleepHours) ? 0 : sleepHours;
-
-        });
+                const sleepHours = parseFloat(entry.sleep ?? "0");
+                if (dataByMonth[monthIndex]?.data?.[day - 1]) {
+                    dataByMonth[monthIndex].data[day - 1].y = isNaN(sleepHours) ? 0 : sleepHours;
+                }
+            });
+        }
 
         setSeries(dataByMonth);
 
@@ -89,9 +93,26 @@ const SleepHeatMap = ({ habitData, sleepMin, sleepMax }) => {
 
     // ---------- Return JSX ----------
     return (
-        <div style={{ width: '100%', overflowX: 'auto' }} className="p-4">
-            <Chart options={options} series={series} type="heatmap" height={588} />
-        </div>
+        <>
+            {/* Website / Desktop View (100% Original Git HEAD) */}
+            <div className="hidden md:block">
+                <div style={{ width: '100%', overflowX: 'auto' }} className="p-4">
+                    <Chart options={options} series={series} type="heatmap" height={588} />
+                </div>
+            </div>
+
+            {/* Phone View (Apple Health-style Calendar Month View) */}
+            <div className="block md:hidden">
+                <HabitMonthCalendar
+                    habitData={habitData}
+                    habitType="sleep"
+                    minTarget={sleepMin || 7}
+                    maxTarget={sleepMax || 9}
+                    unit="h"
+                    title="Sleep Duration Calendar"
+                />
+            </div>
+        </>
     );
 };
 

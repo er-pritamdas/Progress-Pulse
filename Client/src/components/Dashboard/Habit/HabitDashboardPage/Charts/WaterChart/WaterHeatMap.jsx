@@ -1,7 +1,8 @@
 // Import Statements
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Chart from 'react-apexcharts';
 import dayjs from 'dayjs';
+import HabitMonthCalendar from '../HabitMonthCalendar';
 
 const WaterHeatMap = ({ habitData, waterMin, waterMax }) => {
 
@@ -20,15 +21,18 @@ const WaterHeatMap = ({ habitData, waterMin, waterMax }) => {
     }));
 
     // Fill in values from the API
-    habitData.forEach(entry => {
-      const date = dayjs(entry.date);
-      const day = date.date();       // 1–31
-      const monthIndex = date.month(); // 0–11
+    if (Array.isArray(habitData)) {
+      habitData.forEach(entry => {
+        const date = dayjs(entry.date);
+        const day = date.date();       // 1–31
+        const monthIndex = date.month(); // 0–11
 
-      const waterLiters = parseFloat(entry.water ?? "0");
-      dataByMonth[monthIndex].data[day - 1].y = isNaN(waterLiters) ? 0 : waterLiters;
-
-    });
+        const waterLiters = parseFloat(entry.water ?? "0");
+        if (dataByMonth[monthIndex]?.data?.[day - 1]) {
+          dataByMonth[monthIndex].data[day - 1].y = isNaN(waterLiters) ? 0 : waterLiters;
+        }
+      });
+    }
 
     setSeries(dataByMonth);
 
@@ -86,9 +90,26 @@ const WaterHeatMap = ({ habitData, waterMin, waterMax }) => {
 
   // ---------- Return JSX ----------
   return (
-    <div style={{ width: '100%', overflowX: 'auto' }} className="p-4">
-      <Chart options={options} series={series} type="heatmap" height={588} />
-    </div>
+    <>
+      {/* Website / Desktop View (100% Original Git HEAD) */}
+      <div className="hidden md:block">
+        <div style={{ width: '100%', overflowX: 'auto' }} className="p-4">
+          <Chart options={options} series={series} type="heatmap" height={588} />
+        </div>
+      </div>
+
+      {/* Phone View (Apple Health-style Calendar Month View) */}
+      <div className="block md:hidden">
+        <HabitMonthCalendar
+          habitData={habitData}
+          habitType="water"
+          minTarget={waterMin || 2}
+          maxTarget={waterMax || 4}
+          unit="L"
+          title="Water Intake Calendar"
+        />
+      </div>
+    </>
   );
 };
 

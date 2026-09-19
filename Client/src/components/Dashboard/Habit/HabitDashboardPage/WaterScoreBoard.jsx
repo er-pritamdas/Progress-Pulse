@@ -118,104 +118,149 @@ const WaterScoreBoard = ({
                 </div>
             )}
 
-            {/* Water Scoreboard Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {/* Desktop View (md: and up) - 100% ORIGINAL */}
+            <div className="hidden md:block">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
 
-                {/* From Date */}
-                <div className="stat shadow relative group">
-                    <button
-                        onClick={() => handleInfoClick('from')}
-                        className="cursor-pointer absolute top-2 right-2 text-base-content hover:text-primary transition-colors"
+                    {/* From Date */}
+                    <div className="stat shadow relative group">
+                        <button
+                            onClick={() => handleInfoClick('from')}
+                            className="cursor-pointer absolute top-2 right-2 text-base-content hover:text-primary transition-colors"
+                        >
+                            <Info size={16} />
+                        </button>
+                        <div className="stat-figure text-blue-400">
+                            <CalendarDays className="h-6 w-6" />
+                        </div>
+                        <div className="stat-title pr-6">From</div>
+                        <div className="stat-value">
+                            {fromDate ? dayjs(fromDate).format('DD MMM') : 'N/A'}
+                        </div>
+                        <div className="stat-desc">Start Date</div>
+                    </div>
+
+                    {/* To Date */}
+                    <div className="stat shadow relative group">
+                        <button
+                            onClick={() => handleInfoClick('to')}
+                            className="cursor-pointer absolute top-2 right-2 text-base-content hover:text-primary transition-colors"
+                        >
+                            <Info size={16} />
+                        </button>
+                        <div className="stat-figure text-blue-400">
+                            <CalendarCheck2 className="h-6 w-6" />
+                        </div>
+                        <div className="stat-title pr-6">To</div>
+                        <div className="stat-value">
+                            {toDate ? dayjs(toDate).format('DD MMM') : 'N/A'}
+                        </div>
+                        <div className="stat-desc">End Date</div>
+                    </div>
+
+                    {/* Total Water Consumed */}
+                    <div className="stat shadow relative group">
+                        <button
+                            onClick={() => handleInfoClick('consumed')}
+                            className="cursor-pointer absolute top-2 right-2 text-base-content hover:text-primary transition-colors"
+                        >
+                            <Info size={16} />
+                        </button>
+
+                        <div className="stat-figure text-sky-500">
+                            <Droplet className="h-6 w-6" />
+                        </div>
+
+                        <div className="stat-title pr-6">Total Water</div>
+                        <div className="stat-value text-sky-500">
+                            {consumedSum.toFixed(2)}L
+                        </div>
+
+                        <div className="stat-desc">
+                            Min: {consumedMinGoal.toFixed(2)}L | Max: {consumedGoal.toFixed(2)}L
+                        </div>
+                    </div>
+
+                    {/* Deficit / Surplus Water */}
+                    <div
+                        className="stat shadow relative group"
                     >
-                        <Info size={16} />
-                    </button>
-                    <div className="stat-figure text-blue-400">
-                        <CalendarDays className="h-6 w-6" />
+                        <button onClick={() => handleInfoClick('offset')} className={`cursor-pointer absolute top-2 right-2 transition-colors ${offset >= 0 ? 'text-emerald-500 hover:text-emerald-500' : 'text-rose-500 hover:text-rose-500'}`}>
+                            <Info size={16} />
+                        </button>
+                        <div className={`stat-figure ${offset >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                            <Target className="h-6 w-6" />
+                        </div>
+                        <div className="stat-title pr-6">Offset from {totalDays * waterMin}L</div>
+                        <div className={`stat-value ${offset >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                            {offset >= 0 ? '+' : ''}
+                            {offset.toFixed(2)} L
+                        </div>
+                        <div className="stat-desc">{offset >= 0 ? 'In Surplus' : 'In Deficit'}</div>
                     </div>
-                    <div className="stat-title pr-6">From</div>
-                    <div className="stat-value">
-                        {fromDate ? dayjs(fromDate).format('DD MMM') : 'N/A'}
+
+                    {/* Scale Section */}
+                    <div className="col-span-2 stat shadow relative group">
+                        <WaterScale
+                            label="Water Intake"
+                            value={consumedSum}
+                            min={consumedMinGoal}
+                            max={consumedGoal}
+                            color="bg-sky-500"
+                            textColor="text-sky-500"
+                            icon={Droplet}
+                        />
                     </div>
-                    <div className="stat-desc">Start Date</div>
+
                 </div>
-
-                {/* To Date */}
-                <div className="stat shadow relative group">
-                    <button
-                        onClick={() => handleInfoClick('to')}
-                        className="cursor-pointer absolute top-2 right-2 text-base-content hover:text-primary transition-colors"
-                    >
-                        <Info size={16} />
-                    </button>
-                    <div className="stat-figure text-blue-400">
-                        <CalendarCheck2 className="h-6 w-6" />
-                    </div>
-                    <div className="stat-title pr-6">To</div>
-                    <div className="stat-value">
-                        {toDate ? dayjs(toDate).format('DD MMM') : 'N/A'}
-                    </div>
-                    <div className="stat-desc">End Date</div>
-                </div>
-
-                {/* Total Water Consumed */}
-                <div className="stat shadow relative group">
-                    <button
-                        onClick={() => handleInfoClick('consumed')}
-                        className="cursor-pointer absolute top-2 right-2 text-base-content hover:text-primary transition-colors"
-                    >
-                        <Info size={16} />
-                    </button>
-
-                    <div className="stat-figure text-sky-500">
-                        <Droplet className="h-6 w-6" />
-                    </div>
-
-                    <div className="stat-title pr-6">Total Water</div>
-                    <div className="stat-value text-sky-500">
-                        {consumedSum.toFixed(2)}L
-                    </div>
-
-                    <div className="stat-desc">
-                        Min: {consumedMinGoal.toFixed(2)}L | Max: {consumedGoal.toFixed(2)}L
-                    </div>
-                </div>
-
-                {/* Deficit / Surplus Water */}
-                <div
-                    className="stat shadow relative group"
-                >
-                    <button onClick={() => handleInfoClick('offset')} className={`cursor-pointer absolute top-2 right-2 transition-colors ${offset >= 0 ? 'text-emerald-500 hover:text-emerald-500' : 'text-rose-500 hover:text-rose-500'}`}>
-                        <Info size={16} />
-                    </button>
-                    <div className={`stat-figure ${offset >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
-                        <Target className="h-6 w-6" />
-                    </div>
-                    <div className="stat-title pr-6">Offset from {totalDays * waterMin}L</div>
-                    <div className={`stat-value ${offset >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
-                        {offset >= 0 ? '+' : ''}
-                        {offset.toFixed(2)} L
-                    </div>
-                    <div className="stat-desc">{offset >= 0 ? 'In Surplus' : 'In Deficit'}</div>
-                </div>
-
-                {/* Scale Section */}
-                <div className="col-span-2 stat shadow relative group">
-                    <WaterScale
-                        label="Water Intake"
-                        value={consumedSum}
-                        min={consumedMinGoal}
-                        max={consumedGoal}
-                        color="bg-sky-500"
-                        textColor="text-sky-500"
-                        icon={Droplet}
-                    />
-                </div>
-
             </div>
 
+            {/* Phone View (block md:hidden) */}
+            <div className="block md:hidden space-y-2.5">
+                {/* Row 1: Total Water & Offset side by side */}
+                <div className="grid grid-cols-2 gap-2">
+                    {/* Total Water Consumed Card */}
+                    <div className="stat shadow rounded-xl p-3 bg-base-100 border border-base-300/60 relative">
+                        <button
+                            onClick={() => handleInfoClick('consumed')}
+                            className="cursor-pointer absolute top-2 right-2 text-base-content/60 hover:text-primary transition-colors"
+                        >
+                            <Info size={14} />
+                        </button>
+                        <div className="stat-title pr-4 text-xs font-semibold">Total Water</div>
+                        <div className="stat-value text-sky-500 text-xl font-bold">
+                            {consumedSum.toFixed(2)}L
+                        </div>
+                        <div className="stat-desc text-[10px]">
+                            Goal: {consumedMinGoal.toFixed(1)} - {consumedGoal.toFixed(1)}L
+                        </div>
+                    </div>
 
+                    {/* Offset Card */}
+                    <div className={`stat shadow rounded-xl p-3 bg-base-100 relative ${offset >= 0 ? 'border border-emerald-500/70' : 'border border-rose-500/70'}`}>
+                        <button onClick={() => handleInfoClick('offset')} className={`cursor-pointer absolute top-2 right-2 transition-colors ${offset >= 0 ? 'text-emerald-500 hover:text-emerald-500' : 'text-rose-500 hover:text-rose-500'}`}>
+                            <Info size={14} />
+                        </button>
+                        <div className="stat-title pr-4 text-xs font-semibold truncate">Offset from {totalDays * waterMin}L</div>
+                        <div className={`stat-value text-xl font-bold ${offset >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                            {offset >= 0 ? '+' : ''}{offset.toFixed(2)}L
+                        </div>
+                        <div className="stat-desc text-[10px]">{offset >= 0 ? 'In Surplus' : 'In Deficit'}</div>
+                    </div>
+                </div>
+
+                {/* Row 2: Progress bar full row */}
+                <WaterScale
+                    label="Water Intake"
+                    value={consumedSum}
+                    min={consumedMinGoal}
+                    max={consumedGoal}
+                    color="bg-sky-500"
+                    textColor="text-sky-500"
+                    icon={Droplet}
+                />
+            </div>
         </div>
-
     );
 };
 

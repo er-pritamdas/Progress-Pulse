@@ -37,10 +37,10 @@ const HabitSummaryCard = React.memo(({ habitData = [] }) => {
 
   return (
     <div className="flex flex-col items-center justify-center">
-      <Flame className="text-primary mb-2" size={32} />
-      <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Logged Days</h2>
-      <p className="text-3xl font-bold text-primary mt-2 mb-5">{count} Day{count > 1 ? "s" : ""}</p>
-      <p className="text-sm text-gray-600 dark:text-gray-400 text-center">
+      <Flame className="text-primary mb-1 md:mb-2 w-6 h-6 md:w-8 md:h-8" />
+      <h2 className="text-xs sm:text-sm md:text-xl font-semibold text-gray-800 dark:text-gray-200 text-center">Logged Days</h2>
+      <p className="text-xl sm:text-2xl md:text-3xl font-bold text-primary mt-1 md:mt-2 mb-1.5 md:mb-5">{count} Day{count > 1 ? "s" : ""}</p>
+      <p className="text-[11px] sm:text-xs md:text-sm text-gray-600 dark:text-gray-400 text-center line-clamp-1 md:line-clamp-none">
         {message.emoji} {message.text}
       </p>
     </div>

@@ -1,0 +1,3 @@
+In the date range When clciked, show a popup only for year and month, Make a Scrollable like animattion Only in phone view
+
+In Nutrients dashboard, remove the Category Tabs from there, and as there iss only five categoies, show them all on the dashboard Wit heading of the Category

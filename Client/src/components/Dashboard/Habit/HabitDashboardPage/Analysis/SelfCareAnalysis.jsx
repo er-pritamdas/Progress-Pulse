@@ -3,6 +3,8 @@ import ReactApexChart from "react-apexcharts";
 import { Heart, CheckCircle2, Calendar, Dumbbell, BookOpen, Flower2, Footprints, Droplets, Moon, PenLine, Sparkles, Zap } from "lucide-react";
 import dayjs from "dayjs";
 import SelfCareCalendar from "./SelfCareCalendar";
+import SelfCareMonthCalendar from "./SelfCareMonthCalendar";
+
 
 const SelfCareAnalysis = ({
     habitData,
@@ -129,99 +131,111 @@ const SelfCareAnalysis = ({
 
     return (
         <div className="mb-12 animate-fade-in-up">
-            <div className="py-3 text-2xl text-primary font-semibold divider mb-8">
+            <div className="py-3 text-xl md:text-2xl text-primary font-semibold divider mb-6 md:mb-8">
                 Self Care Analysis 💆‍♂️
             </div>
 
-            <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                
-                {/* Summary / Stats Section */}
-                <div className="space-y-6 order-2 md:order-1">
-                    <div className="grid grid-cols-2 gap-4">
-                         {/* Total Activities Card */}
-                        <div className="bg-base-100 rounded-2xl shadow-md p-6">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-lg font-semibold opacity-70">Total Activities ✨</p>
-                                    <p className="text-2xl font-bold mt-1 text-secondary">{totalActivities}</p>
-                                </div>
-                                <div className="p-2 bg-secondary/10 rounded-full text-secondary">
-                                    <CheckCircle2 size={20} />
-                                </div>
-                            </div>
-                        </div>
+            {/* ── Desktop View (100% Original) ── */}
+            <div className="hidden md:block">
+                <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-                         {/* Total Days Card */}
-                         <div className="bg-base-100 rounded-2xl shadow-md p-6">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-lg font-semibold opacity-70">Total Days 📅</p>
-                                    <p className="text-2xl font-bold mt-1 text-accent">{totalDaysInRange}</p>
-                                </div>
-                                <div className="p-2 bg-accent/10 rounded-full text-accent">
-                                    <Calendar size={20} />
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-
-                    {/* Breakdown Card */}
-                    <div className="bg-base-100 rounded-2xl shadow-md p-6">
-                        <h4 className="text-lg font-semibold mb-4 opacity-70">Activity Breakdown 📋</h4>
-                        <div className="space-y-3 h-64 overflow-y-auto pr-2 custom-scrollbar">
-                            {Object.entries(activityCounts)
-                                .sort(([, a], [, b]) => b - a)
-                                .map(([activity, count]) => (
-                                    <div key={activity} className="flex items-center justify-between p-3 bg-base-200 rounded-xl">
-                                        <div className="flex items-center gap-2">
-                                            <span className="font-medium flex items-center gap-2">{getHabitIcon(activity)} {activity}</span>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <span className="font-bold text-secondary">{count} <span className="text-xs opacity-50 font-normal">/ {totalDaysInRange}</span></span>
-                                        </div>
+                    {/* Summary / Stats Section */}
+                    <div className="space-y-6 order-2 md:order-1">
+                        <div className="grid grid-cols-2 gap-4">
+                            {/* Total Activities Card */}
+                            <div className="bg-base-100 rounded-2xl shadow-md p-6">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <p className="text-lg font-semibold opacity-70">Total Activities ✨</p>
+                                        <p className="text-2xl font-bold mt-1 text-secondary">{totalActivities}</p>
                                     </div>
-                                ))
-                            }
-                             {Object.keys(activityCounts).length === 0 && (
-                                <p className="text-sm text-center opacity-50 py-2">No self care habits configured</p>
-                            )}
+                                    <div className="p-2 bg-secondary/10 rounded-full text-secondary">
+                                        <CheckCircle2 size={20} />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Total Days Card */}
+                            <div className="bg-base-100 rounded-2xl shadow-md p-6">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <p className="text-lg font-semibold opacity-70">Total Days 📅</p>
+                                        <p className="text-2xl font-bold mt-1 text-accent">{totalDaysInRange}</p>
+                                    </div>
+                                    <div className="p-2 bg-accent/10 rounded-full text-accent">
+                                        <Calendar size={20} />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Breakdown Card */}
+                        <div className="bg-base-100 rounded-2xl shadow-md p-6">
+                            <h4 className="text-lg font-semibold mb-4 opacity-70">Activity Breakdown 📋</h4>
+                            <div className="space-y-3 h-64 overflow-y-auto pr-2 custom-scrollbar">
+                                {Object.entries(activityCounts)
+                                    .sort(([, a], [, b]) => b - a)
+                                    .map(([activity, count]) => (
+                                        <div key={activity} className="flex items-center justify-between p-3 bg-base-200 rounded-xl">
+                                            <div className="flex items-center gap-2">
+                                                <span className="font-medium flex items-center gap-2">{getHabitIcon(activity)} {activity}</span>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <span className="font-bold text-secondary">{count} <span className="text-xs opacity-50 font-normal">/ {totalDaysInRange}</span></span>
+                                            </div>
+                                        </div>
+                                    ))
+                                }
+                                {Object.keys(activityCounts).length === 0 && (
+                                    <p className="text-sm text-center opacity-50 py-2">No self care habits configured</p>
+                                )}
+                            </div>
                         </div>
                     </div>
+
+                    {/* Chart Section */}
+                    <div className="bg-base-100 rounded-2xl shadow-md p-6 flex flex-col items-center justify-center order-1 md:order-2">
+                        <h3 className="text-lg font-semibold mb-4 w-full text-left flex items-center gap-2">
+                            <Heart size={20}/> Frequency Chart (vs Total Days)
+                        </h3>
+                        {totalActivities > 0 ? (
+                            <div className="w-full h-80">
+                                <ReactApexChart
+                                    options={chartOptions}
+                                    series={chartSeries}
+                                    type="bar"
+                                    height="100%"
+                                />
+                            </div>
+                        ) : (
+                            <div className="h-64 flex items-center justify-center text-gray-500">
+                                No activity data available for this period
+                            </div>
+                        )}
+                    </div>
+
+                </section>
+
+                {/* Self Care Year Calendar Section (Desktop only) */}
+                <section className="mt-8">
+                    <SelfCareCalendar
+                        habitData={habitData}
+                        selfCareList={selfCareList}
+                        year={fromDate ? dayjs(fromDate).year() : dayjs().year()}
+                        activityColors={activityColors}
+                    />
+                </section>
+            </div>
+
+            {/* ── Phone View (< md) — Calendar with habit tabs only ── */}
+            <div className="block md:hidden">
+                <div className="bg-base-100 rounded-2xl shadow-sm p-3">
+                    <SelfCareMonthCalendar
+                        habitData={habitData}
+                        selfCareList={selfCareList}
+                    />
                 </div>
-
-                {/* Chart Section */}
-                <div className="bg-base-100 rounded-2xl shadow-md p-6 flex flex-col items-center justify-center order-1 md:order-2">
-                     <h3 className="text-lg font-semibold mb-4 w-full text-left flex items-center gap-2">
-                         <Heart size={20}/> Frequency Chart (vs Total Days)
-                    </h3>
-                    {totalActivities > 0 ? (
-                        <div className="w-full h-80">
-                            <ReactApexChart
-                                options={chartOptions}
-                                series={chartSeries}
-                                type="bar"
-                                height="100%"
-                            />
-                        </div>
-                    ) : (
-                         <div className="h-64 flex items-center justify-center text-gray-500">
-                            No activity data available for this period
-                        </div>
-                    )}
-                </div>
-
-            </section>
-
-            {/* Self Care Calendar Section */}
-            <section className="mt-8">
-                 <SelfCareCalendar 
-                    habitData={habitData} 
-                    selfCareList={selfCareList}
-                    year={fromDate ? dayjs(fromDate).year() : dayjs().year()}
-                    activityColors={activityColors}
-                 />
-            </section>
+            </div>
         </div>
     );
 };

@@ -102,7 +102,7 @@ const CalorieScoreBoard = ({
     };
 
     return (
-        <div className="relative">
+        <div className="relative w-full">
             {/* Info Modal */}
             {activeInfo && (
                 <div className="fixed inset-0 z-[9999] bg-black/75 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 overflow-hidden" onClick={closeInfo}>
@@ -128,91 +128,139 @@ const CalorieScoreBoard = ({
                 </div>
             )}
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                {/* Row 1 */}
-                <div className="stat shadow relative group">
-                    <button onClick={() => handleInfoClick('from')} className="cursor-pointer absolute top-2 right-2 text-base-content hover:text-primary transition-colors">
-                        <Info size={16} />
-                    </button>
-                    <div className="stat-figure text-secondary">
-                        <CalendarDays className="h-6 w-6" />
+            {/* Desktop View (md: and up) - 100% ORIGINAL */}
+            <div className="hidden md:block">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    {/* Row 1 */}
+                    <div className="stat shadow relative group">
+                        <button onClick={() => handleInfoClick('from')} className="cursor-pointer absolute top-2 right-2 text-base-content hover:text-primary transition-colors">
+                            <Info size={16} />
+                        </button>
+                        <div className="stat-figure text-secondary">
+                            <CalendarDays className="h-6 w-6" />
+                        </div>
+                        <div className="stat-title pr-6">From</div>
+                        <div className="stat-value">{fromDate ? dayjs(fromDate).format('DD MMM') : 'N/A'}</div>
+                        <div className="stat-desc">Start Date</div>
                     </div>
-                    <div className="stat-title pr-6">From</div>
-                    <div className="stat-value">{fromDate ? dayjs(fromDate).format('DD MMM') : 'N/A'}</div>
-                    <div className="stat-desc">Start Date</div>
+
+                    <div className="stat shadow relative group">
+                        <button onClick={() => handleInfoClick('to')} className="cursor-pointer absolute top-2 right-2 text-base-content hover:text-primary transition-colors">
+                            <Info size={16} />
+                        </button>
+                        <div className="stat-figure text-secondary">
+                            <CalendarCheck2 className="h-6 w-6" />
+                        </div>
+                        <div className="stat-title pr-6">To</div>
+                        <div className="stat-value">{toDate ? dayjs(toDate).format('DD MMM') : 'N/A'}</div>
+                        <div className="stat-desc">End Date</div>
+                    </div>
+
+                    <div className="stat shadow relative group">
+                        <button onClick={() => handleInfoClick('burned')} className="cursor-pointer absolute top-2 right-2 text-base-content hover:text-primary transition-colors">
+                            <Info size={16} />
+                        </button>
+                        <div className="stat-figure text-red-500">
+                            <Flame className="h-6 w-6" />
+                        </div>
+                        <div className="stat-title pr-6">Total Burned</div>
+                        <div className="stat-value text-red-500">{burnedSum}</div>
+                        <div className="stat-desc">Min: {burnedMinGoal} | Max: {burnedGoal}</div>
+                    </div>
+
+                    {/* Row 2 */}
+                    <div className="stat shadow relative group">
+                        <button onClick={() => handleInfoClick('consumed')} className="cursor-pointer absolute top-2 right-2 text-base-content hover:text-primary transition-colors">
+                            <Info size={16} />
+                        </button>
+                        <div className="stat-figure text-green-500">
+                            <Utensils className="h-6 w-6" />
+                        </div>
+                        <div className="stat-title pr-6">Total Consumed</div>
+                        <div className="stat-value text-green-500">{consumedSum}</div>
+                        <div className="stat-desc">Min: {consumedMinGoal} | Max: {consumedGoal}</div>
+                    </div>
+
+                    <div className="stat shadow relative group">
+                        <button onClick={() => handleInfoClick('effective')} className="cursor-pointer absolute top-2 right-2 text-base-content hover:text-primary transition-colors">
+                            <Info size={16} />
+                        </button>
+                        <div className="stat-figure text-blue-500">
+                            <Scale className="h-6 w-6" />
+                        </div>
+                        <div className="stat-title pr-6">Effective</div>
+                        <div className="stat-value text-blue-500">{effective}</div>
+                        <div className="stat-desc">Consumed - Burned</div>
+                    </div>
+
+                    <div
+                        className={`stat shadow rounded-lg relative group ${offset >= 0 ? 'border border-emerald-500' : 'border border-rose-500'
+                            }`}
+                    >
+                        <button onClick={() => handleInfoClick('offset')} className={`cursor-pointer absolute top-2 right-2 transition-colors ${offset >= 0 ? 'text-emerald-500 hover:text-emerald-500' : 'text-rose-500 hover:text-rose-500'}`}>
+                            <Info size={16} />
+                        </button>
+                        <div className={`stat-figure ${offset >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                            <Target className="h-6 w-6" />
+                        </div>
+                        <div className="stat-title pr-6">Offset from {basalMetabolicRate}</div>
+                        <div className={`stat-value ${offset >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                            {offset >= 0 ? '+' : ''}
+                            {offset}
+                        </div>
+                        <div className="stat-desc">{offset >= 0 ? 'In Surplus' : 'In Deficit'}</div>
+                    </div>
                 </div>
 
-                <div className="stat shadow relative group">
-                    <button onClick={() => handleInfoClick('to')} className="cursor-pointer absolute top-2 right-2 text-base-content hover:text-primary transition-colors">
-                        <Info size={16} />
-                    </button>
-                    <div className="stat-figure text-secondary">
-                        <CalendarCheck2 className="h-6 w-6" />
-                    </div>
-                    <div className="stat-title pr-6">To</div>
-                    <div className="stat-value">{toDate ? dayjs(toDate).format('DD MMM') : 'N/A'}</div>
-                    <div className="stat-desc">End Date</div>
+                {/* Scales Section Desktop */}
+                <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <CalorieScale
+                        label="Total Consumed"
+                        value={consumedSum}
+                        min={consumedMinGoal}
+                        max={consumedGoal}
+                        color="bg-green-500"
+                        textColor="text-green-500"
+                        icon={Utensils}
+                    />
+                    <CalorieScale
+                        label="Total Burned"
+                        value={burnedSum}
+                        min={burnedMinGoal}
+                        max={burnedGoal}
+                        color="bg-red-500"
+                        textColor="text-red-500"
+                        icon={Flame}
+                    />
                 </div>
-
-                <div className="stat shadow relative group">
-                    <button onClick={() => handleInfoClick('burned')} className="cursor-pointer absolute top-2 right-2 text-base-content hover:text-primary transition-colors">
-                        <Info size={16} />
-                    </button>
-                    <div className="stat-figure text-red-500">
-                        <Flame className="h-6 w-6" />
-                    </div>
-                    <div className="stat-title pr-6">Total Burned</div>
-                    <div className="stat-value text-red-500">{burnedSum}</div>
-                    <div className="stat-desc">Min: {burnedMinGoal} | Max: {burnedGoal}</div>
-                </div>
-
-                {/* Row 2 */}
-                <div className="stat shadow relative group">
-                    <button onClick={() => handleInfoClick('consumed')} className="cursor-pointer absolute top-2 right-2 text-base-content hover:text-primary transition-colors">
-                        <Info size={16} />
-                    </button>
-                    <div className="stat-figure text-green-500">
-                        <Utensils className="h-6 w-6" />
-                    </div>
-                    <div className="stat-title pr-6">Total Consumed</div>
-                    <div className="stat-value text-green-500">{consumedSum}</div>
-                    <div className="stat-desc">Min: {consumedMinGoal} | Max: {consumedGoal}</div>
-                </div>
-
-                <div className="stat shadow relative group">
-                    <button onClick={() => handleInfoClick('effective')} className="cursor-pointer absolute top-2 right-2 text-base-content hover:text-primary transition-colors">
-                        <Info size={16} />
-                    </button>
-                    <div className="stat-figure text-blue-500">
-                        <Scale className="h-6 w-6" />
-                    </div>
-                    <div className="stat-title pr-6">Effective</div>
-                    <div className="stat-value text-blue-500">{effective}</div>
-                    <div className="stat-desc">Consumed - Burned</div>
-                </div>
-
-                <div
-                    className={`stat shadow rounded-lg relative group ${offset >= 0 ? 'border border-emerald-500' : 'border border-rose-500'
-                        }`}
-                >
-                    <button onClick={() => handleInfoClick('offset')} className={`cursor-pointer absolute top-2 right-2 transition-colors ${offset >= 0 ? 'text-emerald-500 hover:text-emerald-500' : 'text-rose-500 hover:text-rose-500'}`}>
-                        <Info size={16} />
-                    </button>
-                    <div className={`stat-figure ${offset >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
-                        <Target className="h-6 w-6" />
-                    </div>
-                    <div className="stat-title pr-6">Offset from {basalMetabolicRate}</div>
-                    <div className={`stat-value ${offset >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
-                        {offset >= 0 ? '+' : ''}
-                        {offset}
-                    </div>
-                    <div className="stat-desc">{offset >= 0 ? 'In Surplus' : 'In Deficit'}</div>
-                </div>
-
             </div>
 
-            {/* Scales Section */}
-            <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Phone View (block md:hidden) */}
+            <div className="block md:hidden space-y-2.5">
+                {/* Row 1: Effective & Offset side by side */}
+                <div className="grid grid-cols-2 gap-2">
+                    <div className="stat shadow rounded-xl p-3 bg-base-100 border border-base-300/60 relative">
+                        <button onClick={() => handleInfoClick('effective')} className="cursor-pointer absolute top-2 right-2 text-base-content/60 hover:text-primary transition-colors">
+                            <Info size={14} />
+                        </button>
+                        <div className="stat-title pr-4 text-xs font-semibold">Effective</div>
+                        <div className="stat-value text-blue-500 text-xl font-bold">{effective}</div>
+                        <div className="stat-desc text-[10px]">Consumed - Burned</div>
+                    </div>
+
+                    <div className={`stat shadow rounded-xl p-3 bg-base-100 relative ${offset >= 0 ? 'border border-emerald-500/70' : 'border border-rose-500/70'}`}>
+                        <button onClick={() => handleInfoClick('offset')} className={`cursor-pointer absolute top-2 right-2 transition-colors ${offset >= 0 ? 'text-emerald-500 hover:text-emerald-500' : 'text-rose-500 hover:text-rose-500'}`}>
+                            <Info size={14} />
+                        </button>
+                        <div className="stat-title pr-4 text-xs font-semibold truncate">Offset from {basalMetabolicRate}</div>
+                        <div className={`stat-value text-xl font-bold ${offset >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                            {offset >= 0 ? '+' : ''}{offset}
+                        </div>
+                        <div className="stat-desc text-[10px]">{offset >= 0 ? 'In Surplus' : 'In Deficit'}</div>
+                    </div>
+                </div>
+
+                {/* Row 2: Total Consumed in its own row */}
                 <CalorieScale
                     label="Total Consumed"
                     value={consumedSum}
@@ -222,6 +270,8 @@ const CalorieScoreBoard = ({
                     textColor="text-green-500"
                     icon={Utensils}
                 />
+
+                {/* Row 3: Total Burned in its own row */}
                 <CalorieScale
                     label="Total Burned"
                     value={burnedSum}
@@ -231,7 +281,6 @@ const CalorieScoreBoard = ({
                     textColor="text-red-500"
                     icon={Flame}
                 />
-
             </div>
         </div>
     );
@@ -251,12 +300,12 @@ const CalorieScale = ({ label, value, min, max, color, textColor, icon: Icon }) 
     const clampedPercentage = Math.min(Math.max(percentage, 0), 100);
 
     return (
-        <div className="bg-base-100 rounded-xl p-4 shadow-sm border border-base-200">
-            <div className="flex justify-between items-center mb-3">
+        <div className="bg-base-100 rounded-xl p-3 sm:p-4 shadow-sm border border-base-200">
+            <div className="flex justify-between items-center mb-2 sm:mb-3">
                 <div className="flex items-center gap-2">
-                    <span className="font-semibold text-sm">{label}</span>
+                    <span className="font-semibold text-xs sm:text-sm">{label}</span>
                 </div>
-                <span className={`font-bold text-lg ${textColor}`}>
+                <span className={`font-bold text-base sm:text-lg ${textColor}`}>
                     {value.toLocaleString()} <span className="text-xs text-base-content/60 font-normal">kcal</span>
                 </span>
             </div>

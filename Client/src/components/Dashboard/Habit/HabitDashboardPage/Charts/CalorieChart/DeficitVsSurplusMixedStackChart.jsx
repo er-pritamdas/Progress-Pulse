@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import Chart from "react-apexcharts";
+import ScrollableChartWrapper from "../ScrollableChartWrapper";
 
 const DeficitSurplusChart = ({ habitData, bmr }) => {
   const [series, setSeries] = useState([]);
@@ -133,9 +134,24 @@ const DeficitSurplusChart = ({ habitData, bmr }) => {
       borderColor: "#444",
       strokeDashArray: 4,
     },
+    responsive: [
+      {
+        breakpoint: 768,
+        options: {
+          chart: { height: 320 },
+        },
+      },
+    ],
   };
 
-  return <Chart options={options} series={series} type="line" height={420} />;
+  return (
+    <ScrollableChartWrapper
+      minWidth={`max(100%, ${sortedData.length * 48}px)`}
+      showScrollHint={sortedData.length > 7}
+    >
+      <Chart options={options} series={series} type="line" height={420} />
+    </ScrollableChartWrapper>
+  );
 };
 
 export default DeficitSurplusChart;

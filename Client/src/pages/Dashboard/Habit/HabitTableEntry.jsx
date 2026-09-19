@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation, useSearchParams } from "react-router-dom";
 import Heading from "../../../components/Dashboard/Habit/HabitTableEntryPage/Heading.jsx";
 import Pagination from "../../../components/Dashboard/Habit/HabitTableEntryPage/Pagination.jsx";
@@ -1158,6 +1158,14 @@ function HabitTableEntry() {
     if (activeMainTab === "habit" && mobileHasChanges) {
       handleSaveMobileEntry(mobileEntry);
     }
+    if (targetTab === "habit") {
+      const today = getTodayStr();
+      setSelectedMobileDate(today);
+      isInitialScrollDone.current = false;
+      setTimeout(() => {
+        centerDayInStrip(today, false);
+      }, 0);
+    }
     setActiveMainTab(targetTab);
   };
 
@@ -1221,6 +1229,7 @@ function HabitTableEntry() {
     }
     setMobileHasChanges(false);
     setSelectedMobileDate(targetDate);
+    centerDayInStrip(targetDate, true);
   };
 
   const handleOpenMobileDatePicker = (e) => {
@@ -1238,50 +1247,50 @@ function HabitTableEntry() {
     }
   };
 
-  // Auto-scroll selected day into view in horizontal strip
+  // Centers a specific date card inside the mobile concentric circles horizontal strip
+  const centerDayInStrip = useCallback((targetDate, smooth = false) => {
+    const container = daysScrollRef.current;
+    if (!container) return false;
+    const dateToFind = targetDate || getTodayStr();
+    const el = container.querySelector(`[data-date="${dateToFind}"]`);
+    if (!el) return false;
+
+    const containerWidth = container.clientWidth;
+    if (containerWidth <= 0) return false;
+
+    const containerRect = container.getBoundingClientRect();
+    const elRect = el.getBoundingClientRect();
+    const currentScrollLeft = container.scrollLeft;
+    // absoluteElLeft is invariant to the current scroll position
+    const absoluteElLeft = currentScrollLeft + (elRect.left - containerRect.left);
+    const targetScrollLeft = Math.round(absoluteElLeft + (el.clientWidth / 2) - (containerWidth / 2));
+    const maxScroll = Math.max(0, container.scrollWidth - containerWidth);
+    const clampScroll = Math.max(0, Math.min(maxScroll, targetScrollLeft));
+
+    if (smooth) {
+      container.scrollTo({ left: clampScroll, behavior: "smooth" });
+    } else {
+      container.scrollLeft = clampScroll;
+    }
+    return true;
+  }, []);
+
+  // Auto-scroll concentric circle strip to Today (or selected day) whenever Habit Logging is active
   useEffect(() => {
-    if (habitLoading || !daysScrollRef.current || !selectedMobileDate) return;
-    const today = getTodayStr();
+    if (activeMainTab !== "habit" || habitLoading || !daysScrollRef.current) return;
+    const targetDate = selectedMobileDate || getTodayStr();
 
-    const doScroll = () => {
-      const container = daysScrollRef.current;
-      if (!container) return;
-
-      if (selectedMobileDate === today) {
-        // Position Today in 3rd spot (Today - 2 at start, Today - 1 second, Today third, Add Day fourth)
-        const twoDaysAgo = shiftDate(today, -2);
-        const elTwoAgo = container.querySelector(`[data-date="${twoDaysAgo}"]`);
-        if (elTwoAgo) {
-          const containerLeft = container.getBoundingClientRect().left;
-          const targetLeft = elTwoAgo.getBoundingClientRect().left;
-          const offsetDiff = targetLeft - containerLeft;
-          container.scrollLeft += (offsetDiff - 6);
-          return;
-        }
-
-        const elToday = container.querySelector(`[data-date="${today}"]`);
-        if (elToday) {
-          elToday.scrollIntoView({ inline: "center", block: "nearest" });
-          return;
-        }
-      }
-
-      // If other date selected, center that date
-      const el = container.querySelector(`[data-date="${selectedMobileDate}"]`);
-      if (el) {
-        el.scrollIntoView({
-          behavior: isInitialScrollDone.current ? "smooth" : "auto",
-          inline: "center",
-          block: "nearest",
-        });
-      }
+    const doScroll = (smooth = false) => {
+      centerDayInStrip(targetDate, smooth);
     };
 
-    // Execute immediately and across ticks to guarantee exact alignment after loading completes
-    doScroll();
-    const rafId = requestAnimationFrame(doScroll);
-    const t1 = setTimeout(doScroll, 80);
-    const t2 = setTimeout(doScroll, 250);
+    // Immediate attempt
+    doScroll(!isInitialScrollDone.current ? false : true);
+
+    // Multi-tick execution across animation frames and timers to guarantee exact centering once layout/fonts settle
+    const rafId = requestAnimationFrame(() => doScroll(!isInitialScrollDone.current ? false : true));
+    const t1 = setTimeout(() => doScroll(!isInitialScrollDone.current ? false : true), 60);
+    const t2 = setTimeout(() => doScroll(!isInitialScrollDone.current ? false : true), 200);
 
     isInitialScrollDone.current = true;
 
@@ -1290,7 +1299,24 @@ function HabitTableEntry() {
       clearTimeout(t1);
       clearTimeout(t2);
     };
-  }, [selectedMobileDate, extraFutureDays, habitLoading]);
+  }, [activeMainTab, selectedMobileDate, extraFutureDays, habitLoading, centerDayInStrip]);
+
+  // ResizeObserver to ensure concentric circles strip stays centered on Today / selected day on layout reflow or orientation change
+  useEffect(() => {
+    if (activeMainTab !== "habit" || !daysScrollRef.current) return;
+    const container = daysScrollRef.current;
+
+    const observer = new ResizeObserver(() => {
+      const targetDate = selectedMobileDate || getTodayStr();
+      centerDayInStrip(targetDate, false);
+    });
+
+    observer.observe(container);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [activeMainTab, selectedMobileDate, centerDayInStrip]);
 
   // Sync data into mobileDaysCache
   useEffect(() => {
@@ -1470,45 +1496,17 @@ function HabitTableEntry() {
 
   // -------------------------------------------------------- Habit Table HTML Data -----------------------------------------------------------
   return (
-    <div className="p-1 pb-24 md:pb-6">
+    <div className="px-0 pt-0 pb-24 md:px-0 md:pt-0 md:pb-6">
       {/* // Alerts Messages */}
       {showErrorAlert && <ErrorAlert message={alertErrorMessage} top={20} />}
       {showSuccessAlert && (
         <SuccessAlert message={alertSuccessMessage} top={20} />
       )}
 
-      {/* Mobile Top Tabs Switcher (Habits vs Food Logging on Phone) */}
-      <div className="flex md:hidden items-center justify-between p-1 bg-base-200/80 backdrop-blur-md rounded-2xl border border-base-300/80 mb-3 shadow-2xs">
+      {/* Main Tabs Navigation (Desktop only) - ZERO gap with navbar */}
+      <div className="hidden md:flex sticky top-0 -mx-4 z-40 bg-base-100 border-b border-base-300 px-4 h-[46px] items-center mb-3 shadow-xs">
         <button
-          type="button"
-          className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 font-bold text-xs rounded-xl transition-all ${
-            activeMainTab === "habit"
-              ? "bg-primary text-primary-content shadow-sm scale-[1.01]"
-              : "text-base-content/70 hover:text-base-content"
-          }`}
-          onClick={() => handleMainTabChange("habit")}
-        >
-          <CalendarDays size={15} />
-          <span>Habits</span>
-        </button>
-        <button
-          type="button"
-          className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 font-bold text-xs rounded-xl transition-all ${
-            activeMainTab === "food"
-              ? "bg-primary text-primary-content shadow-sm scale-[1.01]"
-              : "text-base-content/70 hover:text-base-content"
-          }`}
-          onClick={() => handleMainTabChange("food")}
-        >
-          <Utensils size={15} />
-          <span>Food Logging</span>
-        </button>
-      </div>
-
-      {/* Main Tabs Navigation (Desktop only) */}
-      <div className="hidden md:flex border-b border-base-300 mb-4 px-2">
-        <button
-          className={`flex items-center gap-2 py-3 px-5 font-bold text-sm border-b-2 transition-all ${
+          className={`flex items-center gap-2 py-2 px-5 font-bold text-sm border-b-2 transition-all h-full ${
             activeMainTab === "habit"
               ? "border-primary text-primary bg-primary/5 rounded-t-lg"
               : "border-transparent text-base-content/60 hover:text-base-content"
@@ -1519,7 +1517,7 @@ function HabitTableEntry() {
           Habit Logging
         </button>
         <button
-          className={`flex items-center gap-2 py-3 px-5 font-bold text-sm border-b-2 transition-all ${
+          className={`flex items-center gap-2 py-2 px-5 font-bold text-sm border-b-2 transition-all h-full ${
             activeMainTab === "food"
               ? "border-primary text-primary bg-primary/5 rounded-t-lg"
               : "border-transparent text-base-content/60 hover:text-base-content"
@@ -1532,11 +1530,11 @@ function HabitTableEntry() {
       </div>
 
       {activeMainTab === "food" ? (
-        <FoodLoggingTab />
+        <FoodLoggingTab onSwitchTab={handleMainTabChange} activeTab={activeMainTab} />
       ) : (
         <>
           {/* Headings (Desktop only) */}
-          <div className="hidden md:flex sticky top-[-20px] z-30 bg-base-300 h-[60px] items-center px-4">
+          <div className="hidden md:flex sticky top-[46px] z-30 bg-base-300 h-[60px] items-center px-4 rounded-xl mb-3 shadow-sm">
             <Heading
               handleAddEntryClick={handleAddEntryClick}
               currentPage={currentPage}
@@ -1558,7 +1556,7 @@ function HabitTableEntry() {
               {/* Desktop Table */}
               <div className="hidden md:block">
                 <table className="bg-base-300 table table-fixed table-md">
-          <thead className="sticky top-[40px] z-30 bg-base-300 [&_th]:bg-base-300">
+          <thead className="sticky top-[106px] z-20 bg-base-300 [&_th]:bg-base-300">
             {/* ToolBar */}
             <tr className="border-b-0 border-none">
               <th colSpan="11" className="py-3 px-4">
@@ -2160,7 +2158,7 @@ function HabitTableEntry() {
       </div>
 
       {/* Mobile Day-by-Day View (md:hidden) */}
-      <div className="md:hidden space-y-3 mt-1 pb-6">
+      <div className="md:hidden space-y-3 mt-0 pb-6">
         {/* Mobile Concentric Rings Day Navigator Header (Horizontal Scrollable) */}
         {(() => {
           const dayMeta = formatDayDisplay(selectedMobileDate);
@@ -2169,83 +2167,104 @@ function HabitTableEntry() {
           const todayStr = getTodayStr();
 
           return (
-            <div className="sticky top-[-16px] z-30 bg-base-100/95 backdrop-blur-xl border border-base-300/80 rounded-2xl p-2.5 shadow-sm mb-3 space-y-2">
-              {/* Top row: Date first, then button to scroll back to today, and arrow marks */}
-              <div className="flex items-center justify-between px-1 text-xs">
-                {/* Date first */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    const [y, m, d] = (selectedMobileDate || getTodayStr()).split("-").map(Number);
-                    setCalendarViewDate(new Date(y, m - 1, d || 1));
-                    setIsCalendarOpen(true);
-                  }}
-                  className="relative inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-base-200/80 hover:bg-base-200 border border-base-300/80 cursor-pointer transition-all active:scale-95 group shadow-2xs select-none"
-                  title="Open Calendar"
-                >
-                  <Calendar size={13} className="text-primary shrink-0" />
-                  <span className="font-extrabold text-base-content text-xs tracking-tight">
-                    {dayMeta.full}
-                  </span>
-                  <ChevronDown size={11} className="text-base-content/40 group-hover:text-primary transition-colors shrink-0" />
-                </button>
-
-                {/* Button to scroll back to today and arrow marks */}
-                <div className="flex items-center gap-1">
-                  {!dayMeta.isToday && (
+            <>
+              {/* Mobile Consolidated Top Sticky Bar (md:hidden) - ZERO gap with navbar */}
+              <div className="sticky top-0 -mx-2 z-30 bg-base-100 border-b border-base-300 px-3 py-2.5 shadow-xs mb-3">
+                {/* Top row: Consolidated Habits/Food tab switcher on left + Date and controls on right */}
+                <div className="flex items-center justify-between text-xs gap-1.5 px-0.5">
+                  {/* Consolidated Mobile Tab Switcher */}
+                  <div className="flex items-center p-0.5 bg-base-200/90 rounded-xl border border-base-300/80 shrink-0 shadow-2xs">
                     <button
                       type="button"
-                      className="text-[11px] font-bold text-primary hover:underline flex items-center gap-1 bg-primary/10 hover:bg-primary/20 px-2 py-0.5 rounded-full cursor-pointer transition-all active:scale-95 border border-primary/20"
-                      onClick={() => handleSelectDay(todayStr)}
-                      title="Scroll back to Today"
+                      onClick={() => handleMainTabChange("habit")}
+                      className={`flex items-center gap-1 px-2 py-1 rounded-lg font-bold text-[11px] transition-all ${
+                        activeMainTab === "habit"
+                          ? "bg-primary text-primary-content shadow-xs"
+                          : "text-base-content/65 hover:text-base-content"
+                      }`}
                     >
-                      <RotateCcw size={10} /> Today
+                      <CalendarDays size={12} className="shrink-0" />
+                      <span>Habits</span>
                     </button>
-                  )}
+                    <button
+                      type="button"
+                      onClick={() => handleMainTabChange("food")}
+                      className={`flex items-center gap-1 px-2 py-1 rounded-lg font-bold text-[11px] transition-all ${
+                        activeMainTab === "food"
+                          ? "bg-primary text-primary-content shadow-xs"
+                          : "text-base-content/65 hover:text-base-content"
+                      }`}
+                    >
+                      <Utensils size={12} className="shrink-0" />
+                      <span>Food</span>
+                    </button>
+                  </div>
 
-                  <button
-                    type="button"
-                    className="btn btn-ghost btn-circle btn-xs text-base-content/70 hover:bg-base-200"
-                    onClick={() => handleDateShift(-1)}
-                    title="Previous Day"
-                  >
-                    <ChevronLeft size={16} />
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-ghost btn-circle btn-xs text-base-content/70 hover:bg-base-200"
-                    onClick={() => handleDateShift(1)}
-                    title="Next Day"
-                  >
-                    <ChevronRight size={16} />
-                  </button>
+                  {/* Right controls: Date picker + Day shift arrows (NO Today button to avoid screen overflow) */}
+                  <div className="flex items-center gap-1 shrink-0 min-w-0">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const [y, m, d] = (selectedMobileDate || getTodayStr()).split("-").map(Number);
+                        setCalendarViewDate(new Date(y, m - 1, d || 1));
+                        setIsCalendarOpen(true);
+                      }}
+                      className="relative inline-flex items-center gap-1 px-2 py-1 rounded-xl bg-base-200/80 hover:bg-base-200 border border-base-300/80 cursor-pointer transition-all active:scale-95 group shadow-2xs select-none shrink-0"
+                      title="Open Calendar"
+                    >
+                      <Calendar size={11} className="text-primary shrink-0" />
+                      <span className="font-extrabold text-base-content text-[11px] tracking-tight truncate max-w-[95px]">
+                        {dayMeta.full}
+                      </span>
+                      <ChevronDown size={10} className="text-base-content/40 group-hover:text-primary transition-colors shrink-0" />
+                    </button>
+
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-circle btn-xs h-6 w-6 min-h-0 text-base-content/70 hover:bg-base-200 shrink-0"
+                      onClick={() => handleDateShift(-1)}
+                      title="Previous Day"
+                    >
+                      <ChevronLeft size={13} />
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-circle btn-xs h-6 w-6 min-h-0 text-base-content/70 hover:bg-base-200 shrink-0"
+                      onClick={() => handleDateShift(1)}
+                      title="Next Day"
+                    >
+                      <ChevronRight size={13} />
+                    </button>
+                  </div>
                 </div>
               </div>
 
-              {/* Rings Legend Bar */}
-              <div className="flex items-center justify-between px-2 py-1 rounded-lg bg-base-200/50 text-[10px] font-semibold text-base-content/70 border border-base-content/5">
-                <span className="flex items-center gap-1">
-                  <span className="w-2 h-2 rounded-full bg-orange-500 inline-block shrink-0 shadow-2xs" />
-                  <span>Burned</span>
-                </span>
-                <span className="flex items-center gap-1">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block shrink-0 shadow-2xs" />
-                  <span>Intake</span>
-                </span>
-                <span className="flex items-center gap-1">
-                  <span className="w-2 h-2 rounded-full bg-cyan-500 inline-block shrink-0 shadow-2xs" />
-                  <span>Water</span>
-                </span>
-                <span className="flex items-center gap-1">
-                  <span className="w-2 h-2 rounded-full bg-violet-500 inline-block shrink-0 shadow-2xs" />
-                  <span>Sleep</span>
-                </span>
-              </div>
+              {/* UNSTICKED Concentric Circles Day Navigator (Rings Legend + Horizontal Strip) */}
+              <div className="bg-base-200 border border-base-300 rounded-2xl p-2.5 shadow-sm mb-3 space-y-2">
+                {/* Rings Legend Bar */}
+                <div className="flex items-center justify-between px-2 py-1 rounded-lg bg-base-100/70 text-[10px] font-semibold text-base-content/70 border border-base-300/60">
+                  <span className="flex items-center gap-1">
+                    <span className="w-2 h-2 rounded-full bg-orange-500 inline-block shrink-0 shadow-2xs" />
+                    <span>Burned</span>
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block shrink-0 shadow-2xs" />
+                    <span>Intake</span>
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <span className="w-2 h-2 rounded-full bg-cyan-500 inline-block shrink-0 shadow-2xs" />
+                    <span>Water</span>
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <span className="w-2 h-2 rounded-full bg-violet-500 inline-block shrink-0 shadow-2xs" />
+                    <span>Sleep</span>
+                  </span>
+                </div>
 
-              {/* Horizontal Scrollable Strip of Days */}
-              <div
-                ref={daysScrollRef}
-                className="flex items-center gap-2 overflow-x-auto py-1 px-0.5 scroll-smooth scroll-hidden select-none"
+                {/* Horizontal Scrollable Strip of Days */}
+                <div
+                  ref={daysScrollRef}
+                className="relative flex items-center gap-2 overflow-x-auto py-1 px-0.5 scroll-hidden select-none"
                 style={{ WebkitOverflowScrolling: "touch" }}
               >
                 {mobileDaysList.map((dStr) => {
@@ -2301,6 +2320,8 @@ function HabitTableEntry() {
                       className={`shrink-0 flex flex-col items-center justify-center py-2 px-1.5 rounded-2xl transition-all cursor-pointer select-none active:scale-95 ${
                         isSelected
                           ? "bg-base-200 border-2 border-primary shadow-md scale-105"
+                          : isToday
+                          ? "bg-base-100 hover:bg-base-200/50 border-2 border-primary/50 opacity-95"
                           : "bg-base-100 hover:bg-base-200/50 border border-base-300/70 opacity-80 hover:opacity-100"
                       }`}
                       style={{ width: "80px" }}
@@ -2382,11 +2403,11 @@ function HabitTableEntry() {
                           x="46"
                           y="38"
                           textAnchor="middle"
-                          className="fill-base-content/60 font-bold"
-                          fontSize="7.5"
-                          letterSpacing="0.04em"
+                          className={isToday ? "fill-primary font-black" : "fill-base-content/60 font-bold"}
+                          fontSize={isToday ? "7" : "7.5"}
+                          letterSpacing={isToday ? "0.02em" : "0.04em"}
                         >
-                          {dayName}
+                          {isToday ? "TODAY" : dayName}
                         </text>
                         <text
                           x="46"
@@ -2442,7 +2463,8 @@ function HabitTableEntry() {
                 </button>
               </div>
             </div>
-          );
+          </>
+        );
         })()}
 
         {mobileLoading ? (
@@ -2460,7 +2482,7 @@ function HabitTableEntry() {
               const strokeOffset = arcLen - (intakePct / 100) * arcLen;
 
               return (
-                <div className="bg-base-100 border border-base-300/80 rounded-2xl p-4 shadow-2xs space-y-3">
+                <div className="bg-base-200 border border-base-300 rounded-2xl p-4 shadow-sm space-y-3">
                   {/* Header */}
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -2558,7 +2580,7 @@ function HabitTableEntry() {
                           type="number"
                           min="0"
                           max="100000"
-                          className="input input-sm input-bordered w-full font-bold text-base bg-base-200/50 pr-12"
+                          className="input input-sm input-bordered w-full font-bold text-base bg-base-100 pr-12"
                           value={mobileEntry.intake === 0 && !mobileHasChanges ? "" : mobileEntry.intake}
                           placeholder="0"
                           onChange={(e) => handleMobileFieldChange("intake", e.target.value === "" ? 0 : Number(e.target.value))}
@@ -2569,7 +2591,7 @@ function HabitTableEntry() {
                       </div>
                       <button
                         type="button"
-                        className="btn btn-sm btn-circle btn-soft btn-primary shrink-0 transition-transform active:scale-95 shadow-2xs"
+                        className="btn btn-sm btn-circle bg-primary/10 hover:bg-primary/20 active:bg-primary/30 border border-primary/30 text-primary shrink-0 transition-all active:scale-95 shadow-2xs focus:outline-none focus:ring-2 focus:ring-primary/40 focus:bg-primary/15 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                         onClick={handleMobileFetchFoodIntake}
                         disabled={isFetchingFoodMobile}
                         title="Fetch & sync calories from Food Logging for this date"
@@ -2600,7 +2622,7 @@ function HabitTableEntry() {
               const mark25 = `${(targetWater * 0.25).toFixed(1)}L`;
 
               return (
-                <div className="bg-base-100 border border-base-300/80 rounded-2xl p-4 shadow-2xs space-y-3">
+                <div className="bg-base-200 border border-base-300 rounded-2xl p-4 shadow-sm space-y-3">
                   {/* Header */}
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -2771,7 +2793,7 @@ function HabitTableEntry() {
                           min="0"
                           max="20"
                           step="0.1"
-                          className="input input-sm input-bordered w-full font-bold text-base bg-base-200/50 pr-10"
+                          className="input input-sm input-bordered w-full font-bold text-base bg-base-100 pr-10"
                           value={mobileEntry.water === 0 && !mobileHasChanges ? "" : mobileEntry.water}
                           placeholder="0.0"
                           onChange={(e) => handleMobileFieldChange("water", e.target.value === "" ? 0 : Number(e.target.value))}
@@ -2811,7 +2833,7 @@ function HabitTableEntry() {
               const strokeOffset = arcLen - (burnedPct / 100) * arcLen;
 
               return (
-                <div className="bg-base-100 border border-base-300/80 rounded-2xl p-4 shadow-2xs space-y-3">
+                <div className="bg-base-200 border border-base-300 rounded-2xl p-4 shadow-sm space-y-3">
                   {/* Header */}
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -2908,7 +2930,7 @@ function HabitTableEntry() {
                         type="number"
                         min="0"
                         max="10000"
-                        className="input input-sm input-bordered w-full font-bold text-base bg-base-200/50 pr-12"
+                        className="input input-sm input-bordered w-full font-bold text-base bg-base-100 pr-12"
                         value={mobileEntry.burned === 0 && !mobileHasChanges ? "" : mobileEntry.burned}
                         placeholder="0"
                         onChange={(e) => handleMobileFieldChange("burned", e.target.value === "" ? 0 : Number(e.target.value))}
@@ -2964,7 +2986,7 @@ function HabitTableEntry() {
               const moonClipY = 108 - moonClipH;
 
               return (
-                <div className="bg-base-100 border border-base-300/80 rounded-2xl p-4 shadow-2xs space-y-3">
+                <div className="bg-base-200 border border-base-300 rounded-2xl p-4 shadow-sm space-y-3">
                   {/* Header (No emoji icon) */}
                   <div className="flex items-center justify-between">
                     <div>
@@ -3259,7 +3281,7 @@ function HabitTableEntry() {
                         min="0"
                         max="24"
                         step="0.5"
-                        className="input input-sm input-bordered w-full font-bold text-base bg-base-200/50 pr-10"
+                        className="input input-sm input-bordered w-full font-bold text-base bg-base-100 pr-10"
                         value={mobileEntry.sleep === 0 && !mobileHasChanges ? "" : mobileEntry.sleep}
                         placeholder="0.0"
                         onChange={(e) => handleMobileFieldChange("sleep", e.target.value === "" ? 0 : Number(e.target.value))}
@@ -3329,7 +3351,7 @@ function HabitTableEntry() {
               const moundW = Math.min(16, 5 + (progressPct / 100) * 11);
 
               return (
-                <div className="bg-base-100 border border-base-300/80 rounded-2xl p-4 shadow-2xs space-y-3">
+                <div className="bg-base-200 border border-base-300 rounded-2xl p-4 shadow-sm space-y-3">
                   {/* Header (No emoji icon) */}
                   <div className="flex items-center justify-between">
                     <div>
@@ -3735,7 +3757,7 @@ function HabitTableEntry() {
                         min="0"
                         max="24"
                         step="0.25"
-                        className="input input-sm input-bordered w-full font-bold text-base bg-base-200/50 pr-10"
+                        className="input input-sm input-bordered w-full font-bold text-base bg-base-100 pr-10"
                         value={mobileEntry.read === 0 && !mobileHasChanges ? "" : mobileEntry.read}
                         placeholder="0.0"
                         onChange={(e) => handleMobileFieldChange("read", e.target.value === "" ? 0 : Number(e.target.value))}
@@ -3791,7 +3813,7 @@ function HabitTableEntry() {
                 : settings.selfcare.slice(0, 10);
 
               return (
-                <div className="bg-base-100 border border-base-300/80 rounded-2xl p-4 shadow-2xs space-y-3">
+                <div className="bg-base-200 border border-base-300 rounded-2xl p-4 shadow-sm space-y-3">
                   {/* Header */}
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -3814,7 +3836,7 @@ function HabitTableEntry() {
                       <span>Daily Progress</span>
                       <span>{completionPct}%</span>
                     </div>
-                    <div className="w-full h-2 rounded-full bg-base-200 overflow-hidden">
+                    <div className="w-full h-2 rounded-full bg-base-300 overflow-hidden">
                       <div
                         className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full transition-all duration-300"
                         style={{ width: `${completionPct}%` }}
@@ -3837,7 +3859,7 @@ function HabitTableEntry() {
                           className={`p-2.5 rounded-xl text-xs font-semibold border transition-all flex items-center justify-between gap-1.5 cursor-pointer select-none active:scale-95 text-left ${
                             isChecked
                               ? "bg-emerald-500/15 border-emerald-500 text-emerald-800 dark:text-emerald-200 ring-2 ring-emerald-500/30 shadow-xs font-bold"
-                              : "bg-base-200/70 border-base-300 text-base-content/80 hover:bg-base-200"
+                              : "bg-base-100/90 border-base-300 text-base-content/80 hover:bg-base-100"
                           }`}
                           onClick={() => {
                             const updated = currentValue
@@ -3873,7 +3895,7 @@ function HabitTableEntry() {
                     <button
                       type="button"
                       onClick={() => setIsSelfCareExpanded(!isSelfCareExpanded)}
-                      className="w-full py-2 px-3 rounded-xl bg-base-200/60 hover:bg-base-200 text-xs font-bold text-primary flex items-center justify-center gap-1.5 border border-base-300/80 transition-all active:scale-98 cursor-pointer mt-1"
+                      className="w-full py-2 px-3 rounded-xl bg-base-100 hover:bg-base-100/80 text-xs font-bold text-primary flex items-center justify-center gap-1.5 border border-base-300 transition-all active:scale-98 cursor-pointer mt-1 shadow-2xs"
                     >
                       <span>
                         {isSelfCareExpanded
@@ -3892,7 +3914,7 @@ function HabitTableEntry() {
 
             {/* 7. Daily Mood (Expressive Mood Cards) */}
             {settings?.mood && settings.mood.length > 0 && (
-              <div className="bg-base-100 border border-base-300/80 rounded-2xl p-4 shadow-2xs space-y-3">
+              <div className="bg-base-200 border border-base-300 rounded-2xl p-4 shadow-sm space-y-3">
                 {/* Header */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -3924,7 +3946,7 @@ function HabitTableEntry() {
                         className={`p-2.5 rounded-xl text-xs font-semibold border transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer active:scale-95 ${
                           isSelected
                             ? "bg-accent/15 border-accent text-accent font-bold ring-2 ring-accent/30 shadow-xs scale-105"
-                            : "bg-base-200/70 border-base-300 text-base-content/75 hover:bg-base-200"
+                            : "bg-base-100/90 border-base-300 text-base-content/75 hover:bg-base-100"
                         }`}
                         onClick={() => {
                           handleMobileFieldChange("mood", isSelected ? "" : m);
@@ -3946,7 +3968,7 @@ function HabitTableEntry() {
               const charCount = journalText.length;
 
               return (
-                <div className="bg-base-100 border border-base-300/80 rounded-2xl p-4 shadow-2xs space-y-3">
+                <div className="bg-base-200 border border-base-300 rounded-2xl p-4 shadow-sm space-y-3">
                   {/* Header */}
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -3971,7 +3993,7 @@ function HabitTableEntry() {
                   <div className="space-y-1.5">
                     <textarea
                       rows={6}
-                      className="textarea textarea-bordered w-full min-h-[150px] text-xs bg-base-200/50 resize-y font-medium placeholder:text-base-content/40 focus:bg-base-100 transition-colors leading-relaxed"
+                      className="textarea textarea-bordered w-full min-h-[150px] text-xs bg-base-100 resize-y font-medium placeholder:text-base-content/40 focus:bg-base-100 transition-colors leading-relaxed"
                       placeholder="Write your daily wins, thoughts, or reflections here..."
                       value={journalText}
                       onChange={(e) => handleMobileFieldChange("journal", e.target.value)}

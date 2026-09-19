@@ -21,6 +21,7 @@ import {
   Edit3,
   Trash2,
   Calendar,
+  CalendarDays,
   Flame,
   Dumbbell,
   Wheat,
@@ -199,7 +200,7 @@ const getMealTotalNutrientVal = (mealLogs, id) => {
   return `${rounded}${meta.unit ? " " + meta.unit : ""}`;
 };
 
-function FoodLoggingTab() {
+function FoodLoggingTab({ onSwitchTab, activeTab = "food" }) {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const habitState = useSelector((state) => state.habit || {});
@@ -261,6 +262,8 @@ function FoodLoggingTab() {
   const [logToDelete, setLogToDelete] = useState(null);
   const [logToEdit, setLogToEdit] = useState(null);
   const [selectedNutrientsMeal, setSelectedNutrientsMeal] = useState("All");
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const [calendarViewDate, setCalendarViewDate] = useState(() => new Date());
 
   const MEAL_CATEGORIES = ["Breakfast", "Lunch", "Dinner", "Snacks", "Other"];
   const MEAL_ICONS = {
@@ -602,95 +605,100 @@ function FoodLoggingTab() {
   );
 
   return (
-    <div className="space-y-6 pb-12">
-      {/* Mobile / Phone Top Navigation Bar (md:hidden) */}
-      <div className="md:hidden sticky top-[-16px] z-30 bg-base-100/95 backdrop-blur-md border border-base-300/80 rounded-2xl px-3 py-2 shadow-sm mb-3">
-        {/* Date Navigation & Calendar Dropdown + Today Button + Nutrients Icon */}
-        <div className="flex items-center justify-between text-xs gap-2">
-          <div className="flex items-center gap-1.5 min-w-0">
+    <div className="space-y-4 md:space-y-6 pb-12">
+      {/* Mobile / Phone Consolidated Top Sticky Bar (md:hidden) - ZERO gap with navbar */}
+      <div className="md:hidden sticky top-0 -mx-2 z-30 bg-base-100 border-b border-base-300 px-3 py-2.5 shadow-xs mb-3">
+        {/* Consolidated Tab Switcher on left + Date Navigation & Controls on right */}
+        <div className="flex items-center justify-between text-xs gap-1.5">
+          {/* Consolidated Mobile Tab Switcher */}
+          {onSwitchTab && (
+            <div className="flex items-center p-0.5 bg-base-200/90 rounded-xl border border-base-300/80 shrink-0 shadow-2xs">
+              <button
+                type="button"
+                onClick={() => onSwitchTab("habit")}
+                className={`flex items-center gap-1 px-2 py-1 rounded-lg font-bold text-[11px] transition-all ${
+                  activeTab === "habit"
+                    ? "bg-primary text-primary-content shadow-xs"
+                    : "text-base-content/65 hover:text-base-content"
+                }`}
+              >
+                <CalendarDays size={12} className="shrink-0" />
+                <span>Habits</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => onSwitchTab("food")}
+                className={`flex items-center gap-1 px-2 py-1 rounded-lg font-bold text-[11px] transition-all ${
+                  activeTab === "food"
+                    ? "bg-primary text-primary-content shadow-xs"
+                    : "text-base-content/65 hover:text-base-content"
+                }`}
+              >
+                <Utensils size={12} className="shrink-0" />
+                <span>Food</span>
+              </button>
+            </div>
+          )}
+
+          {/* Right Controls: Date Dropdown + Prev/Next + Nutrients Icon (NO Today button to avoid screen overflow) */}
+          <div className="flex items-center gap-1 shrink-0 min-w-0">
+
+            {/* Center Date Button (Triggers Theme-Matched Calendar Modal) */}
+            <button
+              type="button"
+              onClick={() => {
+                const [y, m, d] = (selectedDate || getTodayDate()).split("-").map(Number);
+                setCalendarViewDate(new Date(y, m - 1, d || 1));
+                setIsCalendarOpen(true);
+              }}
+              className="px-2 py-1 rounded-xl bg-base-200/80 hover:bg-base-200 border border-base-300/80 flex items-center gap-1 cursor-pointer shadow-2xs shrink-0 select-none active:scale-95"
+              title="Open Calendar"
+            >
+              <Calendar size={11} className="text-primary shrink-0" />
+              <span className="font-extrabold text-[11px] truncate max-w-[85px]">
+                {formatDate(selectedDate)}
+              </span>
+              <ChevronDown size={10} className="text-base-content/40 shrink-0" />
+            </button>
+
             {/* Previous Day (<) */}
             <button
               type="button"
-              className="btn btn-xs btn-circle btn-ghost border border-base-300/80 shrink-0"
+              className="btn btn-xs btn-circle btn-ghost h-6 w-6 min-h-0 text-base-content/70 hover:bg-base-200 shrink-0"
               onClick={() => changeSelectedDateByDays(-1)}
               title="Previous Day"
             >
-              <ChevronLeft size={15} />
+              <ChevronLeft size={13} />
             </button>
-
-            {/* Center Date Dropdown */}
-            <div className="dropdown dropdown-bottom floating-label">
-              <div
-                tabIndex={0}
-                role="button"
-                className="px-2.5 py-1.5 rounded-xl bg-base-200/80 hover:bg-base-200 border border-base-300/80 flex items-center gap-1.5 cursor-pointer shadow-2xs"
-              >
-                <Calendar size={13} className="text-primary shrink-0" />
-                <span className="font-bold text-xs truncate max-w-[125px]">
-                  {formatDate(selectedDate)}
-                </span>
-              </div>
-              <div className="dropdown-content z-[999] bg-base-100 rounded-box shadow-2xl p-2 mt-1 border border-base-300">
-                <calendar-date
-                  class="cally"
-                  value={selectedDate}
-                  onchange={(e) => setSelectedDate(e.target.value)}
-                >
-                  <svg aria-label="Previous" className="fill-current size-4" slot="previous" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-                    <path d="M15.75 19.5 8.25 12l7.5-7.5"></path>
-                  </svg>
-                  <svg aria-label="Next" className="fill-current size-4" slot="next" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-                    <path d="m8.25 4.5 7.5 7.5-7.5 7.5"></path>
-                  </svg>
-                  <calendar-month></calendar-month>
-                </calendar-date>
-              </div>
-            </div>
 
             {/* Next Day (>) */}
             <button
               type="button"
-              className="btn btn-xs btn-circle btn-ghost border border-base-300/80 shrink-0"
+              className="btn btn-xs btn-circle btn-ghost h-6 w-6 min-h-0 text-base-content/70 hover:bg-base-200 shrink-0"
               onClick={() => changeSelectedDateByDays(1)}
               title="Next Day"
             >
-              <ChevronRight size={15} />
-            </button>
-          </div>
-
-          {/* Right Controls: Today Button + Nutrients Icon */}
-          <div className="flex items-center gap-1.5 shrink-0">
-            <button
-              type="button"
-              onClick={() => setSelectedDate(getTodayDate())}
-              className={`btn btn-xs rounded-xl font-bold px-2.5 transition-all ${
-                selectedDate === getTodayDate()
-                  ? "btn-primary shadow-xs"
-                  : "btn-ghost border border-base-300/80 hover:bg-base-200 text-base-content/80"
-              }`}
-              title="Jump to Today's Food Log"
-            >
-              Today
+              <ChevronRight size={13} />
             </button>
 
             {/* Nutrients Icon Button */}
             <button
               type="button"
-              className="btn btn-xs btn-circle btn-ghost border border-base-300/80 text-info hover:bg-info/10 shadow-2xs shrink-0"
+              className="btn btn-xs btn-circle btn-ghost h-6 w-6 min-h-0 text-info hover:bg-info/10 shrink-0"
               onClick={() => {
                 setSelectedNutrientsMeal("All");
                 setIsNutrientsModalOpen(true);
               }}
               title="Daily Nutrients Breakdown"
             >
-              <Info size={15} />
+              <Info size={13} />
             </button>
           </div>
         </div>
       </div>
 
-      {/* Desktop Sticky Top Toolbar (hidden on mobile) */}
-      <div className="hidden md:flex sticky -top-4 z-40 bg-base-200 -mt-4 -mx-4 px-4 sm:px-6 py-3.5 border-b border-base-300 shadow-md flex-wrap justify-between items-center gap-4 transition-all">
+      {/* Desktop Top Toolbar (hidden on mobile) */}
+      <div className="hidden md:flex sticky top-[46px] z-30 bg-base-200 px-4 sm:px-6 py-3.5 border border-base-300 rounded-2xl shadow-sm flex-wrap justify-between items-center gap-4 transition-all mb-4">
         <div className="flex items-center gap-3">
           <div className="p-3 bg-primary/15 text-primary rounded-xl">
             <Utensils size={26} />
@@ -729,44 +737,22 @@ function FoodLoggingTab() {
               <ChevronLeft size={16} />
             </button>
 
-            <div className="dropdown dropdown-end floating-label">
-              <div
-                tabIndex={0}
-                role="button"
-                className="input text-xs w-44 bg-base-100 flex items-center justify-between cursor-pointer px-3"
-              >
+            <button
+              type="button"
+              onClick={() => {
+                const [y, m, d] = (selectedDate || getTodayDate()).split("-").map(Number);
+                setCalendarViewDate(new Date(y, m - 1, d || 1));
+                setIsCalendarOpen(true);
+              }}
+              className="input text-xs w-44 bg-base-100 flex items-center justify-between cursor-pointer px-3 border border-base-300 hover:bg-base-200/50"
+              title="Open Calendar"
+            >
+              <div className="flex items-center min-w-0">
                 <Calendar size={14} className="text-primary shrink-0 mr-1.5" />
                 <span className="font-medium whitespace-nowrap truncate">{formatDate(selectedDate) || "-- / --- / --"}</span>
               </div>
-              <span>Select Date</span>
-              <div className="dropdown-content z-[999] bg-base-100 rounded-box shadow-xl p-2 mt-1 border border-base-300">
-                <calendar-date
-                  class="cally"
-                  value={selectedDate}
-                  onchange={(e) => setSelectedDate(e.target.value)}
-                >
-                  <svg
-                    aria-label="Previous"
-                    className="fill-current size-4"
-                    slot="previous"
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 24 24"
-                  >
-                    <path d="M15.75 19.5 8.25 12l7.5-7.5"></path>
-                  </svg>
-                  <svg
-                    aria-label="Next"
-                    className="fill-current size-4"
-                    slot="next"
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 24 24"
-                  >
-                    <path d="m8.25 4.5 7.5 7.5-7.5 7.5"></path>
-                  </svg>
-                  <calendar-month></calendar-month>
-                </calendar-date>
-              </div>
-            </div>
+              <ChevronDown size={12} className="text-base-content/40 shrink-0" />
+            </button>
 
             <button
               type="button"
@@ -806,7 +792,7 @@ function FoodLoggingTab() {
       ) : (
         <>
           {/* Phone View: Concentric Circles Nutrient Overview Dashboard (md:hidden) */}
-          <div className="md:hidden bg-base-100 border border-base-300/80 rounded-2xl p-3.5 shadow-2xs space-y-3 mb-2">
+          <div className="md:hidden bg-base-200 border border-base-300 rounded-2xl p-3.5 shadow-sm space-y-3 mb-2">
             <MacroConcentricCircles
               data={data}
               targets={NUTRIENT_TARGETS}
@@ -1442,11 +1428,11 @@ function FoodLoggingTab() {
           return (
             <div
               key={`phone-${mealType}`}
-              className="bg-base-100 rounded-2xl border border-base-300/80 shadow-2xs overflow-hidden transition-all"
+              className="bg-base-200 rounded-2xl border border-base-300 shadow-sm overflow-hidden transition-all"
             >
               {/* Meal Header */}
               <div
-                className="p-3 bg-base-200/50 flex items-center justify-between cursor-pointer select-none"
+                className="p-3 bg-base-300/60 flex items-center justify-between cursor-pointer select-none hover:bg-base-300/80 transition-colors"
                 onClick={() => toggleMealCollapse(mealType)}
               >
                 <div className="flex items-center gap-1.5 min-w-0">
@@ -1524,7 +1510,7 @@ function FoodLoggingTab() {
               {!isCollapsed && (
                 <div className="p-3 space-y-2 border-t border-base-200/70">
                   {mealLogs.length === 0 ? (
-                    <div className="py-4 px-3 text-center border border-dashed border-base-300/80 rounded-xl bg-base-200/20 space-y-2">
+                    <div className="py-4 px-3 text-center border border-dashed border-base-300 rounded-xl bg-base-100/60 space-y-2">
                       <p className="text-xs text-base-content/50 font-medium">
                         No {mealType.toLowerCase()} logged for this date.
                       </p>
@@ -1552,7 +1538,7 @@ function FoodLoggingTab() {
                         {mealLogs.map((log) => (
                           <div
                             key={log._id}
-                            className="bg-base-200/40 hover:bg-base-200/70 border border-base-300/60 rounded-xl p-2.5 space-y-1.5 transition-colors"
+                            className="bg-base-100/90 hover:bg-base-100 border border-base-300/80 rounded-xl p-2.5 space-y-1.5 transition-colors shadow-2xs"
                           >
                             {/* Row 1: Food Title & Calories */}
                             <div className="flex items-start justify-between gap-2">
@@ -1789,6 +1775,203 @@ function FoodLoggingTab() {
           </div>
         );
       })()}
+
+      {/* Theme-Matched Calendar Modal (Exact same design and behavior as Habit Date Popup) */}
+      {isCalendarOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-all"
+          onClick={() => setIsCalendarOpen(false)}
+        >
+          <div
+            className="bg-base-100 border border-base-300/80 rounded-3xl p-4 shadow-2xl w-full max-w-[340px] space-y-3.5 transition-all text-base-content"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Top Header */}
+            <div className="flex items-center justify-between pb-2 border-b border-base-200">
+              <div className="flex items-center gap-2">
+                <span className="p-1.5 rounded-xl bg-primary/10 text-primary">
+                  <Calendar size={16} />
+                </span>
+                <div>
+                  <h3 className="text-xs font-black uppercase tracking-wider text-base-content">
+                    Jump to Date
+                  </h3>
+                  <p className="text-[10px] text-base-content/60 font-medium">
+                    Select any day to view or edit food logs
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsCalendarOpen(false)}
+                className="btn btn-ghost btn-circle btn-xs text-base-content/60 hover:text-base-content hover:bg-base-200"
+                title="Close"
+              >
+                <X size={15} />
+              </button>
+            </div>
+
+            {/* Month & Year Navigation and Days Grid */}
+            {(() => {
+              const viewYear = calendarViewDate.getFullYear();
+              const viewMonth = calendarViewDate.getMonth();
+              const monthName = calendarViewDate.toLocaleDateString("en-US", { month: "long" });
+
+              const handlePrevMonth = () => {
+                setCalendarViewDate(new Date(viewYear, viewMonth - 1, 1));
+              };
+
+              const handleNextMonth = () => {
+                setCalendarViewDate(new Date(viewYear, viewMonth + 1, 1));
+              };
+
+              // 0=Sun, 1=Mon, ..., 6=Sat
+              const firstDayIndex = new Date(viewYear, viewMonth, 1).getDay();
+              const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+              const daysInPrevMonth = new Date(viewYear, viewMonth, 0).getDate();
+
+              const formatCellDate = (y, m, d) => {
+                const mm = String(m + 1).padStart(2, "0");
+                const dd = String(d).padStart(2, "0");
+                return `${y}-${mm}-${dd}`;
+              };
+
+              const cells = [];
+
+              // Leading days from previous month
+              for (let i = firstDayIndex - 1; i >= 0; i--) {
+                const dayNum = daysInPrevMonth - i;
+                const prevM = viewMonth === 0 ? 11 : viewMonth - 1;
+                const prevY = viewMonth === 0 ? viewYear - 1 : viewYear;
+                cells.push({
+                  dayNum,
+                  dateStr: formatCellDate(prevY, prevM, dayNum),
+                  isCurrentMonth: false,
+                });
+              }
+
+              // Days of current month
+              for (let dayNum = 1; dayNum <= daysInMonth; dayNum++) {
+                cells.push({
+                  dayNum,
+                  dateStr: formatCellDate(viewYear, viewMonth, dayNum),
+                  isCurrentMonth: true,
+                });
+              }
+
+              // Trailing days from next month to fill grid
+              const remaining = (7 - (cells.length % 7)) % 7;
+              for (let dayNum = 1; dayNum <= remaining; dayNum++) {
+                const nextM = viewMonth === 11 ? 0 : viewMonth + 1;
+                const nextY = viewMonth === 11 ? viewYear + 1 : viewYear;
+                cells.push({
+                  dayNum,
+                  dateStr: formatCellDate(nextY, nextM, dayNum),
+                  isCurrentMonth: false,
+                });
+              }
+
+              const todayStr = getTodayDate();
+
+              return (
+                <>
+                  {/* Month navigation */}
+                  <div className="flex items-center justify-between px-1">
+                    <button
+                      type="button"
+                      onClick={handlePrevMonth}
+                      className="btn btn-ghost btn-circle btn-xs hover:bg-base-200 text-base-content/80"
+                      title="Previous Month"
+                    >
+                      <ChevronLeft size={16} />
+                    </button>
+
+                    <div className="text-center">
+                      <span className="font-extrabold text-sm text-base-content tracking-tight">
+                        {monthName} {viewYear}
+                      </span>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleNextMonth}
+                      className="btn btn-ghost btn-circle btn-xs hover:bg-base-200 text-base-content/80"
+                      title="Next Month"
+                    >
+                      <ChevronRight size={16} />
+                    </button>
+                  </div>
+
+                  {/* Weekdays */}
+                  <div className="grid grid-cols-7 text-center text-[10px] font-black uppercase text-base-content/40 tracking-wider">
+                    <span>Su</span>
+                    <span>Mo</span>
+                    <span>Tu</span>
+                    <span>We</span>
+                    <span>Th</span>
+                    <span>Fr</span>
+                    <span>Sa</span>
+                  </div>
+
+                  {/* Calendar Days */}
+                  <div className="grid grid-cols-7 gap-1">
+                    {cells.map((cell) => {
+                      const isSelected = cell.dateStr === selectedDate;
+                      const isToday = cell.dateStr === todayStr;
+
+                      return (
+                        <button
+                          key={cell.dateStr}
+                          type="button"
+                          onClick={() => {
+                            setSelectedDate(cell.dateStr);
+                            setIsCalendarOpen(false);
+                          }}
+                          className={`relative h-10 w-full flex flex-col items-center justify-center rounded-xl text-xs transition-all cursor-pointer select-none active:scale-90 ${
+                            isSelected
+                              ? "bg-primary text-primary-content font-black shadow-md scale-105"
+                              : isToday
+                              ? "border-2 border-primary text-primary font-black bg-primary/5 hover:bg-primary/10"
+                              : cell.isCurrentMonth
+                              ? "text-base-content hover:bg-base-200 hover:text-primary font-semibold"
+                              : "text-base-content/30 opacity-40 hover:bg-base-200/50 hover:opacity-100 font-normal"
+                          }`}
+                        >
+                          <span>{cell.dayNum}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Footer */}
+                  <div className="flex items-center justify-between pt-2 border-t border-base-200 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const today = getTodayDate();
+                        setSelectedDate(today);
+                        setCalendarViewDate(new Date());
+                        setIsCalendarOpen(false);
+                      }}
+                      className="text-xs font-bold text-primary hover:underline flex items-center gap-1 bg-primary/10 hover:bg-primary/20 px-2.5 py-1 rounded-xl transition-all active:scale-95 border border-primary/20"
+                    >
+                      <RotateCcw size={11} /> Today
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setIsCalendarOpen(false)}
+                      className="btn btn-ghost btn-xs text-base-content/70 hover:bg-base-200 rounded-xl"
+                    >
+                      Close
+                    </button>
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

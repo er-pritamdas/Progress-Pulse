@@ -97,120 +97,125 @@ function FoodItemNutrientsModal({ isOpen, onClose, foodItem }) {
 
   return (
     <div className="fixed inset-0 z-[99999] bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
-      <div className="bg-base-200 rounded-3xl max-w-3xl w-full h-[620px] border border-base-300 shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-        {/* Header */}
-        <div className="px-5 py-3.5 bg-base-300/80 border-b border-base-300 flex justify-between items-center shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="p-3 bg-secondary/20 text-secondary rounded-2xl">
-              <Utensils size={24} />
+      <div className="bg-base-200 rounded-3xl max-w-2xl w-full max-h-[90vh] border border-base-300 shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+        {/* Header with small, well-proportioned heading & zero overlap */}
+        <div className="px-4 sm:px-5 py-3 bg-base-300/80 border-b border-base-300 flex justify-between items-center shrink-0 gap-2">
+          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+            <div className="p-2 bg-secondary/15 text-secondary rounded-xl shrink-0">
+              <Utensils size={18} />
             </div>
-            <div>
-              <h2 className="text-xl font-bold flex items-center gap-2">
-                {foodItem.foodName || foodObj.name}
-                <span className="badge badge-primary badge-sm font-extrabold">
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-1.5 min-w-0">
+                <h2 className="text-sm sm:text-base font-extrabold text-base-content truncate max-w-[200px] sm:max-w-[360px]" title={foodItem.foodName || foodObj.name}>
+                  {foodItem.foodName || foodObj.name}
+                </h2>
+                <span className="badge badge-primary badge-xs font-bold shrink-0">
                   {servings} Serving{servings !== 1 ? "s" : ""}
                 </span>
-              </h2>
-              <p className="text-xs text-base-content/70">
-                Logged Portion: <span className="font-bold text-primary">{formatServingCalc(foodItem)}</span> • {foodObj.brand || "Generic"}
+              </div>
+              <p className="text-[11px] text-base-content/70 truncate mt-0.5" title={`${formatServingCalc(foodItem)} • ${foodObj.brand || "Generic"}`}>
+                Portion: <span className="font-bold text-primary">{formatServingCalc(foodItem)}</span> • {foodObj.brand || "Generic"}
               </p>
             </div>
           </div>
-          <button className="btn btn-sm btn-circle btn-ghost" onClick={onClose}>
-            <X size={20} />
+          <button className="btn btn-sm btn-circle btn-ghost shrink-0 text-base-content/70 hover:text-base-content" onClick={onClose}>
+            <X size={18} />
           </button>
         </div>
 
         {/* Body */}
-        <div className="p-5 sm:p-6 space-y-5 flex-1 overflow-y-auto min-h-0">
+        <div className="p-4 sm:p-5 space-y-4 flex-1 overflow-y-auto min-h-0">
           {/* Key Macros Summary Banner */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-base-100 p-4 rounded-2xl border border-base-300 shadow-sm text-center">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 bg-base-100 p-3 rounded-2xl border border-base-300 shadow-2xs text-center">
             <div className="space-y-0.5">
-              <div className="text-[11px] font-bold text-error uppercase flex items-center justify-center gap-1">
-                <Flame size={14} /> Calories
+              <div className="text-[10px] font-bold text-error uppercase flex items-center justify-center gap-1">
+                <Flame size={12} /> Calories
               </div>
-              <div className="text-xl font-extrabold">{getNutrientVal({ id: "calories" })} kcal</div>
+              <div className="text-base sm:text-lg font-black truncate">{getNutrientVal({ id: "calories" })} kcal</div>
             </div>
             <div className="space-y-0.5">
-              <div className="text-[11px] font-bold text-info uppercase flex items-center justify-center gap-1">
-                <Dumbbell size={14} /> Protein
+              <div className="text-[10px] font-bold text-info uppercase flex items-center justify-center gap-1">
+                <Dumbbell size={12} /> Protein
               </div>
-              <div className="text-xl font-extrabold">{getNutrientVal({ id: "protein" })} g</div>
+              <div className="text-base sm:text-lg font-black truncate">{getNutrientVal({ id: "protein" })} g</div>
             </div>
             <div className="space-y-0.5">
-              <div className="text-[11px] font-bold text-warning uppercase flex items-center justify-center gap-1">
-                <Wheat size={14} /> Carbs
+              <div className="text-[10px] font-bold text-warning uppercase flex items-center justify-center gap-1">
+                <Wheat size={12} /> Carbs
               </div>
-              <div className="text-xl font-extrabold">{getNutrientVal({ id: "carbohydrates" })} g</div>
+              <div className="text-base sm:text-lg font-black truncate">{getNutrientVal({ id: "carbohydrates" })} g</div>
             </div>
             <div className="space-y-0.5">
-              <div className="text-[11px] font-bold text-success uppercase flex items-center justify-center gap-1">
-                <PieChart size={14} /> Fat
+              <div className="text-[10px] font-bold text-success uppercase flex items-center justify-center gap-1">
+                <PieChart size={12} /> Fat
               </div>
-              <div className="text-xl font-extrabold">{getNutrientVal({ id: "fat" })} g</div>
+              <div className="text-base sm:text-lg font-black truncate">{getNutrientVal({ id: "fat" })} g</div>
             </div>
           </div>
 
-          {/* Category Tabs */}
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
+          {/* Category Tabs (No wrapping, no scrollbar, horizontally scrollable) */}
+          <div className="flex items-center gap-1.5 overflow-x-auto py-0.5 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden scroll-hidden select-none shrink-0">
             {["All", ...Object.keys(NUTRIENT_CATEGORIES)].map((tab) => (
               <button
                 key={tab}
-                className={`btn btn-xs sm:btn-sm rounded-xl font-bold transition-all whitespace-nowrap ${
+                className={`btn btn-xs rounded-xl font-bold transition-all shrink-0 whitespace-nowrap ${
                   activeTab === tab
-                    ? "btn-primary shadow-md"
-                    : "btn-ghost border border-base-300 text-base-content/70"
+                    ? "btn-primary shadow-xs"
+                    : "btn-ghost bg-base-100 hover:bg-base-300/60 border border-base-300 text-base-content/70"
                 }`}
                 onClick={() => setActiveTab(tab)}
               >
-                {tab}
+                {tab === "Macronutrients" ? "Macros" : tab}
               </button>
             ))}
           </div>
 
           {/* Categorized Nutrient Breakdown */}
-          <div className="space-y-6">
+          <div className="space-y-4">
             {categoriesToDisplay.map((category) => {
               const nutrients = NUTRIENT_CATEGORIES[category] || [];
+              const categoryTitle = category === "Macronutrients" ? "Macros" : category;
               return (
-                <div key={category} className="space-y-3">
-                  <div className="flex justify-between items-center border-b border-base-300 pb-1.5">
-                    <h3 className="text-xs font-black uppercase tracking-wider text-primary flex items-center gap-2">
-                      <Sparkles size={14} /> {category}
+                <div key={category} className="space-y-2.5">
+                  <div className="flex justify-between items-center border-b border-base-300/60 pb-1">
+                    <h3 className="text-[11px] font-black uppercase tracking-wider text-primary flex items-center gap-1.5">
+                      <Sparkles size={13} /> {categoryTitle}
                     </h3>
                   </div>
 
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-2.5">
                     {nutrients.map((n) => {
                       const Icon = n.icon;
                       const val = getNutrientVal(n);
                       return (
                         <div
                           key={n.id}
-                          className="bg-base-100 p-3.5 rounded-2xl border border-base-300 shadow-sm flex flex-col justify-between"
+                          className="bg-base-100 p-2.5 sm:p-3 rounded-2xl border border-base-300 shadow-2xs flex flex-col justify-between min-w-0"
                         >
-                          <div className="flex items-center justify-between gap-1 mb-1">
-                            <span className="text-xs font-bold text-base-content/80 truncate flex items-center gap-1.5">
-                              <Icon size={14} className={n.color} />
-                              {n.label}
-                            </span>
+                          <div className="flex items-center justify-between gap-1 mb-1 min-w-0">
+                            <div className="flex items-center gap-1.5 min-w-0 flex-1" title={n.label}>
+                              <Icon size={13} className={`${n.color} shrink-0`} />
+                              <span className="text-xs font-bold text-base-content/85 truncate">
+                                {n.label}
+                              </span>
+                            </div>
                             <button
                               type="button"
-                              className="btn btn-ghost btn-xs p-1 text-info hover:bg-info/10 rounded-lg transition-all"
+                              className="btn btn-ghost btn-xs p-1 text-info hover:bg-info/10 rounded-lg transition-all shrink-0 h-6 w-6 min-h-0"
                               title={`Learn more about ${n.label}`}
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setSelectedWikiNutrient(n);
                               }}
                             >
-                              <Info size={14} />
+                              <Info size={13} />
                             </button>
                           </div>
-                          <div className="flex items-baseline gap-1 my-1">
-                            <span className="text-lg font-extrabold tracking-tight">
+                          <div className="flex items-baseline gap-1 mt-auto min-w-0">
+                            <span className="text-base sm:text-lg font-black tracking-tight text-base-content truncate">
                               {val}
                             </span>
-                            <span className="text-xs font-semibold text-base-content/60">
+                            <span className="text-[10px] font-semibold text-base-content/50 shrink-0">
                               {n.unit}
                             </span>
                           </div>

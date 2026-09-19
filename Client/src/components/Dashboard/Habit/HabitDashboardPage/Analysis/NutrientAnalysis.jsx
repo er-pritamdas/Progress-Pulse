@@ -30,6 +30,7 @@ import {
 import NutrientGraphCard from "../Charts/NutrientGraphCard";
 import NutrientWikiModal from "../../FoodLogging/NutrientWikiModal";
 import NutrientTableModal from "../NutrientTableModal";
+import NutrientMonthCalendar from "../Charts/NutrientMonthCalendar";
 
 export const NUTRIENT_CATEGORIES_CONFIG = {
   Macronutrients: [
@@ -570,237 +571,260 @@ function NutrientAnalysis({
 
   return (
     <div className="mb-12 animate-fade-in-up space-y-8">
-      {/* Render Category Sections */}
-      {categoriesToRender.map((category) => {
-        const categoryNutrients = NUTRIENT_CATEGORIES_CONFIG[category] || [];
-        const activeSelected = selectedGraphs[category] || [];
 
-        // Filter cards by active selections and optional Avg < Max Target condition
-        const selectedCategoryNutrients = categoryNutrients.filter((n) => activeSelected.includes(n.id));
+      {/* ── Desktop View (hidden md:block) — existing full cards layout ── */}
+      <div className="hidden md:block space-y-8">
+        {/* Render Category Sections */}
+        {categoriesToRender.map((category) => {
+          const categoryNutrients = NUTRIENT_CATEGORIES_CONFIG[category] || [];
+          const activeSelected = selectedGraphs[category] || [];
 
-        const displayedNutrients = selectedCategoryNutrients.filter((nutrient) => {
-          if (targetFilter !== "below-max") return true;
-          const targetInfo = TARGETS_CONFIG[nutrient.id] || { min: 0, max: 0 };
-          const maxTarget = targetInfo.max || 0;
-          if (maxTarget <= 0) return true;
+          // Filter cards by active selections and optional Avg < Max Target condition
+          const selectedCategoryNutrients = categoryNutrients.filter((n) => activeSelected.includes(n.id));
 
-          const dailyValues = calculateNutrientDailyValues(nutrient.id);
-          const values = dailyValues.map((d) => d.value || 0);
-          const totalConsumed = values.reduce((sum, val) => sum + val, 0);
-          const loggedDaysCount = dailyValues.filter((d) => d.hasLog || (d.value || 0) > 0).length;
-          const avgValue = loggedDaysCount > 0 ? totalConsumed / loggedDaysCount : 0;
+          const displayedNutrients = selectedCategoryNutrients.filter((nutrient) => {
+            if (targetFilter !== "below-max") return true;
+            const targetInfo = TARGETS_CONFIG[nutrient.id] || { min: 0, max: 0 };
+            const maxTarget = targetInfo.max || 0;
+            if (maxTarget <= 0) return true;
 
-          return avgValue < maxTarget;
-        });
+            const dailyValues = calculateNutrientDailyValues(nutrient.id);
+            const values = dailyValues.map((d) => d.value || 0);
+            const totalConsumed = values.reduce((sum, val) => sum + val, 0);
+            const loggedDaysCount = dailyValues.filter((d) => d.hasLog || (d.value || 0) > 0).length;
+            const avgValue = loggedDaysCount > 0 ? totalConsumed / loggedDaysCount : 0;
 
-        return (
-          <section key={category} className="space-y-4">
-            {/* Category Control Header */}
-            <div className="bg-base-100 p-4 rounded-2xl border border-base-300 shadow-sm flex flex-col gap-3">
-              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-base-200/80 pb-3">
-                <div className="flex items-center gap-2.5">
-                  <span className="p-2 rounded-xl bg-primary/10 text-primary font-bold text-sm">
-                    <SlidersHorizontal size={16} />
-                  </span>
-                  <div>
-                    <h3 className="font-bold text-base uppercase tracking-wider text-base-content flex items-center gap-2">
-                      {category} Cards
-                    </h3>
-                    <span className="text-xs text-base-content/60 font-medium">
-                      {displayedNutrients.length} of {categoryNutrients.length} cards visible
-                      {targetFilter === "below-max" && " (Filtered: Avg < Max Target)"}
+            return avgValue < maxTarget;
+          });
+
+          return (
+            <section key={category} className="space-y-4">
+              {/* Category Control Header */}
+              <div className="bg-base-100 p-4 rounded-2xl border border-base-300 shadow-sm flex flex-col gap-3">
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-base-200/80 pb-3">
+                  <div className="flex items-center gap-2.5">
+                    <span className="p-2 rounded-xl bg-primary/10 text-primary font-bold text-sm">
+                      <SlidersHorizontal size={16} />
                     </span>
+                    <div>
+                      <h3 className="font-bold text-base uppercase tracking-wider text-base-content flex items-center gap-2">
+                        {category} Cards
+                      </h3>
+                      <span className="text-xs text-base-content/60 font-medium">
+                        {displayedNutrients.length} of {categoryNutrients.length} cards visible
+                        {targetFilter === "below-max" && " (Filtered: Avg < Max Target)"}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* View Mode & Layout Control Buttons */}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {/* Target Filter (All vs Avg < Max Target) */}
+                    <div className="join bg-base-200/80 p-1 rounded-2xl border border-base-300/60 shadow-xs">
+                      <button
+                        type="button"
+                        className={`join-item btn btn-xs rounded-xl font-bold gap-1.5 transition-all ${
+                          targetFilter === "all"
+                            ? "btn-primary text-primary-content shadow-xs"
+                            : "btn-ghost text-base-content/60 hover:text-base-content"
+                        }`}
+                        onClick={() => setTargetFilter("all")}
+                        title="Show All Selected Cards"
+                      >
+                        <Filter size={13} />
+                        <span className="hidden sm:inline">All Cards</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        className={`join-item btn btn-xs rounded-xl font-bold gap-1.5 transition-all ${
+                          targetFilter === "below-max"
+                            ? "btn-primary text-primary-content shadow-xs"
+                            : "btn-ghost text-base-content/60 hover:text-base-content"
+                        }`}
+                        onClick={() => {
+                          setTargetFilter("below-max");
+                          selectAllGraphsForAllCategories();
+                        }}
+                        title="Show only cards where Average is less than Max Target"
+                      >
+                        <TrendingDown size={13} />
+                        <span className="hidden sm:inline">Avg &lt; Max Target</span>
+                      </button>
+                    </div>
+
+                    {/* Layout Mode (Side by Side vs Full Width) */}
+                    <div className="join bg-base-200/80 p-1 rounded-2xl border border-base-300/60 shadow-xs">
+                      <button
+                        type="button"
+                        className={`join-item btn btn-xs rounded-xl font-bold gap-1.5 transition-all ${
+                          cardLayout === "side-by-side"
+                            ? "btn-primary text-primary-content shadow-xs"
+                            : "btn-ghost text-base-content/60 hover:text-base-content"
+                        }`}
+                        onClick={() => setCardLayout("side-by-side")}
+                        title="Side by Side Layout (2 cards per row)"
+                      >
+                        <LayoutGrid size={13} />
+                        <span className="hidden sm:inline">Side by Side</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        className={`join-item btn btn-xs rounded-xl font-bold gap-1.5 transition-all ${
+                          cardLayout === "full-width"
+                            ? "btn-primary text-primary-content shadow-xs"
+                            : "btn-ghost text-base-content/60 hover:text-base-content"
+                        }`}
+                        onClick={() => setCardLayout("full-width")}
+                        title="Full Width Layout (1 card per row)"
+                      >
+                        <Rows size={13} />
+                        <span className="hidden sm:inline">Full Width</span>
+                      </button>
+                    </div>
+
+                    {/* Display Mode (With Graph vs Metrics Only) */}
+                    <div className="join bg-base-200/80 p-1 rounded-2xl border border-base-300/60 shadow-xs">
+                      <button
+                        type="button"
+                        className={`join-item btn btn-xs rounded-xl font-bold gap-1.5 transition-all ${
+                          displayMode === "with-graph"
+                            ? "btn-primary text-primary-content shadow-xs"
+                            : "btn-ghost text-base-content/60 hover:text-base-content"
+                        }`}
+                        onClick={() => setDisplayMode("with-graph")}
+                        title="Show Graphs & Metrics"
+                      >
+                        <LineChart size={13} />
+                        <span className="hidden sm:inline">With Graph</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        className={`join-item btn btn-xs rounded-xl font-bold gap-1.5 transition-all ${
+                          displayMode === "metrics-only"
+                            ? "btn-primary text-primary-content shadow-xs"
+                            : "btn-ghost text-base-content/60 hover:text-base-content"
+                        }`}
+                        onClick={() => setDisplayMode("metrics-only")}
+                        title="Show Metrics Only (Hide Graphs)"
+                      >
+                        <BarChart2 size={13} />
+                        <span className="hidden sm:inline">Metrics Only</span>
+                      </button>
+                    </div>
+
+                    {/* Sub Dashboard Table View Button */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setTableCategory(category);
+                        setIsTableModalOpen(true);
+                      }}
+                      className="btn btn-xs h-7 px-2.5 rounded-xl font-extrabold bg-primary/10 border border-primary/30 text-primary hover:bg-primary hover:text-primary-content hover:border-primary shadow-xs transition-all cursor-pointer flex items-center gap-1.5 shrink-0"
+                      title={`Open ${category} Table View (Dates & Days grouped by month)`}
+                    >
+                      <Table size={13} />
+                      <span className="hidden sm:inline">Table View</span>
+                    </button>
                   </div>
                 </div>
 
-                {/* View Mode & Layout Control Buttons */}
-                <div className="flex items-center gap-2 flex-wrap">
-                  {/* Target Filter (All vs Avg < Max Target) */}
-                  <div className="join bg-base-200/80 p-1 rounded-2xl border border-base-300/60 shadow-xs">
-                    <button
-                      type="button"
-                      className={`join-item btn btn-xs rounded-xl font-bold gap-1.5 transition-all ${
-                        targetFilter === "all"
-                          ? "btn-primary text-primary-content shadow-xs"
-                          : "btn-ghost text-base-content/60 hover:text-base-content"
-                      }`}
-                      onClick={() => setTargetFilter("all")}
-                      title="Show All Selected Cards"
-                    >
-                      <Filter size={13} />
-                      <span className="hidden sm:inline">All Cards</span>
-                    </button>
+                {/* Selector Pills with Left/Right Scroll Arrows */}
+                <div className="flex items-center justify-between gap-3 w-full">
+                  <span className="text-xs font-semibold text-base-content/50 uppercase tracking-wider shrink-0 hidden md:inline">
+                    Filter Nutrients:
+                  </span>
+                  <CategoryTagBar
+                    category={category}
+                    categoryNutrients={categoryNutrients}
+                    activeSelected={activeSelected}
+                    toggleGraph={toggleGraph}
+                    selectAllGraphs={selectAllGraphs}
+                    deselectAllGraphs={deselectAllGraphs}
+                  />
+                </div>
+              </div>
 
-                    <button
-                      type="button"
-                      className={`join-item btn btn-xs rounded-xl font-bold gap-1.5 transition-all ${
-                        targetFilter === "below-max"
-                          ? "btn-primary text-primary-content shadow-xs"
-                          : "btn-ghost text-base-content/60 hover:text-base-content"
-                      }`}
-                      onClick={() => {
-                        setTargetFilter("below-max");
-                        selectAllGraphsForAllCategories();
-                      }}
-                      title="Show only cards where Average is less than Max Target"
-                    >
-                      <TrendingDown size={13} />
-                      <span className="hidden sm:inline">Avg &lt; Max Target</span>
-                    </button>
-                  </div>
-
-                  {/* Layout Mode (Side by Side vs Full Width) */}
-                  <div className="join bg-base-200/80 p-1 rounded-2xl border border-base-300/60 shadow-xs">
-                    <button
-                      type="button"
-                      className={`join-item btn btn-xs rounded-xl font-bold gap-1.5 transition-all ${
-                        cardLayout === "side-by-side"
-                          ? "btn-primary text-primary-content shadow-xs"
-                          : "btn-ghost text-base-content/60 hover:text-base-content"
-                      }`}
-                      onClick={() => setCardLayout("side-by-side")}
-                      title="Side by Side Layout (2 cards per row)"
-                    >
-                      <LayoutGrid size={13} />
-                      <span className="hidden sm:inline">Side by Side</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      className={`join-item btn btn-xs rounded-xl font-bold gap-1.5 transition-all ${
-                        cardLayout === "full-width"
-                          ? "btn-primary text-primary-content shadow-xs"
-                          : "btn-ghost text-base-content/60 hover:text-base-content"
-                      }`}
-                      onClick={() => setCardLayout("full-width")}
-                      title="Full Width Layout (1 card per row)"
-                    >
-                      <Rows size={13} />
-                      <span className="hidden sm:inline">Full Width</span>
-                    </button>
-                  </div>
-
-                  {/* Display Mode (With Graph vs Metrics Only) */}
-                  <div className="join bg-base-200/80 p-1 rounded-2xl border border-base-300/60 shadow-xs">
-                    <button
-                      type="button"
-                      className={`join-item btn btn-xs rounded-xl font-bold gap-1.5 transition-all ${
-                        displayMode === "with-graph"
-                          ? "btn-primary text-primary-content shadow-xs"
-                          : "btn-ghost text-base-content/60 hover:text-base-content"
-                      }`}
-                      onClick={() => setDisplayMode("with-graph")}
-                      title="Show Graphs & Metrics"
-                    >
-                      <LineChart size={13} />
-                      <span className="hidden sm:inline">With Graph</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      className={`join-item btn btn-xs rounded-xl font-bold gap-1.5 transition-all ${
-                        displayMode === "metrics-only"
-                          ? "btn-primary text-primary-content shadow-xs"
-                          : "btn-ghost text-base-content/60 hover:text-base-content"
-                      }`}
-                      onClick={() => setDisplayMode("metrics-only")}
-                      title="Show Metrics Only (Hide Graphs)"
-                    >
-                      <BarChart2 size={13} />
-                      <span className="hidden sm:inline">Metrics Only</span>
-                    </button>
-                  </div>
-
-                  {/* Sub Dashboard Table View Button */}
+              {/* Render Selected Nutrient Cards Grid */}
+              {activeSelected.length === 0 ? (
+                <div className="bg-base-100 p-8 rounded-2xl border border-dashed border-base-300 text-center space-y-2">
+                  <p className="text-sm font-semibold text-base-content/60">
+                    No graphs selected for <span className="text-primary">{category}</span>.
+                  </p>
                   <button
-                    type="button"
-                    onClick={() => {
-                      setTableCategory(category);
-                      setIsTableModalOpen(true);
-                    }}
-                    className="btn btn-xs h-7 px-2.5 rounded-xl font-extrabold bg-primary/10 border border-primary/30 text-primary hover:bg-primary hover:text-primary-content hover:border-primary shadow-xs transition-all cursor-pointer flex items-center gap-1.5 shrink-0"
-                    title={`Open ${category} Table View (Dates & Days grouped by month)`}
+                    className="btn btn-xs btn-primary rounded-xl px-4"
+                    onClick={() => selectAllGraphs(category)}
                   >
-                    <Table size={13} />
-                    <span className="hidden sm:inline">Table View</span>
+                    Show All {category} Graphs
                   </button>
                 </div>
-              </div>
+              ) : displayedNutrients.length === 0 ? (
+                <div className="bg-base-100 p-8 rounded-2xl border border-dashed border-base-300 text-center space-y-2">
+                  <p className="text-sm font-semibold text-base-content/60">
+                    No nutrient cards in <span className="text-primary">{category}</span> have a daily Average less than their Max Target.
+                  </p>
+                  <button
+                    className="btn btn-xs btn-ghost border border-base-300 rounded-xl px-4 font-semibold"
+                    onClick={() => setTargetFilter("all")}
+                  >
+                    Show All Cards
+                  </button>
+                </div>
+              ) : (
+                <div
+                  className={
+                    cardLayout === "full-width"
+                      ? "grid grid-cols-1 gap-5"
+                      : "grid grid-cols-1 lg:grid-cols-2 gap-5"
+                  }
+                >
+                  {displayedNutrients.map((nutrient) => {
+                    const dailyValues = calculateNutrientDailyValues(nutrient.id);
+                    const targetInfo = TARGETS_CONFIG[nutrient.id] || { min: 0, max: 0 };
+                    const nutrientProps = {
+                      ...nutrient,
+                      minTarget: targetInfo.min || 0,
+                      maxTarget: targetInfo.max || 0,
+                    };
 
-              {/* Selector Pills with Left/Right Scroll Arrows */}
-              <div className="flex items-center justify-between gap-3 w-full">
-                <span className="text-xs font-semibold text-base-content/50 uppercase tracking-wider shrink-0 hidden md:inline">
-                  Filter Nutrients:
-                </span>
-                <CategoryTagBar
-                  category={category}
-                  categoryNutrients={categoryNutrients}
-                  activeSelected={activeSelected}
-                  toggleGraph={toggleGraph}
-                  selectAllGraphs={selectAllGraphs}
-                  deselectAllGraphs={deselectAllGraphs}
-                />
-              </div>
+                    return (
+                      <NutrientGraphCard
+                        key={nutrient.id}
+                        nutrient={nutrientProps}
+                        dailyData={dailyValues}
+                        totalDays={dateRangeList.length}
+                        showGraph={displayMode === "with-graph"}
+                        onOpenWiki={(nutr) => setSelectedWikiNutrient(nutr)}
+                      />
+                    );
+                  })}
+                </div>
+              )}
+            </section>
+          );
+        })}
+      </div>
+
+      {/* ── Phone View (block md:hidden) — Month Calendar per category ── */}
+      <div className="block md:hidden">
+        {categoriesToRender.map((category) => {
+          const categoryNutrients = NUTRIENT_CATEGORIES_CONFIG[category] || [];
+          return (
+            <div key={category} className="bg-base-100 rounded-2xl shadow-sm p-3">
+              <NutrientMonthCalendar
+                category={category}
+                nutrients={categoryNutrients}
+                logsByDate={logsByDate}
+                habitDataByDate={habitDataByDate}
+                targetsConfig={TARGETS_CONFIG}
+                extractNutrientValue={extractNutrientValue}
+              />
             </div>
-
-            {/* Render Selected Nutrient Cards Grid */}
-            {activeSelected.length === 0 ? (
-              <div className="bg-base-100 p-8 rounded-2xl border border-dashed border-base-300 text-center space-y-2">
-                <p className="text-sm font-semibold text-base-content/60">
-                  No graphs selected for <span className="text-primary">{category}</span>.
-                </p>
-                <button
-                  className="btn btn-xs btn-primary rounded-xl px-4"
-                  onClick={() => selectAllGraphs(category)}
-                >
-                  Show All {category} Graphs
-                </button>
-              </div>
-            ) : displayedNutrients.length === 0 ? (
-              <div className="bg-base-100 p-8 rounded-2xl border border-dashed border-base-300 text-center space-y-2">
-                <p className="text-sm font-semibold text-base-content/60">
-                  No nutrient cards in <span className="text-primary">{category}</span> have a daily Average less than their Max Target.
-                </p>
-                <button
-                  className="btn btn-xs btn-ghost border border-base-300 rounded-xl px-4 font-semibold"
-                  onClick={() => setTargetFilter("all")}
-                >
-                  Show All Cards
-                </button>
-              </div>
-            ) : (
-              <div
-                className={
-                  cardLayout === "full-width"
-                    ? "grid grid-cols-1 gap-5"
-                    : "grid grid-cols-1 lg:grid-cols-2 gap-5"
-                }
-              >
-                {displayedNutrients.map((nutrient) => {
-                  const dailyValues = calculateNutrientDailyValues(nutrient.id);
-                  const targetInfo = TARGETS_CONFIG[nutrient.id] || { min: 0, max: 0 };
-                  const nutrientProps = {
-                    ...nutrient,
-                    minTarget: targetInfo.min || 0,
-                    maxTarget: targetInfo.max || 0,
-                  };
-
-                  return (
-                    <NutrientGraphCard
-                      key={nutrient.id}
-                      nutrient={nutrientProps}
-                      dailyData={dailyValues}
-                      totalDays={dateRangeList.length}
-                      showGraph={displayMode === "with-graph"}
-                      onOpenWiki={(nutr) => setSelectedWikiNutrient(nutr)}
-                    />
-                  );
-                })}
-              </div>
-            )}
-          </section>
-        );
-      })}
+          );
+        })}
+      </div>
 
       {/* Nutrient Table Modal Popup (Middle of UI with Month Groups & Sticky Headers) */}
       <NutrientTableModal

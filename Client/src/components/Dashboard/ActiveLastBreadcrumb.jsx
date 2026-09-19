@@ -58,7 +58,7 @@ export default function ThemedBreadcrumbs() {
 
   return (
     <>
-      <div className="hidden md:flex items-center justify-between gap-3 px-4 py-2 bg-base-200 text-base-content rounded-box shadow-sm mb-4 relative z-10 min-h-[46px]">
+      <div className="hidden md:flex items-center justify-between gap-3 px-4 py-2 bg-base-200 text-base-content rounded-box shadow-sm mt-3 mb-4 relative z-10 min-h-[46px]">
         {/* DaisyUI Breadcrumb navigation bar */}
         <div className="breadcrumbs text-sm p-0 flex-1 min-w-0">
           <ul className="flex items-center gap-2">

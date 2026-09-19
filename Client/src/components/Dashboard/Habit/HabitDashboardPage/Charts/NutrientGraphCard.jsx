@@ -319,7 +319,19 @@ function NutrientGraphCard({ nutrient, dailyData = [], totalDays = 1, onOpenWiki
       {/* Chart Section */}
       {showGraph && (
         <div className="w-full pt-1">
-          <Chart options={chartOptions} series={series} type="line" height={260} />
+          {dailyData.length > 10 && (
+            <div className="flex md:hidden items-center justify-end gap-1 text-[10px] text-base-content/50 mb-1 px-1">
+              <span>↔ Scroll sideways</span>
+            </div>
+          )}
+          <div className="phone-chart-scroll-wrapper custom-scrollbar-thin pb-1">
+            <div
+              className="phone-chart-inner min-w-full md:!w-full md:!min-w-full"
+              style={{ minWidth: `max(100%, ${(dailyData?.length || 0) * 40}px)` }}
+            >
+              <Chart options={chartOptions} series={series} type="line" height={260} />
+            </div>
+          </div>
         </div>
       )}
     </div>

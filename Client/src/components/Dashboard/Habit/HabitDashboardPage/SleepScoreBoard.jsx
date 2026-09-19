@@ -117,99 +117,147 @@ const SleepScoreBoard = ({
                 </div>
             )}
 
-            {/* Sleep Scoreboard Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {/* Desktop View (md: and up) - 100% ORIGINAL */}
+            <div className="hidden md:block">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
 
-                {/* From Date */}
-                <div className="stat shadow relative group">
-                    <button
-                        onClick={() => handleInfoClick('from')}
-                        className="cursor-pointer absolute top-2 right-2 text-base-content hover:text-primary transition-colors"
+                    {/* From Date */}
+                    <div className="stat shadow relative group">
+                        <button
+                            onClick={() => handleInfoClick('from')}
+                            className="cursor-pointer absolute top-2 right-2 text-base-content hover:text-primary transition-colors"
+                        >
+                            <Info size={16} />
+                        </button>
+                        <div className="stat-figure text-blue-400">
+                            <CalendarDays className="h-6 w-6" />
+                        </div>
+                        <div className="stat-title pr-6">From</div>
+                        <div className="stat-value">
+                            {fromDate ? dayjs(fromDate).format('DD MMM') : 'N/A'}
+                        </div>
+                        <div className="stat-desc">Start Date</div>
+                    </div>
+
+                    {/* To Date */}
+                    <div className="stat shadow relative group">
+                        <button
+                            onClick={() => handleInfoClick('to')}
+                            className="cursor-pointer absolute top-2 right-2 text-base-content hover:text-primary transition-colors"
+                        >
+                            <Info size={16} />
+                        </button>
+                        <div className="stat-figure text-blue-400">
+                            <CalendarCheck2 className="h-6 w-6" />
+                        </div>
+                        <div className="stat-title pr-6">To</div>
+                        <div className="stat-value">
+                            {toDate ? dayjs(toDate).format('DD MMM') : 'N/A'}
+                        </div>
+                        <div className="stat-desc">End Date</div>
+                    </div>
+
+                    {/* Total Sleep */}
+                    <div className="stat shadow relative group">
+                        <button
+                            onClick={() => handleInfoClick('consumed')}
+                            className="cursor-pointer absolute top-2 right-2 text-base-content hover:text-primary transition-colors"
+                        >
+                            <Info size={16} />
+                        </button>
+
+                        <div className="stat-figure text-violet-500">
+                            <Moon className="h-6 w-6" />
+                        </div>
+
+                        <div className="stat-title pr-6">Total Sleep</div>
+                        <div className="stat-value text-violet-500">
+                            {sleepSum.toFixed(1)}h
+                        </div>
+
+                        <div className="stat-desc">
+                            Min: {sleepMinGoal.toFixed(1)}h | Max: {sleepGoal.toFixed(1)}h
+                        </div>
+                    </div>
+
+                    {/* Deficit / Surplus Sleep */}
+                    <div
+                        className="stat shadow relative group"
                     >
-                        <Info size={16} />
-                    </button>
-                    <div className="stat-figure text-blue-400">
-                        <CalendarDays className="h-6 w-6" />
+                        <button onClick={() => handleInfoClick('offset')} className={`cursor-pointer absolute top-2 right-2 transition-colors ${offset >= 0 ? 'text-emerald-500 hover:text-emerald-500' : 'text-rose-500 hover:text-rose-500'}`}>
+                            <Info size={16} />
+                        </button>
+                        <div className={`stat-figure ${offset >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                            <Target className="h-6 w-6" />
+                        </div>
+                        <div className="stat-title pr-6">Offset from {totalDays * sleepMin}h</div>
+                        <div className={`stat-value ${offset >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                            {offset >= 0 ? '+' : ''}
+                            {offset.toFixed(1)} h
+                        </div>
+                        <div className="stat-desc">{offset >= 0 ? 'In Surplus' : 'In Deficit'}</div>
                     </div>
-                    <div className="stat-title pr-6">From</div>
-                    <div className="stat-value">
-                        {fromDate ? dayjs(fromDate).format('DD MMM') : 'N/A'}
+
+                    {/* Scale Section */}
+                    <div className="col-span-2 stat shadow relative group">
+                        <SleepScale
+                            label="Sleep Duration"
+                            value={sleepSum}
+                            min={sleepMinGoal}
+                            max={sleepGoal}
+                            color="bg-violet-500"
+                            textColor="text-violet-500"
+                            icon={Moon}
+                        />
                     </div>
-                    <div className="stat-desc">Start Date</div>
+
+                </div>
+            </div>
+
+            {/* Phone View (< md) - Compact 2-row layout matching Water */}
+            <div className="block md:hidden space-y-2.5">
+                {/* Row 1: Total Sleep & Offset side by side */}
+                <div className="grid grid-cols-2 gap-2">
+                    {/* Total Sleep Card */}
+                    <div className="stat shadow rounded-xl p-3 bg-base-100 border border-base-300/60 relative">
+                        <button
+                            onClick={() => handleInfoClick('consumed')}
+                            className="cursor-pointer absolute top-2 right-2 text-base-content/60 hover:text-primary transition-colors"
+                        >
+                            <Info size={14} />
+                        </button>
+                        <div className="stat-title pr-4 text-xs font-semibold">Total Sleep</div>
+                        <div className="stat-value text-violet-500 text-xl font-bold">
+                            {sleepSum.toFixed(1)}h
+                        </div>
+                        <div className="stat-desc text-[10px]">
+                            Goal: {sleepMinGoal.toFixed(1)} - {sleepGoal.toFixed(1)}h
+                        </div>
+                    </div>
+
+                    {/* Offset Card */}
+                    <div className={`stat shadow rounded-xl p-3 bg-base-100 relative ${offset >= 0 ? 'border border-emerald-500/70' : 'border border-rose-500/70'}`}>
+                        <button onClick={() => handleInfoClick('offset')} className={`cursor-pointer absolute top-2 right-2 transition-colors ${offset >= 0 ? 'text-emerald-500 hover:text-emerald-500' : 'text-rose-500 hover:text-rose-500'}`}>
+                            <Info size={14} />
+                        </button>
+                        <div className="stat-title pr-4 text-xs font-semibold truncate">Offset from {totalDays * sleepMin}h</div>
+                        <div className={`stat-value text-xl font-bold ${offset >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                            {offset >= 0 ? '+' : ''}{offset.toFixed(1)}h
+                        </div>
+                        <div className="stat-desc text-[10px]">{offset >= 0 ? 'In Surplus' : 'In Deficit'}</div>
+                    </div>
                 </div>
 
-                {/* To Date */}
-                <div className="stat shadow relative group">
-                    <button
-                        onClick={() => handleInfoClick('to')}
-                        className="cursor-pointer absolute top-2 right-2 text-base-content hover:text-primary transition-colors"
-                    >
-                        <Info size={16} />
-                    </button>
-                    <div className="stat-figure text-blue-400">
-                        <CalendarCheck2 className="h-6 w-6" />
-                    </div>
-                    <div className="stat-title pr-6">To</div>
-                    <div className="stat-value">
-                        {toDate ? dayjs(toDate).format('DD MMM') : 'N/A'}
-                    </div>
-                    <div className="stat-desc">End Date</div>
-                </div>
-
-                {/* Total Sleep */}
-                <div className="stat shadow relative group">
-                    <button
-                        onClick={() => handleInfoClick('consumed')}
-                        className="cursor-pointer absolute top-2 right-2 text-base-content hover:text-primary transition-colors"
-                    >
-                        <Info size={16} />
-                    </button>
-
-                    <div className="stat-figure text-violet-500">
-                        <Moon className="h-6 w-6" />
-                    </div>
-
-                    <div className="stat-title pr-6">Total Sleep</div>
-                    <div className="stat-value text-violet-500">
-                        {sleepSum.toFixed(1)}h
-                    </div>
-
-                    <div className="stat-desc">
-                        Min: {sleepMinGoal.toFixed(1)}h | Max: {sleepGoal.toFixed(1)}h
-                    </div>
-                </div>
-
-                {/* Deficit / Surplus Sleep */}
-                <div
-                    className="stat shadow relative group"
-                >
-                    <button onClick={() => handleInfoClick('offset')} className={`cursor-pointer absolute top-2 right-2 transition-colors ${offset >= 0 ? 'text-emerald-500 hover:text-emerald-500' : 'text-rose-500 hover:text-rose-500'}`}>
-                        <Info size={16} />
-                    </button>
-                    <div className={`stat-figure ${offset >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
-                        <Target className="h-6 w-6" />
-                    </div>
-                    <div className="stat-title pr-6">Offset from {totalDays * sleepMin}h</div>
-                    <div className={`stat-value ${offset >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
-                        {offset >= 0 ? '+' : ''}
-                        {offset.toFixed(1)} h
-                    </div>
-                    <div className="stat-desc">{offset >= 0 ? 'In Surplus' : 'In Deficit'}</div>
-                </div>
-
-                {/* Scale Section */}
-                <div className="col-span-2 stat shadow relative group">
-                    <SleepScale
-                        label="Sleep Duration"
-                        value={sleepSum}
-                        min={sleepMinGoal}
-                        max={sleepGoal}
-                        color="bg-violet-500"
-                        textColor="text-violet-500"
-                        icon={Moon}
-                    />
-                </div>
-
+                {/* Row 2: Progress bar full row */}
+                <SleepScale
+                    label="Sleep Duration"
+                    value={sleepSum}
+                    min={sleepMinGoal}
+                    max={sleepGoal}
+                    color="bg-violet-500"
+                    textColor="text-violet-500"
+                    icon={Moon}
+                />
             </div>
 
 

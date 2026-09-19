@@ -252,7 +252,7 @@ const AddHabitPopUp = ({
               <legend className="fieldset-legend mb-0">Calorie Intake</legend>
               <button
                 type="button"
-                className="btn btn-xs btn-outline btn-primary gap-1 rounded-lg"
+                className="btn btn-xs bg-primary/10 hover:bg-primary/20 active:bg-primary/30 text-primary border border-primary/30 gap-1 rounded-lg transition-all focus:outline-none focus:ring-2 focus:ring-primary/40 focus:bg-primary/15 disabled:opacity-50"
                 onClick={handleCalculateFromFood}
                 disabled={isCalculatingFood}
                 title="Automatically calculate total logged calories from Food Logging for this date"

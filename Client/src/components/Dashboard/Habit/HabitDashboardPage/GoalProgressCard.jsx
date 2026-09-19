@@ -49,18 +49,18 @@ const GoalProgressCard = React.memo(({ habitData = [], fromDate, toDate }) => {
   const percent = Math.min((average / 7) * 100, 100);
 
   return (
-    <div className="flex flex-col items-center justify-center">
-      <Target className="text-green-500 mb-2" size={32} />
-      <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">Average Score</h2>
-      <p className="text-3xl font-bold text-green-500 mt-2">
+    <div className="flex flex-col items-center justify-center w-full">
+      <Target className="text-green-500 mb-1 md:mb-2 w-6 h-6 md:w-8 md:h-8" />
+      <h2 className="text-xs sm:text-sm md:text-xl font-semibold text-gray-800 dark:text-gray-200 text-center">Average Score</h2>
+      <p className="text-xl sm:text-2xl md:text-3xl font-bold text-green-500 mt-1 md:mt-2 mb-1.5 md:mb-0">
         {average} / 7
       </p>
-      <p className="text-sm text-gray-600 dark:text-gray-400">
+      <p className="text-[11px] sm:text-xs md:text-sm text-gray-600 dark:text-gray-400 text-center line-clamp-1 md:line-clamp-none">
         {message.emoji} {message.text}
       </p>
 
       <progress
-        className="progress progress-success w-full mt-4"
+        className="progress progress-success w-full mt-2 md:mt-4 h-1.5 md:h-2"
         value={percent}
         max="100"
       ></progress>
