@@ -1011,10 +1011,10 @@ const ExpenseTable = ({
     }
 
     return (
-        <div className="w-full bg-base-100 rounded-2xl shadow-lg border border-base-200 flex flex-col min-h-[500px]">
+        <div className="w-full bg-base-100 rounded-none sm:rounded-2xl shadow-none sm:shadow-lg border-y sm:border border-base-200 flex flex-col min-h-[500px]">
 
             {/* Unified Sticky Glass Header Section: Month Selector Banner + Table Column Headers */}
-            <div ref={upperHeaderRef} className="sticky top-[-17px] -mt-5 pt-5 z-40 bg-base-100/90 dark:bg-base-900/90 backdrop-blur-2xl border-b border-base-200/80 shadow-md rounded-t-2xl transition-all">
+            <div ref={upperHeaderRef} className="sticky top-[-17px] -mt-5 pt-5 z-40 bg-base-100/90 dark:bg-base-900/90 backdrop-blur-2xl border-b border-base-200/80 shadow-md rounded-t-none sm:rounded-t-2xl transition-all">
                 
                 {/* Desktop Upper Header: Current Period Banner & Navigation Controls */}
                 <div className="hidden lg:flex p-4 flex-row items-center justify-between gap-3 border-b border-base-200/50 bg-base-100/40 dark:bg-base-900/40">
@@ -2073,7 +2073,7 @@ const ExpenseTable = ({
                             </div>
 
                             {/* MOBILE CARD FEED VIEW (< lg) */}
-                            <div className="block lg:hidden px-3 py-3 space-y-3">
+                            <div className="block lg:hidden px-1 sm:px-3 py-2 sm:py-3 space-y-2 sm:space-y-3 w-full">
                                 {/* Inline Add Form (if isAdding) */}
                                 {isAdding && (
                                     <div className="p-3.5 bg-base-100 rounded-2xl border-2 border-primary/40 space-y-3 shadow-md animate-in fade-in slide-in-from-top-2">
@@ -2224,7 +2224,7 @@ const ExpenseTable = ({
                                             <div
                                                 onClick={() => toggleDayCollapse(group.dateKey)}
                                                 style={{ top: `${headerStickyTop}px` }}
-                                                className="sticky z-20 flex items-center justify-between px-3 py-2 bg-base-200/95 dark:bg-base-800/95 backdrop-blur-md hover:bg-base-200 rounded-2xl cursor-pointer border border-base-content/10 transition-colors select-none shadow-xs"
+                                                className="sticky z-20 flex items-center justify-between px-2.5 sm:px-3 py-2 bg-base-200/95 dark:bg-base-800/95 backdrop-blur-md hover:bg-base-200 rounded-xl sm:rounded-2xl cursor-pointer border border-base-content/10 transition-colors select-none shadow-xs w-full"
                                             >
                                                 <div className="flex items-center gap-2 min-w-0">
                                                     <span className="p-1 rounded-lg bg-base-100 text-primary shrink-0 shadow-2xs">
@@ -2250,7 +2250,7 @@ const ExpenseTable = ({
 
                                             {/* Transaction Items */}
                                             {!isCollapsed && (
-                                                <div className="space-y-1.5 pl-1">
+                                                <div className="space-y-1.5 w-full">
                                                     {group.transactions.map((t) => (
                                                         <React.Fragment key={t._id}>
                                                             {editingId === t._id ? (
@@ -2411,7 +2411,7 @@ const ExpenseTable = ({
                                                                     </div>
                                                                 </div>
                                                             ) : (
-                                                                <div className="p-3 bg-base-100 rounded-2xl border border-base-content/10 hover:border-base-content/20 transition-all shadow-2xs space-y-2">
+                                                                <div className="p-2.5 sm:p-3 bg-base-100 rounded-xl sm:rounded-2xl border border-base-content/10 hover:border-base-content/20 transition-all shadow-2xs space-y-2 w-full">
                                                                     {/* Row 1 (Top): Bank Name (or Bank 1 → Bank 2 for Transfer) & Reimbursable Pill */}
                                                                     <div className="flex items-center justify-between gap-2 min-w-0">
                                                                         <div className="flex items-center gap-1.5 min-w-0 flex-wrap">

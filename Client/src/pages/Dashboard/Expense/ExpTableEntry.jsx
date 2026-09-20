@@ -320,7 +320,7 @@ const ExpTableEntry = () => {
   const totalNetBalance = totalBankBalance - totalCardSpent;
 
   return (
-    <div className="p-4 md:p-2 w-full max-w-[1600px] mx-auto pb-20">
+    <div className="p-0 sm:p-2 md:p-2 w-full max-w-[1600px] mx-auto pb-20">
 
       {error && !isDataLoading && (
         <div className="alert alert-error shadow-lg mb-6">
@@ -687,9 +687,9 @@ const ExpTableEntry = () => {
         </div>
 
         {/* Main Table Area (Right on desktop, Full width on mobile) */}
-        <div className="flex-1 flex flex-col gap-4 lg:gap-6 w-full min-w-0">
+        <div className="flex-1 flex flex-col gap-3 lg:gap-6 w-full min-w-0">
           {/* Mobile Financial Overview (< lg) - High Density Financial Summary */}
-          <div className="block lg:hidden w-full space-y-2.5 mb-1">
+          <div className="block lg:hidden w-full space-y-2.5 mb-1 px-2.5 sm:px-0 pt-2 sm:pt-0">
             {/* Net Balance Card */}
             <div className="bg-gradient-to-br from-base-100 to-base-200 border border-base-content/10 rounded-2xl p-3.5 shadow-sm space-y-3">
               <div className="flex items-center justify-between">
