@@ -291,9 +291,9 @@ function HabitLogging() {
     ];
 
     return (
-        <div className="p-4">
-            {showErrorAlert && <ErrorAlert message={alertErrorMessage} top={20} />}
-            {showSuccessAlert && <SuccessAlert message={alertSuccessMessage} top={20} />}
+        <div className="p-0 md:p-4 w-full">
+            {showErrorAlert && <div className="px-2 pt-2 md:px-0 md:pt-0"><ErrorAlert message={alertErrorMessage} top={20} /></div>}
+            {showSuccessAlert && <div className="px-2 pt-2 md:px-0 md:pt-0"><SuccessAlert message={alertSuccessMessage} top={20} /></div>}
 
             <h1 className="text-2xl font-bold hidden md:flex items-center gap-2 mb-6">
                 <UserCheck size={26} />
@@ -777,11 +777,11 @@ function HabitLogging() {
             {/* ── End Desktop View ── */}
             </div>
 
-            {/* ── Phone View (block md:hidden) — Mobile Optimized Experience ── */}
-            <div className="block md:hidden space-y-4">
+            {/* ── Phone View (block md:hidden) — Full Width Mobile Optimized Experience ── */}
+            <div className="block md:hidden space-y-3 pb-24 w-full">
                 {/* Sticky Module Navigation Tabs */}
-                <div className="sticky top-0 z-30 bg-base-100/95 backdrop-blur-md pb-2 pt-1 border-b border-base-300/80 mb-2">
-                    <div className="grid grid-cols-3 gap-1.5 p-1 bg-base-200/80 rounded-2xl border border-base-300/60 shadow-xs">
+                <div className="sticky top-0 z-30 bg-base-100/95 backdrop-blur-md px-2 py-1.5 border-b border-base-300/80 mb-1 w-full">
+                    <div className="grid grid-cols-3 gap-1.5 p-1 bg-base-200/80 rounded-2xl border border-base-300/60 shadow-xs w-full">
                         <button
                             type="button"
                             onClick={() => setMobileTab("calculator")}
@@ -823,7 +823,7 @@ function HabitLogging() {
 
                 {/* TAB 1: CALCULATOR & BMR/BMI */}
                 {mobileTab === "calculator" && (
-                    <div className="space-y-4">
+                    <div className="space-y-3 px-2 w-full">
                         {/* Physical Stats Input Card */}
                         <div className="bg-base-100 border border-base-content/10 rounded-2xl p-4 shadow-xs space-y-3.5">
                             <div className="flex items-center justify-between border-b border-base-content/[0.06] pb-2.5">
@@ -1124,7 +1124,7 @@ function HabitLogging() {
 
                 {/* TAB 2: MACROS & MICROS */}
                 {mobileTab === "macros" && (
-                    <div className="space-y-4">
+                    <div className="space-y-3 px-2 w-full">
                         <MacroMicroCalculator
                             maintenanceCalories={maintenanceCalories}
                             age={age}
@@ -1135,7 +1135,7 @@ function HabitLogging() {
 
                 {/* TAB 3: PHYSICAL LOGS & CHARTS */}
                 {mobileTab === "logs" && (
-                    <div className="space-y-4">
+                    <div className="space-y-3 px-2 w-full">
                         {/* Top Action Bar with Icon to Open Log Entry Popup */}
                         <div className="bg-base-100 border border-base-content/10 rounded-2xl p-3.5 shadow-xs flex items-center justify-between">
                             <div className="flex items-center gap-2.5">

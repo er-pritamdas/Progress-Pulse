@@ -212,8 +212,8 @@ const MacroMicroCalculator = ({ maintenanceCalories, age, gender }) => {
     handleRatioChange(type, ratios[type] + delta);
   };
 
-  // --- Mobile Single Vertical Progress Bar Handlers ---
-  const verticalBarRef = useRef(null);
+  // --- Mobile Single Horizontal Progress Bar Handlers ---
+  const horizontalBarRef = useRef(null);
   const [activeDragHandle, setActiveDragHandle] = useState(null);
 
   const handlePointerDown = (handleIndex, e) => {
@@ -229,10 +229,10 @@ const MacroMicroCalculator = ({ maintenanceCalories, age, gender }) => {
     }
 
     const onPointerMove = (moveEvent) => {
-      if (!verticalBarRef.current) return;
-      const rect = verticalBarRef.current.getBoundingClientRect();
-      const rawY = moveEvent.clientY - rect.top;
-      const pct = Math.max(0, Math.min(100, Math.round((rawY / rect.height) * 100)));
+      if (!horizontalBarRef.current) return;
+      const rect = horizontalBarRef.current.getBoundingClientRect();
+      const rawX = moveEvent.clientX - rect.left;
+      const pct = Math.max(0, Math.min(100, Math.round((rawX / rect.width) * 100)));
 
       setRatios((prev) => {
         const currentP = Number(prev.protein) || 30;
@@ -362,7 +362,7 @@ const MacroMicroCalculator = ({ maintenanceCalories, age, gender }) => {
   }, [selectedMicro]);
 
   return (
-    <div className="bg-transparent md:bg-base-300 rounded-xl p-0 md:p-6 shadow-none md:shadow-md mt-0 md:mt-8">
+    <div className="bg-transparent md:bg-base-300 rounded-xl p-0 md:p-6 shadow-none md:shadow-md mt-0 md:mt-8 w-full">
       <h2 className="text-xl font-bold mb-6 hidden md:flex items-center gap-2">
         <Activity size={22} /> Macro & Micro Nutrient Calculator
       </h2>
@@ -714,9 +714,9 @@ const MacroMicroCalculator = ({ maintenanceCalories, age, gender }) => {
           </div>
 
           {/* ── Phone View (block md:hidden) — Separate Macros & Micros, No Tabs ── */}
-          <div className="block md:hidden space-y-5 mt-3">
-            {/* ═══ SECTION 1: MACRO TARGETS & SINGLE VERTICAL INTERACTIVE PROGRESS BAR ═══ */}
-            <div className="bg-base-100 rounded-2xl p-3.5 border border-base-300/80 shadow-xs space-y-3">
+          <div className="block md:hidden space-y-4 mt-0 w-full">
+            {/* ═══ SECTION 1: MACRO TARGETS & SINGLE HORIZONTAL INTERACTIVE PROGRESS BAR ═══ */}
+            <div className="bg-base-100 rounded-2xl p-3.5 border border-base-content/10 shadow-xs space-y-3.5 w-full">
               {/* Header */}
               <div className="flex items-center justify-between border-b border-base-200/80 pb-2">
                 <div className="min-w-0">
@@ -743,234 +743,229 @@ const MacroMicroCalculator = ({ maintenanceCalories, age, gender }) => {
                 </span>
               </div>
 
-              {/* Main Interactive Container: Vertical Bar on Left + 3 Macro Cards on Right */}
-              <div className="flex gap-2.5 items-stretch pt-1">
-                {/* ── Single Vertical Interactive Progress Bar ── */}
-                <div className="flex flex-col items-center select-none w-14 shrink-0">
-                  <div
-                    ref={verticalBarRef}
-                    className="relative w-11 h-[270px] bg-base-300/80 rounded-2xl overflow-visible border border-base-300/80 shadow-inner flex flex-col touch-none"
-                  >
-                    {/* Protein Segment (Top) */}
-                    <div
-                      style={{ height: `${ratios.protein}%` }}
-                      className="w-full bg-info text-info-content flex flex-col items-center justify-center transition-all duration-75 overflow-hidden rounded-t-2xl"
-                    >
-                      {ratios.protein >= 8 && (
-                        <div className="flex flex-col items-center leading-none pointer-events-none">
-                          <span className="text-[9px] font-black uppercase tracking-tight">P</span>
-                          <span className="text-[8px] font-mono font-bold">{ratios.protein}%</span>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Divider Handle 1 (Between Protein and Carbs) */}
-                    <div
-                      style={{ top: `${ratios.protein}%` }}
-                      className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 cursor-row-resize touch-none py-2 px-1 w-14 flex items-center justify-center select-none"
-                      onPointerDown={(e) => handlePointerDown(1, e)}
-                      title="Drag to change Protein & Carbs ratio"
-                    >
-                      <div
-                        className={`bg-base-100 border-2 ${
-                          activeDragHandle === 1 ? "scale-110 border-primary ring-2 ring-primary/40" : "border-info"
-                        } text-info shadow-md rounded-full px-1.5 py-0.5 flex items-center justify-center gap-1 transition-transform`}
-                      >
-                        <div className="w-1.5 h-0.5 bg-current rounded-full"></div>
-                        <span className="text-[8px] font-black font-mono leading-none">↕</span>
-                        <div className="w-1.5 h-0.5 bg-current rounded-full"></div>
-                      </div>
-                    </div>
-
-                    {/* Carbs Segment (Middle) */}
-                    <div
-                      style={{ height: `${ratios.carbs}%` }}
-                      className="w-full bg-success text-success-content flex flex-col items-center justify-center transition-all duration-75 overflow-hidden"
-                    >
-                      {ratios.carbs >= 8 && (
-                        <div className="flex flex-col items-center leading-none pointer-events-none">
-                          <span className="text-[9px] font-black uppercase tracking-tight">C</span>
-                          <span className="text-[8px] font-mono font-bold">{ratios.carbs}%</span>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Divider Handle 2 (Between Carbs and Fats) */}
-                    <div
-                      style={{ top: `${ratios.protein + ratios.carbs}%` }}
-                      className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 cursor-row-resize touch-none py-2 px-1 w-14 flex items-center justify-center select-none"
-                      onPointerDown={(e) => handlePointerDown(2, e)}
-                      title="Drag to change Carbs & Fats ratio"
-                    >
-                      <div
-                        className={`bg-base-100 border-2 ${
-                          activeDragHandle === 2 ? "scale-110 border-primary ring-2 ring-primary/40" : "border-warning"
-                        } text-warning shadow-md rounded-full px-1.5 py-0.5 flex items-center justify-center gap-1 transition-transform`}
-                      >
-                        <div className="w-1.5 h-0.5 bg-current rounded-full"></div>
-                        <span className="text-[8px] font-black font-mono leading-none">↕</span>
-                        <div className="w-1.5 h-0.5 bg-current rounded-full"></div>
-                      </div>
-                    </div>
-
-                    {/* Fats Segment (Bottom) */}
-                    <div
-                      style={{ height: `${ratios.fats}%` }}
-                      className="w-full bg-warning text-warning-content flex flex-col items-center justify-center transition-all duration-75 overflow-hidden rounded-b-2xl"
-                    >
-                      {ratios.fats >= 8 && (
-                        <div className="flex flex-col items-center leading-none pointer-events-none">
-                          <span className="text-[9px] font-black uppercase tracking-tight">F</span>
-                          <span className="text-[8px] font-mono font-bold">{ratios.fats}%</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <span className="text-[8px] font-semibold text-base-content/50 mt-1 flex items-center gap-0.5">
-                    ↕ Drag
+              {/* ── Single Horizontal Interactive Progress Bar (Above Breakdown Cards) ── */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between text-[10px] text-base-content/60 font-semibold px-0.5">
+                  <span>Ratio Distribution</span>
+                  <span className="text-[10px] font-semibold text-primary flex items-center gap-1">
+                    <span>↔ Drag handles to adjust</span>
                   </span>
                 </div>
 
-                {/* ── Right Column: 3 Macro Cards (No Individual Progress Bars) ── */}
-                <div className="flex-1 flex flex-col justify-between gap-2 min-w-0">
-                  {/* 1. Protein Card */}
-                  <div className="bg-info/10 border border-info/25 rounded-xl p-2.5 flex flex-col justify-between shadow-xs">
-                    <div className="flex items-center justify-between gap-1">
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <span className="w-2 h-2 rounded-full bg-info shrink-0"></span>
-                        <span className="text-[11px] font-bold text-info uppercase tracking-wider">Protein</span>
-                        <span className="text-xs font-black font-mono text-info bg-base-100/90 px-1.5 py-0.5 rounded-md border border-info/20 shadow-2xs">
-                          {ratios.protein}%
-                        </span>
+                <div
+                  ref={horizontalBarRef}
+                  className="relative w-full h-9 bg-base-300/80 rounded-xl overflow-visible border border-base-content/10 shadow-inner flex flex-row touch-none select-none"
+                >
+                  {/* Protein Segment (Left) */}
+                  <div
+                    style={{ width: `${ratios.protein}%` }}
+                    className="h-full bg-info text-info-content flex items-center justify-center transition-all duration-75 overflow-hidden rounded-l-xl shrink-0"
+                  >
+                    {ratios.protein >= 10 && (
+                      <div className="flex items-center gap-1 leading-none pointer-events-none px-1">
+                        <span className="text-[10px] font-black uppercase tracking-tight">P</span>
+                        <span className="text-[9px] font-mono font-bold">{ratios.protein}%</span>
                       </div>
-                      <span className="text-[8px] font-semibold bg-info/20 text-info px-1.5 py-0.5 rounded shrink-0">
-                        Recommended: {RECOMMENDED_RANGES.protein}
-                      </span>
-                    </div>
+                    )}
+                  </div>
 
-                    <div className="flex items-center justify-between bg-base-100/70 px-2 py-1.5 rounded-lg border border-info/15 mt-1.5">
-                      <span className="text-xs font-black font-mono text-base-content truncate">
-                        {proteinMinGrams}g–{proteinMaxGrams}g
-                      </span>
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        <span className="text-[10px] font-bold font-mono text-info">
-                          {proteinMinCals}–{proteinMaxCals} kcal
-                        </span>
-                        <div className="flex items-center gap-0.5">
-                          <button
-                            type="button"
-                            className="btn btn-ghost btn-xs p-0 h-5 w-5 min-h-0 text-info hover:bg-info/20 cursor-pointer rounded"
-                            onClick={() => adjustMacroPhone("protein", -1)}
-                            title="Decrease Protein"
-                          >
-                            <Minus size={11} />
-                          </button>
-                          <button
-                            type="button"
-                            className="btn btn-ghost btn-xs p-0 h-5 w-5 min-h-0 text-info hover:bg-info/20 cursor-pointer rounded"
-                            onClick={() => adjustMacroPhone("protein", 1)}
-                            title="Increase Protein"
-                          >
-                            <Plus size={11} />
-                          </button>
-                        </div>
-                      </div>
+                  {/* Divider Handle 1 (Between Protein and Carbs) */}
+                  <div
+                    style={{ left: `${ratios.protein}%` }}
+                    className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 z-20 cursor-col-resize touch-none px-2 py-1 h-11 flex items-center justify-center select-none"
+                    onPointerDown={(e) => handlePointerDown(1, e)}
+                    title="Drag to change Protein & Carbs ratio"
+                  >
+                    <div
+                      className={`bg-base-100 border-2 ${
+                        activeDragHandle === 1 ? "scale-110 border-primary ring-2 ring-primary/40" : "border-info"
+                      } text-info shadow-md rounded-full px-1.5 py-0.5 flex items-center justify-center gap-0.5 transition-transform`}
+                    >
+                      <span className="text-[9px] font-black font-mono leading-none">↔</span>
                     </div>
                   </div>
 
-                  {/* 2. Carbs Card */}
-                  <div className="bg-success/10 border border-success/25 rounded-xl p-2.5 flex flex-col justify-between shadow-xs">
-                    <div className="flex items-center justify-between gap-1">
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <span className="w-2 h-2 rounded-full bg-success shrink-0"></span>
-                        <span className="text-[11px] font-bold text-success uppercase tracking-wider">Carbs</span>
-                        <span className="text-xs font-black font-mono text-success bg-base-100/90 px-1.5 py-0.5 rounded-md border border-success/20 shadow-2xs">
-                          {ratios.carbs}%
-                        </span>
+                  {/* Carbs Segment (Middle) */}
+                  <div
+                    style={{ width: `${ratios.carbs}%` }}
+                    className="h-full bg-success text-success-content flex items-center justify-center transition-all duration-75 overflow-hidden shrink-0"
+                  >
+                    {ratios.carbs >= 10 && (
+                      <div className="flex items-center gap-1 leading-none pointer-events-none px-1">
+                        <span className="text-[10px] font-black uppercase tracking-tight">C</span>
+                        <span className="text-[9px] font-mono font-bold">{ratios.carbs}%</span>
                       </div>
-                      <span className="text-[8px] font-semibold bg-success/20 text-success px-1.5 py-0.5 rounded shrink-0">
-                        Recommended: {RECOMMENDED_RANGES.carbs}
-                      </span>
-                    </div>
+                    )}
+                  </div>
 
-                    <div className="flex items-center justify-between bg-base-100/70 px-2 py-1.5 rounded-lg border border-success/15 mt-1.5">
-                      <span className="text-xs font-black font-mono text-base-content truncate">
-                        {carbsMinGrams}g–{carbsMaxGrams}g
-                      </span>
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        <span className="text-[10px] font-bold font-mono text-success">
-                          {carbsMinCals}–{carbsMaxCals} kcal
-                        </span>
-                        <div className="flex items-center gap-0.5">
-                          <button
-                            type="button"
-                            className="btn btn-ghost btn-xs p-0 h-5 w-5 min-h-0 text-success hover:bg-success/20 cursor-pointer rounded"
-                            onClick={() => adjustMacroPhone("carbs", -1)}
-                            title="Decrease Carbs"
-                          >
-                            <Minus size={11} />
-                          </button>
-                          <button
-                            type="button"
-                            className="btn btn-ghost btn-xs p-0 h-5 w-5 min-h-0 text-success hover:bg-success/20 cursor-pointer rounded"
-                            onClick={() => adjustMacroPhone("carbs", 1)}
-                            title="Increase Carbs"
-                          >
-                            <Plus size={11} />
-                          </button>
-                        </div>
-                      </div>
+                  {/* Divider Handle 2 (Between Carbs and Fats) */}
+                  <div
+                    style={{ left: `${ratios.protein + ratios.carbs}%` }}
+                    className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 z-20 cursor-col-resize touch-none px-2 py-1 h-11 flex items-center justify-center select-none"
+                    onPointerDown={(e) => handlePointerDown(2, e)}
+                    title="Drag to change Carbs & Fats ratio"
+                  >
+                    <div
+                      className={`bg-base-100 border-2 ${
+                        activeDragHandle === 2 ? "scale-110 border-primary ring-2 ring-primary/40" : "border-warning"
+                      } text-warning shadow-md rounded-full px-1.5 py-0.5 flex items-center justify-center gap-0.5 transition-transform`}
+                    >
+                      <span className="text-[9px] font-black font-mono leading-none">↔</span>
                     </div>
                   </div>
 
-                  {/* 3. Fats Card */}
-                  <div className="bg-warning/10 border border-warning/25 rounded-xl p-2.5 flex flex-col justify-between shadow-xs">
-                    <div className="flex items-center justify-between gap-1">
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <span className="w-2 h-2 rounded-full bg-warning shrink-0"></span>
-                        <span className="text-[11px] font-bold text-warning uppercase tracking-wider">Fats</span>
-                        <span className="text-xs font-black font-mono text-warning bg-base-100/90 px-1.5 py-0.5 rounded-md border border-warning/20 shadow-2xs">
-                          {ratios.fats}%
-                        </span>
+                  {/* Fats Segment (Right) */}
+                  <div
+                    style={{ width: `${ratios.fats}%` }}
+                    className="h-full bg-warning text-warning-content flex items-center justify-center transition-all duration-75 overflow-hidden rounded-r-xl shrink-0"
+                  >
+                    {ratios.fats >= 10 && (
+                      <div className="flex items-center gap-1 leading-none pointer-events-none px-1">
+                        <span className="text-[10px] font-black uppercase tracking-tight">F</span>
+                        <span className="text-[9px] font-mono font-bold">{ratios.fats}%</span>
                       </div>
-                      <span className="text-[8px] font-semibold bg-warning/20 text-warning px-1.5 py-0.5 rounded shrink-0">
-                        Recommended: {RECOMMENDED_RANGES.fats}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center justify-between bg-base-100/70 px-2 py-1.5 rounded-lg border border-warning/15 mt-1.5">
-                      <span className="text-xs font-black font-mono text-base-content truncate">
-                        {fatsMinGrams}g–{fatsMaxGrams}g
-                      </span>
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        <span className="text-[10px] font-bold font-mono text-warning">
-                          {fatsMinCals}–{fatsMaxCals} kcal
-                        </span>
-                        <div className="flex items-center gap-0.5">
-                          <button
-                            type="button"
-                            className="btn btn-ghost btn-xs p-0 h-5 w-5 min-h-0 text-warning hover:bg-warning/20 cursor-pointer rounded"
-                            onClick={() => adjustMacroPhone("fats", -1)}
-                            title="Decrease Fats"
-                          >
-                            <Minus size={11} />
-                          </button>
-                          <button
-                            type="button"
-                            className="btn btn-ghost btn-xs p-0 h-5 w-5 min-h-0 text-warning hover:bg-warning/20 cursor-pointer rounded"
-                            onClick={() => adjustMacroPhone("fats", 1)}
-                            title="Increase Fats"
-                          >
-                            <Plus size={11} />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
+                    )}
                   </div>
                 </div>
               </div>
 
+              {/* ── Breakdown Cards (Full Width Stack Below Horizontal Bar) ── */}
+              <div className="space-y-2 pt-1 w-full">
+                {/* 1. Protein Card */}
+                <div className="bg-info/10 border border-info/25 rounded-xl p-2.5 flex flex-col gap-1.5 shadow-xs w-full">
+                  <div className="flex items-center justify-between gap-1">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span className="w-2 h-2 rounded-full bg-info shrink-0"></span>
+                      <span className="text-[11px] font-bold text-info uppercase tracking-wider">Protein</span>
+                      <span className="text-[10px] font-medium font-mono text-info bg-base-100/90 px-1.5 py-0.5 rounded border border-info/20 shadow-2xs">
+                        {ratios.protein}%
+                      </span>
+                    </div>
+                    <span className="text-[8.5px] font-medium bg-info/20 text-info px-1.5 py-0.5 rounded shrink-0">
+                      DRI: {RECOMMENDED_RANGES.protein}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between bg-base-100/70 px-2 py-1 rounded-lg border border-info/15">
+                    <div className="flex items-baseline gap-1.5">
+                      <span className="text-[11px] font-medium font-mono text-base-content">
+                        {proteinMinGrams}g – {proteinMaxGrams}g
+                      </span>
+                      <span className="text-[9px] font-normal font-mono text-info/90">
+                        ({proteinMinCals} – {proteinMaxCals} kcal)
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-xs p-0 h-5 w-5 min-h-0 text-info hover:bg-info/20 cursor-pointer rounded border border-info/30"
+                        onClick={() => adjustMacroPhone("protein", -1)}
+                        title="Decrease Protein"
+                      >
+                        <Minus size={11} />
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-xs p-0 h-5 w-5 min-h-0 text-info hover:bg-info/20 cursor-pointer rounded border border-info/30"
+                        onClick={() => adjustMacroPhone("protein", 1)}
+                        title="Increase Protein"
+                      >
+                        <Plus size={11} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. Carbs Card */}
+                <div className="bg-success/10 border border-success/25 rounded-xl p-2.5 flex flex-col gap-1.5 shadow-xs w-full">
+                  <div className="flex items-center justify-between gap-1">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span className="w-2 h-2 rounded-full bg-success shrink-0"></span>
+                      <span className="text-[11px] font-bold text-success uppercase tracking-wider">Carbs</span>
+                      <span className="text-[10px] font-medium font-mono text-success bg-base-100/90 px-1.5 py-0.5 rounded border border-success/20 shadow-2xs">
+                        {ratios.carbs}%
+                      </span>
+                    </div>
+                    <span className="text-[8.5px] font-medium bg-success/20 text-success px-1.5 py-0.5 rounded shrink-0">
+                      DRI: {RECOMMENDED_RANGES.carbs}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between bg-base-100/70 px-2 py-1 rounded-lg border border-success/15">
+                    <div className="flex items-baseline gap-1.5">
+                      <span className="text-[11px] font-medium font-mono text-base-content">
+                        {carbsMinGrams}g – {carbsMaxGrams}g
+                      </span>
+                      <span className="text-[9px] font-normal font-mono text-success/90">
+                        ({carbsMinCals} – {carbsMaxCals} kcal)
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-xs p-0 h-5 w-5 min-h-0 text-success hover:bg-success/20 cursor-pointer rounded border border-success/30"
+                        onClick={() => adjustMacroPhone("carbs", -1)}
+                        title="Decrease Carbs"
+                      >
+                        <Minus size={11} />
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-xs p-0 h-5 w-5 min-h-0 text-success hover:bg-success/20 cursor-pointer rounded border border-success/30"
+                        onClick={() => adjustMacroPhone("carbs", 1)}
+                        title="Increase Carbs"
+                      >
+                        <Plus size={11} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 3. Fats Card */}
+                <div className="bg-warning/10 border border-warning/25 rounded-xl p-2.5 flex flex-col gap-1.5 shadow-xs w-full">
+                  <div className="flex items-center justify-between gap-1">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span className="w-2 h-2 rounded-full bg-warning shrink-0"></span>
+                      <span className="text-[11px] font-bold text-warning uppercase tracking-wider">Fats</span>
+                      <span className="text-[10px] font-medium font-mono text-warning bg-base-100/90 px-1.5 py-0.5 rounded border border-warning/20 shadow-2xs">
+                        {ratios.fats}%
+                      </span>
+                    </div>
+                    <span className="text-[8.5px] font-medium bg-warning/20 text-warning px-1.5 py-0.5 rounded shrink-0">
+                      DRI: {RECOMMENDED_RANGES.fats}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between bg-base-100/70 px-2 py-1 rounded-lg border border-warning/15">
+                    <div className="flex items-baseline gap-1.5">
+                      <span className="text-[11px] font-medium font-mono text-base-content">
+                        {fatsMinGrams}g – {fatsMaxGrams}g
+                      </span>
+                      <span className="text-[9px] font-normal font-mono text-warning/90">
+                        ({fatsMinCals} – {fatsMaxCals} kcal)
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-xs p-0 h-5 w-5 min-h-0 text-warning hover:bg-warning/20 cursor-pointer rounded border border-warning/30"
+                        onClick={() => adjustMacroPhone("fats", -1)}
+                        title="Decrease Fats"
+                      >
+                        <Minus size={11} />
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-xs p-0 h-5 w-5 min-h-0 text-warning hover:bg-warning/20 cursor-pointer rounded border border-warning/30"
+                        onClick={() => adjustMacroPhone("fats", 1)}
+                        title="Increase Fats"
+                      >
+                        <Plus size={11} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* ═══ SECTION 2: SEPARATE MICROS (NO TABS) ═══ */}

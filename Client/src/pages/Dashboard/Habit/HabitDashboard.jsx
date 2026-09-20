@@ -57,96 +57,64 @@ function HabitDashboard() {
       label: "Calorie",
       icon: Flame,
       color: "text-red-500",
-      activeBg: "bg-red-500/15 dark:bg-red-500/25",
-      activeBorder: "border-2 border-red-500",
-      activeDot: "bg-red-500 ring-2 ring-red-500/40",
-      activeWatermark: "text-red-500 opacity-[0.08]",
-      inactiveWatermark: "text-base-content opacity-[0.03]",
-      shadow: "shadow-sm shadow-red-500/20",
+      activeBorder: "border border-red-500/50 dark:border-red-500/40",
+      activeDot: "bg-red-500 ring-2 ring-red-500/30",
     },
     {
       id: "water",
       label: "Water",
       icon: Droplet,
       color: "text-sky-500",
-      activeBg: "bg-sky-500/15 dark:bg-sky-500/25",
-      activeBorder: "border-2 border-sky-500",
-      activeDot: "bg-sky-500 ring-2 ring-sky-500/40",
-      activeWatermark: "text-sky-500 opacity-[0.08]",
-      inactiveWatermark: "text-base-content opacity-[0.03]",
-      shadow: "shadow-sm shadow-sky-500/20",
+      activeBorder: "border border-sky-500/50 dark:border-sky-500/40",
+      activeDot: "bg-sky-500 ring-2 ring-sky-500/30",
     },
     {
       id: "sleep",
       label: "Sleep",
       icon: Moon,
       color: "text-indigo-500",
-      activeBg: "bg-indigo-500/15 dark:bg-indigo-500/25",
-      activeBorder: "border-2 border-indigo-500",
-      activeDot: "bg-indigo-500 ring-2 ring-indigo-500/40",
-      activeWatermark: "text-indigo-500 opacity-[0.08]",
-      inactiveWatermark: "text-base-content opacity-[0.03]",
-      shadow: "shadow-sm shadow-indigo-500/20",
+      activeBorder: "border border-indigo-500/50 dark:border-indigo-500/40",
+      activeDot: "bg-indigo-500 ring-2 ring-indigo-500/30",
     },
     {
       id: "read",
       label: "Read",
       icon: BookOpen,
       color: "text-amber-500",
-      activeBg: "bg-amber-500/15 dark:bg-amber-500/25",
-      activeBorder: "border-2 border-amber-500",
-      activeDot: "bg-amber-500 ring-2 ring-amber-500/40",
-      activeWatermark: "text-amber-500 opacity-[0.08]",
-      inactiveWatermark: "text-base-content opacity-[0.03]",
-      shadow: "shadow-sm shadow-amber-500/20",
+      activeBorder: "border border-amber-500/50 dark:border-amber-500/40",
+      activeDot: "bg-amber-500 ring-2 ring-amber-500/30",
     },
     {
       id: "selfcare",
       label: "Self Care",
       icon: Heart,
       color: "text-rose-500",
-      activeBg: "bg-rose-500/15 dark:bg-rose-500/25",
-      activeBorder: "border-2 border-rose-500",
-      activeDot: "bg-rose-500 ring-2 ring-rose-500/40",
-      activeWatermark: "text-rose-500 opacity-[0.08]",
-      inactiveWatermark: "text-base-content opacity-[0.03]",
-      shadow: "shadow-sm shadow-rose-500/20",
+      activeBorder: "border border-rose-500/50 dark:border-rose-500/40",
+      activeDot: "bg-rose-500 ring-2 ring-rose-500/30",
     },
     {
       id: "mood",
       label: "Mood",
       icon: Smile,
       color: "text-purple-500",
-      activeBg: "bg-purple-500/15 dark:bg-purple-500/25",
-      activeBorder: "border-2 border-purple-500",
-      activeDot: "bg-purple-500 ring-2 ring-purple-500/40",
-      activeWatermark: "text-purple-500 opacity-[0.08]",
-      inactiveWatermark: "text-base-content opacity-[0.03]",
-      shadow: "shadow-sm shadow-purple-500/20",
+      activeBorder: "border border-purple-500/50 dark:border-purple-500/40",
+      activeDot: "bg-purple-500 ring-2 ring-purple-500/30",
     },
     {
       id: "scores",
       label: "Scores",
       icon: Trophy,
       color: "text-amber-500",
-      activeBg: "bg-amber-500/15 dark:bg-amber-500/25",
-      activeBorder: "border-2 border-amber-500",
-      activeDot: "bg-amber-500 ring-2 ring-amber-500/40",
-      activeWatermark: "text-amber-500 opacity-[0.08]",
-      inactiveWatermark: "text-base-content opacity-[0.03]",
-      shadow: "shadow-sm shadow-amber-500/20",
+      activeBorder: "border border-amber-500/50 dark:border-amber-500/40",
+      activeDot: "bg-amber-500 ring-2 ring-amber-500/30",
     },
     {
       id: "nutrients",
       label: "Nutrients",
       icon: Apple,
       color: "text-emerald-500",
-      activeBg: "bg-emerald-500/15 dark:bg-emerald-500/25",
-      activeBorder: "border-2 border-emerald-500",
-      activeDot: "bg-emerald-500 ring-2 ring-emerald-500/40",
-      activeWatermark: "text-emerald-500 opacity-[0.08]",
-      inactiveWatermark: "text-base-content opacity-[0.03]",
-      shadow: "shadow-sm shadow-emerald-500/20",
+      activeBorder: "border border-emerald-500/50 dark:border-emerald-500/40",
+      activeDot: "bg-emerald-500 ring-2 ring-emerald-500/30",
     },
   ];
 
@@ -483,7 +451,7 @@ function HabitDashboard() {
           </button>
         </div>
 
-        {/* Row 2: Horizontal Scrollable Rectangular Category Boxes with Subtle Background Watermark Icon */}
+        {/* Row 2: Horizontal Scrollable Rectangular Category Boxes (No background, thin low-opacity borders) */}
         <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 -mx-1 px-1">
           {DASHBOARD_TABS.map((tab) => {
             const Icon = tab.icon;
@@ -493,39 +461,30 @@ function HabitDashboard() {
                 key={tab.id}
                 type="button"
                 onClick={() => setActiveTab(tab.id)}
-                className={`relative overflow-hidden shrink-0 w-24 h-14 rounded-2xl transition-all cursor-pointer flex flex-col justify-between p-2.5 text-left select-none ${
+                className={`shrink-0 w-24 h-13 rounded-xl transition-all cursor-pointer flex flex-col justify-between p-2 text-left select-none bg-transparent ${
                   isActive
-                    ? `${tab.activeBg} ${tab.activeBorder} ${tab.shadow}`
-                    : "bg-base-200/60 hover:bg-base-200 border border-base-300/60"
+                    ? `${tab.activeBorder} shadow-xs`
+                    : "border border-base-content/10 hover:border-base-content/20"
                 }`}
               >
-                {/* Subtle Watermark Icon in Top-Right Corner (Away from bottom text for crystal-clear readability) */}
-                <div className="absolute -top-1 -right-1 pointer-events-none select-none">
-                  <Icon
-                    className={`w-9 h-9 transition-transform duration-300 ${
-                      isActive ? `${tab.activeWatermark} scale-105` : tab.inactiveWatermark
-                    }`}
-                  />
-                </div>
-
                 {/* Foreground Header / Small Active Dot & Icon */}
-                <div className="flex items-center justify-between w-full relative z-10">
+                <div className="flex items-center justify-between w-full">
                   <Icon
                     className={`w-3.5 h-3.5 ${
-                      isActive ? tab.color : `${tab.color} opacity-75`
+                      isActive ? tab.color : `${tab.color} opacity-70`
                     }`}
                   />
                   {isActive && (
-                    <span className={`w-2 h-2 rounded-full ${tab.activeDot} animate-pulse`} />
+                    <span className={`w-1.5 h-1.5 rounded-full ${tab.activeDot} animate-pulse`} />
                   )}
                 </div>
 
-                {/* Foreground Label with Maximum Contrast */}
+                {/* Foreground Label */}
                 <span
-                  className={`text-[11px] leading-tight relative z-10 truncate ${
+                  className={`text-[11px] leading-tight truncate ${
                     isActive
-                      ? "font-extrabold text-base-content drop-shadow-xs"
-                      : "font-semibold text-base-content/70"
+                      ? "font-bold text-base-content"
+                      : "font-medium text-base-content/60"
                   }`}
                 >
                   {tab.label}

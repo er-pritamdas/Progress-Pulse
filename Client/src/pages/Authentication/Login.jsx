@@ -173,9 +173,9 @@ function Login() {
 
 
   return (
-    <div className="relative w-full h-screen bg-base-300 flex items-center justify-center overflow-hidden">
+    <div className="relative w-full min-h-[calc(100vh-5rem)] bg-base-300 flex items-center justify-center pt-24 pb-16 px-4 md:px-8 overflow-hidden">
       {/* Background Animated Blobs */}
-      <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none fixed">
+      <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
         <div className="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] bg-primary/20 rounded-full blur-[100px] animate-pulse-slow"></div>
         <div className="absolute bottom-[-10%] left-[-10%] w-[40%] h-[40%] bg-secondary/20 rounded-full blur-[100px] animate-pulse-slow"></div>
       </div>

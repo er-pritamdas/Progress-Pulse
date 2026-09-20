@@ -66,7 +66,7 @@ const DashboardLayout = () => {
         </div>
 
         <main className={`flex-1 transition-all duration-300 overflow-y-auto w-full min-w-0 pb-28 md:pb-6 ${
-          isHabitPage ? "px-2 pt-0 md:px-4 md:pt-0 md:pb-6" : "p-2 sm:p-4"
+          isHabitPage ? "px-0 pt-0 md:px-4 md:pt-0 md:pb-6" : "p-2 sm:p-4"
         }`}>
           <ActiveLastBreadcrumb />
           <Outlet />
