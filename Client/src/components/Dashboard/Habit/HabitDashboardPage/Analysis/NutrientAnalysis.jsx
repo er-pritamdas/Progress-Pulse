@@ -807,12 +807,20 @@ function NutrientAnalysis({
         })}
       </div>
 
-      {/* ── Phone View (block md:hidden) — Month Calendar per category ── */}
-      <div className="block md:hidden">
-        {categoriesToRender.map((category) => {
+      {/* ── Phone View (block md:hidden) — All Category Calendars Stacked Sequentially ── */}
+      <div className="block md:hidden space-y-4">
+        {Object.keys(NUTRIENT_CATEGORIES_CONFIG).map((category) => {
           const categoryNutrients = NUTRIENT_CATEGORIES_CONFIG[category] || [];
           return (
-            <div key={category} className="bg-base-100 rounded-2xl shadow-sm p-3">
+            <div key={category} className="bg-base-100 rounded-2xl shadow-sm p-3 border border-base-300/60">
+              <div className="flex items-center justify-between pb-2 mb-2 border-b border-base-200/80">
+                <span className="text-xs font-bold uppercase tracking-wider text-primary">
+                  {category}
+                </span>
+                <span className="text-[10px] font-semibold text-base-content/50">
+                  {categoryNutrients.length} Nutrients
+                </span>
+              </div>
               <NutrientMonthCalendar
                 category={category}
                 nutrients={categoryNutrients}

@@ -92,17 +92,27 @@ axiosInstance.interceptors.response.use(
       originalRequest._retry = true;
 
       try {
+        const storedRefreshToken = localStorage.getItem("refreshToken");
         // Call refresh-token API to get a new access token
         const res = await axios.post(
           "/api/v1/users/loggedin/refresh-token",
-          {},
+          { refreshToken: storedRefreshToken },
           { withCredentials: true } // send cookie with refresh token
         );
 
-        const newAccessToken = res.data.data;
+        const data = res.data?.data;
+        const newAccessToken = typeof data === "string" ? data : data?.accessToken;
+        const newRefreshToken = typeof data === "object" ? data?.refreshToken : null;
+
+        if (!newAccessToken) {
+          throw new Error("No access token received from refresh API");
+        }
 
         // Store new access token
         localStorage.setItem("token", newAccessToken);
+        if (newRefreshToken) {
+          localStorage.setItem("refreshToken", newRefreshToken);
+        }
 
         // Update headers for retry
         axiosInstance.defaults.headers.common["Authorization"] = `Bearer ${newAccessToken}`;
@@ -110,10 +120,13 @@ axiosInstance.interceptors.response.use(
         // Retry original request
         return axiosInstance(originalRequest);
       } catch (refreshError) {
-        console.error("Refresh token expired or invalid");
+        console.error("Refresh token expired or invalid", refreshError);
         localStorage.removeItem("token");
+        localStorage.removeItem("refreshToken");
         apiCache.clear();
-        window.location.href = "/login"; // force logout
+        if (window.location.pathname.startsWith("/dashboard")) {
+          window.location.href = "/login"; // force logout only if on protected route
+        }
       }
     }
 

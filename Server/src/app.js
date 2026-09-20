@@ -37,6 +37,11 @@ app.get('/metrics', async (req, res) => {
     res.end(metrics);
 });
 
+// ---------------------------- Health Check Endpoint (Render Wake-up) -----------------
+app.get(['/api/v1/health', '/health', '/api/health'], (req, res) => {
+    res.status(200).json({ status: "ok", message: "Server is awake and healthy" });
+});
+
 // ------------------------------Public Routes---------------------------
 // Registered User Routes
 app.use("/api/v1/users/registered", registeredUserRoutes)

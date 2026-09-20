@@ -154,7 +154,7 @@ const updateUserProfile = asynchandler(async (req, res) => {
         newAccessToken = jwt.sign(
             { id: updatedUser._id, username: updatedUser.username },
             process.env.JWT_SECRET_KEY,
-            { expiresIn: process.env.ACCESS_TOKEN_EXPIRY || "15m" }
+            { expiresIn: process.env.ACCESS_TOKEN_EXPIRY || "7d" }
         );
     }
 

@@ -30,7 +30,7 @@ export const LoadingProvider = ({ children }) => {
 
   return (
     <LoadingContext.Provider value={{ loading, setLoading, showLoader, hideLoader, loadingMessage }}>
-      {loading && <Loader message={loadingMessage || "Please wait..."} />}
+      {loading && <Loader message={loadingMessage || "Please wait..."} onClose={hideLoader} />}
       {children}
     </LoadingContext.Provider>
   );

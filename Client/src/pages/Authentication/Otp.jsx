@@ -68,14 +68,23 @@ function Otp() {
         }
     };
 
+    useEffect(() => {
+        return () => {
+            setLoading(false);
+        };
+    }, []);
+
 // ---------------- Login Automatically after signing up : Bette User Experience ------------------
 const LoginAfterSignup = async () =>{
     try{
-      const loginResponse = await axios.post("/api/v1/users/loggedin", formData);
-      localStorage.setItem("token", loginResponse.data.data.accessToken);
+      const loginResponse = await axios.post("/api/v1/users/loggedin", formData, { withCredentials: true });
+      const responseData = loginResponse.data?.data;
+      if (responseData?.accessToken) localStorage.setItem("token", responseData.accessToken);
+      if (responseData?.refreshToken) localStorage.setItem("refreshToken", responseData.refreshToken);
       localStorage.setItem("username", formData.username);
+      localStorage.setItem("remembered_username", formData.username);
 
-      const loggedInUser = loginResponse.data?.data?.user;
+      const loggedInUser = responseData?.user;
       if (loggedInUser?.email) {
         localStorage.setItem("email", loggedInUser.email);
       }
@@ -91,10 +100,10 @@ const LoginAfterSignup = async () =>{
         } catch (e) {}
       }
 
-      setvalidToken(true)
+      setvalidToken(true);
     }catch(error){
-        const errorMessage = err.response?.data?.message || "Something went Wrong";
-        console.log(errorMessage)
+        const errorMessage = error?.response?.data?.message || "Something went Wrong";
+        console.log(errorMessage);
     }
   }
 

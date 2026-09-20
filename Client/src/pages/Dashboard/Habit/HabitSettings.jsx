@@ -82,6 +82,7 @@ function HabitSettings() {
   const [isEmailNotifOn, setIsEmailNotifOn] = useState(emailNotification);
   const [isDarkMode, setIsDarkMode] = useState(darkMode);
   const [isStreakReminderOn, setIsStreakReminderOn] = useState(streakReminders);
+  const [mobileTab, setMobileTab] = useState("targets"); // "targets" | "habits" | "foods"
 
 
 
@@ -473,8 +474,10 @@ function HabitSettings() {
         </div>
       )}
 
-      {/* Heading */}
-      <div className="sticky top-[-17px] z-30 bg-opacity-90 backdrop-blur-md shadow-sm">
+      {/* ── Desktop View (hidden md:block) — UNTOUCHED ── */}
+      <div className="hidden md:block">
+        {/* Heading */}
+        <div className="sticky top-[-17px] z-30 bg-opacity-90 backdrop-blur-md shadow-sm">
         <div className="flex items-center justify-between p-3">
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <UserCheck size={26} />
@@ -755,6 +758,454 @@ function HabitSettings() {
         </div>
       </div>
     )}
+    </div>
+    {/* End Desktop View */}
+
+    {/* ── Phone View (block md:hidden) ── */}
+    <div className="block md:hidden space-y-4 pb-20">
+      {/* Mobile Top Header Bar */}
+      <div className="bg-base-100/90 backdrop-blur-md border border-base-content/10 rounded-2xl p-3 shadow-xs flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+            <UserCheck size={17} />
+          </div>
+          <div>
+            <h1 className="text-sm font-bold text-base-content leading-tight">Habit Settings</h1>
+            <span className="text-[10px] text-base-content/60 font-medium">Daily targets & tracking</span>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            className="btn btn-xs btn-ghost border border-base-content/10 rounded-xl text-base-content/70 h-8 px-2 cursor-pointer"
+            onClick={ResetSettings}
+            disabled={isDataLoading}
+            title="Reset to default settings"
+          >
+            <ListRestart size={13} />
+          </button>
+          <button
+            type="button"
+            className="btn btn-xs btn-primary rounded-xl font-bold gap-1 h-8 px-3 shadow-xs cursor-pointer"
+            onClick={UpdateSettings}
+            disabled={isDataLoading}
+          >
+            <SaveAll size={13} />
+            <span>Save</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Mobile Segmented Tab Navigation */}
+      <div className="flex bg-base-100 p-1 rounded-2xl border border-base-content/10 gap-1 shadow-2xs">
+        <button
+          type="button"
+          onClick={() => setMobileTab("targets")}
+          className={`flex-1 py-2 px-2 rounded-xl font-bold transition-all text-xs flex items-center justify-center gap-1.5 cursor-pointer ${
+            mobileTab === "targets"
+              ? "bg-primary text-primary-content shadow-xs"
+              : "text-base-content/70 hover:bg-base-200/60"
+          }`}
+        >
+          <Target size={14} />
+          <span>Targets</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setMobileTab("habits")}
+          className={`flex-1 py-2 px-2 rounded-xl font-bold transition-all text-xs flex items-center justify-center gap-1.5 cursor-pointer ${
+            mobileTab === "habits"
+              ? "bg-primary text-primary-content shadow-xs"
+              : "text-base-content/70 hover:bg-base-200/60"
+          }`}
+        >
+          <UserCheck size={14} />
+          <span>Habits</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setMobileTab("foods")}
+          className={`flex-1 py-2 px-2 rounded-xl font-bold transition-all text-xs flex items-center justify-center gap-1.5 cursor-pointer ${
+            mobileTab === "foods"
+              ? "bg-primary text-primary-content shadow-xs"
+              : "text-base-content/70 hover:bg-base-200/60"
+          }`}
+        >
+          <Utensils size={14} />
+          <span>Foods</span>
+          {customFoods?.length > 0 && (
+            <span className={`badge badge-xs font-mono font-bold ${mobileTab === "foods" ? "bg-primary-content text-primary" : "badge-secondary"}`}>
+              {customFoods.length}
+            </span>
+          )}
+        </button>
+      </div>
+
+      {/* Loading Spinner */}
+      {isDataLoading ? (
+        <div className="py-16 flex items-center justify-center bg-base-100 rounded-2xl border border-base-content/10 shadow-xs">
+          <span className="loading loading-spinner loading-md text-primary"></span>
+        </div>
+      ) : (
+        <>
+          {/* ═══ TAB 1: DAILY TARGETS / RANGES ═══ */}
+          {mobileTab === "targets" && (
+            <div className="space-y-3">
+              {Object.keys(iconMap).map((field) => {
+                const isIntake = field === "intake";
+                return (
+                  <div
+                    key={field}
+                    className={`bg-base-100 rounded-2xl p-4 border shadow-xs space-y-3 ${
+                      isIntake ? "border-primary/40 ring-1 ring-primary/20" : "border-base-content/10"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between border-b border-base-content/[0.06] pb-2">
+                      <div className="flex items-center gap-2">
+                        <div className={`p-1.5 rounded-lg ${isIntake ? "bg-primary/10 text-primary" : "bg-base-200 text-base-content"}`}>
+                          {iconMap[field]}
+                        </div>
+                        <div>
+                          <h3 className="text-xs font-bold capitalize text-base-content leading-tight">
+                            {field === "intake" ? "Daily Calorie Intake" : field}
+                          </h3>
+                          <span className="text-[10px] text-base-content/60 font-medium">
+                            {isIntake ? "Controls BMR/BMI target goals" : `Target range in ${unitMap[field] || ""}`}
+                          </span>
+                        </div>
+                      </div>
+
+                      <span className="badge badge-soft badge-primary text-[10px] font-mono font-bold">
+                        {unitMap[field] || "-"}
+                      </span>
+                    </div>
+
+                    {/* Inputs */}
+                    <div className="grid grid-cols-2 gap-2.5">
+                      <div>
+                        <label className="text-[10px] font-bold text-base-content/60 uppercase tracking-wider block mb-1">
+                          Min ({unitMap[field] || ""})
+                        </label>
+                        <input
+                          type="number"
+                          value={ranges[field]?.min ?? ""}
+                          onChange={(e) => handleRangeChange(field, "min", e.target.value)}
+                          className="input input-sm w-full bg-base-200/50 border border-base-content/10 rounded-xl font-mono text-xs font-bold text-base-content"
+                          placeholder="Min"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-[10px] font-bold text-base-content/60 uppercase tracking-wider block mb-1">
+                          Max ({unitMap[field] || ""})
+                        </label>
+                        <input
+                          type="number"
+                          value={ranges[field]?.max ?? ""}
+                          onChange={(e) => handleRangeChange(field, "max", e.target.value)}
+                          className="input input-sm w-full bg-base-200/50 border border-base-content/10 rounded-xl font-mono text-xs font-bold text-base-content"
+                          placeholder="Max"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Quick Save Card Button */}
+                    <button
+                      type="button"
+                      className="btn btn-xs btn-soft btn-info w-full rounded-xl font-bold h-7 cursor-pointer"
+                      onClick={() => saveRange(field)}
+                    >
+                      Save {field.charAt(0).toUpperCase() + field.slice(1)} Target
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* ═══ TAB 2: SELFCARE & MOOD TRACKING ═══ */}
+          {mobileTab === "habits" && (
+            <div className="space-y-4">
+              {/* Selfcare Card */}
+              <div className="bg-base-100 rounded-2xl p-4 border border-base-content/10 shadow-xs space-y-3">
+                <div className="flex items-center justify-between border-b border-base-content/[0.06] pb-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-lg bg-success/10 text-success flex items-center justify-center">
+                      <UserCheck size={16} />
+                    </div>
+                    <div>
+                      <h3 className="text-xs font-bold text-base-content leading-tight">Selfcare Habits</h3>
+                      <span className="text-[10px] text-base-content/60 font-medium">Daily wellness activities</span>
+                    </div>
+                  </div>
+                  <span className="badge badge-soft badge-success badge-xs font-mono font-bold">
+                    {ranges.selfcare?.length || 0}
+                  </span>
+                </div>
+
+                {/* Add Input */}
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="e.g. 10m Meditation"
+                    className="input input-sm w-full bg-base-200/50 border border-base-content/10 rounded-xl text-xs font-medium"
+                    value={selfcareInput}
+                    onChange={(e) => setSelfcareInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        addToArray("selfcare", selfcareInput, setSelfcareInput);
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-success rounded-xl font-bold text-xs px-3 shadow-2xs shrink-0 cursor-pointer"
+                    onClick={() => addToArray("selfcare", selfcareInput, setSelfcareInput)}
+                  >
+                    <Plus size={14} /> Add
+                  </button>
+                </div>
+
+                {/* Chips */}
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {ranges.selfcare?.map((habit, idx) => (
+                    <div
+                      key={idx}
+                      className="badge badge-soft badge-success gap-1.5 text-xs py-2 px-2.5 rounded-xl flex items-center"
+                    >
+                      <UserCheck size={12} />
+                      <span className="font-medium">{habit}</span>
+                      <button
+                        type="button"
+                        className="ml-1 cursor-pointer opacity-70 hover:opacity-100"
+                        onClick={() => removeFromArray("selfcare", idx)}
+                      >
+                        <X size={13} />
+                      </button>
+                    </div>
+                  ))}
+                  {(!ranges.selfcare || ranges.selfcare.length === 0) && (
+                    <p className="text-[11px] text-base-content/50 italic py-2">No selfcare habits added yet.</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Mood Tracking Card */}
+              <div className="bg-base-100 rounded-2xl p-4 border border-base-content/10 shadow-xs space-y-3">
+                <div className="flex items-center justify-between border-b border-base-content/[0.06] pb-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-lg bg-warning/10 text-warning flex items-center justify-center">
+                      <Smile size={16} />
+                    </div>
+                    <div>
+                      <h3 className="text-xs font-bold text-base-content leading-tight">Mood Tracking</h3>
+                      <span className="text-[10px] text-base-content/60 font-medium">Daily emotion tags</span>
+                    </div>
+                  </div>
+                  <span className="badge badge-soft badge-warning badge-xs font-mono font-bold">
+                    {ranges.mood?.length || 0}
+                  </span>
+                </div>
+
+                {/* Add Input */}
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="e.g. Grateful, Energized"
+                    className="input input-sm w-full bg-base-200/50 border border-base-content/10 rounded-xl text-xs font-medium"
+                    value={moodInput}
+                    onChange={(e) => setMoodInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        addToArray("mood", moodInput, setMoodInput);
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-warning rounded-xl font-bold text-xs px-3 shadow-2xs shrink-0 cursor-pointer"
+                    onClick={() => addToArray("mood", moodInput, setMoodInput)}
+                  >
+                    <Plus size={14} /> Add
+                  </button>
+                </div>
+
+                {/* Chips */}
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {ranges.mood?.map((m, idx) => (
+                    <div
+                      key={idx}
+                      className="badge badge-soft badge-warning gap-1.5 text-xs py-2 px-2.5 rounded-xl flex items-center"
+                    >
+                      <Smile size={12} />
+                      <span className="font-medium">{m}</span>
+                      <button
+                        type="button"
+                        className="ml-1 cursor-pointer opacity-70 hover:opacity-100"
+                        onClick={() => removeFromArray("mood", idx)}
+                      >
+                        <X size={13} />
+                      </button>
+                    </div>
+                  ))}
+                  {(!ranges.mood || ranges.mood.length === 0) && (
+                    <p className="text-[11px] text-base-content/50 italic py-2">No mood tags added yet.</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ═══ TAB 3: CUSTOM FOODS & RECIPES ═══ */}
+          {mobileTab === "foods" && (
+            <div className="space-y-3">
+              {/* Header Action Card */}
+              <div className="bg-base-100 rounded-2xl p-3.5 border border-base-content/10 shadow-xs flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl bg-secondary/10 text-secondary flex items-center justify-center">
+                    <Utensils size={16} />
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-bold text-base-content leading-tight">Custom Foods</h3>
+                    <span className="text-[10px] text-base-content/60 font-medium">
+                      {customFoods.length} items registered
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  className="btn btn-xs btn-secondary rounded-xl font-bold gap-1 px-3 shadow-xs h-8 cursor-pointer"
+                  onClick={() => setIsAddCustomFoodModalOpen(true)}
+                >
+                  <Plus size={14} /> Add Food
+                </button>
+              </div>
+
+              {/* Content */}
+              {customFoodsLoading ? (
+                <div className="py-12 flex items-center justify-center bg-base-100 rounded-2xl border border-base-content/10">
+                  <span className="loading loading-spinner loading-md text-secondary"></span>
+                </div>
+              ) : customFoods.length === 0 ? (
+                <div className="border-2 border-dashed border-base-content/10 rounded-2xl p-6 text-center bg-base-100/60 space-y-2.5">
+                  <div className="w-11 h-11 rounded-2xl bg-secondary/10 text-secondary flex items-center justify-center mx-auto">
+                    <Utensils size={20} />
+                  </div>
+                  <h4 className="text-xs font-bold text-base-content">No Custom Foods Yet</h4>
+                  <p className="text-[11px] text-base-content/60 max-w-xs mx-auto">
+                    Add your home-cooked meals, shakes, or branded snacks to quickly log them in your food diary.
+                  </p>
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-outline btn-xs rounded-xl gap-1.5 font-bold mt-1 cursor-pointer"
+                    onClick={() => setIsAddCustomFoodModalOpen(true)}
+                  >
+                    <Plus size={13} /> Create First Food
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-2.5">
+                  {customFoods.map((food) => (
+                    <div
+                      key={food._id}
+                      className="bg-base-100 border border-base-content/10 rounded-2xl p-3.5 shadow-xs space-y-2.5"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <h4 className="font-bold text-xs text-base-content truncate">
+                            {food.name}
+                          </h4>
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            <span className="badge badge-xs badge-soft badge-secondary font-semibold text-[10px]">
+                              {food.category || "General"}
+                            </span>
+                            {food.brand && food.brand !== "Generic" && (
+                              <span className="text-[10px] text-base-content/60 truncate">
+                                • {food.brand}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteCustomFood(food._id)}
+                          disabled={deletingFoodId === food._id}
+                          className="btn btn-ghost btn-xs btn-circle text-error/70 hover:text-error hover:bg-error/10 shrink-0 cursor-pointer"
+                          title="Delete custom food"
+                        >
+                          {deletingFoodId === food._id ? (
+                            <span className="loading loading-spinner loading-xs"></span>
+                          ) : (
+                            <Trash2 size={13} />
+                          )}
+                        </button>
+                      </div>
+
+                      {/* Macro Grid */}
+                      <div className="grid grid-cols-4 gap-1.5 text-center">
+                        <div className="bg-base-200/60 rounded-xl p-1.5">
+                          <p className="text-[9px] text-base-content/60 uppercase font-bold">Cals</p>
+                          <p className="text-xs font-black text-secondary">{food.calories || 0}</p>
+                        </div>
+                        <div className="bg-base-200/60 rounded-xl p-1.5">
+                          <p className="text-[9px] text-base-content/60 uppercase font-bold">Prot</p>
+                          <p className="text-xs font-black text-info">{food.protein || 0}g</p>
+                        </div>
+                        <div className="bg-base-200/60 rounded-xl p-1.5">
+                          <p className="text-[9px] text-base-content/60 uppercase font-bold">Carb</p>
+                          <p className="text-xs font-black text-warning">{food.carbohydrates || 0}g</p>
+                        </div>
+                        <div className="bg-base-200/60 rounded-xl p-1.5">
+                          <p className="text-[9px] text-base-content/60 uppercase font-bold">Fat</p>
+                          <p className="text-xs font-black text-error">{food.fat || 0}g</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-2 text-[10px] text-base-content/60 border-t border-base-content/5">
+                        <span>Serving: {food.servingSize || 100} {food.unitType || "g"}</span>
+                        <span className="font-mono text-[9px] opacity-70">Custom Item</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Mobile Floating Bottom Bar for Unsaved Changes */}
+      {isDirty && (
+        <div className="fixed bottom-3 left-3 right-3 z-40 bg-base-100/95 backdrop-blur-md border border-base-content/15 rounded-2xl p-2.5 shadow-2xl flex items-center justify-between gap-2 animate-in slide-in-from-bottom duration-200">
+          <div className="flex items-center gap-1.5 pl-1 min-w-0">
+            <span className="w-2 h-2 rounded-full bg-warning animate-pulse shrink-0" />
+            <span className="text-[11px] font-bold text-base-content truncate">Unsaved Changes</span>
+          </div>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              type="button"
+              onClick={ResetSettings}
+              className="btn btn-xs btn-ghost rounded-xl text-xs text-base-content/70 cursor-pointer"
+              disabled={isDataLoading}
+            >
+              Reset
+            </button>
+            <button
+              type="button"
+              onClick={UpdateSettings}
+              className="btn btn-xs btn-primary font-bold rounded-xl px-3 text-xs gap-1 shadow-xs cursor-pointer"
+              disabled={isDataLoading}
+            >
+              <SaveAll size={12} /> Save
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
 
       {/* Export Food Log Modal */}
       <ExportFoodLogModal

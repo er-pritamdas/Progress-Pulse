@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import { setHabitFilters, resetHabitFilters } from "../../../services/redux/slice/habitSlice";
+import { setHabitFilters, resetHabitFilters, setHabitYearAndMonth } from "../../../services/redux/slice/habitSlice";
 import HabitDateQuickSelect from "../../../components/Dashboard/Habit/HabitDateQuickSelect.jsx";
 import { TitleChanger } from "../../../utils/TitleChanger";
 import LongestStreakCard from "../../../components/Dashboard/Habit/HabitDashboardPage/LongestStreakCard";
@@ -34,6 +34,7 @@ function HabitDashboard() {
   const [activeTab, setActiveTab] = useState('calorie');
   const [isOverviewOpen, setIsOverviewOpen] = useState(false);
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
+  const [mobileCalendarView, setMobileCalendarView] = useState("from"); // "from" | "to" | null
 
   const [nutrientCategory, setNutrientCategory] = useState("Macronutrients");
   const [waterMin, setWaterMin] = useState(0);
@@ -51,14 +52,102 @@ function HabitDashboard() {
   const [selfCareList, setSelfCareList] = useState([]);
 
   const DASHBOARD_TABS = [
-    { id: "calorie", label: "Calorie", icon: Flame, color: "text-error" },
-    { id: "water", label: "Water", icon: Droplet, color: "text-info" },
-    { id: "sleep", label: "Sleep", icon: Moon, color: "text-accent" },
-    { id: "read", label: "Read", icon: BookOpen, color: "text-warning" },
-    { id: "selfcare", label: "Self Care", icon: Heart, color: "text-secondary" },
-    { id: "mood", label: "Mood", icon: Smile, color: "text-accent" },
-    { id: "scores", label: "Scores", icon: Trophy, color: "text-amber-400" },
-    { id: "nutrients", label: "Nutrients", icon: Apple, color: "text-success" },
+    {
+      id: "calorie",
+      label: "Calorie",
+      icon: Flame,
+      color: "text-red-500",
+      activeBg: "bg-red-500/15 dark:bg-red-500/25",
+      activeBorder: "border-2 border-red-500",
+      activeDot: "bg-red-500 ring-2 ring-red-500/40",
+      activeWatermark: "text-red-500 opacity-[0.08]",
+      inactiveWatermark: "text-base-content opacity-[0.03]",
+      shadow: "shadow-sm shadow-red-500/20",
+    },
+    {
+      id: "water",
+      label: "Water",
+      icon: Droplet,
+      color: "text-sky-500",
+      activeBg: "bg-sky-500/15 dark:bg-sky-500/25",
+      activeBorder: "border-2 border-sky-500",
+      activeDot: "bg-sky-500 ring-2 ring-sky-500/40",
+      activeWatermark: "text-sky-500 opacity-[0.08]",
+      inactiveWatermark: "text-base-content opacity-[0.03]",
+      shadow: "shadow-sm shadow-sky-500/20",
+    },
+    {
+      id: "sleep",
+      label: "Sleep",
+      icon: Moon,
+      color: "text-indigo-500",
+      activeBg: "bg-indigo-500/15 dark:bg-indigo-500/25",
+      activeBorder: "border-2 border-indigo-500",
+      activeDot: "bg-indigo-500 ring-2 ring-indigo-500/40",
+      activeWatermark: "text-indigo-500 opacity-[0.08]",
+      inactiveWatermark: "text-base-content opacity-[0.03]",
+      shadow: "shadow-sm shadow-indigo-500/20",
+    },
+    {
+      id: "read",
+      label: "Read",
+      icon: BookOpen,
+      color: "text-amber-500",
+      activeBg: "bg-amber-500/15 dark:bg-amber-500/25",
+      activeBorder: "border-2 border-amber-500",
+      activeDot: "bg-amber-500 ring-2 ring-amber-500/40",
+      activeWatermark: "text-amber-500 opacity-[0.08]",
+      inactiveWatermark: "text-base-content opacity-[0.03]",
+      shadow: "shadow-sm shadow-amber-500/20",
+    },
+    {
+      id: "selfcare",
+      label: "Self Care",
+      icon: Heart,
+      color: "text-rose-500",
+      activeBg: "bg-rose-500/15 dark:bg-rose-500/25",
+      activeBorder: "border-2 border-rose-500",
+      activeDot: "bg-rose-500 ring-2 ring-rose-500/40",
+      activeWatermark: "text-rose-500 opacity-[0.08]",
+      inactiveWatermark: "text-base-content opacity-[0.03]",
+      shadow: "shadow-sm shadow-rose-500/20",
+    },
+    {
+      id: "mood",
+      label: "Mood",
+      icon: Smile,
+      color: "text-purple-500",
+      activeBg: "bg-purple-500/15 dark:bg-purple-500/25",
+      activeBorder: "border-2 border-purple-500",
+      activeDot: "bg-purple-500 ring-2 ring-purple-500/40",
+      activeWatermark: "text-purple-500 opacity-[0.08]",
+      inactiveWatermark: "text-base-content opacity-[0.03]",
+      shadow: "shadow-sm shadow-purple-500/20",
+    },
+    {
+      id: "scores",
+      label: "Scores",
+      icon: Trophy,
+      color: "text-amber-500",
+      activeBg: "bg-amber-500/15 dark:bg-amber-500/25",
+      activeBorder: "border-2 border-amber-500",
+      activeDot: "bg-amber-500 ring-2 ring-amber-500/40",
+      activeWatermark: "text-amber-500 opacity-[0.08]",
+      inactiveWatermark: "text-base-content opacity-[0.03]",
+      shadow: "shadow-sm shadow-amber-500/20",
+    },
+    {
+      id: "nutrients",
+      label: "Nutrients",
+      icon: Apple,
+      color: "text-emerald-500",
+      activeBg: "bg-emerald-500/15 dark:bg-emerald-500/25",
+      activeBorder: "border-2 border-emerald-500",
+      activeDot: "bg-emerald-500 ring-2 ring-emerald-500/40",
+      activeWatermark: "text-emerald-500 opacity-[0.08]",
+      inactiveWatermark: "text-base-content opacity-[0.03]",
+      shadow: "shadow-sm shadow-emerald-500/20",
+    },
   ];
 
   const activeTabObj = DASHBOARD_TABS.find((t) => t.id === activeTab) || DASHBOARD_TABS[0];
@@ -78,6 +167,57 @@ function HabitDashboard() {
   const resetFilters = () => {
     dispatch(resetHabitFilters());
   };
+
+  const now = new Date();
+  const currentSystemYear = now.getFullYear();
+
+  const getYearAndMonth = () => {
+    if (!fromDate || !toDate) return { year: currentSystemYear, month: "all" };
+
+    const fromParts = fromDate.split("-").map(Number);
+    const toParts = toDate.split("-").map(Number);
+
+    if (fromParts.length !== 3 || toParts.length !== 3) {
+      return { year: currentSystemYear, month: "all" };
+    }
+
+    const [fromYear, fromMonthNum, fromDay] = fromParts;
+    const [toYear, toMonthNum, toDay] = toParts;
+
+    const fromMonth = fromMonthNum - 1;
+    const toMonth = toMonthNum - 1;
+
+    const lastDayOfToMonth = new Date(toYear, toMonth + 1, 0).getDate();
+
+    if (fromYear === toYear) {
+      if (fromMonth === 0 && fromDay === 1 && toMonth === 11 && toDay === 31) {
+        return { year: fromYear, month: "all" };
+      }
+      if (fromMonth === toMonth && fromDay === 1 && toDay === lastDayOfToMonth) {
+        return { year: fromYear, month: fromMonth };
+      }
+    }
+    return { year: fromYear || currentSystemYear, month: "custom" };
+  };
+
+  const { year: activeYear, month: activeMonth } = getYearAndMonth();
+  const years = Array.from({ length: 11 }, (_, i) => currentSystemYear - 5 + i);
+
+  const months = [
+    { label: "Whole Year", value: "all" },
+    { label: "January", value: 0 },
+    { label: "February", value: 1 },
+    { label: "March", value: 2 },
+    { label: "April", value: 3 },
+    { label: "May", value: 4 },
+    { label: "June", value: 5 },
+    { label: "July", value: 6 },
+    { label: "August", value: 7 },
+    { label: "September", value: 8 },
+    { label: "October", value: 9 },
+    { label: "November", value: 10 },
+    { label: "December", value: 11 },
+  ];
 
   const fetchHabitSettings = async () => {
     try {
@@ -343,8 +483,8 @@ function HabitDashboard() {
           </button>
         </div>
 
-        {/* Row 2: Horizontal Scrollable Category Pills */}
-        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 -mx-1 px-1">
+        {/* Row 2: Horizontal Scrollable Rectangular Category Boxes with Subtle Background Watermark Icon */}
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 -mx-1 px-1">
           {DASHBOARD_TABS.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -353,95 +493,227 @@ function HabitDashboard() {
                 key={tab.id}
                 type="button"
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold shrink-0 transition-all cursor-pointer ${
+                className={`relative overflow-hidden shrink-0 w-24 h-14 rounded-2xl transition-all cursor-pointer flex flex-col justify-between p-2.5 text-left select-none ${
                   isActive
-                    ? "bg-primary text-primary-content shadow-xs font-bold"
-                    : "bg-base-200/80 hover:bg-base-200 text-base-content/75 border border-base-300/50"
+                    ? `${tab.activeBg} ${tab.activeBorder} ${tab.shadow}`
+                    : "bg-base-200/60 hover:bg-base-200 border border-base-300/60"
                 }`}
               >
-                <Icon className={`w-3.5 h-3.5 ${isActive ? "text-primary-content" : tab.color}`} />
-                <span>{tab.label}</span>
+                {/* Subtle Watermark Icon in Top-Right Corner (Away from bottom text for crystal-clear readability) */}
+                <div className="absolute -top-1 -right-1 pointer-events-none select-none">
+                  <Icon
+                    className={`w-9 h-9 transition-transform duration-300 ${
+                      isActive ? `${tab.activeWatermark} scale-105` : tab.inactiveWatermark
+                    }`}
+                  />
+                </div>
+
+                {/* Foreground Header / Small Active Dot & Icon */}
+                <div className="flex items-center justify-between w-full relative z-10">
+                  <Icon
+                    className={`w-3.5 h-3.5 ${
+                      isActive ? tab.color : `${tab.color} opacity-75`
+                    }`}
+                  />
+                  {isActive && (
+                    <span className={`w-2 h-2 rounded-full ${tab.activeDot} animate-pulse`} />
+                  )}
+                </div>
+
+                {/* Foreground Label with Maximum Contrast */}
+                <span
+                  className={`text-[11px] leading-tight relative z-10 truncate ${
+                    isActive
+                      ? "font-extrabold text-base-content drop-shadow-xs"
+                      : "font-semibold text-base-content/70"
+                  }`}
+                >
+                  {tab.label}
+                </span>
               </button>
             );
           })}
         </div>
-
-        {/* Row 3: Nutrient Category Pills (Visible only when Nutrients tab is active) */}
-        {activeTab === "nutrients" && (
-          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pt-1.5 pb-0.5 border-t border-base-300/50">
-            <span className="text-[10px] uppercase font-bold text-base-content/50 shrink-0 mr-1">Category:</span>
-            {["Macronutrients", "Vitamins", "Minerals", "Fatty Acids", "Others"].map((cat) => (
-              <button
-                key={cat}
-                type="button"
-                onClick={() => setNutrientCategory(cat)}
-                className={`px-2.5 py-1 rounded-lg text-xs font-semibold shrink-0 transition-all cursor-pointer ${
-                  nutrientCategory === cat
-                    ? "bg-primary text-primary-content shadow-xs font-bold"
-                    : "bg-base-200/70 hover:bg-base-200 text-base-content/70 border border-base-300/40"
-                }`}
-              >
-                {cat}
-              </button>
-            ))}
-          </div>
-        )}
       </div>
 
-      {/* Mobile Date Filter Modal Popup */}
+      {/* Mobile Date Filter Modal Popup (Phone View Only - Desktop View Untouched) */}
       {isMobileFilterOpen && (
         <div 
           className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-xs p-0 sm:p-4 animate-fade-in"
           onClick={() => setIsMobileFilterOpen(false)}
         >
           <div
-            className="bg-base-100 rounded-t-3xl sm:rounded-2xl border border-base-300 shadow-2xl w-full max-w-md p-5 space-y-4 max-h-[85vh] overflow-y-auto"
+            className="bg-base-100 rounded-t-3xl sm:rounded-2xl border border-base-300 shadow-2xl w-full max-w-md p-5 space-y-4 max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
+            {/* Modal Header */}
             <div className="flex items-center justify-between border-b border-base-300 pb-3">
-              <div className="flex items-center gap-2">
-                <Calendar className="w-5 h-5 text-primary" />
-                <h3 className="font-bold text-base text-base-content">Filter Date Range</h3>
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-primary/10 text-primary">
+                  <Calendar className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-base text-base-content leading-tight">Filter Date Range</h3>
+                  <p className="text-[11px] text-base-content/60 font-medium">Quick select or pick custom dates</p>
+                </div>
               </div>
               <button
                 type="button"
                 onClick={() => setIsMobileFilterOpen(false)}
-                className="btn btn-sm btn-circle btn-ghost"
+                className="btn btn-sm btn-circle btn-ghost text-base-content/70 hover:text-base-content cursor-pointer"
+                title="Close"
               >
                 <X size={18} />
               </button>
             </div>
 
-            {/* Quick Select */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-base-content/60 uppercase tracking-wider">
+            {/* Quick Select Section */}
+            <div className="space-y-2">
+              <span className="text-[11px] font-bold text-base-content/70 uppercase tracking-wider block">
                 Quick Select (Year & Month)
-              </label>
-              <div className="flex items-center justify-start">
-                <HabitDateQuickSelect />
+              </span>
+              <div className="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label className="text-[11px] font-semibold text-base-content/70 mb-1 block">Year</label>
+                  <select
+                    className="select select-sm w-full bg-base-200 border border-base-300 rounded-xl text-xs font-semibold text-base-content focus:border-primary focus:outline-none cursor-pointer"
+                    value={activeYear}
+                    onChange={(e) => {
+                      const selectedYear = Number(e.target.value);
+                      const targetMonth = activeMonth === "custom" ? "all" : activeMonth;
+                      dispatch(setHabitYearAndMonth({ year: selectedYear, month: targetMonth }));
+                    }}
+                  >
+                    {years.map((y) => (
+                      <option key={y} value={y} className="bg-base-100 text-base-content">
+                        {y}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-semibold text-base-content/70 mb-1 block">Month</label>
+                  <select
+                    className="select select-sm w-full bg-base-200 border border-base-300 rounded-xl text-xs font-semibold text-base-content focus:border-primary focus:outline-none cursor-pointer"
+                    value={activeMonth}
+                    onChange={(e) => {
+                      const val = e.target.value === "all" ? "all" : Number(e.target.value);
+                      dispatch(setHabitYearAndMonth({ year: activeYear, month: val }));
+                    }}
+                  >
+                    {months.map((m) => (
+                      <option key={m.value} value={m.value} className="bg-base-100 text-base-content">
+                        {m.label}
+                      </option>
+                    ))}
+                    {activeMonth === "custom" && (
+                      <option value="custom" disabled className="bg-base-100 text-base-content">
+                        Custom Range
+                      </option>
+                    )}
+                  </select>
+                </div>
               </div>
             </div>
 
-            {/* Custom Date Inputs */}
-            <div className="grid grid-cols-2 gap-3 pt-2 border-t border-base-300/60">
-              <div>
-                <label className="text-xs font-semibold text-base-content/70 mb-1 block">From Date</label>
-                <input
-                  type="date"
-                  value={fromDate || ""}
-                  onChange={(e) => dispatch(setHabitFilters({ fromDate: e.target.value }))}
-                  className="input input-sm w-full bg-base-200 border-base-300 rounded-xl"
-                />
+            {/* Custom Date Range Section with Theme-Matched Calendars */}
+            <div className="space-y-2.5 pt-2 border-t border-base-300/60">
+              <span className="text-[11px] font-bold text-base-content/70 uppercase tracking-wider block">
+                Custom Range (Theme Calendar)
+              </span>
+
+              {/* Date Selection Buttons */}
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setMobileCalendarView(mobileCalendarView === "from" ? null : "from")}
+                  className={`flex flex-col p-2.5 rounded-xl border transition-all text-left cursor-pointer ${
+                    mobileCalendarView === "from"
+                      ? "bg-primary/10 border-primary shadow-xs ring-1 ring-primary/30"
+                      : "bg-base-200/70 hover:bg-base-200 border-base-300"
+                  }`}
+                >
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-base-content/60">From Date</span>
+                  <span className="text-xs font-bold text-base-content mt-0.5 truncate">
+                    {fromDate ? formatDate(fromDate) : "Select date"}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setMobileCalendarView(mobileCalendarView === "to" ? null : "to")}
+                  className={`flex flex-col p-2.5 rounded-xl border transition-all text-left cursor-pointer ${
+                    mobileCalendarView === "to"
+                      ? "bg-primary/10 border-primary shadow-xs ring-1 ring-primary/30"
+                      : "bg-base-200/70 hover:bg-base-200 border-base-300"
+                  }`}
+                >
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-base-content/60">To Date</span>
+                  <span className="text-xs font-bold text-base-content mt-0.5 truncate">
+                    {toDate ? formatDate(toDate) : "Select date"}
+                  </span>
+                </button>
               </div>
-              <div>
-                <label className="text-xs font-semibold text-base-content/70 mb-1 block">To Date</label>
-                <input
-                  type="date"
-                  value={toDate || ""}
-                  onChange={(e) => dispatch(setHabitFilters({ toDate: e.target.value }))}
-                  className="input input-sm w-full bg-base-200 border-base-300 rounded-xl"
-                />
-              </div>
+
+              {/* Interactive Theme-Matched Calendar */}
+              {mobileCalendarView && (
+                <div className="flex flex-col items-center justify-center p-3 bg-base-200/60 rounded-2xl border border-base-300 animate-in fade-in zoom-in-95 duration-150">
+                  <div className="flex items-center justify-between w-full mb-2 px-1">
+                    <span className="text-xs font-bold text-primary flex items-center gap-1.5">
+                      <Calendar className="w-3.5 h-3.5" />
+                      {mobileCalendarView === "from" ? "Pick Start Date" : "Pick End Date"}
+                    </span>
+                    <span className="text-[11px] font-semibold text-base-content/70">
+                      {mobileCalendarView === "from"
+                        ? (fromDate ? formatDate(fromDate) : "None")
+                        : (toDate ? formatDate(toDate) : "None")}
+                    </span>
+                  </div>
+
+                  {mobileCalendarView === "from" ? (
+                    <calendar-date
+                      class="cally"
+                      value={fromDate || undefined}
+                      onchange={(e) => {
+                        if (e.target.value) {
+                          dispatch(setHabitFilters({ fromDate: e.target.value }));
+                          if (!toDate || toDate < e.target.value) {
+                            dispatch(setHabitFilters({ fromDate: e.target.value, toDate: e.target.value }));
+                          }
+                        }
+                      }}
+                    >
+                      <svg aria-label="Previous" className="fill-current size-4" slot="previous" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                        <path d="M15.75 19.5 8.25 12l7.5-7.5"></path>
+                      </svg>
+                      <svg aria-label="Next" className="fill-current size-4" slot="next" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                        <path d="m8.25 4.5 7.5 7.5-7.5 7.5"></path>
+                      </svg>
+                      <calendar-month></calendar-month>
+                    </calendar-date>
+                  ) : (
+                    <calendar-date
+                      class="cally"
+                      value={toDate || undefined}
+                      min={fromDate || undefined}
+                      onchange={(e) => {
+                        if (e.target.value) {
+                          dispatch(setHabitFilters({ toDate: e.target.value }));
+                        }
+                      }}
+                    >
+                      <svg aria-label="Previous" className="fill-current size-4" slot="previous" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                        <path d="M15.75 19.5 8.25 12l7.5-7.5"></path>
+                      </svg>
+                      <svg aria-label="Next" className="fill-current size-4" slot="next" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                        <path d="m8.25 4.5 7.5 7.5-7.5 7.5"></path>
+                      </svg>
+                      <calendar-month></calendar-month>
+                    </calendar-date>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Action Buttons */}
@@ -450,8 +722,9 @@ function HabitDashboard() {
                 type="button"
                 onClick={() => {
                   resetFilters();
+                  setMobileCalendarView("from");
                 }}
-                className="btn btn-sm btn-ghost border border-base-300 rounded-xl px-4 cursor-pointer"
+                className="btn btn-sm btn-ghost border border-base-300 rounded-xl px-4 cursor-pointer text-xs"
               >
                 Reset
               </button>
@@ -461,7 +734,7 @@ function HabitDashboard() {
                   fetchData();
                   setIsMobileFilterOpen(false);
                 }}
-                className="btn btn-sm btn-primary rounded-xl px-6 font-bold shadow-sm cursor-pointer"
+                className="btn btn-sm btn-primary rounded-xl px-6 font-bold shadow-sm cursor-pointer text-xs"
               >
                 Apply Filter
               </button>

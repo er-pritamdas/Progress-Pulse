@@ -116,8 +116,9 @@ function Navbar({ onToggleSidebar, isSidebarOpen }) {
             setLoading(true, "Logging out... See you soon!");
 
             const formData = { username };
-            await axios.post("/api/v1/users/logout", formData);
+            await axios.post("/api/v1/users/logout", formData, { withCredentials: true });
             localStorage.removeItem("token");
+            localStorage.removeItem("refreshToken");
             localStorage.removeItem("username");
             localStorage.removeItem("email");
             localStorage.removeItem("fullName");

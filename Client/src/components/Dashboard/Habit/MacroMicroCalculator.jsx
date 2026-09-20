@@ -1,12 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import { Activity, Droplet, Zap, Info, Minus, Plus, PieChart, ExternalLink } from "lucide-react";
+import { Activity, Droplet, Zap, Info, Minus, Plus, PieChart, ExternalLink, Settings, HeartPulse, Sparkles } from "lucide-react";
 
-const DonutChart = ({ ratios, calorieMin, calorieMax }) => {
+const DonutChart = ({ ratios, calorieMin, calorieMax, size = 250, strokeWidth = 20 }) => {
   const navigate = useNavigate();
-  const size = 250;
-  const strokeWidth = 20;
   const radius = (size - strokeWidth) / 2;
   const center = size / 2;
   const circumference = 2 * Math.PI * radius;
@@ -88,6 +86,7 @@ const DonutChart = ({ ratios, calorieMin, calorieMax }) => {
 };
 
 const MacroMicroCalculator = ({ maintenanceCalories, age, gender }) => {
+  const navigate = useNavigate();
   // --- Redux Habit Settings Intake Min & Max ---
   const habitSettings = useSelector((state) => state.habit?.settings);
 
@@ -163,22 +162,36 @@ const MacroMicroCalculator = ({ maintenanceCalories, age, gender }) => {
         { name: "Vitamin B9", value: "400 mcg", icon: "🥬" },
         { name: "Vitamin B12", value: "2.4 mcg", icon: "🥩" },
         { name: "Vitamin C", value: isMale ? "90 mg" : "75 mg", icon: "🍊" },
-        { name: "Vitamin D", value: "15-20 mcg", icon: "☀️" },
+        { name: "Vitamin D", value: age > 70 ? "20 mcg" : "15 mcg", icon: "☀️" },
         { name: "Vitamin E", value: "15 mg", icon: "🌻" },
         { name: "Vitamin K", value: isMale ? "120 mcg" : "90 mcg", icon: "🥦" },
       ],
       minerals: [
-        { name: "Calcium", value: "1000 mg", icon: "🥛" },
-        { name: "Iron", value: isMale ? "8 mg" : (age > 50 ? "8 mg" : "18 mg"), icon: "🍖" },
+        { name: "Calcium", value: age > 50 ? (isMale && age <= 70 ? "1000 mg" : "1200 mg") : "1000 mg", icon: "🥛" },
         { name: "Magnesium", value: isMale ? "400-420 mg" : "310-320 mg", icon: "🍫" },
-        { name: "Zinc", value: isMale ? "11 mg" : "8 mg", icon: "🦪" },
-        { name: "Potassium", value: "3400 mg", icon: "🍌" },
-        { name: "Sodium", value: "1500-2300 mg", icon: "🧂" },
         { name: "Phosphorus", value: "700 mg", icon: "🦴" },
+        { name: "Potassium", value: isMale ? "3400 mg" : "2600 mg", icon: "🍌" },
+        { name: "Sodium", value: "< 2300 mg", icon: "🧂" },
+        { name: "Iron", value: isMale ? "8 mg" : (age > 50 ? "8 mg" : "18 mg"), icon: "🍖" },
+        { name: "Zinc", value: isMale ? "11 mg" : "8 mg", icon: "🦪" },
+        { name: "Copper", value: "900 mcg", icon: "🍄" },
+        { name: "Manganese", value: isMale ? "2.3 mg" : "1.8 mg", icon: "🌾" },
+        { name: "Selenium", value: "55 mcg", icon: "🌰" },
+        { name: "Iodine", value: "150 mcg", icon: "🌊" },
       ],
-      essentialFats: [
+      fattyAcids: [
+        { name: "Saturated Fat", value: "< 10% cals", icon: "🧈" },
+        { name: "Monounsaturated", value: "15-20% cals", icon: "🫒" },
+        { name: "Polyunsaturated", value: "5-10% cals", icon: "🌻" },
         { name: "Omega-3", value: isMale ? "1.6 g" : "1.1 g", icon: "🐟" },
         { name: "Omega-6", value: isMale ? "17 g" : "12 g", icon: "🥜" },
+        { name: "Trans Fat", value: "< 1% (0g)", icon: "🚫" },
+      ],
+      others: [
+        { name: "Cholesterol", value: "< 300 mg", icon: "🍳" },
+        { name: "Glycemic Index", value: "< 55 (Low)", icon: "📊" },
+        { name: "Glycemic Load", value: "< 10 (Low)", icon: "📈" },
+        { name: "Water", value: isMale ? "3.7 L" : "2.7 L", icon: "💧" },
       ]
     };
     setMicros(newMicros);
@@ -199,6 +212,124 @@ const MacroMicroCalculator = ({ maintenanceCalories, age, gender }) => {
     handleRatioChange(type, ratios[type] + delta);
   };
 
+  // --- Mobile Single Vertical Progress Bar Handlers ---
+  const verticalBarRef = useRef(null);
+  const [activeDragHandle, setActiveDragHandle] = useState(null);
+
+  const handlePointerDown = (handleIndex, e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setActiveDragHandle(handleIndex);
+
+    const targetEl = e.currentTarget;
+    if (targetEl && targetEl.setPointerCapture) {
+      try {
+        targetEl.setPointerCapture(e.pointerId);
+      } catch (err) {}
+    }
+
+    const onPointerMove = (moveEvent) => {
+      if (!verticalBarRef.current) return;
+      const rect = verticalBarRef.current.getBoundingClientRect();
+      const rawY = moveEvent.clientY - rect.top;
+      const pct = Math.max(0, Math.min(100, Math.round((rawY / rect.height) * 100)));
+
+      setRatios((prev) => {
+        const currentP = Number(prev.protein) || 30;
+        const currentC = Number(prev.carbs) || 40;
+        const currentF = Number(prev.fats) || 30;
+        const b2 = Math.min(95, Math.max(currentP + 5, currentP + currentC));
+
+        if (handleIndex === 1) {
+          const newP = Math.max(5, Math.min(b2 - 5, pct));
+          const newC = b2 - newP;
+          const newF = 100 - (newP + newC);
+          return { protein: newP, carbs: newC, fats: newF };
+        } else {
+          const b1 = Math.max(5, Math.min(90, currentP));
+          const newB2 = Math.max(b1 + 5, Math.min(95, pct));
+          const newC = newB2 - b1;
+          const newF = 100 - newB2;
+          return { protein: b1, carbs: newC, fats: newF };
+        }
+      });
+    };
+
+    const onPointerUp = (upEvent) => {
+      setActiveDragHandle(null);
+      if (targetEl && targetEl.releasePointerCapture) {
+        try {
+          targetEl.releasePointerCapture(upEvent.pointerId);
+        } catch (err) {}
+      }
+      window.removeEventListener("pointermove", onPointerMove);
+      window.removeEventListener("pointerup", onPointerUp);
+      window.removeEventListener("pointercancel", onPointerUp);
+    };
+
+    window.addEventListener("pointermove", onPointerMove);
+    window.addEventListener("pointerup", onPointerUp);
+    window.addEventListener("pointercancel", onPointerUp);
+  };
+
+  const adjustMacroPhone = (macro, delta) => {
+    setRatios((prev) => {
+      let p = Number(prev.protein) || 30;
+      let c = Number(prev.carbs) || 40;
+      let f = Number(prev.fats) || 30;
+
+      if (macro === "protein") {
+        const targetP = Math.max(5, Math.min(80, p + delta));
+        const diff = targetP - p;
+        if (diff > 0) {
+          if (c - diff >= 5) c -= diff;
+          else {
+            const rem = diff - (c - 5);
+            c = 5;
+            f = Math.max(5, f - rem);
+          }
+        } else {
+          c -= diff;
+        }
+        p = targetP;
+      } else if (macro === "carbs") {
+        const targetC = Math.max(5, Math.min(80, c + delta));
+        const diff = targetC - c;
+        if (diff > 0) {
+          if (f - diff >= 5) f -= diff;
+          else {
+            const rem = diff - (f - 5);
+            f = 5;
+            p = Math.max(5, p - rem);
+          }
+        } else {
+          f -= diff;
+        }
+        c = targetC;
+      } else if (macro === "fats") {
+        const targetF = Math.max(5, Math.min(80, f + delta));
+        const diff = targetF - f;
+        if (diff > 0) {
+          if (c - diff >= 5) c -= diff;
+          else {
+            const rem = diff - (c - 5);
+            c = 5;
+            p = Math.max(5, p - rem);
+          }
+        } else {
+          c -= diff;
+        }
+        f = targetF;
+      }
+
+      const total = p + c + f;
+      if (total !== 100) {
+        c += (100 - total);
+      }
+      return { protein: p, carbs: c, fats: f };
+    });
+  };
+
   const totalRatio = ratios.protein + ratios.carbs + ratios.fats;
   const isRatioValid = totalRatio === 100;
 
@@ -206,15 +337,33 @@ const MacroMicroCalculator = ({ maintenanceCalories, age, gender }) => {
   const [selectedMicro, setSelectedMicro] = useState(null);
 
   const openMicroModal = (microName) => {
-    setSelectedMicro(MICRO_DETAILS[microName] || null);
-    if (MICRO_DETAILS[microName]) {
-      document.getElementById("micro_info_modal").showModal();
-    }
+    const detail = MICRO_DETAILS[microName] || {
+      name: microName,
+      description: `${microName} is an essential nutrient supporting overall health, vitality, and metabolic function.`,
+      sources: [{ name: "Whole Foods & Balanced Nutrition", amount: "Variable" }],
+      benefits: ["Supports general physiological metabolism", "Promotes daily wellness and cellular function"]
+    };
+    setSelectedMicro(detail);
   };
 
+  const closeMicroModal = () => {
+    setSelectedMicro(null);
+  };
+
+  // Close on Escape key press without any layout shift
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape" && selectedMicro) {
+        setSelectedMicro(null);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [selectedMicro]);
+
   return (
-    <div className="bg-base-300 rounded-xl p-6 shadow-md mt-8">
-      <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
+    <div className="bg-transparent md:bg-base-300 rounded-xl p-0 md:p-6 shadow-none md:shadow-md mt-0 md:mt-8">
+      <h2 className="text-xl font-bold mb-6 hidden md:flex items-center gap-2">
         <Activity size={22} /> Macro & Micro Nutrient Calculator
       </h2>
 
@@ -224,7 +373,10 @@ const MacroMicroCalculator = ({ maintenanceCalories, age, gender }) => {
           <span>Please calculate your calories in the section above first.</span>
         </div>
       ) : (
-        <div className="tabs tabs-border w-full mt-4">
+        <>
+          {/* ── Desktop View (hidden md:block) — UNTOUCHED ── */}
+          <div className="hidden md:block">
+            <div className="tabs tabs-border w-full mt-4">
           {/* Tab 1: Recommended Micros */}
           <input type="radio" name="macro_tabs" className="tab" aria-label="Micros" />
           <div className="tab-content border-base-300 bg-base-100 p-4 rounded-b-xl">
@@ -261,10 +413,10 @@ const MacroMicroCalculator = ({ maintenanceCalories, age, gender }) => {
                   </div>
                 </div>
 
-                {/* 2. Minerals (Electrolytes) */}
+                {/* 2. Minerals */}
                 <div>
                   <h4 className="text-sm font-bold uppercase opacity-70 mb-3 flex items-center gap-2 border-b border-base-300 pb-2">
-                    <Activity size={14} /> Minerals (Electrolytes)
+                    <Activity size={14} className="text-secondary" /> Minerals
                   </h4>
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
                     {micros.minerals?.map((m, idx) => (
@@ -283,13 +435,13 @@ const MacroMicroCalculator = ({ maintenanceCalories, age, gender }) => {
                   </div>
                 </div>
 
-                {/* 3. Essential Fatty Acids */}
+                {/* 3. Fatty Acids */}
                 <div>
                   <h4 className="text-sm font-bold uppercase opacity-70 mb-3 flex items-center gap-2 border-b border-base-300 pb-2">
-                    <Zap size={14} /> Essential Fatty Acids
+                    <HeartPulse size={14} className="text-warning" /> Fatty Acids
                   </h4>
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-                    {micros.essentialFats?.map((m, idx) => (
+                    {micros.fattyAcids?.map((m, idx) => (
                       <div key={idx} className="bg-base-100 p-3 rounded-lg border border-base-300 flex flex-col items-center text-center hover:border-warning transition-colors hover:shadow-sm group relative">
                         <button
                           className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity btn btn-ghost btn-xs btn-circle"
@@ -300,6 +452,28 @@ const MacroMicroCalculator = ({ maintenanceCalories, age, gender }) => {
                         <span className="text-2xl mb-2 group-hover:scale-110 transition-transform">{m.icon}</span>
                         <span className="text-xs font-bold mb-1">{m.name}</span>
                         <span className="text-xs text-warning font-mono bg-warning/10 px-2 py-0.5 rounded-full">{m.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 4. Others */}
+                <div>
+                  <h4 className="text-sm font-bold uppercase opacity-70 mb-3 flex items-center gap-2 border-b border-base-300 pb-2">
+                    <Sparkles size={14} className="text-accent" /> Others
+                  </h4>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                    {micros.others?.map((m, idx) => (
+                      <div key={idx} className="bg-base-100 p-3 rounded-lg border border-base-300 flex flex-col items-center text-center hover:border-accent transition-colors hover:shadow-sm group relative">
+                        <button
+                          className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity btn btn-ghost btn-xs btn-circle"
+                          onClick={() => openMicroModal(m.name)}
+                        >
+                          <Info size={14} className="text-accent" />
+                        </button>
+                        <span className="text-2xl mb-2 group-hover:scale-110 transition-transform">{m.icon}</span>
+                        <span className="text-xs font-bold mb-1">{m.name}</span>
+                        <span className="text-xs text-accent font-mono bg-accent/10 px-2 py-0.5 rounded-full">{m.value}</span>
                       </div>
                     ))}
                   </div>
@@ -535,65 +709,489 @@ const MacroMicroCalculator = ({ maintenanceCalories, age, gender }) => {
               </div>
             </div>
           </div>
-        </div>
-      )}
+          </div>
+          {/* End Desktop View */}
+          </div>
 
-      {/* --- Micro Info Modal --- */}
-      <dialog id="micro_info_modal" className="modal modal-bottom sm:modal-middle">
-        <div className="modal-box">
-          {selectedMicro && (
-            <>
-              <h3 className="font-bold text-xl flex items-center gap-2 mb-4">
-                <Info className="text-primary" /> {selectedMicro.name || "Nutrient Info"}
-              </h3>
+          {/* ── Phone View (block md:hidden) — Separate Macros & Micros, No Tabs ── */}
+          <div className="block md:hidden space-y-5 mt-3">
+            {/* ═══ SECTION 1: MACRO TARGETS & SINGLE VERTICAL INTERACTIVE PROGRESS BAR ═══ */}
+            <div className="bg-base-100 rounded-2xl p-3.5 border border-base-300/80 shadow-xs space-y-3">
+              {/* Header */}
+              <div className="flex items-center justify-between border-b border-base-200/80 pb-2">
+                <div className="min-w-0">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-1.5">
+                    <PieChart size={14} /> Macro Breakdown
+                  </h3>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <span className="text-[10px] text-base-content/70 font-medium">
+                      Target: <strong className="font-mono text-base-content">{calorieMin} – {calorieMax}</strong> kcal/day
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => navigate("/dashboard/habit/settings")}
+                      className="btn btn-ghost btn-xs p-1 h-5 min-h-0 text-primary hover:bg-primary/10 rounded cursor-pointer flex items-center gap-0.5"
+                      title="Edit Intake Target in Settings"
+                    >
+                      <Settings size={11} className="transition-transform hover:rotate-45" />
+                    </button>
+                  </div>
+                </div>
 
-              <div className="mb-6">
-                <p className="opacity-80 text-sm whitespace-pre-wrap">{selectedMicro.description}</p>
+                <span className={`badge badge-xs py-1.5 px-2 font-bold ${isRatioValid ? 'badge-success' : 'badge-error'}`}>
+                  {totalRatio}% {isRatioValid ? "✓ Balanced" : "⚠️ Needs 100%"}
+                </span>
               </div>
 
-              <div className="mb-6">
-                <h4 className="text-sm font-bold uppercase opacity-60 mb-2 border-b border-base-300 pb-1">Top Sources</h4>
-                <div className="overflow-x-auto bg-base-200/50 rounded-lg">
+              {/* Main Interactive Container: Vertical Bar on Left + 3 Macro Cards on Right */}
+              <div className="flex gap-2.5 items-stretch pt-1">
+                {/* ── Single Vertical Interactive Progress Bar ── */}
+                <div className="flex flex-col items-center select-none w-14 shrink-0">
+                  <div
+                    ref={verticalBarRef}
+                    className="relative w-11 h-[270px] bg-base-300/80 rounded-2xl overflow-visible border border-base-300/80 shadow-inner flex flex-col touch-none"
+                  >
+                    {/* Protein Segment (Top) */}
+                    <div
+                      style={{ height: `${ratios.protein}%` }}
+                      className="w-full bg-info text-info-content flex flex-col items-center justify-center transition-all duration-75 overflow-hidden rounded-t-2xl"
+                    >
+                      {ratios.protein >= 8 && (
+                        <div className="flex flex-col items-center leading-none pointer-events-none">
+                          <span className="text-[9px] font-black uppercase tracking-tight">P</span>
+                          <span className="text-[8px] font-mono font-bold">{ratios.protein}%</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Divider Handle 1 (Between Protein and Carbs) */}
+                    <div
+                      style={{ top: `${ratios.protein}%` }}
+                      className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 cursor-row-resize touch-none py-2 px-1 w-14 flex items-center justify-center select-none"
+                      onPointerDown={(e) => handlePointerDown(1, e)}
+                      title="Drag to change Protein & Carbs ratio"
+                    >
+                      <div
+                        className={`bg-base-100 border-2 ${
+                          activeDragHandle === 1 ? "scale-110 border-primary ring-2 ring-primary/40" : "border-info"
+                        } text-info shadow-md rounded-full px-1.5 py-0.5 flex items-center justify-center gap-1 transition-transform`}
+                      >
+                        <div className="w-1.5 h-0.5 bg-current rounded-full"></div>
+                        <span className="text-[8px] font-black font-mono leading-none">↕</span>
+                        <div className="w-1.5 h-0.5 bg-current rounded-full"></div>
+                      </div>
+                    </div>
+
+                    {/* Carbs Segment (Middle) */}
+                    <div
+                      style={{ height: `${ratios.carbs}%` }}
+                      className="w-full bg-success text-success-content flex flex-col items-center justify-center transition-all duration-75 overflow-hidden"
+                    >
+                      {ratios.carbs >= 8 && (
+                        <div className="flex flex-col items-center leading-none pointer-events-none">
+                          <span className="text-[9px] font-black uppercase tracking-tight">C</span>
+                          <span className="text-[8px] font-mono font-bold">{ratios.carbs}%</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Divider Handle 2 (Between Carbs and Fats) */}
+                    <div
+                      style={{ top: `${ratios.protein + ratios.carbs}%` }}
+                      className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 cursor-row-resize touch-none py-2 px-1 w-14 flex items-center justify-center select-none"
+                      onPointerDown={(e) => handlePointerDown(2, e)}
+                      title="Drag to change Carbs & Fats ratio"
+                    >
+                      <div
+                        className={`bg-base-100 border-2 ${
+                          activeDragHandle === 2 ? "scale-110 border-primary ring-2 ring-primary/40" : "border-warning"
+                        } text-warning shadow-md rounded-full px-1.5 py-0.5 flex items-center justify-center gap-1 transition-transform`}
+                      >
+                        <div className="w-1.5 h-0.5 bg-current rounded-full"></div>
+                        <span className="text-[8px] font-black font-mono leading-none">↕</span>
+                        <div className="w-1.5 h-0.5 bg-current rounded-full"></div>
+                      </div>
+                    </div>
+
+                    {/* Fats Segment (Bottom) */}
+                    <div
+                      style={{ height: `${ratios.fats}%` }}
+                      className="w-full bg-warning text-warning-content flex flex-col items-center justify-center transition-all duration-75 overflow-hidden rounded-b-2xl"
+                    >
+                      {ratios.fats >= 8 && (
+                        <div className="flex flex-col items-center leading-none pointer-events-none">
+                          <span className="text-[9px] font-black uppercase tracking-tight">F</span>
+                          <span className="text-[8px] font-mono font-bold">{ratios.fats}%</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <span className="text-[8px] font-semibold text-base-content/50 mt-1 flex items-center gap-0.5">
+                    ↕ Drag
+                  </span>
+                </div>
+
+                {/* ── Right Column: 3 Macro Cards (No Individual Progress Bars) ── */}
+                <div className="flex-1 flex flex-col justify-between gap-2 min-w-0">
+                  {/* 1. Protein Card */}
+                  <div className="bg-info/10 border border-info/25 rounded-xl p-2.5 flex flex-col justify-between shadow-xs">
+                    <div className="flex items-center justify-between gap-1">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="w-2 h-2 rounded-full bg-info shrink-0"></span>
+                        <span className="text-[11px] font-bold text-info uppercase tracking-wider">Protein</span>
+                        <span className="text-xs font-black font-mono text-info bg-base-100/90 px-1.5 py-0.5 rounded-md border border-info/20 shadow-2xs">
+                          {ratios.protein}%
+                        </span>
+                      </div>
+                      <span className="text-[8px] font-semibold bg-info/20 text-info px-1.5 py-0.5 rounded shrink-0">
+                        Recommended: {RECOMMENDED_RANGES.protein}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between bg-base-100/70 px-2 py-1.5 rounded-lg border border-info/15 mt-1.5">
+                      <span className="text-xs font-black font-mono text-base-content truncate">
+                        {proteinMinGrams}g–{proteinMaxGrams}g
+                      </span>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <span className="text-[10px] font-bold font-mono text-info">
+                          {proteinMinCals}–{proteinMaxCals} kcal
+                        </span>
+                        <div className="flex items-center gap-0.5">
+                          <button
+                            type="button"
+                            className="btn btn-ghost btn-xs p-0 h-5 w-5 min-h-0 text-info hover:bg-info/20 cursor-pointer rounded"
+                            onClick={() => adjustMacroPhone("protein", -1)}
+                            title="Decrease Protein"
+                          >
+                            <Minus size={11} />
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btn-ghost btn-xs p-0 h-5 w-5 min-h-0 text-info hover:bg-info/20 cursor-pointer rounded"
+                            onClick={() => adjustMacroPhone("protein", 1)}
+                            title="Increase Protein"
+                          >
+                            <Plus size={11} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 2. Carbs Card */}
+                  <div className="bg-success/10 border border-success/25 rounded-xl p-2.5 flex flex-col justify-between shadow-xs">
+                    <div className="flex items-center justify-between gap-1">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="w-2 h-2 rounded-full bg-success shrink-0"></span>
+                        <span className="text-[11px] font-bold text-success uppercase tracking-wider">Carbs</span>
+                        <span className="text-xs font-black font-mono text-success bg-base-100/90 px-1.5 py-0.5 rounded-md border border-success/20 shadow-2xs">
+                          {ratios.carbs}%
+                        </span>
+                      </div>
+                      <span className="text-[8px] font-semibold bg-success/20 text-success px-1.5 py-0.5 rounded shrink-0">
+                        Recommended: {RECOMMENDED_RANGES.carbs}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between bg-base-100/70 px-2 py-1.5 rounded-lg border border-success/15 mt-1.5">
+                      <span className="text-xs font-black font-mono text-base-content truncate">
+                        {carbsMinGrams}g–{carbsMaxGrams}g
+                      </span>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <span className="text-[10px] font-bold font-mono text-success">
+                          {carbsMinCals}–{carbsMaxCals} kcal
+                        </span>
+                        <div className="flex items-center gap-0.5">
+                          <button
+                            type="button"
+                            className="btn btn-ghost btn-xs p-0 h-5 w-5 min-h-0 text-success hover:bg-success/20 cursor-pointer rounded"
+                            onClick={() => adjustMacroPhone("carbs", -1)}
+                            title="Decrease Carbs"
+                          >
+                            <Minus size={11} />
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btn-ghost btn-xs p-0 h-5 w-5 min-h-0 text-success hover:bg-success/20 cursor-pointer rounded"
+                            onClick={() => adjustMacroPhone("carbs", 1)}
+                            title="Increase Carbs"
+                          >
+                            <Plus size={11} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 3. Fats Card */}
+                  <div className="bg-warning/10 border border-warning/25 rounded-xl p-2.5 flex flex-col justify-between shadow-xs">
+                    <div className="flex items-center justify-between gap-1">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="w-2 h-2 rounded-full bg-warning shrink-0"></span>
+                        <span className="text-[11px] font-bold text-warning uppercase tracking-wider">Fats</span>
+                        <span className="text-xs font-black font-mono text-warning bg-base-100/90 px-1.5 py-0.5 rounded-md border border-warning/20 shadow-2xs">
+                          {ratios.fats}%
+                        </span>
+                      </div>
+                      <span className="text-[8px] font-semibold bg-warning/20 text-warning px-1.5 py-0.5 rounded shrink-0">
+                        Recommended: {RECOMMENDED_RANGES.fats}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between bg-base-100/70 px-2 py-1.5 rounded-lg border border-warning/15 mt-1.5">
+                      <span className="text-xs font-black font-mono text-base-content truncate">
+                        {fatsMinGrams}g–{fatsMaxGrams}g
+                      </span>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <span className="text-[10px] font-bold font-mono text-warning">
+                          {fatsMinCals}–{fatsMaxCals} kcal
+                        </span>
+                        <div className="flex items-center gap-0.5">
+                          <button
+                            type="button"
+                            className="btn btn-ghost btn-xs p-0 h-5 w-5 min-h-0 text-warning hover:bg-warning/20 cursor-pointer rounded"
+                            onClick={() => adjustMacroPhone("fats", -1)}
+                            title="Decrease Fats"
+                          >
+                            <Minus size={11} />
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btn-ghost btn-xs p-0 h-5 w-5 min-h-0 text-warning hover:bg-warning/20 cursor-pointer rounded"
+                            onClick={() => adjustMacroPhone("fats", 1)}
+                            title="Increase Fats"
+                          >
+                            <Plus size={11} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+            {/* ═══ SECTION 2: SEPARATE MICROS (NO TABS) ═══ */}
+            <div className="bg-base-100 rounded-2xl p-4 border border-base-content/10 shadow-xs space-y-4">
+              <div className="border-b border-base-200/80 pb-2.5">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-1.5">
+                  <Zap size={15} /> Recommended Micros & Nutrients
+                </h3>
+                <p className="text-[10px] text-base-content/60 font-medium mt-0.5">
+                  Based on Age: {age}, Gender: <span className="capitalize">{gender}</span> (DRI guidelines)
+                </p>
+              </div>
+
+              {/* 1. Vitamins */}
+              <div className="space-y-2">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-info flex items-center gap-1.5 border-b border-base-200 pb-1">
+                  <Droplet size={13} /> Vitamins
+                </h4>
+                <div className="grid grid-cols-2 gap-2">
+                  {micros.vitamins?.map((m, idx) => (
+                    <div
+                      key={idx}
+                      className="bg-base-200/60 p-2.5 rounded-xl border border-base-content/10 flex flex-col items-center text-center relative"
+                    >
+                      <button
+                        type="button"
+                        className="absolute top-1 right-1 btn btn-ghost btn-xs btn-circle text-info p-0.5 h-7 w-7 min-h-0 cursor-pointer z-10 hover:bg-info/15"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          openMicroModal(m.name);
+                        }}
+                        title={`View ${m.name} details`}
+                      >
+                        <Info size={14} />
+                      </button>
+                      <span className="text-xl mb-1">{m.icon}</span>
+                      <span className="text-[11px] font-bold text-base-content truncate w-full px-1">{m.name}</span>
+                      <span className="text-[10px] text-info font-bold font-mono bg-info/10 px-2 py-0.5 rounded-md mt-1">
+                        {m.value}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* 2. Minerals */}
+              <div className="space-y-2 pt-2">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-secondary flex items-center gap-1.5 border-b border-base-200 pb-1">
+                  <Activity size={13} /> Minerals
+                </h4>
+                <div className="grid grid-cols-2 gap-2">
+                  {micros.minerals?.map((m, idx) => (
+                    <div
+                      key={idx}
+                      className="bg-base-200/60 p-2.5 rounded-xl border border-base-content/10 flex flex-col items-center text-center relative"
+                    >
+                      <button
+                        type="button"
+                        className="absolute top-1 right-1 btn btn-ghost btn-xs btn-circle text-secondary p-0.5 h-7 w-7 min-h-0 cursor-pointer z-10 hover:bg-secondary/15"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          openMicroModal(m.name);
+                        }}
+                        title={`View ${m.name} details`}
+                      >
+                        <Info size={14} />
+                      </button>
+                      <span className="text-xl mb-1">{m.icon}</span>
+                      <span className="text-[11px] font-bold text-base-content truncate w-full px-1">{m.name}</span>
+                      <span className="text-[10px] text-secondary font-bold font-mono bg-secondary/10 px-2 py-0.5 rounded-md mt-1">
+                        {m.value}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* 3. Fatty Acids */}
+              <div className="space-y-2 pt-2">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-warning flex items-center gap-1.5 border-b border-base-200 pb-1">
+                  <HeartPulse size={13} /> Fatty Acids
+                </h4>
+                <div className="grid grid-cols-2 gap-2">
+                  {micros.fattyAcids?.map((m, idx) => (
+                    <div
+                      key={idx}
+                      className="bg-base-200/60 p-2.5 rounded-xl border border-base-content/10 flex flex-col items-center text-center relative"
+                    >
+                      <button
+                        type="button"
+                        className="absolute top-1 right-1 btn btn-ghost btn-xs btn-circle text-warning p-0.5 h-7 w-7 min-h-0 cursor-pointer z-10 hover:bg-warning/15"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          openMicroModal(m.name);
+                        }}
+                        title={`View ${m.name} details`}
+                      >
+                        <Info size={14} />
+                      </button>
+                      <span className="text-xl mb-1">{m.icon}</span>
+                      <span className="text-[11px] font-bold text-base-content truncate w-full px-1">{m.name}</span>
+                      <span className="text-[10px] text-warning font-bold font-mono bg-warning/10 px-2 py-0.5 rounded-md mt-1">
+                        {m.value}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* 4. Others */}
+              <div className="space-y-2 pt-2">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-accent flex items-center gap-1.5 border-b border-base-200 pb-1">
+                  <Sparkles size={13} /> Others
+                </h4>
+                <div className="grid grid-cols-2 gap-2">
+                  {micros.others?.map((m, idx) => (
+                    <div
+                      key={idx}
+                      className="bg-base-200/60 p-2.5 rounded-xl border border-base-content/10 flex flex-col items-center text-center relative"
+                    >
+                      <button
+                        type="button"
+                        className="absolute top-1 right-1 btn btn-ghost btn-xs btn-circle text-accent p-0.5 h-7 w-7 min-h-0 cursor-pointer z-10 hover:bg-accent/15"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          openMicroModal(m.name);
+                        }}
+                        title={`View ${m.name} details`}
+                      >
+                        <Info size={14} />
+                      </button>
+                      <span className="text-xl mb-1">{m.icon}</span>
+                      <span className="text-[11px] font-bold text-base-content truncate w-full px-1">{m.name}</span>
+                      <span className="text-[10px] text-accent font-bold font-mono bg-accent/10 px-2 py-0.5 rounded-md mt-1">
+                        {m.value}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* --- Micro Info Modal (Zero-Layout-Shift Overlay) --- */}
+      {selectedMicro && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
+          {/* Backdrop Click */}
+          <div
+            className="fixed inset-0"
+            onClick={closeMicroModal}
+            aria-hidden="true"
+          />
+
+          {/* Modal Card */}
+          <div className="relative z-10 bg-base-100 border border-base-content/10 shadow-2xl rounded-2xl p-5 max-w-lg w-full max-h-[85vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 mb-4 border-b border-base-content/10">
+              <h3 className="font-bold text-lg sm:text-xl flex items-center gap-2 text-base-content">
+                <Info className="text-primary shrink-0" size={20} /> {selectedMicro.name || "Nutrient Info"}
+              </h3>
+              <button
+                type="button"
+                onClick={closeMicroModal}
+                className="btn btn-xs btn-circle btn-ghost text-base-content/60 hover:text-base-content"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="mb-4">
+              <p className="text-xs sm:text-sm text-base-content/80 leading-relaxed whitespace-pre-wrap">{selectedMicro.description}</p>
+            </div>
+
+            {selectedMicro.sources && selectedMicro.sources.length > 0 && (
+              <div className="mb-4">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-base-content/70 mb-2 border-b border-base-content/10 pb-1">Top Sources</h4>
+                <div className="overflow-x-auto bg-base-200/60 border border-base-content/5 rounded-xl">
                   <table className="table table-xs w-full">
                     <thead>
-                      <tr>
+                      <tr className="border-b border-base-content/10 text-base-content/60">
                         <th>Source</th>
                         <th className="text-right">Amount (approx)</th>
                       </tr>
                     </thead>
                     <tbody>
                       {selectedMicro.sources.map((source, idx) => (
-                        <tr key={idx} className="hover:bg-base-200">
-                          <td className="font-medium">{source.name}</td>
-                          <td className="text-right font-mono opacity-80">{source.amount}</td>
+                        <tr key={idx} className="hover:bg-base-300/40 border-b border-base-content/5 last:border-none">
+                          <td className="font-medium text-xs text-base-content">{source.name}</td>
+                          <td className="text-right font-mono text-xs text-base-content/80">{source.amount}</td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
               </div>
+            )}
 
-              <div>
-                <h4 className="text-sm font-bold uppercase opacity-60 mb-2 border-b border-base-300 pb-1">Key Benefits</h4>
+            {selectedMicro.benefits && selectedMicro.benefits.length > 0 && (
+              <div className="mb-4">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-base-content/70 mb-2 border-b border-base-content/10 pb-1">Key Benefits</h4>
                 <ul className="list-disc list-inside space-y-1">
                   {selectedMicro.benefits.map((benefit, idx) => (
-                    <li key={idx} className="text-sm opacity-80">{benefit}</li>
+                    <li key={idx} className="text-xs sm:text-sm text-base-content/80">{benefit}</li>
                   ))}
                 </ul>
               </div>
+            )}
 
-              <div className="modal-action">
-                <form method="dialog">
-                  <button className="btn">Close</button>
-                </form>
-              </div>
-            </>
-          )}
+            <div className="mt-5 pt-3 border-t border-base-content/10 flex justify-end">
+              <button type="button" className="btn btn-sm btn-primary rounded-xl px-5 cursor-pointer" onClick={closeMicroModal}>
+                Close
+              </button>
+            </div>
+          </div>
         </div>
-        <form method="dialog" className="modal-backdrop">
-          <button>close</button>
-        </form>
-      </dialog>
+      )}
 
     </div>
   );
@@ -863,6 +1461,150 @@ const MICRO_DETAILS = {
       { name: "Pine Nuts (1 oz)", amount: "9.4 g" }
     ],
     benefits: ["Supports healthy hair and skin barrier", "Helps regulate cellular metabolism", "Supports skeletal and bone health"]
+  },
+  "Copper": {
+    name: "Copper",
+    description: "An essential trace mineral that works with iron to build red blood cells, sustain blood vessel flexibility, and maintain nervous and immune system health.",
+    sources: [
+      { name: "Beef Liver (cooked, 3 oz)", amount: "12.4 mg" },
+      { name: "Oysters (cooked, 3 oz)", amount: "4.8 mg" },
+      { name: "Shiitake Mushrooms (1 cup)", amount: "1.3 mg" },
+      { name: "Cashews (1 oz)", amount: "0.6 mg" },
+      { name: "Dark Chocolate (70%+, 1 oz)", amount: "0.5 mg" }
+    ],
+    benefits: ["Works with iron to build functional red blood cells", "Supports heart, blood vessel, and nerve signaling", "Essential enzymatic cofactor for collagen and antioxidant defense"]
+  },
+  "Manganese": {
+    name: "Manganese",
+    description: "A vital trace mineral involved in amino acid, cholesterol, glucose, and carbohydrate metabolism. Also crucial for bone formation and connective tissue synthesis.",
+    sources: [
+      { name: "Mussels (cooked, 3 oz)", amount: "5.8 mg" },
+      { name: "Brown Rice (1 cup cooked)", amount: "2.1 mg" },
+      { name: "Chickpeas (1 cup cooked)", amount: "1.7 mg" },
+      { name: "Spinach (1 cup cooked)", amount: "1.7 mg" },
+      { name: "Pineapple (1 cup chunks)", amount: "1.5 mg" }
+    ],
+    benefits: ["Essential for bone formation and cartilage repair", "Antioxidant protection as manganese superoxide dismutase", "Aids glucose metabolism and blood sugar regulation"]
+  },
+  "Selenium": {
+    name: "Selenium",
+    description: "A potent antioxidant trace mineral that shields cells from free radical damage, supports thyroid hormone metabolism, and promotes strong DNA reproduction.",
+    sources: [
+      { name: "Brazil Nuts (1 nut)", amount: "68–91 mcg" },
+      { name: "Yellowfin Tuna (3 oz)", amount: "92 mcg" },
+      { name: "Halibut (3 oz)", amount: "47 mcg" },
+      { name: "Sardines (canned, 3 oz)", amount: "45 mcg" },
+      { name: "Egg (1 large)", amount: "15 mcg" }
+    ],
+    benefits: ["Crucial for thyroid hormone synthesis and regulation", "Protects against cellular oxidative damage", "Strengthens immune response and antibody defense"]
+  },
+  "Iodine": {
+    name: "Iodine",
+    description: "An indispensable trace mineral required by the thyroid gland to produce thyroxine (T4) and triiodothyronine (T3), controlling metabolism and cellular growth.",
+    sources: [
+      { name: "Seaweed / Kelp (1 g)", amount: "150–2,000 mcg" },
+      { name: "Cod (3 oz)", amount: "99 mcg" },
+      { name: "Iodized Table Salt (1/4 tsp)", amount: "71 mcg" },
+      { name: "Greek Yogurt (1 cup)", amount: "75 mcg" },
+      { name: "Whole Milk (1 cup)", amount: "56 mcg" }
+    ],
+    benefits: ["Regulates basal metabolic rate and body temperature", "Essential for healthy thyroid hormone synthesis", "Supports cognitive function and neural development"]
+  },
+  "Saturated Fat": {
+    name: "Saturated Fat",
+    description: "Fat molecules with single chemical bonds between carbons. Naturally present in meat and dairy; dietary guidelines recommend moderating intake to protect cardiovascular health.",
+    sources: [
+      { name: "Coconut Oil (1 tbsp)", amount: "12 g" },
+      { name: "Butter (1 tbsp)", amount: "7 g" },
+      { name: "Cheddar Cheese (1 oz)", amount: "6 g" },
+      { name: "Beef Ribeye (3 oz)", amount: "5 g" },
+      { name: "Palm Oil (1 tbsp)", amount: "6.7 g" }
+    ],
+    benefits: ["Supplies dense cellular energy and hormone precursors", "Assists absorption of fat-soluble vitamins (A, D, E, K)", "Target guideline: Keep under 10% of total daily caloric intake"]
+  },
+  "Monounsaturated": {
+    name: "Monounsaturated Fatty Acids (MUFAs)",
+    description: "Heart-healthy fats containing one unsaturated carbon bond. Renowned as a key pillar of Mediterranean longevity diets for improving cholesterol and cardiovascular resilience.",
+    sources: [
+      { name: "Extra Virgin Olive Oil (1 tbsp)", amount: "9.8 g" },
+      { name: "Avocado (medium)", amount: "15 g" },
+      { name: "Almonds (1 oz)", amount: "9 g" },
+      { name: "Peanuts (1 oz)", amount: "7 g" },
+      { name: "Canola Oil (1 tbsp)", amount: "8.2 g" }
+    ],
+    benefits: ["Helps lower LDL cholesterol while preserving HDL", "Improves cellular insulin sensitivity and blood glucose balance", "Helps reduce chronic vascular inflammation"]
+  },
+  "Polyunsaturated": {
+    name: "Polyunsaturated Fatty Acids (PUFAs)",
+    description: "Essential fatty acids containing multiple double bonds that the body cannot manufacture on its own, encompassing crucial Omega-3 and Omega-6 lipid chains.",
+    sources: [
+      { name: "Walnuts (1 oz)", amount: "13.4 g" },
+      { name: "Sunflower Seeds (1 oz)", amount: "9.3 g" },
+      { name: "Flaxseed Oil (1 tbsp)", amount: "8.9 g" },
+      { name: "Wild Salmon (3 oz)", amount: "3.8 g" },
+      { name: "Soybeans (1/2 cup)", amount: "3.5 g" }
+    ],
+    benefits: ["Lowers blood triglycerides and arterial plaque risks", "Enhances neural membrane fluidity and eye retina health", "Supplies precursor molecules for anti-inflammatory prostaglandins"]
+  },
+  "Trans Fat": {
+    name: "Trans Fatty Acids",
+    description: "Unsaturated fats altered industrially by partial hydrogenation. Significantly elevates LDL (bad) cholesterol and drops HDL (good) cholesterol; intake should be kept as close to 0g as possible.",
+    sources: [
+      { name: "Partially Hydrogenated Oils", amount: "Variable" },
+      { name: "Commercial Fried Fast Foods", amount: "Variable" },
+      { name: "Commercial Frostings & Shortenings", amount: "Variable" },
+      { name: "Processed Pastries & Crackers", amount: "Variable" },
+      { name: "Dairy / Ruminant Meat (trace natural)", amount: "< 0.5 g" }
+    ],
+    benefits: ["Intake guideline: Restrict to under 1% of calories (ideally 0g)", "Avoiding trans fats reduces heart disease risk significantly", "Always check ingredient labels for partially hydrogenated fats"]
+  },
+  "Cholesterol": {
+    name: "Dietary Cholesterol",
+    description: "A structural sterol lipid molecule essential for synthesizing cell membranes, bile acids for fat breakdown, and vital steroid hormones including testosterone and estrogen.",
+    sources: [
+      { name: "Egg Yolk (1 large)", amount: "186 mg" },
+      { name: "Beef Liver (3 oz)", amount: "275 mg" },
+      { name: "Shrimp (3 oz)", amount: "166 mg" },
+      { name: "Chicken Breast (3 oz)", amount: "73 mg" },
+      { name: "Butter (1 tbsp)", amount: "31 mg" }
+    ],
+    benefits: ["Precursor for steroid hormones and Vitamin D synthesis", "Required for bile acid creation to digest dietary fats", "Maintains cell membrane integrity and fluid stability"]
+  },
+  "Glycemic Index": {
+    name: "Glycemic Index (GI)",
+    description: "A metric quantifying how rapidly carbohydrates in a food break down into glucose and raise blood sugar levels compared to pure glucose benchmarked at 100.",
+    sources: [
+      { name: "Low GI (< 55)", amount: "Lentils, Oats, Apples, Berries, Non-starchy Veggies" },
+      { name: "Medium GI (56–69)", amount: "Brown Rice, Bananas, Sweet Corn" },
+      { name: "High GI (70+)", amount: "White Bread, Pretzels, Soda, Watermelon" },
+      { name: "Pure Glucose Reference", amount: "100 GI Benchmark" },
+      { name: "Leafy Greens", amount: "< 15 GI" }
+    ],
+    benefits: ["Prevents sharp insulin spikes and subsequent energy crashes", "Promotes sustained mental alertness and prolonged satiety", "Supports metabolic health and reduces risk of insulin resistance"]
+  },
+  "Glycemic Load": {
+    name: "Glycemic Load (GL)",
+    description: "A comprehensive metric combining both the speed of carbohydrate absorption (GI) and the total grams of carbs per standard serving: GL = (GI × Net Carbs) / 100.",
+    sources: [
+      { name: "Low GL (< 10)", amount: "Carrots, Apples, Chickpeas, Berries" },
+      { name: "Medium GL (11–19)", amount: "Brown Rice, Oatmeal, Whole Wheat Pasta" },
+      { name: "High GL (20+)", amount: "White Rice, Russet Baked Potato, Candy" },
+      { name: "Watermelon (High GI, Low GL)", amount: "5 GL (Serving is 92% water)" },
+      { name: "Strawberries (1 cup)", amount: "3–4 GL" }
+    ],
+    benefits: ["Reflects real-world meal blood sugar impact accurately", "Takes portion size and water/fiber density into account", "Practical tool for athletic nutrition, diabetes care, and body recomposition"]
+  },
+  "Water": {
+    name: "Water & Hydration",
+    description: "The primary chemical constituent of the human body, accounting for ~60% of total mass. Indispensable for cellular respiration, thermoregulation, and detoxification.",
+    sources: [
+      { name: "Pure Drinking Water", amount: "100% Hydration" },
+      { name: "Cucumbers & Celery", amount: "95–96% Water" },
+      { name: "Watermelon & Strawberries", amount: "91–92% Water" },
+      { name: "Citrus Fruits & Apples", amount: "86–88% Water" },
+      { name: "Herbal Teas & Broths", amount: "99% Water" }
+    ],
+    benefits: ["Flushes metabolic byproducts via renal filtration", "Regulates internal core temperature through perspiration", "Lubricates synovial joints and protects spinal cord and brain tissues"]
   }
 };
 

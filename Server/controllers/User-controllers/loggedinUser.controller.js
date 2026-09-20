@@ -63,13 +63,13 @@ const isPasswordCorrect = asynchandler(
         res.cookie('refreshToken', refreshToken, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',  // Set secure flag only in production
-            sameSite: 'Strict',
+            sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax',
             maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
         });
 
-        // Send the response with access token
+        // Send the response with access token and refresh token
         return res.status(200).json(
-            new ApiResponse(200, { user, accessToken }, "User Logged In Successfully")
+            new ApiResponse(200, { user, accessToken, refreshToken }, "User Logged In Successfully")
         );
     }
 )
@@ -81,7 +81,7 @@ const generateAccessToken = (user) => {
     return jwt.sign(
         { id: user._id, username: user.username },
         process.env.JWT_SECRET_KEY,  // Secret for access token
-        { expiresIn: process.env.ACCESS_TOKEN_EXPIRY } // Access token expires in 15 minutes
+        { expiresIn: process.env.ACCESS_TOKEN_EXPIRY || "7d" }
     );
 };
 
@@ -89,7 +89,7 @@ const generateRefreshToken = (user) => {
     return jwt.sign(
         { id: user._id },
         process.env.REFRESH_TOKEN_SECRET_KEY, // Secret for refresh token
-        { expiresIn: process.env.REFRESH_TOKEN_EXPIRY } // Refresh token expires in 7 days
+        { expiresIn: process.env.REFRESH_TOKEN_EXPIRY || "30d" }
     );
 };
 

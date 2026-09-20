@@ -28,8 +28,10 @@ const autoLogin = asyncHandler(
         throw new ApiError(401, "User not found");
       }
       req.user = userExist;
+      const safeUser = userExist.toObject ? userExist.toObject() : { ...userExist };
+      delete safeUser.passwordHash;
       return res.status(200).json(
-        new ApiResponse(200, userExist, "Authorized")
+        new ApiResponse(200, safeUser, "Authorized")
       );
     } catch (error) {
       throw new ApiError(401, error.message);

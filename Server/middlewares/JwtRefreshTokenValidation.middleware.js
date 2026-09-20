@@ -8,7 +8,7 @@ import RegisteredUsers from '../models/User-models/registeredUser.model.js';
 
 // Refresh Token Route
 const refreshTokenHandler = asynchandler(async (req, res, next) => {
-    const refreshToken = req.cookies.refreshToken; // Get the refresh token from cookie
+    const refreshToken = req.cookies?.refreshToken || req.body?.refreshToken || req.headers?.['x-refresh-token'];
 
     if (!refreshToken) {
         throw new ApiError(401, "Refresh Token is missing");
@@ -23,12 +23,21 @@ const refreshTokenHandler = asynchandler(async (req, res, next) => {
             throw new ApiError(401, "Invalid refresh token");
         }
 
-        // Generate a new access token
+        // Generate new access and refresh tokens
         const accessToken = generateAccessToken(user);
+        const newRefreshToken = generateRefreshToken(user);
 
-        // Send the new access token
+        // Update cookie
+        res.cookie('refreshToken', newRefreshToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax',
+            maxAge: 7 * 24 * 60 * 60 * 1000,
+        });
+
+        // Send the new access token and refresh token
         return res.status(200).json(
-            new ApiResponse(200, accessToken, "Token refreshed successfully")
+            new ApiResponse(200, { accessToken, refreshToken: newRefreshToken }, "Token refreshed successfully")
         );
 
     } catch (err) {

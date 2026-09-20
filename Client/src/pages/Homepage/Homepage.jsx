@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect } from 'react';
 import Banner from '../../components/Homepage/Banner.jsx'
 import What from '../../components/Homepage/What.jsx';
 import Why from '../../components/Homepage/Why.jsx';
@@ -8,6 +8,12 @@ import { TitleChanger } from '../../utils/TitleChanger.jsx';
 
 function Homepage() {
   TitleChanger("Progress Pulse | Home")
+
+  useEffect(() => {
+    // Ping Render server in background so it warms up if asleep
+    fetch('/api/v1/health').catch(() => {});
+  }, []);
+
   return (
     <div className="flex flex-col min-h-screen">
       <main className="flex-grow">

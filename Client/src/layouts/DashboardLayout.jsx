@@ -16,17 +16,41 @@ const DashboardLayout = () => {
 
   // Variables
   const isOtpPage = location.pathname === "/otp";
-  const { validToken } = useAuth();
+  const { validToken, isCheckingAuth } = useAuth();
   const isHabitPage = location.pathname.toLowerCase().includes('/habit');
 
   // Sidebar State
-  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // ------------------- Conditions before Dashboard -----------------------
   if (!isOtpPage) {
     localStorage.setItem('allowOtp', false);
   }
-  const isAuthenticated = validToken
+
+  // If session is currently being checked or waking up, display connecting screen
+  if (isCheckingAuth) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-base-300">
+        <div className="flex flex-col items-center gap-4 p-8 bg-base-100/70 backdrop-blur-md rounded-2xl border border-white/10 shadow-2xl max-w-sm w-full text-center">
+          <span className="loading loading-spinner loading-lg text-primary"></span>
+          <div className="space-y-1">
+            <p className="text-base font-semibold text-base-content">
+              Connecting to Progress Pulse...
+            </p>
+            <p className="text-xs text-base-content/60">
+              Validating session. Waking up server if asleep...
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const isAuthenticated = validToken;
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace state={{ from: location }} />;
+  }
 
   // --------------------- Dashboard HTML Layout -------------------------
   return (
@@ -35,29 +59,25 @@ const DashboardLayout = () => {
       <Navbar />
       
       {/* Sidebar and Outlet */}
-      {isAuthenticated ? (
-        <div className="flex h-[calc(100vh-4rem)] relative overflow-hidden">
-          {/* Desktop Sidebar (hidden on mobile, visible on md+) */}
-          <div className="hidden md:block h-full shrink-0">
-            <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} />
-          </div>
-
-          <main className={`flex-1 transition-all duration-300 overflow-y-auto w-full min-w-0 pb-28 md:pb-6 ${
-            isHabitPage ? "px-2 pt-0 md:px-4 md:pt-0 md:pb-6" : "p-2 sm:p-4"
-          }`}>
-            <ActiveLastBreadcrumb />
-            <Outlet />
-          </main>
-
-          {/* Mobile Bottom Navigation Bar */}
-          <MobileBottomNav />
+      <div className="flex h-[calc(100vh-4rem)] relative overflow-hidden">
+        {/* Desktop Sidebar (hidden on mobile, visible on md+) */}
+        <div className="hidden md:block h-full shrink-0">
+          <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} />
         </div>
-      ) : (
-        <Navigate to="/login" />
-      )}
+
+        <main className={`flex-1 transition-all duration-300 overflow-y-auto w-full min-w-0 pb-28 md:pb-6 ${
+          isHabitPage ? "px-2 pt-0 md:px-4 md:pt-0 md:pb-6" : "p-2 sm:p-4"
+        }`}>
+          <ActiveLastBreadcrumb />
+          <Outlet />
+        </main>
+
+        {/* Mobile Bottom Navigation Bar */}
+        <MobileBottomNav />
+      </div>
     </>
-  )
-}
+  );
+};
 
 export default DashboardLayout
 

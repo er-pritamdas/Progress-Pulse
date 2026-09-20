@@ -12,7 +12,8 @@ import LoginLeftCard from "../../components/Authentication/LoginLeftCard";
 function Login() {
   TitleChanger("Progress Pulse | Login");
   const navigate = useNavigate();
-  const { validToken, setvalidToken } = useAuth();
+  const { validToken, setvalidToken, isCheckingAuth } = useAuth();
+  const { setLoading } = useLoading();
   const loginTimersRef = useRef([]);
 
   const clearLoginTimers = () => {
@@ -20,20 +21,31 @@ function Login() {
     loginTimersRef.current = [];
   };
 
+  // Ensure loading popup is ALWAYS dismissed if Login unmounts
   useEffect(() => {
-    return () => clearLoginTimers();
+    // Ping Render server in the background to wake it up early
+    axios.get("/api/v1/health").catch(() => {});
+
+    return () => {
+      clearLoginTimers();
+      setLoading(false);
+    };
   }, []);
 
   useEffect(() => {
     if (validToken) {
-      navigate("/dashboard");
+      clearLoginTimers();
+      setLoading(false);
+      navigate("/dashboard", { replace: true });
     }
-  }, [validToken]);
+  }, [validToken, navigate]);
 
-  const { setLoading } = useLoading();
   const [showPassword, setShowPassword] = useState(false);
   const [disableButton, setDisableButton] = useState(false);
-  const [formData, setFormData] = useState({ username: "", password: "" });
+  const [formData, setFormData] = useState({
+    username: localStorage.getItem("remembered_username") || localStorage.getItem("username") || "",
+    password: "",
+  });
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -49,12 +61,25 @@ function Login() {
     try {
       setLoading(true, "Logging in... Please wait");
       setDisableButton(true);
-      const response = await axios.post("/api/v1/users/loggedin", formData);
 
-      localStorage.setItem("token", response.data.data.accessToken);
+      const response = await axios.post("/api/v1/users/loggedin", formData, {
+        withCredentials: true,
+      });
+
+      const responseData = response.data?.data;
+      const accessToken = responseData?.accessToken;
+      const refreshToken = responseData?.refreshToken;
+      const loggedInUser = responseData?.user;
+
+      if (accessToken) {
+        localStorage.setItem("token", accessToken);
+      }
+      if (refreshToken) {
+        localStorage.setItem("refreshToken", refreshToken);
+      }
       localStorage.setItem("username", formData.username);
+      localStorage.setItem("remembered_username", formData.username);
 
-      const loggedInUser = response.data?.data?.user;
       if (loggedInUser?.email) {
         localStorage.setItem("email", loggedInUser.email);
       }
@@ -75,31 +100,32 @@ function Login() {
 
       clearLoginTimers();
 
+      // Sequential smooth transition steps
       loginTimersRef.current.push(
         setTimeout(() => {
           setLoading(true, "Logged in!");
-        }, 1000)
+        }, 500)
       );
 
       loginTimersRef.current.push(
         setTimeout(() => {
           setLoading(true, "Gathering your data...");
-        }, 2000)
+        }, 1300)
       );
 
       loginTimersRef.current.push(
         setTimeout(() => {
           setLoading(true, "Building your dashboard...");
-        }, 3000)
+        }, 2100)
       );
 
       loginTimersRef.current.push(
         setTimeout(() => {
           setShowSuccessAlert(false);
+          setLoading(false); // Dismiss loader before setting valid token and navigating
           setvalidToken(true);
-          setLoading(false);
-          navigate("/dashboard", { state: { formData } });
-        }, 4200)
+          navigate("/dashboard", { replace: true, state: { formData } });
+        }, 2900)
       );
     } catch (err) {
       clearLoginTimers();
@@ -110,16 +136,16 @@ function Login() {
       setAlertErrorMessage(errorMessage);
       setShowErrorAlert(true);
       setTimeout(() => {
-        setShowErrorAlert(false)
-      }, 2000);
+        setShowErrorAlert(false);
+      }, 3000);
 
       const isVerifiedError = err?.response?.data?.errors?.[0]?.isVerified === false;
 
       if (isVerifiedError) {
         try {
-          setLoading(true);
+          setLoading(true, "Generating OTP...");
           setDisableButton(true);
-          const response = await axios.post("/api/v1/users/loggedin/generate-otp", formData);
+          await axios.post("/api/v1/users/loggedin/generate-otp", formData);
 
           setalertSuccessMessage("OTP Generated to your Registered Email ID");
           localStorage.setItem("allowOtp", "true");
@@ -129,12 +155,12 @@ function Login() {
             setShowSuccessAlert(false);
             setLoading(false);
             navigate("/otp", { state: { formData } });
-          }, 4000);
-        } catch (err) {
+          }, 3000);
+        } catch (otpErr) {
           setLoading(false);
           setDisableButton(false);
           const otpErrorMessage =
-            err?.response?.data?.message ||
+            otpErr?.response?.data?.message ||
             "Something went wrong. Please try again.";
           setAlertErrorMessage(otpErrorMessage);
           setShowErrorAlert(true);
@@ -193,12 +219,20 @@ function Login() {
                 <p className="text-base-content/60 text-sm mt-2">Enter your credentials to access your account</p>
               </div>
 
+              {isCheckingAuth && (localStorage.getItem("token") || localStorage.getItem("refreshToken")) && (
+                <div className="flex items-center justify-center gap-2 p-3 bg-primary/10 border border-primary/20 rounded-xl text-primary text-xs font-medium animate-pulse">
+                  <span className="loading loading-spinner loading-xs"></span>
+                  Restoring previous session... Waking up server if asleep.
+                </div>
+              )}
+
               {/* Username */}
               <div>
                 <label className="label text-sm font-medium text-base-content/80 ml-1 mb-1">Username</label>
                 <input
                   type="text"
                   name="username"
+                  value={formData.username}
                   className="input input-bordered input-lg w-full bg-base-200/50 focus:bg-base-200 focus:border-primary transition-all rounded-xl"
                   placeholder="Enter your username"
                   required
@@ -214,6 +248,7 @@ function Login() {
                 <label className="label text-sm font-medium text-base-content/80 ml-1 mb-1">Password</label>
                 <input
                   name="password"
+                  value={formData.password}
                   type={showPassword ? "text" : "password"}
                   className="input input-bordered input-lg w-full bg-base-200/50 focus:bg-base-200 focus:border-primary transition-all rounded-xl"
                   required
