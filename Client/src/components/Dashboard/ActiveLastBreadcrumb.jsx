@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Home, BookOpen, Navigation, TrendingUp, Wallet, CalendarCheck, Grid2x2Plus, Grid2x2Check, Settings2, Target, User, AlertTriangle, Palette, ShieldCheck, Bell, Download } from 'lucide-react';
+import { Home, BookOpen, Navigation, TrendingUp, Wallet, CalendarCheck, Grid2x2Plus, Grid2x2Check, Settings2, Target, User, AlertTriangle, Palette, ShieldCheck, Bell, Download, Calculator } from 'lucide-react';
 import Dashboard from '../../utils/Icons/Dashboard';
 import QuickCalculator from '../Expense/QuickCalculator';
 
@@ -93,7 +93,19 @@ export default function ThemedBreadcrumbs() {
         </div>
 
         {/* Extreme Right Action Slot for Breadcrumbs Navigation Bar */}
-        <div id="breadcrumb-actions" className="flex items-center gap-2 shrink-0"></div>
+        <div id="breadcrumb-actions" className="flex items-center gap-2 shrink-0">
+          {isExpensePage && (
+            <button
+              type="button"
+              onClick={() => window.dispatchEvent(new Event("toggle_quick_calculator"))}
+              className="btn btn-xs btn-ghost gap-1.5 font-bold text-xs text-primary hover:bg-primary/10 rounded-xl px-2.5 cursor-pointer"
+              title="Open Quick Calculator"
+            >
+              <Calculator size={13} />
+              <span>Calculator</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Floating Action Quick Calculator for Expense Pages */}

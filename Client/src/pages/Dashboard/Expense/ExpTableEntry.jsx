@@ -5,7 +5,7 @@ import { useAuth } from "../../../Context/JwtAuthContext";
 import ExpenseTable from "../../../components/Expense/ExpenseTable";
 import BankBalancesModal from "../../../components/Expense/BankBalancesModal";
 import dayjs from "dayjs";
-import { ChevronLeft, ChevronRight, TrendingUp, TrendingDown, Eye, EyeOff, Calendar, X, Wallet, Search, Folder, ExternalLink, ArrowUp, ArrowDown, ArrowUpDown, ArrowRightLeft, Sparkles, Filter, ChevronDown, ChevronUp, Building2, CreditCard, Info, Handshake, Users, Plus, Minus } from "lucide-react";
+import { ChevronLeft, ChevronRight, TrendingUp, TrendingDown, Eye, EyeOff, Calendar, X, Wallet, Search, Folder, ExternalLink, ArrowUp, ArrowDown, ArrowUpDown, ArrowRightLeft, Sparkles, Filter, ChevronDown, ChevronUp, Building2, CreditCard, Info, Handshake, Users, Plus, Minus, RotateCcw } from "lucide-react";
 import { getSourceTagStyle, getCategoryTagStyle } from "../../../utils/expenseTheme";
 import TransactionInfoModal from "../../../components/Expense/TransactionInfoModal";
 
@@ -336,7 +336,7 @@ const ExpTableEntry = () => {
         <div className="flex flex-col lg:flex-row gap-6 items-start">
 
         {/* Sidebar Controls (Left) - Sticky & Scrollable (Hidden scrollbar) */}
-        <div className="w-full lg:w-72 shrink-0 space-y-4 lg:sticky lg:top-2 lg:max-h-[calc(100vh-9.5rem)] lg:overflow-y-auto lg:overflow-x-hidden overscroll-contain scroll-hidden [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden p-1 pb-8">
+        <div className="hidden lg:block w-72 shrink-0 space-y-4 lg:sticky lg:top-2 lg:max-h-[calc(100vh-9.5rem)] lg:overflow-y-auto lg:overflow-x-hidden overscroll-contain scroll-hidden [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden p-1 pb-8">
 
           {/* Bank Balances Card - Clickable to open Popup */}
           <div
@@ -686,8 +686,113 @@ const ExpTableEntry = () => {
 
         </div>
 
-        {/* Main Table Area (Right) */}
-        <div className="flex-1 flex flex-col gap-6">
+        {/* Main Table Area (Right on desktop, Full width on mobile) */}
+        <div className="flex-1 flex flex-col gap-4 lg:gap-6 w-full min-w-0">
+          {/* Mobile Financial Overview (< lg) - High Density Financial Summary */}
+          <div className="block lg:hidden w-full space-y-2.5 mb-1">
+            {/* Net Balance Card */}
+            <div className="bg-gradient-to-br from-base-100 to-base-200 border border-base-content/10 rounded-2xl p-3.5 shadow-sm space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-base-content/60 block">
+                    {isCurrentMonth ? "Net Available Balance" : `${dayjs(currentMonth).format("MMM 'YY")} Closing Net`}
+                  </span>
+                  <div className={`text-2xl font-black font-mono tracking-tight ${totalNetBalance < 0 ? 'text-error' : 'text-success'}`}>
+                    {hideNumbers ? "••••••••" : (totalNetBalance < 0 ? `-₹${Math.abs(totalNetBalance).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : `₹${totalNetBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`)}
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setBankModalTypeFilter("all");
+                      setShowBankBalancesModal(true);
+                    }}
+                    className="btn btn-xs btn-outline rounded-xl text-[11px] font-bold gap-1 cursor-pointer"
+                  >
+                    <Wallet size={12} />
+                    <span>Accounts</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Sub-breakdown: Banks & Cards Due */}
+              <div className="grid grid-cols-2 gap-2 pt-2.5 border-t border-base-content/10">
+                <div
+                  onClick={() => {
+                    setBankModalTypeFilter("Bank");
+                    setShowBankBalancesModal(true);
+                  }}
+                  className="bg-base-200/50 hover:bg-base-200/80 transition-colors p-2.5 rounded-xl cursor-pointer border border-base-content/5"
+                >
+                  <div className="flex items-center justify-between text-[10px] text-base-content/60 font-semibold mb-0.5">
+                    <span className="flex items-center gap-1">
+                      <Building2 size={11} className="text-primary" /> Banks
+                    </span>
+                    <ExternalLink size={9} className="opacity-50" />
+                  </div>
+                  <div className={`text-xs font-extrabold font-mono ${totalBankBalance < 0 ? 'text-error' : 'text-success'}`}>
+                    {hideNumbers ? "••••••••" : (totalBankBalance < 0 ? `-₹${Math.abs(totalBankBalance).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : `₹${totalBankBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`)}
+                  </div>
+                </div>
+
+                <div
+                  onClick={() => {
+                    setBankModalTypeFilter("Card");
+                    setShowBankBalancesModal(true);
+                  }}
+                  className="bg-base-200/50 hover:bg-base-200/80 transition-colors p-2.5 rounded-xl cursor-pointer border border-base-content/5"
+                >
+                  <div className="flex items-center justify-between text-[10px] text-base-content/60 font-semibold mb-0.5">
+                    <span className="flex items-center gap-1">
+                      <CreditCard size={11} className="text-error" /> CC Dues
+                    </span>
+                    <ExternalLink size={9} className="opacity-50" />
+                  </div>
+                  <div className="text-xs font-extrabold font-mono text-error">
+                    {hideNumbers ? "••••••••" : `-₹${totalCardSpent.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                  </div>
+                </div>
+              </div>
+
+              {/* Monthly Activity Badges: Debited, Credited, Pending (Non-clickable) */}
+              <div className="grid grid-cols-3 gap-1.5 pt-0.5 select-none">
+                <div
+                  className="bg-error/10 border border-error/20 p-2 rounded-xl text-left"
+                >
+                  <div className="text-[9.5px] font-bold text-error uppercase tracking-wider flex items-center gap-1 mb-0.5">
+                    <TrendingDown size={10} /> Debited
+                  </div>
+                  <div className="text-[11px] font-black font-mono text-error truncate">
+                    {hideNumbers || !showDebit ? "••••••" : `₹${totalDebited.toLocaleString(undefined, { maximumFractionDigits: 0 })}`}
+                  </div>
+                </div>
+
+                <div
+                  className="bg-success/10 border border-success/20 p-2 rounded-xl text-left"
+                >
+                  <div className="text-[9.5px] font-bold text-success uppercase tracking-wider flex items-center gap-1 mb-0.5">
+                    <TrendingUp size={10} /> Credited
+                  </div>
+                  <div className="text-[11px] font-black font-mono text-success truncate">
+                    {hideNumbers || !showCredit ? "••••••" : `₹${totalCredited.toLocaleString(undefined, { maximumFractionDigits: 0 })}`}
+                  </div>
+                </div>
+
+                <div
+                  className="bg-warning/10 border border-warning/20 p-2 rounded-xl text-left"
+                >
+                  <div className="text-[9.5px] font-bold text-warning uppercase tracking-wider flex items-center gap-1 mb-0.5">
+                    <Handshake size={10} /> Pending
+                  </div>
+                  <div className="text-[11px] font-black font-mono text-warning truncate">
+                    {hideNumbers || !showReimbursable ? "••••••" : `₹${totalReimbursableToCollect.toLocaleString(undefined, { maximumFractionDigits: 0 })}`}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <ExpenseTable
             externalFilters={filters}
             externalSetFilters={setFilters}
@@ -743,6 +848,7 @@ const ExpTableEntry = () => {
 const HeatmapModal = ({ transactions, currentMonth, onClose }) => {
   const dispatch = useDispatch();
   const { sources = [], categories = [] } = useSelector((state) => state.expense);
+  const [mobileTab, setMobileTab] = useState("debit"); // "debit" | "credit" | "net" (phone view only)
   const [upperLimit, setUpperLimit] = useState(() => {
     try {
       const saved = localStorage.getItem("expense_calendar_limit");
@@ -933,10 +1039,403 @@ const HeatmapModal = ({ transactions, currentMonth, onClose }) => {
     return String(Math.round(val));
   };
 
+  const formatCellAmt = (amt) => {
+    if (!amt || amt === 0) return null;
+    const abs = Math.abs(amt);
+    if (abs >= 100000) return `${(abs / 100000).toFixed(1)}L`;
+    if (abs >= 1000) return `${(abs / 1000).toFixed(abs >= 10000 ? 0 : 1)}k`;
+    return `${Math.round(abs)}`;
+  };
+
+  const mobileCells = useMemo(() => {
+    const monthObj = dayjs(currentMonth);
+    const firstDayIndex = monthObj.startOf("month").day(); // 0=Sun..6=Sat
+    const daysInCurrMonth = monthObj.daysInMonth();
+    const prevMonthObj = monthObj.subtract(1, "month");
+    const daysInPrevMonth = prevMonthObj.daysInMonth();
+
+    const cells = [];
+
+    // Leading days from previous month
+    for (let i = firstDayIndex - 1; i >= 0; i--) {
+      const dayNum = daysInPrevMonth - i;
+      cells.push({
+        dayNum,
+        dateStr: prevMonthObj.date(dayNum).format("YYYY-MM-DD"),
+        isCurrentMonth: false,
+      });
+    }
+
+    // Days of current month
+    for (let dayNum = 1; dayNum <= daysInCurrMonth; dayNum++) {
+      cells.push({
+        dayNum,
+        dateStr: monthObj.date(dayNum).format("YYYY-MM-DD"),
+        isCurrentMonth: true,
+      });
+    }
+
+    // Trailing days from next month
+    const nextMonthObj = monthObj.add(1, "month");
+    const remaining = (7 - (cells.length % 7)) % 7;
+    for (let dayNum = 1; dayNum <= remaining; dayNum++) {
+      cells.push({
+        dayNum,
+        dateStr: nextMonthObj.date(dayNum).format("YYYY-MM-DD"),
+        isCurrentMonth: false,
+      });
+    }
+
+    return cells;
+  }, [currentMonth]);
+
   return (
-    <div className="fixed inset-0 z-[99999] bg-black/70 backdrop-blur-lg flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
-      {/* Fixed Dimension Modal Container (Constant width & height across all months) */}
-      <div className="flex flex-col lg:flex-row items-stretch justify-center gap-4 h-[90vh] min-h-[660px] max-h-[840px] max-w-7xl w-full">
+    <div
+      className="fixed inset-0 z-[99999] bg-black/70 backdrop-blur-lg flex items-center justify-center p-2 sm:p-4 overflow-y-auto"
+      onClick={onClose}
+    >
+      {/* Mobile Phone View (Calorie Dashboard Style Calendar Modal - Only in Phone View) */}
+      <div
+        className="block sm:hidden w-full max-w-[360px] bg-base-100 border border-base-300/80 rounded-3xl p-4 shadow-2xl space-y-3.5 transition-all text-base-content max-h-[92vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-200"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Modal Top Header */}
+        <div className="flex items-center justify-between pb-2 border-b border-base-200">
+          <div className="flex items-center gap-2">
+            <span className="p-1.5 rounded-xl bg-primary/10 text-primary">
+              <Calendar size={16} />
+            </span>
+            <div>
+              <h3 className="text-xs font-black uppercase tracking-wider text-base-content">
+                Spending Calendar
+              </h3>
+              <p className="text-[10px] text-base-content/60 font-medium">
+                Daily cash flow & expense breakdown
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="btn btn-ghost btn-circle btn-xs text-base-content/60 hover:text-base-content hover:bg-base-200"
+            title="Close"
+          >
+            <X size={15} />
+          </button>
+        </div>
+
+        {/* Tabs: Debit, Credit, Net (Only in phone view) */}
+        <div className="grid grid-cols-3 gap-1.5 p-1 bg-base-200/80 rounded-2xl border border-base-300/50">
+          <button
+            type="button"
+            onClick={() => setMobileTab("debit")}
+            className={`py-1.5 px-1.5 rounded-xl text-xs font-bold flex flex-col items-center justify-center gap-0.5 transition-all cursor-pointer ${
+              mobileTab === "debit"
+                ? "bg-rose-500 text-white shadow-xs font-black"
+                : "text-base-content/70 hover:text-base-content hover:bg-base-100/60"
+            }`}
+          >
+            <div className="flex items-center gap-1">
+              <TrendingDown size={13} />
+              <span>Debit</span>
+            </div>
+            <span
+              className={`text-[10px] font-mono leading-none ${
+                mobileTab === "debit" ? "text-white/90 font-black" : "text-rose-500 font-bold"
+              }`}
+            >
+              -₹{formatAmtClean(totalMonthSpent)}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setMobileTab("credit")}
+            className={`py-1.5 px-1.5 rounded-xl text-xs font-bold flex flex-col items-center justify-center gap-0.5 transition-all cursor-pointer ${
+              mobileTab === "credit"
+                ? "bg-emerald-600 text-white shadow-xs font-black"
+                : "text-base-content/70 hover:text-base-content hover:bg-base-100/60"
+            }`}
+          >
+            <div className="flex items-center gap-1">
+              <TrendingUp size={13} />
+              <span>Credit</span>
+            </div>
+            <span
+              className={`text-[10px] font-mono leading-none ${
+                mobileTab === "credit" ? "text-white/90 font-black" : "text-emerald-500 font-bold"
+              }`}
+            >
+              +₹{formatAmtClean(totalMonthCredits)}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setMobileTab("net")}
+            className={`py-1.5 px-1.5 rounded-xl text-xs font-bold flex flex-col items-center justify-center gap-0.5 transition-all cursor-pointer ${
+              mobileTab === "net"
+                ? "bg-primary text-primary-content shadow-xs font-black"
+                : "text-base-content/70 hover:text-base-content hover:bg-base-100/60"
+            }`}
+          >
+            <div className="flex items-center gap-1">
+              <ArrowUpDown size={13} />
+              <span>Net</span>
+            </div>
+            <span
+              className={`text-[10px] font-mono leading-none ${
+                mobileTab === "net"
+                  ? "text-primary-content/90 font-black"
+                  : totalNetFlow >= 0
+                  ? "text-emerald-500 font-bold"
+                  : "text-rose-500 font-bold"
+              }`}
+            >
+              {totalNetFlow >= 0 ? "+" : "-"}₹{formatAmtClean(Math.abs(totalNetFlow))}
+            </span>
+          </button>
+        </div>
+
+        {/* Month Navigation */}
+        <div className="flex items-center justify-between px-1">
+          <button
+            type="button"
+            onClick={() => dispatch(setMonth(dayjs(currentMonth).subtract(1, "month").format("YYYY-MM")))}
+            className="btn btn-ghost btn-circle btn-xs hover:bg-base-200 text-base-content/80"
+            title="Previous Month"
+          >
+            <ChevronLeft size={16} />
+          </button>
+
+          <div className="text-center">
+            <span className="font-extrabold text-sm text-base-content tracking-tight">
+              {dayjs(currentMonth).format("MMMM YYYY")}
+            </span>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => dispatch(setMonth(dayjs(currentMonth).add(1, "month").format("YYYY-MM")))}
+            className="btn btn-ghost btn-circle btn-xs hover:bg-base-200 text-base-content/80"
+            title="Next Month"
+          >
+            <ChevronRight size={16} />
+          </button>
+        </div>
+
+        {/* Weekdays */}
+        <div className="grid grid-cols-7 text-center text-[10px] font-black uppercase text-base-content/40 tracking-wider">
+          <span>Su</span>
+          <span>Mo</span>
+          <span>Tu</span>
+          <span>We</span>
+          <span>Th</span>
+          <span>Fr</span>
+          <span>Sa</span>
+        </div>
+
+        {/* Calendar Days Matrix */}
+        <div className="grid grid-cols-7 gap-1">
+          {mobileCells.map((cell) => {
+            const isSelected = cell.dateStr === selectedDateStr;
+            const isToday = cell.dateStr === dayjs().format("YYYY-MM-DD");
+            const dSpent = dailySpending[cell.dateStr] || 0;
+            const dCredit = dailyCredits[cell.dateStr] || 0;
+            const dNet = dCredit - dSpent;
+
+            let amtLabel = null;
+            let amtColor = "";
+            if (mobileTab === "debit" && dSpent > 0) {
+              amtLabel = `-₹${formatCellAmt(dSpent)}`;
+              amtColor = isSelected ? "text-primary-content/90 font-black" : "text-rose-500 font-bold";
+            } else if (mobileTab === "credit" && dCredit > 0) {
+              amtLabel = `+₹${formatCellAmt(dCredit)}`;
+              amtColor = isSelected ? "text-primary-content/90 font-black" : "text-emerald-500 font-bold";
+            } else if (mobileTab === "net" && (dCredit > 0 || dSpent > 0)) {
+              if (dNet > 0) {
+                amtLabel = `+₹${formatCellAmt(dNet)}`;
+                amtColor = isSelected ? "text-primary-content/90 font-black" : "text-emerald-500 font-bold";
+              } else if (dNet < 0) {
+                amtLabel = `-₹${formatCellAmt(Math.abs(dNet))}`;
+                amtColor = isSelected ? "text-primary-content/90 font-black" : "text-rose-500 font-bold";
+              } else {
+                amtLabel = "₹0";
+                amtColor = isSelected ? "text-primary-content/80 font-bold" : "text-base-content/50";
+              }
+            }
+
+            return (
+              <button
+                key={cell.dateStr}
+                type="button"
+                onClick={() => {
+                  setSelectedDateStr(cell.dateStr);
+                  if (!cell.isCurrentMonth) {
+                    dispatch(setMonth(dayjs(cell.dateStr).format("YYYY-MM")));
+                  }
+                }}
+                className={`relative h-11 w-full flex flex-col items-center justify-center rounded-xl text-xs transition-all cursor-pointer select-none active:scale-95 ${
+                  isSelected
+                    ? "bg-primary text-primary-content font-black shadow-md scale-102"
+                    : isToday
+                    ? "border-2 border-primary text-primary font-black bg-primary/5 hover:bg-primary/10"
+                    : cell.isCurrentMonth
+                    ? "text-base-content hover:bg-base-200 hover:text-primary font-semibold"
+                    : "text-base-content/30 opacity-40 hover:bg-base-200/50 hover:opacity-100 font-normal"
+                }`}
+              >
+                <span className="text-[11px] leading-tight font-sans">{cell.dayNum}</span>
+                {amtLabel ? (
+                  <span className={`text-[8px] font-mono leading-none tracking-tighter ${amtColor}`}>
+                    {amtLabel}
+                  </span>
+                ) : (
+                  <span className="h-[8px]"></span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Selected Day Details & Transactions (Below Grid) */}
+        <div className="bg-base-200/50 rounded-2xl p-2.5 border border-base-300/60 space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5">
+              <span className="font-extrabold text-xs text-base-content">
+                {selectedDateStr ? dayjs(selectedDateStr).format("ddd, MMM D") : "Select a day"}
+              </span>
+              {selectedDateStr === dayjs().format("YYYY-MM-DD") && (
+                <span className="badge badge-xs badge-primary font-bold">Today</span>
+              )}
+            </div>
+            <div className="text-[11px] font-mono font-bold">
+              {mobileTab === "debit" && (
+                <span className="text-rose-500 font-black">-₹{Number(selectedDayDebit || 0).toLocaleString()}</span>
+              )}
+              {mobileTab === "credit" && (
+                <span className="text-emerald-500 font-black">+₹{Number(selectedDayCredit || 0).toLocaleString()}</span>
+              )}
+              {mobileTab === "net" && (
+                <span className={`font-black ${selectedDayNet >= 0 ? "text-emerald-500" : "text-rose-500"}`}>
+                  {selectedDayNet >= 0 ? "+" : "-"}₹{Math.abs(selectedDayNet).toLocaleString()}
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Scrollable transactions list for the selected day */}
+          <div className="max-h-[140px] overflow-y-auto space-y-1.5 pr-0.5">
+            {selectedTxns.length > 0 ? (
+              selectedTxns.map((t) => {
+                const rawType = t.type || "Debit";
+                const isCredit = rawType.toLowerCase() === "credit";
+                const isTrf = rawType.toLowerCase() === "transfer";
+
+                const sourceObj = t.sourceId;
+                const srcName = sourceObj?.name || (typeof sourceObj === "string" ? sourceObj : "");
+                const srcStyle = getSourceTagStyle(sourceObj || srcName, sources);
+
+                const targetObj = t.targetSourceId;
+                const trgName = targetObj?.name || (typeof targetObj === "string" ? targetObj : "Bank");
+                const trgStyle = getSourceTagStyle(targetObj || trgName, sources);
+
+                const catObj = t.categoryId;
+                const catName = catObj?.name || (typeof catObj === "string" ? catObj : "");
+                const catStyle = getCategoryTagStyle(catObj || catName, categories);
+
+                return (
+                  <div
+                    key={t._id || t.id}
+                    className="flex items-center justify-between p-2 rounded-xl bg-base-100 border border-base-300/70 text-xs gap-2"
+                  >
+                    <div className="flex flex-col min-w-0 flex-1">
+                      <span className="font-extrabold text-[11px] text-base-content truncate">
+                        {t.description || (isCredit ? "Credit Income" : "Expense")}
+                      </span>
+                      <div className="flex items-center gap-1 mt-0.5 flex-wrap text-[9px]">
+                        {srcName && (
+                          <span className={`px-1.5 py-0.5 rounded font-semibold ${srcStyle.bg} ${srcStyle.text}`}>
+                            {srcName}
+                          </span>
+                        )}
+                        {isTrf && trgName && (
+                          <span className={`px-1.5 py-0.5 rounded font-semibold ${trgStyle.bg} ${trgStyle.text}`}>
+                            → {trgName}
+                          </span>
+                        )}
+                        {catName && (
+                          <span className={`px-1.5 py-0.5 rounded font-semibold ${catStyle.bg} ${catStyle.text}`}>
+                            {catName}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <span
+                        className={`font-mono font-black text-xs whitespace-nowrap ${
+                          isCredit
+                            ? "text-emerald-500"
+                            : isTrf
+                            ? "text-amber-500"
+                            : "text-rose-500"
+                        }`}
+                      >
+                        {isCredit ? "+" : isTrf ? "" : "-"}₹{Number(t.amount || 0).toLocaleString()}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setInfoModalTx(t)}
+                        className={`btn btn-xs btn-ghost btn-circle ${
+                          t.info && t.info.trim()
+                            ? "text-primary bg-primary/10 hover:bg-primary/20"
+                            : "text-base-content/40 hover:text-base-content hover:bg-base-300/60"
+                        }`}
+                        title={t.info && t.info.trim() ? `Note: ${t.info}` : "View Notes (i)"}
+                      >
+                        <Info size={11} />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="py-3 text-center text-[11px] text-base-content/50 italic">
+                No transactions on this date
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-between pt-1 border-t border-base-200 text-xs">
+          <button
+            type="button"
+            onClick={() => {
+              const today = dayjs().format("YYYY-MM-DD");
+              setSelectedDateStr(today);
+              dispatch(setMonth(dayjs().format("YYYY-MM")));
+            }}
+            className="text-xs font-bold text-primary hover:underline flex items-center gap-1 bg-primary/10 hover:bg-primary/20 px-2.5 py-1 rounded-xl transition-all active:scale-95 border border-primary/20"
+          >
+            <RotateCcw size={11} /> Today
+          </button>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="btn btn-ghost btn-xs text-base-content/70 hover:bg-base-200 rounded-xl"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+
+      {/* Desktop View - Fixed Dimension Modal Container (Constant width & height across all months) */}
+      <div
+        className="hidden sm:flex flex-col lg:flex-row items-stretch justify-center gap-4 h-[90vh] min-h-[660px] max-h-[840px] max-w-7xl w-full"
+        onClick={(e) => e.stopPropagation()}
+      >
         
         {/* Main Calendar Panel (Left - Fixed Size & 6-Row Grid) */}
         <div className="flex-[1.4] h-full bg-base-100 rounded-3xl shadow-2xl overflow-hidden border border-base-300 flex flex-col justify-between text-xs animate-in fade-in zoom-in-95 duration-200">

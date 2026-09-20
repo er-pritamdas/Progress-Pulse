@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, ChevronUp, X, ArrowLeftRight } from 'lucide-react';
+import { Home, ChevronUp, X, ArrowLeftRight, Calculator } from 'lucide-react';
 
 import AlarmClockCheck from '../../../utils/Icons/AlarmClockCheck';
 import CreditCard from '../../../utils/Icons/CreditCard';
@@ -118,17 +118,32 @@ function MobileBottomNav() {
                 <span>Home</span>
               </Link>
 
-              {/* Active Tracker Capsule / Switcher Button */}
-              <button
-                type="button"
-                onClick={() => setIsSwitcherOpen(true)}
-                className="flex items-center gap-1.5 px-2.5 py-1 rounded-full font-bold text-xs bg-base-100 hover:bg-base-200 border border-base-content/10 shadow-xs transition-all active:scale-95 text-base-content"
-                title="Switch to another tracker"
-              >
-                <span className={`w-2 h-2 rounded-full ${currentTracker.color.replace('text-', 'bg-')} animate-pulse shrink-0`} />
-                <span className="truncate max-w-[130px]">{currentTracker.name}</span>
-                <ChevronUp size={13} className="text-base-content/50 shrink-0" />
-              </button>
+              {/* Right: Calculator (if on Expense) + Active Tracker Capsule */}
+              <div className="flex items-center gap-2">
+                {isExpense && (
+                  <button
+                    type="button"
+                    onClick={() => window.dispatchEvent(new Event("toggle_quick_calculator"))}
+                    className="flex items-center gap-1 px-2.5 py-1 rounded-full font-bold text-xs bg-primary/10 hover:bg-primary/20 text-primary border border-primary/25 shadow-2xs transition-all active:scale-95 cursor-pointer"
+                    title="Quick Calculator"
+                  >
+                    <Calculator size={13} className="shrink-0" />
+                    <span>Calc</span>
+                  </button>
+                )}
+
+                {/* Active Tracker Capsule / Switcher Button */}
+                <button
+                  type="button"
+                  onClick={() => setIsSwitcherOpen(true)}
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-full font-bold text-xs bg-base-100 hover:bg-base-200 border border-base-content/10 shadow-xs transition-all active:scale-95 text-base-content"
+                  title="Switch to another tracker"
+                >
+                  <span className={`w-2 h-2 rounded-full ${currentTracker.color.replace('text-', 'bg-')} animate-pulse shrink-0`} />
+                  <span className="truncate max-w-[130px]">{currentTracker.name}</span>
+                  <ChevronUp size={13} className="text-base-content/50 shrink-0" />
+                </button>
+              </div>
             </div>
 
             {/* 4 Bottom Tab Buttons for Current Tracker */}

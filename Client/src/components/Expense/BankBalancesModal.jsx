@@ -24,8 +24,18 @@ const BankBalancesModal = ({ isOpen, onClose, initialTypeFilter = "all" }) => {
   useEffect(() => {
     if (isOpen) {
       setTypeFilter(initialTypeFilter || "all");
+      setSearchQuery("");
     }
   }, [isOpen, initialTypeFilter]);
+
+  // Close on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape") onClose();
+    };
+    if (isOpen) window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, onClose]);
 
   // Excluded Sources State (persisted in localStorage and synced across components)
   const [excludedSourceIds, setExcludedSourceIds] = useState(() => {
@@ -111,49 +121,67 @@ const BankBalancesModal = ({ isOpen, onClose, initialTypeFilter = "all" }) => {
   const netAssets = totalAssets - totalCardSpent;
 
   return (
-    <div className="fixed inset-0 z-[99999] bg-black/65 backdrop-blur-md flex items-center justify-center p-4">
-      <div className="bg-base-100 rounded-3xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden border border-base-300 animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-[99999] bg-black/65 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200">
+      <div className="bg-base-100 rounded-3xl shadow-2xl w-full max-w-lg sm:max-w-3xl max-h-[85vh] sm:max-h-[90vh] flex flex-col overflow-hidden border border-base-300 animate-in fade-in zoom-in-95 duration-200">
         
         {/* Header */}
-        <div className="p-5 border-b border-base-200 flex justify-between items-center bg-base-200/50">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-2xl bg-primary/15 text-primary">
-              <Building2 size={22} />
+        <div className="p-3.5 sm:p-5 border-b border-base-200 flex justify-between items-center bg-base-200/50 shrink-0">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <div className={`p-2 sm:p-2.5 rounded-2xl shrink-0 ${
+              typeFilter === "Card"
+                ? "bg-error/15 text-error"
+                : "bg-primary/15 text-primary"
+            }`}>
+              {typeFilter === "Card" ? <CreditCard size={20} /> : <Building2 size={20} />}
             </div>
-            <div>
-              <h3 className="font-extrabold text-lg flex items-center gap-2 flex-wrap">
-                <span>Bank Accounts & Balances</span>
+            <div className="min-w-0">
+              <h3 className="font-extrabold text-base sm:text-lg flex items-center gap-2 flex-wrap leading-tight">
+                <span>
+                  {typeFilter === "Bank"
+                    ? "Bank Accounts"
+                    : typeFilter === "Card"
+                    ? "Credit Cards"
+                    : typeFilter === "Wallet"
+                    ? "Wallets"
+                    : "Bank Accounts & Balances"}
+                </span>
                 {!isCurrentMonth && (
-                  <span className="text-xs font-bold text-amber-500 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-md">
-                    {dayjs(currentMonth).format("MMMM YYYY")} Closing
+                  <span className="text-[10px] sm:text-xs font-bold text-amber-500 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded-md">
+                    {dayjs(currentMonth).format("MMM 'YY")} Closing
                   </span>
                 )}
                 {isCurrentMonth && (
-                  <span className="text-xs font-bold text-emerald-500 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-md">
-                    Current Live
+                  <span className="text-[10px] sm:text-xs font-bold text-emerald-500 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded-md">
+                    Live
                   </span>
                 )}
                 {excludedSourceIds.length > 0 && (
-                  <span className="text-xs font-bold text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-md">
+                  <span className="text-[10px] sm:text-xs font-bold text-amber-500 bg-amber-500/10 px-1.5 py-0.5 rounded-md">
                     {excludedSourceIds.length} Excluded
                   </span>
                 )}
               </h3>
-              <p className="text-xs opacity-60 font-medium">
-                {isCurrentMonth
-                  ? "Showing current live balances. Click any account card below to exclude it from Total Net Assets."
-                  : `Showing closing balances as of the end of ${dayjs(currentMonth).format("MMMM YYYY")}. Click any account card to exclude.`}
+              <p className="text-[11px] sm:text-xs opacity-70 font-medium mt-0.5 truncate">
+                {typeFilter === "Bank" ? (
+                  <span>Total: <strong className={totalBankBalance < 0 ? "text-error font-mono" : "text-success font-mono"}>{totalBankBalance < 0 ? `-₹${Math.abs(totalBankBalance).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : `₹${totalBankBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}</strong> ({filteredSources.length} banks)</span>
+                ) : typeFilter === "Card" ? (
+                  <span>Total Due: <strong className="text-error font-mono">-₹${totalCardSpent.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong> ({filteredSources.length} cards)</span>
+                ) : (
+                  isCurrentMonth
+                    ? "Showing current live balances. Tap any account to exclude."
+                    : `Showing closing balances of ${dayjs(currentMonth).format("MMMM YYYY")}.`
+                )}
               </p>
             </div>
           </div>
 
-          <button onClick={onClose} className="btn btn-sm btn-ghost btn-circle rounded-full">
+          <button onClick={onClose} className="btn btn-sm btn-ghost btn-circle rounded-full shrink-0" title="Close (Esc)">
             <X size={18} />
           </button>
         </div>
 
-        {/* Top Summary Banner */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-5 bg-base-200/30 border-b border-base-200 text-xs">
+        {/* Top Summary Banner (Desktop only - hidden in phone view) */}
+        <div className="hidden sm:grid grid-cols-3 gap-3 p-5 bg-base-200/30 border-b border-base-200 text-xs shrink-0">
           <div className="p-3.5 rounded-2xl bg-base-100 border border-base-200 shadow-2xs">
             <span className="text-[10px] font-bold text-base-content/50 uppercase block tracking-wider mb-1">
               {isCurrentMonth ? "Total Net Assets" : `Net Closing Assets (${dayjs(currentMonth).format("MMM 'YY")})`}
@@ -182,8 +210,8 @@ const BankBalancesModal = ({ isOpen, onClose, initialTypeFilter = "all" }) => {
           </div>
         </div>
 
-        {/* Search & Filter Bar */}
-        <div className="px-5 pt-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+        {/* Search & Filter Bar (Desktop only - hidden in phone view) */}
+        <div className="hidden sm:flex px-5 pt-4 flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
           <div className="relative w-full sm:w-64">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 opacity-50" />
             <input
@@ -215,7 +243,7 @@ const BankBalancesModal = ({ isOpen, onClose, initialTypeFilter = "all" }) => {
         </div>
 
         {/* Accounts Grid List */}
-        <div className="p-5 overflow-y-auto flex-1 grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="p-3 sm:p-5 overflow-y-auto flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3 [scrollbar-width:thin]">
           {filteredSources.map((source) => {
             const style = getSourceTagStyle(source, sources);
             const isCard = source.type === "Card";
@@ -257,7 +285,7 @@ const BankBalancesModal = ({ isOpen, onClose, initialTypeFilter = "all" }) => {
                         ? (isCurrentMonth ? "Card Balance / Due" : "Closing Due")
                         : (isCurrentMonth ? "Current Balance" : "Closing Balance")}
                     </span>
-                    <span className={`text-xl font-extrabold font-mono tracking-tight ${isExcluded ? 'line-through opacity-60' : (isErrorColor ? 'text-error' : '')}`}>
+                    <span className={`text-lg sm:text-xl font-extrabold font-mono tracking-tight ${isExcluded ? 'line-through opacity-60' : (isErrorColor ? 'text-error' : '')}`}>
                       {isCard ? `-₹${Math.abs(rawAmt).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : (rawAmt < 0 ? `-₹${Math.abs(rawAmt).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : `₹${rawAmt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`)}
                     </span>
                   </div>
@@ -276,14 +304,14 @@ const BankBalancesModal = ({ isOpen, onClose, initialTypeFilter = "all" }) => {
           })}
 
           {filteredSources.length === 0 && (
-            <div className="col-span-full py-12 text-center text-base-content/40 italic">
-              No accounts match "{searchQuery}"
+            <div className="col-span-full py-12 text-center text-base-content/40 italic text-xs font-semibold">
+              No {typeFilter === "Card" ? "credit cards" : typeFilter === "Bank" ? "bank accounts" : "accounts"} found
             </div>
           )}
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-base-200 flex justify-end bg-base-200/40">
+        <div className="p-3 sm:p-4 border-t border-base-200 flex justify-end bg-base-200/40 shrink-0">
           <button onClick={onClose} className="btn btn-sm btn-ghost font-bold rounded-xl">
             Close
           </button>

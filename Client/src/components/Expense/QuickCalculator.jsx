@@ -13,10 +13,15 @@ const QuickCalculator = () => {
   const dragOffsetRef = useRef({ offsetX: 0, offsetY: 0 });
   const containerRef = useRef(null);
 
-  // Calculate default initial spawn position (bottom-right near floating button)
+  // Calculate default initial spawn position (centered on mobile, bottom-right on desktop)
   const getDefaultPosition = () => {
     const calcWidth = 320;
     const calcHeight = 490;
+    if (window.innerWidth <= 640) {
+      const x = Math.max(12, (window.innerWidth - calcWidth) / 2);
+      const y = Math.max(40, (window.innerHeight - calcHeight) / 2);
+      return { x, y };
+    }
     const x = Math.max(16, window.innerWidth - calcWidth - (mainBounds?.right || 24) - 20);
     const y = Math.max(16, window.innerHeight - calcHeight - (mainBounds?.bottom || 24) - 50);
     return { x, y };
@@ -28,6 +33,23 @@ const QuickCalculator = () => {
       setPosition(getDefaultPosition());
     }
   }, [isOpen]);
+
+  // Global event listener to toggle / open calculator from navigation bars
+  useEffect(() => {
+    const handleToggle = () => setIsOpen((prev) => !prev);
+    const handleOpen = () => setIsOpen(true);
+    const handleClose = () => setIsOpen(false);
+
+    window.addEventListener("toggle_quick_calculator", handleToggle);
+    window.addEventListener("open_quick_calculator", handleOpen);
+    window.addEventListener("close_quick_calculator", handleClose);
+
+    return () => {
+      window.removeEventListener("toggle_quick_calculator", handleToggle);
+      window.removeEventListener("open_quick_calculator", handleOpen);
+      window.removeEventListener("close_quick_calculator", handleClose);
+    };
+  }, []);
 
   // Main window context positioning for floating button (Left of scrollbar)
   useEffect(() => {
@@ -276,7 +298,7 @@ const QuickCalculator = () => {
           right: `${mainBounds.right}px`,
           bottom: `${mainBounds.bottom}px`,
         }}
-        className="fixed z-[99998] transition-all duration-300 animate-in fade-in zoom-in-90"
+        className="hidden"
       >
         <button
           type="button"

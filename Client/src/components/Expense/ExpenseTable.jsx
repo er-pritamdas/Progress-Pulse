@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from "react-redux";
 import dayjs from "dayjs";
 import { addTransaction, updateTransaction, deleteTransaction, setMonth, performUndo, performRedo } from "../../services/redux/slice/ExpenseSlice";
 import { getSourceTagStyle, getCategoryTagStyle } from "../../utils/expenseTheme";
-import { Trash2, Save, X, Edit2, Plus, PlusCircle, Handshake, AlertTriangle, Wallet, CreditCard, Tag, Folder, TrendingUp, TrendingDown, ArrowUp, ArrowDown, Calendar, ArrowRightLeft, Sparkles, ChevronDown, ChevronLeft, ChevronRight, Filter, Search, Undo2, Redo2, Eye, EyeOff, SlidersHorizontal, Info, ArrowUpRight, Zap } from "lucide-react";
+import { Trash2, Save, X, Edit2, Plus, PlusCircle, Handshake, AlertTriangle, Wallet, CreditCard, Tag, Folder, TrendingUp, TrendingDown, ArrowUp, ArrowDown, Calendar, ArrowRightLeft, Sparkles, ChevronDown, ChevronLeft, ChevronRight, Filter, Search, Undo2, Redo2, Eye, EyeOff, SlidersHorizontal, Info, ArrowUpRight, Zap, Layers } from "lucide-react";
 import AddTransactionModal from "./AddTransactionModal";
 import TransactionInfoModal from "./TransactionInfoModal";
 import { evaluateMathExpression } from "../../utils/mathExpression";
@@ -187,6 +187,26 @@ const ExpenseTable = ({
 
     const headerRef = useRef(null);
     const bodyRef = useRef(null);
+    const upperHeaderRef = useRef(null);
+    const [headerStickyTop, setHeaderStickyTop] = useState(115);
+
+    useEffect(() => {
+        if (!upperHeaderRef.current) return;
+        const updateStickyTop = () => {
+            if (upperHeaderRef.current) {
+                const h = upperHeaderRef.current.offsetHeight;
+                setHeaderStickyTop(Math.max(0, h - 17));
+            }
+        };
+        updateStickyTop();
+        const ro = new ResizeObserver(updateStickyTop);
+        ro.observe(upperHeaderRef.current);
+        window.addEventListener("resize", updateStickyTop);
+        return () => {
+            ro.disconnect();
+            window.removeEventListener("resize", updateStickyTop);
+        };
+    }, []);
 
     const handleBodyScroll = (e) => {
         if (headerRef.current) {
@@ -327,14 +347,15 @@ const ExpenseTable = ({
         });
     }, [categories, currentMonth]);
     const selectedFilterCategoryObj = monthCategories.find(c => String(c._id) === String(filters.categoryId));
-    const hasActiveFilters = Boolean(filters.date || filters.description || filters.sourceId || filters.categoryId || filters.subCategoryId);
+    const hasActiveFilters = Boolean(filters.date || filters.description || filters.sourceId || filters.categoryId || filters.subCategoryId || filters.type);
     const clearFilters = () => {
         setFilters({
             date: "",
             description: "",
             sourceId: "",
             categoryId: "",
-            subCategoryId: ""
+            subCategoryId: "",
+            type: ""
         });
     };
 
@@ -344,19 +365,21 @@ const ExpenseTable = ({
     };
 
     // Render Source Tag Helper
-    const renderSourceTag = (t) => {
+    const renderSourceTag = (t, isSmall = false) => {
+        const px = isSmall ? "px-1.5 py-0.5 text-[10px] font-bold" : "px-2.5 py-1 text-xs font-semibold";
+        const iconSize = isSmall ? 10 : 12;
         if (t.type === 'Credit') {
             return (
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 truncate max-w-full">
-                    <TrendingUp size={12} className="shrink-0 text-emerald-500" />
+                <span className={`inline-flex items-center gap-1 ${px} rounded-md bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 whitespace-nowrap shrink-0 max-w-full`}>
+                    <TrendingUp size={iconSize} className="shrink-0 text-emerald-500" />
                     <span className="truncate">+ Add Money</span>
                 </span>
             );
         }
         if (t.type === 'Debit' && !t.categoryId) {
             return (
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30 truncate max-w-full">
-                    <TrendingDown size={12} className="shrink-0 text-rose-500" />
+                <span className={`inline-flex items-center gap-1 ${px} rounded-md bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30 whitespace-nowrap shrink-0 max-w-full`}>
+                    <TrendingDown size={iconSize} className="shrink-0 text-rose-500" />
                     <span className="truncate">- Debit Money</span>
                 </span>
             );
@@ -366,22 +389,24 @@ const ExpenseTable = ({
         const style = getSourceTagStyle(sourceObj || sourceName, sources);
         const isCard = sourceObj?.type === 'Card';
         return (
-            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold ${style.bg} ${style.text} border ${style.border} truncate max-w-full`} title={sourceName}>
-                {isCard ? <CreditCard size={12} className="shrink-0 text-rose-500" /> : <Wallet size={12} className="shrink-0" />}
+            <span className={`inline-flex items-center gap-1 ${px} rounded-md ${style.bg} ${style.text} border ${style.border} whitespace-nowrap shrink-0 max-w-[120px]`} title={sourceName}>
+                {isCard ? <CreditCard size={iconSize} className="shrink-0 text-rose-500" /> : <Wallet size={iconSize} className="shrink-0" />}
                 <span className="truncate">{sourceName}</span>
             </span>
         );
     };
 
     // Render Category Tag Helper
-    const renderCategoryTag = (t) => {
+    const renderCategoryTag = (t, isSmall = false) => {
+        const px = isSmall ? "px-1.5 py-0.5 text-[10px] font-bold" : "px-2.5 py-1 text-xs font-semibold";
+        const iconSize = isSmall ? 10 : 12;
         if (t.type === 'Transfer') {
             const targetObj = t.targetSourceId;
             const targetName = targetObj?.name || (typeof targetObj === 'string' ? targetObj : 'Bank');
             const style = getSourceTagStyle(targetObj || targetName, sources);
             return (
-                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold ${style.bg} ${style.text} border ${style.border} truncate max-w-full`} title={`Transfer to ${targetName}`}>
-                    <ArrowRightLeft size={12} className="shrink-0" />
+                <span className={`inline-flex items-center gap-1 ${px} rounded-md ${style.bg} ${style.text} border ${style.border} whitespace-nowrap shrink-0 max-w-[120px]`} title={`Transfer to ${targetName}`}>
+                    <ArrowRightLeft size={iconSize} className="shrink-0" />
                     <span className="truncate">To: {targetName}</span>
                 </span>
             );
@@ -391,8 +416,8 @@ const ExpenseTable = ({
             const sourceName = sourceObj?.name || (typeof sourceObj === 'string' ? sourceObj : 'Bank');
             const style = getSourceTagStyle(sourceObj || sourceName, sources);
             return (
-                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold ${style.bg} ${style.text} border ${style.border} truncate max-w-full`} title={`Added to ${sourceName}`}>
-                    <Wallet size={12} className="shrink-0 text-emerald-500" />
+                <span className={`inline-flex items-center gap-1 ${px} rounded-md ${style.bg} ${style.text} border ${style.border} whitespace-nowrap shrink-0 max-w-[120px]`} title={`Added to ${sourceName}`}>
+                    <Wallet size={iconSize} className="shrink-0 text-emerald-500" />
                     <span className="truncate">To: {sourceName}</span>
                 </span>
             );
@@ -402,8 +427,8 @@ const ExpenseTable = ({
             const sourceName = sourceObj?.name || (typeof sourceObj === 'string' ? sourceObj : 'Bank');
             const style = getSourceTagStyle(sourceObj || sourceName, sources);
             return (
-                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold ${style.bg} ${style.text} border ${style.border} truncate max-w-full`} title={`Debited from ${sourceName}`}>
-                    <Wallet size={12} className="shrink-0 text-rose-500" />
+                <span className={`inline-flex items-center gap-1 ${px} rounded-md ${style.bg} ${style.text} border ${style.border} whitespace-nowrap shrink-0 max-w-[120px]`} title={`Debited from ${sourceName}`}>
+                    <Wallet size={iconSize} className="shrink-0 text-rose-500" />
                     <span className="truncate">From: {sourceName}</span>
                 </span>
             );
@@ -412,8 +437,8 @@ const ExpenseTable = ({
         const catName = catObj?.name || (typeof catObj === 'string' ? catObj : '-');
         const style = getCategoryTagStyle(catObj || catName, categories);
         return (
-            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold ${style.bg} ${style.text} border ${style.border} truncate max-w-full`} title={catName}>
-                <Tag size={12} className="shrink-0" />
+            <span className={`inline-flex items-center gap-1 ${px} rounded-md ${style.bg} ${style.text} border ${style.border} whitespace-nowrap shrink-0 max-w-[120px]`} title={catName}>
+                <Tag size={iconSize} className="shrink-0" />
                 <span className="truncate">{catName}</span>
             </span>
         );
@@ -430,11 +455,17 @@ const ExpenseTable = ({
     const filteredTransactions = (() => {
         let list = transactions.filter(t => {
             const matchDate = filters.date ? dayjs(t.date).format("YYYY-MM-DD") === filters.date : true;
-            const matchDesc = filters.description ? t.description.toLowerCase().includes(filters.description.toLowerCase()) : true;
+            const matchDesc = filters.description ? (
+                t.description.toLowerCase().includes(filters.description.toLowerCase()) ||
+                String(t.amount || "").includes(filters.description)
+            ) : true;
             const matchSource = filters.sourceId ? (t.sourceId?._id === filters.sourceId || t.sourceId === filters.sourceId) : true;
             const matchCategory = filters.categoryId ? (t.categoryId?._id === filters.categoryId || t.categoryId === filters.categoryId) : true;
             const matchSub = filters.subCategoryId ? (t.subCategoryId?._id === filters.subCategoryId || t.subCategoryId === filters.subCategoryId) : true;
-            return matchDate && matchDesc && matchSource && matchCategory && matchSub;
+            const matchType = filters.type ? (
+                filters.type === 'Reimbursable' ? Boolean(t.isReimbursable) : t.type === filters.type
+            ) : true;
+            return matchDate && matchDesc && matchSource && matchCategory && matchSub && matchType;
         });
 
         list.sort((a, b) => {
@@ -983,10 +1014,10 @@ const ExpenseTable = ({
         <div className="w-full bg-base-100 rounded-2xl shadow-lg border border-base-200 flex flex-col min-h-[500px]">
 
             {/* Unified Sticky Glass Header Section: Month Selector Banner + Table Column Headers */}
-            <div className="sticky top-[-17px] -mt-5 pt-5 z-50 bg-base-100/90 dark:bg-base-900/90 backdrop-blur-2xl border-b border-base-200/80 shadow-md rounded-t-2xl transition-all">
+            <div ref={upperHeaderRef} className="sticky top-[-17px] -mt-5 pt-5 z-40 bg-base-100/90 dark:bg-base-900/90 backdrop-blur-2xl border-b border-base-200/80 shadow-md rounded-t-2xl transition-all">
                 
-                {/* Upper Header: Current Period Banner & Navigation Controls */}
-                <div className="p-4 flex flex-col sm:flex-row items-center justify-between gap-3 border-b border-base-200/50 bg-base-100/40 dark:bg-base-900/40">
+                {/* Desktop Upper Header: Current Period Banner & Navigation Controls */}
+                <div className="hidden lg:flex p-4 flex-row items-center justify-between gap-3 border-b border-base-200/50 bg-base-100/40 dark:bg-base-900/40">
                     {/* Period Header & Title */}
                     <div className="flex items-center gap-3">
                         <div
@@ -1185,8 +1216,245 @@ const ExpenseTable = ({
                     </div>
                 </div>
 
-                {/* Lower Header: Table Column Headers with Interactive Filter Dropdowns */}
-                <div ref={headerRef} className="overflow-x-auto overflow-y-visible [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+                {/* Mobile Upper Header (< lg) */}
+                <div className="flex lg:hidden flex-col gap-2 p-3 border-b border-base-200/50 bg-base-100/40 dark:bg-base-900/40">
+                    <div className="flex items-center justify-between">
+                        {/* Month Selector */}
+                        <div className="flex items-center gap-1">
+                            <button
+                                type="button"
+                                onClick={() => dispatch(setMonth(dayjs(currentMonth).subtract(1, 'month').format("YYYY-MM")))}
+                                className="btn btn-xs btn-ghost btn-square rounded-lg text-base-content/70 hover:text-primary cursor-pointer"
+                                title="Previous Month"
+                            >
+                                <ChevronLeft size={16} />
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setPickerYear(dayjs(currentMonth).year());
+                                    setIsMonthPickerOpen((prev) => !prev);
+                                }}
+                                className="flex items-center gap-1 px-1.5 py-0.5 rounded-xl hover:bg-base-200 text-base-content font-sans text-sm sm:text-base font-extrabold tracking-tight cursor-pointer"
+                            >
+                                <span>{dayjs(currentMonth).format("MMM YYYY")}</span>
+                                <ChevronDown size={13} className={`text-primary/70 transition-transform ${isMonthPickerOpen ? 'rotate-180 text-primary' : ''}`} />
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() => dispatch(setMonth(dayjs(currentMonth).add(1, 'month').format("YYYY-MM")))}
+                                className="btn btn-xs btn-ghost btn-square rounded-lg text-base-content/70 hover:text-primary cursor-pointer"
+                                title="Next Month"
+                            >
+                                <ChevronRight size={16} />
+                            </button>
+                        </div>
+
+                        {/* Right Tools & Add Button */}
+                        <div className="flex items-center gap-1">
+                            {onOpenHeatmap && (
+                                <button
+                                    type="button"
+                                    onClick={onOpenHeatmap}
+                                    className="btn btn-xs btn-ghost btn-square rounded-lg text-primary hover:bg-primary/10 cursor-pointer"
+                                    title="Open Spending Calendar Heatmap"
+                                >
+                                    <Calendar size={15} />
+                                </button>
+                            )}
+
+                            <button
+                                type="button"
+                                onClick={toggleHideNumbers}
+                                className="btn btn-xs btn-ghost btn-square rounded-lg text-base-content/60 hover:text-primary cursor-pointer"
+                                title={hideNumbers ? "Show numbers" : "Hide numbers"}
+                            >
+                                {hideNumbers ? <EyeOff size={15} className="text-primary font-bold" /> : <Eye size={15} />}
+                            </button>
+
+                            <div className="flex items-center gap-0.5 bg-base-200/60 p-0.5 rounded-lg border border-base-content/10">
+                                <button
+                                    onClick={() => dispatch(performUndo())}
+                                    disabled={!undoStack || undoStack.length === 0}
+                                    className="btn btn-xs btn-square btn-ghost h-5 w-5 min-h-0 disabled:opacity-30 cursor-pointer"
+                                    title="Undo"
+                                >
+                                    <Undo2 size={12} />
+                                </button>
+                                <button
+                                    onClick={() => dispatch(performRedo())}
+                                    disabled={!redoStack || redoStack.length === 0}
+                                    className="btn btn-xs btn-square btn-ghost h-5 w-5 min-h-0 disabled:opacity-30 cursor-pointer"
+                                    title="Redo"
+                                >
+                                    <Redo2 size={12} />
+                                </button>
+                            </div>
+
+                            <button
+                                onClick={() => {
+                                    if (setIsAddModalOpen) setIsAddModalOpen(true);
+                                    else setInternalIsAddModalOpen(true);
+                                }}
+                                className="btn btn-primary btn-xs rounded-xl font-bold gap-1 text-primary-content h-7 px-2.5 shadow-xs cursor-pointer"
+                            >
+                                <Plus size={14} />
+                                <span>Add</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Month Picker Popover for Mobile */}
+                    {isMonthPickerOpen && (
+                        <div className="w-full bg-base-100 rounded-2xl shadow-2xl border border-base-300 p-3 mt-1 animate-in fade-in zoom-in-95 duration-150">
+                            {/* Year Selector with Side Arrows */}
+                            <div className="flex items-center justify-between pb-2 mb-2 border-b border-base-200">
+                                <button
+                                    type="button"
+                                    onClick={() => setPickerYear((y) => y - 1)}
+                                    className="btn btn-xs btn-ghost btn-square rounded-lg hover:bg-base-200 text-base-content/70 hover:text-primary cursor-pointer"
+                                >
+                                    <ChevronLeft size={15} />
+                                </button>
+                                <span className="font-mono font-extrabold text-sm text-base-content tracking-wider">
+                                    {pickerYear}
+                                </span>
+                                <button
+                                    type="button"
+                                    onClick={() => setPickerYear((y) => y + 1)}
+                                    className="btn btn-xs btn-ghost btn-square rounded-lg hover:bg-base-200 text-base-content/70 hover:text-primary cursor-pointer"
+                                >
+                                    <ChevronRight size={15} />
+                                </button>
+                            </div>
+
+                            {/* 12 Months Grid */}
+                            <div className="grid grid-cols-4 gap-1.5">
+                                {Array.from({ length: 12 }, (_, i) => {
+                                    const monthDate = dayjs().year(pickerYear).month(i);
+                                    const monthKey = monthDate.format("YYYY-MM");
+                                    const isSelected = currentMonth === monthKey;
+                                    const isCurrentActualMonth = dayjs().format("YYYY-MM") === monthKey;
+
+                                    return (
+                                        <button
+                                            key={i}
+                                            type="button"
+                                            onClick={() => {
+                                                dispatch(setMonth(monthKey));
+                                                setIsMonthPickerOpen(false);
+                                            }}
+                                            className={`py-1.5 px-1 rounded-xl text-xs font-bold transition-all text-center cursor-pointer ${
+                                                isSelected
+                                                    ? "bg-primary text-primary-content shadow-xs font-extrabold"
+                                                    : isCurrentActualMonth
+                                                    ? "bg-primary/15 text-primary border border-primary/30"
+                                                    : "hover:bg-base-200 text-base-content/80"
+                                            }`}
+                                        >
+                                            {monthDate.format("MMM")}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Mobile Search & Quick Filter Toolbar */}
+                    <div className="pt-2 border-t border-base-200/70 space-y-2">
+                        <div className="flex items-center gap-1.5">
+                            <div className="relative flex-1">
+                                <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-base-content/40 pointer-events-none" />
+                                <input
+                                    type="text"
+                                    value={filters.description || ""}
+                                    onChange={(e) => setFilters(prev => ({ ...prev, description: e.target.value }))}
+                                    placeholder="Search description or amount..."
+                                    className="input input-xs h-7.5 pl-8 pr-7 w-full bg-base-200/60 border border-base-300 rounded-xl text-xs focus:input-primary focus:bg-base-100 placeholder:text-base-content/40"
+                                />
+                                {filters.description && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setFilters(prev => ({ ...prev, description: "" }))}
+                                        className="absolute right-2 top-1/2 -translate-y-1/2 text-base-content/40 hover:text-base-content p-0.5 cursor-pointer"
+                                    >
+                                        <X size={12} />
+                                    </button>
+                                )}
+                            </div>
+
+                            {/* Mobile Sort Order Toggle */}
+                            <button
+                                type="button"
+                                onClick={() => handleSortChange(sortOrder === "newest" ? "oldest" : "newest")}
+                                className="btn btn-xs btn-square h-7.5 w-7.5 rounded-xl bg-base-200/70 hover:bg-base-200 border border-base-300 text-base-content/70 cursor-pointer shrink-0"
+                                title={`Sort: ${sortOrder === 'newest' ? 'Newest first' : 'Oldest first'}`}
+                            >
+                                {sortOrder === "newest" ? (
+                                    <ArrowDown size={13} className="text-primary" />
+                                ) : (
+                                    <ArrowUp size={13} className="text-primary" />
+                                )}
+                            </button>
+
+                            {/* Collapse / Expand All Days */}
+                            {groupedTransactions.length > 0 && (
+                                <button
+                                    type="button"
+                                    onClick={toggleCollapseAll}
+                                    className="btn btn-xs btn-square h-7.5 w-7.5 rounded-xl bg-base-200/70 hover:bg-base-200 border border-base-300 text-base-content/70 cursor-pointer shrink-0"
+                                    title={isAllCollapsed ? "Expand all days" : "Collapse all days"}
+                                >
+                                    <Layers size={13} className="text-primary" />
+                                </button>
+                            )}
+
+                            {/* Clear Active Filters */}
+                            {hasActiveFilters && (
+                                <button
+                                    type="button"
+                                    onClick={clearFilters}
+                                    className="btn btn-xs h-7.5 px-2 rounded-xl bg-error/15 hover:bg-error/25 text-error border border-error/30 text-[11px] font-bold cursor-pointer shrink-0"
+                                    title="Clear All Filters"
+                                >
+                                    <X size={12} />
+                                </button>
+                            )}
+                        </div>
+
+                        {/* Quick Type Filter Chips */}
+                        <div className="flex items-center gap-1.5 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden -mx-1 px-1 py-0.5">
+                            {[
+                                { id: "", label: "All" },
+                                { id: "Debit", label: "Debited" },
+                                { id: "Credit", label: "Credited" },
+                                { id: "Transfer", label: "Transfers" },
+                                { id: "Reimbursable", label: "Reimbursable" }
+                            ].map(chip => {
+                                const isActive = (filters.type || "") === chip.id;
+                                return (
+                                    <button
+                                        key={chip.id}
+                                        type="button"
+                                        onClick={() => setFilters(prev => ({ ...prev, type: prev.type === chip.id ? "" : chip.id }))}
+                                        className={`px-2.5 py-0.5 rounded-lg text-[10.5px] font-bold whitespace-nowrap transition-all cursor-pointer ${
+                                            isActive
+                                                ? "bg-primary text-primary-content shadow-xs"
+                                                : "bg-base-200/80 hover:bg-base-200 text-base-content/70 border border-base-content/5"
+                                        }`}
+                                    >
+                                        {chip.label}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Lower Header: Table Column Headers with Interactive Filter Dropdowns (Desktop only) */}
+                <div ref={headerRef} className="hidden lg:block overflow-x-auto overflow-y-visible [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
                     <div className="flex items-center gap-3 px-6 py-3.5 bg-base-200/60 backdrop-blur-md text-xs font-extrabold text-base-content/80 uppercase tracking-widest min-w-[980px]">
                     
                     {/* 1. Date Header + Dropdown & Sort Order Toggle */}
@@ -1307,7 +1575,7 @@ const ExpenseTable = ({
         </div>
 
         {/* Scrollable Content */}
-        <div ref={bodyRef} onScroll={handleBodyScroll} className="flex-1 pb-40 overflow-x-auto">
+        <div ref={bodyRef} onScroll={handleBodyScroll} className="flex-1 pb-40 lg:overflow-x-auto overflow-visible">
                 {(() => {
                     const renderInlineAddRow = () => (
                         <div className={`transition-all duration-300 ${isAdding ? 'bg-base-200/30 py-4 px-4 border-b border-primary/20 z-20 relative' : 'p-2 border-b border-base-200/50 flex justify-center'}`}>
@@ -1475,8 +1743,10 @@ const ExpenseTable = ({
 
                     return (
                         <>
-                            {/* Top position when sortOrder is newest */}
-                            {sortOrder === "newest" && renderInlineAddRow()}
+                            {/* DESKTOP TABLE VIEW (>= lg) */}
+                            <div className="hidden lg:block">
+                                {/* Top position when sortOrder is newest */}
+                                {sortOrder === "newest" && renderInlineAddRow()}
 
                             {/* Grouped Collapsible Rows */}
                             {groupedTransactions.map((group) => {
@@ -1800,6 +2070,534 @@ const ExpenseTable = ({
                                     No transactions recorded for this period.
                                 </div>
                             )}
+                            </div>
+
+                            {/* MOBILE CARD FEED VIEW (< lg) */}
+                            <div className="block lg:hidden px-3 py-3 space-y-3">
+                                {/* Inline Add Form (if isAdding) */}
+                                {isAdding && (
+                                    <div className="p-3.5 bg-base-100 rounded-2xl border-2 border-primary/40 space-y-3 shadow-md animate-in fade-in slide-in-from-top-2">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-xs font-extrabold text-primary flex items-center gap-1.5 uppercase tracking-wider">
+                                                <Plus size={14} /> Add Transaction
+                                            </span>
+                                            <button
+                                                type="button"
+                                                onClick={() => setNewData({ ...newData, isReimbursable: !newData.isReimbursable })}
+                                                className={`btn btn-xs rounded-xl ${newData.isReimbursable ? 'btn-warning' : 'btn-ghost opacity-60'}`}
+                                                title="Mark as Reimbursable"
+                                            >
+                                                <Handshake size={13} />
+                                                <span className="text-[10px] font-bold">Reimbursable</span>
+                                            </button>
+                                        </div>
+
+                                        {/* Date & Desc */}
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                            <CallyDatePicker
+                                                value={newData.date}
+                                                onChange={(val) => setNewData({ ...newData, date: val })}
+                                                placeholder="Select Date"
+                                                size="xs"
+                                                className="w-full"
+                                            />
+                                            <input
+                                                placeholder="Description"
+                                                value={newData.description}
+                                                onChange={e => setNewData({ ...newData, description: e.target.value })}
+                                                className="input input-xs input-bordered w-full text-xs font-semibold rounded-xl"
+                                                autoFocus
+                                            />
+                                        </div>
+
+                                        {/* Source & Target */}
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                            <DaisySelect
+                                                options={sourceOptions}
+                                                value={newData.isAddMoney ? "add_money" : (newData.isManualDebit ? "debit_money" : newData.sourceId)}
+                                                placeholder="Source Account"
+                                                onChange={(val) => {
+                                                    if (val === "add_money") {
+                                                        setNewData({ ...newData, isAddMoney: true, isManualDebit: false, sourceId: "", categoryId: "", subCategoryId: "" });
+                                                    } else if (val === "debit_money") {
+                                                        setNewData({ ...newData, isAddMoney: false, isManualDebit: true, sourceId: "", categoryId: "", subCategoryId: "" });
+                                                    } else {
+                                                        setNewData({ ...newData, isAddMoney: false, isManualDebit: false, sourceId: val });
+                                                    }
+                                                }}
+                                            />
+
+                                            {newData.isAddMoney ? (
+                                                <DaisySelect
+                                                    options={targetOptions}
+                                                    value={newData.sourceId}
+                                                    placeholder="Select Bank"
+                                                    onChange={(val) => setNewData({ ...newData, sourceId: val })}
+                                                    className="text-success"
+                                                />
+                                            ) : newData.isManualDebit ? (
+                                                <DaisySelect
+                                                    options={targetOptions}
+                                                    value={newData.sourceId}
+                                                    placeholder="Select Bank"
+                                                    onChange={(val) => setNewData({ ...newData, sourceId: val })}
+                                                    className="text-error"
+                                                />
+                                            ) : (
+                                                <DaisySelect
+                                                    options={categoryOptions}
+                                                    value={newData.isTransfer ? `bank_${newData.targetSourceId}` : newData.categoryId}
+                                                    placeholder="Category / To"
+                                                    onChange={(val) => {
+                                                        if (val.startsWith("bank_")) {
+                                                            const trgId = val.replace("bank_", "");
+                                                            setNewData({
+                                                                ...newData,
+                                                                isAddMoney: false,
+                                                                isTransfer: true,
+                                                                targetSourceId: trgId,
+                                                                categoryId: "",
+                                                                subCategoryId: ""
+                                                            });
+                                                        } else {
+                                                            setNewData({
+                                                                ...newData,
+                                                                isAddMoney: false,
+                                                                isTransfer: false,
+                                                                targetSourceId: "",
+                                                                categoryId: val,
+                                                                subCategoryId: ""
+                                                            });
+                                                        }
+                                                    }}
+                                                />
+                                            )}
+                                        </div>
+
+                                        {/* Subcategory (if applicable) */}
+                                        {!(newData.isAddMoney || newData.isManualDebit || newData.isTransfer) && (
+                                            <DaisySelect
+                                                options={getSubCatOptions(newData.categoryId)}
+                                                value={newData.subCategoryId}
+                                                placeholder="SubCategory (optional)"
+                                                onChange={(val) => setNewData({ ...newData, subCategoryId: val })}
+                                            />
+                                        )}
+
+                                        {/* Amount with Live Math Preview */}
+                                        <div className="flex items-center gap-1.5 bg-base-100 px-3 py-1.5 rounded-xl border border-base-300 focus-within:border-primary">
+                                            <input
+                                                type="text"
+                                                placeholder="Amount (e.g. 500 or 250+120)"
+                                                value={newData.amount}
+                                                onChange={e => setNewData({ ...newData, amount: e.target.value })}
+                                                className="flex-1 input input-xs border-0 focus:outline-none text-xs font-mono font-bold"
+                                            />
+                                            <span className="font-bold text-base-content/40 text-xs select-none">=</span>
+                                            <span className={`text-right text-xs font-mono font-black truncate select-none ${
+                                                calculatedNewAmount !== null ? 'text-primary' : 'text-base-content/40'
+                                            }`}>
+                                                {calculatedNewAmount !== null ? `₹${calculatedNewAmount}` : "0.00"}
+                                            </span>
+                                        </div>
+
+                                        {/* Actions */}
+                                        <div className="flex items-center gap-2 pt-1">
+                                            <button type="button" onClick={handleAdd} className="btn btn-xs btn-primary font-bold flex-1 rounded-xl gap-1">
+                                                <Save size={13} /> Save Transaction
+                                            </button>
+                                            <button type="button" onClick={() => setIsAdding(false)} className="btn btn-xs btn-ghost text-error rounded-xl">
+                                                <X size={13} /> Cancel
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Day Accordion Cards */}
+                                {groupedTransactions.map((group) => {
+                                    const isCollapsed = Boolean(collapsedDays[group.dateKey]);
+                                    const formattedGroupDate = dayjs(group.dateObj).format("ddd, D MMM");
+
+                                    return (
+                                        <div key={group.dateKey} className="space-y-1.5">
+                                            {/* Accordion Header */}
+                                            <div
+                                                onClick={() => toggleDayCollapse(group.dateKey)}
+                                                style={{ top: `${headerStickyTop}px` }}
+                                                className="sticky z-20 flex items-center justify-between px-3 py-2 bg-base-200/95 dark:bg-base-800/95 backdrop-blur-md hover:bg-base-200 rounded-2xl cursor-pointer border border-base-content/10 transition-colors select-none shadow-xs"
+                                            >
+                                                <div className="flex items-center gap-2 min-w-0">
+                                                    <span className="p-1 rounded-lg bg-base-100 text-primary shrink-0 shadow-2xs">
+                                                        {isCollapsed ? <ChevronRight size={13} /> : <ChevronDown size={13} />}
+                                                    </span>
+                                                    <span className="font-extrabold text-xs text-base-content truncate">
+                                                        {formattedGroupDate}
+                                                    </span>
+                                                    <span className="badge badge-neutral badge-xs font-bold text-[9px] px-1.5 py-0.5 opacity-80 shrink-0">
+                                                        {group.transactions.length}
+                                                    </span>
+                                                </div>
+
+                                                <div className="flex items-center gap-1.5 font-mono text-xs font-bold shrink-0">
+                                                    <span className="text-[9.5px] uppercase font-semibold text-base-content/40 font-sans">Net:</span>
+                                                    <span className={group.netAmount > 0 ? 'text-success' : (group.netAmount < 0 ? 'text-error' : 'text-base-content/60')}>
+                                                        {hideNumbers
+                                                            ? "••••••"
+                                                            : `${group.netAmount > 0 ? '+' : (group.netAmount < 0 ? '-' : '')}₹${Math.abs(group.netAmount).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`}
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            {/* Transaction Items */}
+                                            {!isCollapsed && (
+                                                <div className="space-y-1.5 pl-1">
+                                                    {group.transactions.map((t) => (
+                                                        <React.Fragment key={t._id}>
+                                                            {editingId === t._id ? (
+                                                                <div className="p-3 bg-base-100 rounded-2xl border-2 border-primary/30 space-y-2.5 shadow-sm animate-in fade-in zoom-in-95 duration-150">
+                                                                    <div className="flex items-center justify-between">
+                                                                        <span className="text-xs font-bold text-primary flex items-center gap-1">
+                                                                            <Edit2 size={12} /> Edit Transaction
+                                                                        </span>
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => setEditData({ ...editData, isReimbursable: !editData.isReimbursable })}
+                                                                            className={`btn btn-xs rounded-xl ${editData.isReimbursable ? 'btn-warning' : 'btn-ghost opacity-50'}`}
+                                                                            title="Reimbursable"
+                                                                        >
+                                                                            <Handshake size={12} />
+                                                                            <span className="text-[10px]">Reimbursable</span>
+                                                                        </button>
+                                                                    </div>
+
+                                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                                                        <CallyDatePicker
+                                                                            value={editData.date}
+                                                                            onChange={(val) => setEditData({ ...editData, date: val })}
+                                                                            placeholder="Date"
+                                                                            size="xs"
+                                                                            className="w-full"
+                                                                        />
+                                                                        <input
+                                                                            placeholder="Description"
+                                                                            value={editData.description}
+                                                                            onChange={e => setEditData({ ...editData, description: e.target.value })}
+                                                                            className="input input-xs input-bordered w-full text-xs font-semibold rounded-xl"
+                                                                        />
+                                                                    </div>
+
+                                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                                                        <DaisySelect
+                                                                            options={sourceOptions}
+                                                                            value={editData.isAddMoney ? "add_money" : (editData.isManualDebit ? "debit_money" : editData.sourceId)}
+                                                                            placeholder="Source Account"
+                                                                            onChange={(val) => {
+                                                                                if (val === "add_money") {
+                                                                                    setEditData({
+                                                                                        ...editData,
+                                                                                        isAddMoney: true,
+                                                                                        isManualDebit: false,
+                                                                                        isTransfer: false,
+                                                                                        type: "Credit",
+                                                                                        categoryId: "",
+                                                                                        subCategoryId: "",
+                                                                                        targetSourceId: ""
+                                                                                    });
+                                                                                } else if (val === "debit_money") {
+                                                                                    setEditData({
+                                                                                        ...editData,
+                                                                                        isAddMoney: false,
+                                                                                        isManualDebit: true,
+                                                                                        isTransfer: false,
+                                                                                        type: "Debit",
+                                                                                        categoryId: "",
+                                                                                        subCategoryId: "",
+                                                                                        targetSourceId: ""
+                                                                                    });
+                                                                                } else {
+                                                                                    setEditData({
+                                                                                        ...editData,
+                                                                                        isAddMoney: false,
+                                                                                        isManualDebit: false,
+                                                                                        sourceId: val
+                                                                                    });
+                                                                                }
+                                                                            }}
+                                                                        />
+
+                                                                        {editData.isAddMoney ? (
+                                                                            <DaisySelect
+                                                                                options={targetOptions}
+                                                                                value={editData.sourceId}
+                                                                                placeholder="Select Bank"
+                                                                                onChange={(val) => setEditData({ ...editData, sourceId: val })}
+                                                                                className="text-success"
+                                                                            />
+                                                                        ) : editData.isManualDebit ? (
+                                                                            <DaisySelect
+                                                                                options={targetOptions}
+                                                                                value={editData.sourceId}
+                                                                                placeholder="Select Bank"
+                                                                                onChange={(val) => setEditData({ ...editData, sourceId: val })}
+                                                                                className="text-error"
+                                                                            />
+                                                                        ) : (
+                                                                            <DaisySelect
+                                                                                options={categoryOptions}
+                                                                                value={editData.isTransfer ? `bank_${editData.targetSourceId}` : editData.categoryId}
+                                                                                placeholder="Category / To"
+                                                                                onChange={(val) => {
+                                                                                    if (val.startsWith("bank_")) {
+                                                                                        const trgId = val.replace("bank_", "");
+                                                                                        setEditData({
+                                                                                            ...editData,
+                                                                                            isAddMoney: false,
+                                                                                            isManualDebit: false,
+                                                                                            isTransfer: true,
+                                                                                            type: "Transfer",
+                                                                                            targetSourceId: trgId,
+                                                                                            categoryId: "",
+                                                                                            subCategoryId: ""
+                                                                                        });
+                                                                                    } else {
+                                                                                        setEditData({
+                                                                                            ...editData,
+                                                                                            isAddMoney: false,
+                                                                                            isManualDebit: false,
+                                                                                            isTransfer: false,
+                                                                                            type: "Debit",
+                                                                                            targetSourceId: "",
+                                                                                            categoryId: val,
+                                                                                            subCategoryId: ""
+                                                                                        });
+                                                                                    }
+                                                                                }}
+                                                                            />
+                                                                        )}
+                                                                    </div>
+
+                                                                    {!(editData.isAddMoney || editData.isManualDebit || editData.isTransfer) && (
+                                                                        <DaisySelect
+                                                                            options={getSubCatOptions(editData.categoryId)}
+                                                                            value={editData.subCategoryId}
+                                                                            placeholder="SubCategory"
+                                                                            onChange={(val) => setEditData({ ...editData, subCategoryId: val })}
+                                                                        />
+                                                                    )}
+
+                                                                    <div className="flex items-center gap-1.5 bg-base-100 px-3 py-1.5 rounded-xl border border-base-300 focus-within:border-primary">
+                                                                        <input
+                                                                            type="text"
+                                                                            placeholder="Amount (e.g. 50+20)"
+                                                                            value={editData.amount}
+                                                                            onChange={e => setEditData({ ...editData, amount: e.target.value })}
+                                                                            className="flex-1 input input-xs border-0 focus:outline-none text-xs font-mono font-bold"
+                                                                        />
+                                                                        <span className="font-bold text-base-content/40 text-xs select-none">=</span>
+                                                                        <span className={`text-right text-xs font-mono font-black truncate select-none ${
+                                                                            calculatedEditAmount !== null ? 'text-primary' : 'text-base-content/40'
+                                                                        }`}>
+                                                                            {calculatedEditAmount !== null ? `₹${calculatedEditAmount}` : "0.00"}
+                                                                        </span>
+                                                                    </div>
+
+                                                                    <div className="flex items-center gap-2 pt-1">
+                                                                        <button type="button" onClick={saveEdit} className="btn btn-xs btn-primary font-bold flex-1 rounded-xl gap-1">
+                                                                            <Save size={13} /> Save Changes
+                                                                        </button>
+                                                                        <button type="button" onClick={() => setEditingId(null)} className="btn btn-xs btn-ghost text-error rounded-xl">
+                                                                            <X size={13} /> Cancel
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                            ) : (
+                                                                <div className="p-3 bg-base-100 rounded-2xl border border-base-content/10 hover:border-base-content/20 transition-all shadow-2xs space-y-2">
+                                                                    {/* Row 1 (Top): Bank Name (or Bank 1 → Bank 2 for Transfer) & Reimbursable Pill */}
+                                                                    <div className="flex items-center justify-between gap-2 min-w-0">
+                                                                        <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
+                                                                            {t.type === 'Transfer' ? (
+                                                                                (() => {
+                                                                                    const srcObj = t.sourceId;
+                                                                                    const srcName = srcObj?.name || (typeof srcObj === 'string' ? srcObj : 'Bank');
+                                                                                    const srcStyle = getSourceTagStyle(srcObj || srcName, sources);
+                                                                                    const isSrcCard = srcObj?.type === 'Card';
+
+                                                                                    const trgObj = t.targetSourceId;
+                                                                                    const trgName = trgObj?.name || (typeof trgObj === 'string' ? trgObj : 'Bank');
+                                                                                    const trgStyle = getSourceTagStyle(trgObj || trgName, sources);
+                                                                                    const isTrgCard = trgObj?.type === 'Card';
+
+                                                                                    return (
+                                                                                        <div className="flex items-center gap-1 min-w-0 flex-wrap">
+                                                                                            <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold ${srcStyle.bg} ${srcStyle.text} border ${srcStyle.border} max-w-[130px] truncate`} title={srcName}>
+                                                                                                {isSrcCard ? <CreditCard size={10} className="shrink-0 text-rose-500" /> : <Wallet size={10} className="shrink-0" />}
+                                                                                                <span className="truncate">{srcName}</span>
+                                                                                            </span>
+                                                                                            <ArrowRightLeft size={10} className="text-amber-500 shrink-0 mx-0.5" />
+                                                                                            <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold ${trgStyle.bg} ${trgStyle.text} border ${trgStyle.border} max-w-[130px] truncate`} title={trgName}>
+                                                                                                {isTrgCard ? <CreditCard size={10} className="shrink-0 text-rose-500" /> : <Wallet size={10} className="shrink-0" />}
+                                                                                                <span className="truncate">{trgName}</span>
+                                                                                            </span>
+                                                                                        </div>
+                                                                                    );
+                                                                                })()
+                                                                            ) : (
+                                                                                (() => {
+                                                                                    const srcObj = t.sourceId;
+                                                                                    const srcName = srcObj?.name || (typeof srcObj === 'string' ? srcObj : 'Bank');
+                                                                                    const srcStyle = getSourceTagStyle(srcObj || srcName, sources);
+                                                                                    const isCard = srcObj?.type === 'Card';
+
+                                                                                    return (
+                                                                                        <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold ${srcStyle.bg} ${srcStyle.text} border ${srcStyle.border} max-w-[160px] truncate`} title={srcName}>
+                                                                                            {isCard ? <CreditCard size={10} className="shrink-0 text-rose-500" /> : <Wallet size={10} className="shrink-0" />}
+                                                                                            <span className="truncate">{srcName}</span>
+                                                                                        </span>
+                                                                                    );
+                                                                                })()
+                                                                            )}
+                                                                        </div>
+
+                                                                        {/* Reimbursable Pill */}
+                                                                        {t.isReimbursable && (
+                                                                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9.5px] font-bold bg-warning/15 text-warning border border-warning/20 shrink-0" title="Reimbursable: Need to collect money">
+                                                                                <Handshake size={10} />
+                                                                                <span>Reimbursable</span>
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+
+                                                                    {/* Row 2 (Middle): Desc and Amt */}
+                                                                    <div className="flex items-center justify-between gap-3 min-w-0 py-0.5">
+                                                                        <div className="text-sm font-bold text-base-content leading-snug break-words flex-1 min-w-0" title={t.description}>
+                                                                            {t.description || "—"}
+                                                                        </div>
+                                                                        <div className={`font-mono font-black text-base tracking-tight shrink-0 whitespace-nowrap ${
+                                                                            t.type === 'Transfer'
+                                                                                ? 'text-amber-500 dark:text-amber-400'
+                                                                                : (t.type === 'Credit' ? 'text-success' : 'text-error')
+                                                                        }`}>
+                                                                            {hideNumbers ? "••••••••" : `${t.type === 'Transfer' ? '' : (t.type === 'Credit' ? '+' : '-')}₹${Number(t.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                                                                        </div>
+                                                                    </div>
+
+                                                                    {/* Row 3 (Bottom): Category and Sub Category + 3 Action Icons */}
+                                                                    <div className="flex items-center justify-between gap-2 pt-1.5 border-t border-base-content/5">
+                                                                        {/* Left: Category and Sub Category */}
+                                                                        <div className="flex items-center gap-1.5 min-w-0 flex-1 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+                                                                            {/* Category Tag */}
+                                                                            {(() => {
+                                                                                if (!t.categoryId) return null;
+                                                                                const catObj = t.categoryId;
+                                                                                const catName = catObj?.name || (typeof catObj === 'string' ? catObj : 'Uncategorized');
+                                                                                const style = getCategoryTagStyle(catObj || catName, categories);
+
+                                                                                return (
+                                                                                    <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold ${style.bg} ${style.text} border ${style.border} max-w-[130px] truncate shrink-0`} title={catName}>
+                                                                                        <Tag size={10} className="shrink-0" />
+                                                                                        <span className="truncate">{catName}</span>
+                                                                                    </span>
+                                                                                );
+                                                                            })()}
+
+                                                                            {/* Sub Category Tag */}
+                                                                            {(() => {
+                                                                                const catId = t.categoryId?._id || t.categoryId;
+                                                                                const subId = t.subCategoryId?._id || t.subCategoryId;
+                                                                                const cat = categories.find(c => c._id === catId);
+                                                                                const sub = cat?.subCategories?.find(s => s._id === subId);
+                                                                                if (!sub?.name) return null;
+                                                                                return (
+                                                                                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 max-w-[120px] truncate shrink-0" title={sub.name}>
+                                                                                        <Folder size={10} className="shrink-0 text-amber-500" />
+                                                                                        <span className="truncate">{sub.name}</span>
+                                                                                    </span>
+                                                                                );
+                                                                            })()}
+                                                                        </div>
+
+                                                                        {/* Right: 3 Action Icons (Info, Edit, Delete) */}
+                                                                        <div className="flex items-center gap-1 shrink-0 pl-1.5">
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => setInfoModalTx(t)}
+                                                                                className={`btn btn-xs btn-ghost btn-square h-6.5 w-6.5 min-h-0 rounded-lg relative ${
+                                                                                    t.info && t.info.trim()
+                                                                                        ? "text-primary bg-primary/10 hover:bg-primary/20"
+                                                                                        : "text-base-content/40 hover:text-base-content hover:bg-base-200"
+                                                                                }`}
+                                                                                title={t.info && t.info.trim() ? `Note: ${t.info}` : "Add / View Notes"}
+                                                                            >
+                                                                                <Info size={13} />
+                                                                                {t.info && t.info.trim() && (
+                                                                                    <span className="w-1.5 h-1.5 rounded-full bg-primary absolute top-0.5 right-0.5"></span>
+                                                                                )}
+                                                                            </button>
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => startEdit(t)}
+                                                                                className="btn btn-xs btn-ghost btn-square h-6.5 w-6.5 min-h-0 text-info hover:bg-info/10 rounded-lg"
+                                                                                title="Edit Transaction"
+                                                                            >
+                                                                                <Edit2 size={12} />
+                                                                            </button>
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => handleDelete(t._id)}
+                                                                                className="btn btn-xs btn-ghost btn-square h-6.5 w-6.5 min-h-0 text-error hover:bg-error/10 rounded-lg"
+                                                                                title="Delete Transaction"
+                                                                            >
+                                                                                <Trash2 size={12} />
+                                                                            </button>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                        </React.Fragment>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+
+                                {/* Mobile Empty State */}
+                                {filteredTransactions.length === 0 && (
+                                    <div className="py-12 px-4 flex flex-col items-center justify-center text-center space-y-3 bg-base-100/50 rounded-2xl border border-dashed border-base-300">
+                                        <div className="w-12 h-12 rounded-full bg-base-200 flex items-center justify-center text-base-content/40">
+                                            <Wallet size={22} />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <h4 className="font-bold text-sm text-base-content/80">No transactions found</h4>
+                                            <p className="text-xs text-base-content/50">
+                                                {hasActiveFilters
+                                                    ? "Try adjusting your search or filters."
+                                                    : `No transactions recorded for ${dayjs(currentMonth).format("MMMM YYYY")}.`}
+                                            </p>
+                                        </div>
+                                        {hasActiveFilters ? (
+                                            <button
+                                                type="button"
+                                                onClick={clearFilters}
+                                                className="btn btn-xs btn-outline rounded-xl text-xs gap-1 font-bold"
+                                            >
+                                                <X size={12} /> Clear Filters
+                                            </button>
+                                        ) : (
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    if (setIsAddModalOpen) setIsAddModalOpen(true);
+                                                    else setInternalIsAddModalOpen(true);
+                                                }}
+                                                className="btn btn-xs btn-primary rounded-xl text-xs gap-1 font-bold"
+                                            >
+                                                <Plus size={13} /> Add Transaction
+                                            </button>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
                         </>
                     );
                 })()}
