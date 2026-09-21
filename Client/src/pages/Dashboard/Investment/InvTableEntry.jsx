@@ -175,6 +175,9 @@ export default function InvTableEntry() {
   const [isAddPfWithdrawalModalOpen, setIsAddPfWithdrawalModalOpen] = useState(false);
   const [editingPfWithdrawal, setEditingPfWithdrawal] = useState(null);
 
+  // Mobile Phone View Filter Drawer State
+  const [isMobileInvFilterOpen, setIsMobileInvFilterOpen] = useState(false);
+
   // Table View Modal Popup state
   const [isTableModalOpen, setIsTableModalOpen] = useState(false);
 
@@ -2071,6 +2074,11 @@ export default function InvTableEntry() {
       label: "Stocks",
       subLabel: "Delivery & Intraday Trades",
       icon: TrendingUp,
+      color: "text-blue-500",
+      activeBorder: "border-blue-500/50 dark:border-blue-500/40",
+      activeBg: "bg-blue-500/[0.05] dark:bg-blue-500/[0.08]",
+      activeDot: "bg-blue-500",
+      badgeClass: "bg-blue-500/15 text-blue-600 dark:text-blue-400",
       badge: `${stocksData.length} Trades`,
       badgeColor: "badge-primary",
     },
@@ -2079,30 +2087,50 @@ export default function InvTableEntry() {
       label: "Mutual Fund",
       subLabel: "SIP & Lumpsum Equity/Debt",
       icon: PieChart,
+      color: "text-purple-500",
+      activeBorder: "border-purple-500/50 dark:border-purple-500/40",
+      activeBg: "bg-purple-500/[0.05] dark:bg-purple-500/[0.08]",
+      activeDot: "bg-purple-500",
+      badgeClass: "bg-purple-500/15 text-purple-600 dark:text-purple-400",
       badge: "SIP Active",
       badgeColor: "badge-secondary",
     },
     {
       id: "fd",
-      label: "FD (Fixed Deposit)",
+      label: "FD",
       subLabel: "Bank & NBFC Fixed Term Deposits",
       icon: Landmark,
+      color: "text-amber-500",
+      activeBorder: "border-amber-500/50 dark:border-amber-500/40",
+      activeBg: "bg-amber-500/[0.05] dark:bg-amber-500/[0.08]",
+      activeDot: "bg-amber-500",
+      badgeClass: "bg-amber-500/15 text-amber-600 dark:text-amber-400",
       badge: "Guaranteed Return",
       badgeColor: "badge-info",
     },
     {
       id: "rd",
-      label: "RD (Recurring)",
+      label: "RD",
       subLabel: "Monthly Systematic Savings",
       icon: PiggyBank,
+      color: "text-orange-500",
+      activeBorder: "border-orange-500/50 dark:border-orange-500/40",
+      activeBg: "bg-orange-500/[0.05] dark:bg-orange-500/[0.08]",
+      activeDot: "bg-orange-500",
+      badgeClass: "bg-orange-500/15 text-orange-600 dark:text-orange-400",
       badge: "Monthly Deposit",
       badgeColor: "badge-accent",
     },
     {
       id: "pf",
-      label: "PF (Provident Fund)",
+      label: "PF",
       subLabel: "EPF & PPF Retirement Funds",
       icon: Percent,
+      color: "text-teal-500",
+      activeBorder: "border-teal-500/50 dark:border-teal-500/40",
+      activeBg: "bg-teal-500/[0.05] dark:bg-teal-500/[0.08]",
+      activeDot: "bg-teal-500",
+      badgeClass: "bg-teal-500/15 text-teal-600 dark:text-teal-400",
       badge: `${salaryData.length} Records`,
       badgeColor: "badge-success",
     },
@@ -2111,6 +2139,11 @@ export default function InvTableEntry() {
       label: "Salary",
       subLabel: "Monthly Compensation & Payslips",
       icon: Briefcase,
+      color: "text-emerald-500",
+      activeBorder: "border-emerald-500/50 dark:border-emerald-500/40",
+      activeBg: "bg-emerald-500/[0.05] dark:bg-emerald-500/[0.08]",
+      activeDot: "bg-emerald-500",
+      badgeClass: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400",
       badge: `${salaryData.length} Records`,
       badgeColor: "badge-accent",
     },
@@ -3063,10 +3096,14 @@ export default function InvTableEntry() {
 
   return (
     <div className="pb-12 max-w-full overflow-visible space-y-4">
-      {/* ------------------------------------------------------------------ */}
-      {/* Sticky Glassmorphism Header: Category Navigation Tabs & Filters   */}
-      {/* ------------------------------------------------------------------ */}
-      <div className="sticky -top-4 -mx-4 px-4 pt-4 pb-3 z-50 bg-base-100/95 backdrop-blur-2xl border-b border-base-200/80 shadow-2xl space-y-2.5 transition-all">
+      {/* ================================================================== */}
+      {/* DESKTOP VIEW (hidden md:block) - ZERO CHANGES TO DESKTOP           */}
+      {/* ================================================================== */}
+      <div className="hidden md:block space-y-4">
+        {/* ------------------------------------------------------------------ */}
+        {/* Sticky Glassmorphism Header: Category Navigation Tabs & Filters   */}
+        {/* ------------------------------------------------------------------ */}
+        <div className="sticky -top-4 -mx-4 px-4 pt-4 pb-3 z-50 bg-base-100/95 backdrop-blur-2xl border-b border-base-200/80 shadow-2xl space-y-2.5 transition-all">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="bg-base-100/80 backdrop-blur-md p-2 rounded-2xl border border-base-200/70 shadow-sm overflow-x-auto flex-1">
             <div className="flex items-center gap-1.5 min-w-max">
@@ -3081,7 +3118,7 @@ export default function InvTableEntry() {
                     onClick={() => setActiveTab(cat.id)}
                     className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer whitespace-nowrap ${
                       isActive
-                        ? "bg-primary text-primary-content shadow-sm shadow-primary/20 scale-[1.02]"
+                        ? `border ${cat.activeBorder} ${cat.activeBg} ${cat.color} shadow-xs font-extrabold scale-[1.02]`
                         : "text-base-content/70 hover:bg-base-200 hover:text-base-content"
                     }`}
                   >
@@ -5901,6 +5938,1788 @@ export default function InvTableEntry() {
           </div>
         </div>
       )}
+      </div>
+
+      {/* ================================================================== */}
+      {/* PHONE VIEW (block md:hidden) - FULL MOBILE OPTIMIZED EXPERIENCE    */}
+      {/* ================================================================== */}
+      <div className="block md:hidden space-y-3 pb-24 w-full">
+        {/* Sticky Header - Mobile Phone View */}
+        <div className="sticky top-[-17px] -mt-2 pt-2 z-40 bg-base-100/95 dark:bg-base-900/95 backdrop-blur-md border-b border-base-300 -mx-2 px-3 py-2 shadow-xs space-y-2">
+          {/* Row 1: Active Category Badge + Privacy Eye Toggle + Filter Drawer Button + Quick Add */}
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-base-200 border border-base-300/60 shadow-xs min-w-0">
+              {(() => {
+                const cat = categories.find((c) => c.id === activeTab) || categories[0];
+                const Icon = cat.icon;
+                return (
+                  <>
+                    <Icon size={14} className="text-primary shrink-0" />
+                    <span className="font-bold text-xs tracking-tight text-base-content truncate">
+                      {cat.label}
+                    </span>
+                  </>
+                );
+              })()}
+            </div>
+
+            <div className="flex items-center gap-1.5 shrink-0">
+              {/* Privacy Mode Eye Toggle */}
+              <button
+                type="button"
+                onClick={() => {
+                  if (activeTab === "stocks") toggleHideStockNumbers();
+                  else if (activeTab === "mf") toggleHideMfNumbers();
+                  else if (activeTab === "fd") toggleHideFdNumbers();
+                  else if (activeTab === "rd") toggleHideRdNumbers();
+                  else toggleHideStockNumbers();
+                }}
+                className="btn btn-xs btn-ghost btn-square rounded-xl text-base-content/60 hover:text-primary cursor-pointer h-7 w-7"
+                title="Privacy Mode (Hide/Show Numbers)"
+              >
+                {activeTab === "stocks" ? (
+                  hideStockNumbers ? <EyeOff size={15} className="text-primary font-bold" /> : <Eye size={15} />
+                ) : activeTab === "mf" ? (
+                  hideMfNumbers ? <EyeOff size={15} className="text-primary font-bold" /> : <Eye size={15} />
+                ) : activeTab === "fd" ? (
+                  hideFdNumbers ? <EyeOff size={15} className="text-primary font-bold" /> : <Eye size={15} />
+                ) : activeTab === "rd" ? (
+                  hideRdNumbers ? <EyeOff size={15} className="text-primary font-bold" /> : <Eye size={15} />
+                ) : hideStockNumbers ? (
+                  <EyeOff size={15} className="text-primary font-bold" />
+                ) : (
+                  <Eye size={15} />
+                )}
+              </button>
+
+              {/* Filter Button */}
+              <button
+                type="button"
+                onClick={() => setIsMobileInvFilterOpen(true)}
+                className="btn btn-xs h-7 px-2.5 rounded-xl font-medium bg-base-200 hover:bg-base-300 border border-base-300/80 shadow-xs flex items-center gap-1.5 text-xs text-base-content cursor-pointer"
+                title="Open Filters"
+              >
+                <Filter size={12} className="text-primary shrink-0" />
+                <span className="font-semibold text-[11px]">Filter</span>
+              </button>
+
+              {/* Quick Add Button */}
+              <button
+                type="button"
+                onClick={() => {
+                  if (activeTab === "stocks") handleOpenAddModal();
+                  else if (activeTab === "mf") handleOpenAddMfModal();
+                  else if (activeTab === "fd") handleOpenAddFdModal();
+                  else if (activeTab === "rd") handleOpenAddRdModal();
+                  else if (activeTab === "salary") handleOpenAddSalaryModal();
+                  else if (activeTab === "pf") {
+                    if (pfSubTab === "withdrawals") {
+                      setEditingPfWithdrawal(null);
+                      setIsAddPfWithdrawalModalOpen(true);
+                    } else {
+                      handleOpenAddSalaryModal();
+                    }
+                  }
+                }}
+                className="btn btn-xs btn-primary h-7 px-2.5 rounded-xl font-bold flex items-center gap-1 text-[11px] shadow-xs cursor-pointer"
+              >
+                <Plus size={13} />
+                <span>Add</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Row 2: Horizontal Scrollable Category Boxes */}
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 -mx-1 px-1">
+            {categories.map((cat) => {
+              const Icon = cat.icon;
+              const isActive = activeTab === cat.id;
+              return (
+                <button
+                  key={cat.id}
+                  type="button"
+                  onClick={() => setActiveTab(cat.id)}
+                  className={`group relative shrink-0 min-w-[100px] max-w-[130px] h-14 rounded-2xl transition-all duration-200 cursor-pointer flex flex-col justify-between p-2.5 text-left select-none overflow-hidden ${
+                    isActive
+                      ? `border ${cat.activeBorder} ${cat.activeBg} shadow-2xs scale-[1.01]`
+                      : "border border-base-content/8 hover:border-base-content/15 bg-base-100/50 dark:bg-base-200/25 hover:bg-base-200/50 shadow-2xs"
+                  }`}
+                >
+                  {/* Enlarged Watermark Background Icon */}
+                  <div className="absolute -right-2 -bottom-2.5 pointer-events-none select-none transition-transform duration-300 group-hover:scale-110 group-active:scale-95">
+                    <Icon
+                      size={52}
+                      strokeWidth={1.5}
+                      className={`transition-all duration-200 ${
+                        isActive
+                          ? `${cat.color} opacity-20 dark:opacity-25`
+                          : "text-base-content opacity-10 dark:opacity-12 group-hover:opacity-16"
+                      }`}
+                    />
+                  </div>
+
+                  {/* Foreground Top Row: Active Indicator Pulse Dot & Badge */}
+                  <div className="flex items-center justify-between w-full relative z-10">
+                    <div className="flex items-center gap-1.5">
+                      {isActive ? (
+                        <span className="flex h-2 w-2 relative">
+                          <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${cat.activeDot} opacity-75`}></span>
+                          <span className={`relative inline-flex rounded-full h-2 w-2 ${cat.activeDot}`}></span>
+                        </span>
+                      ) : (
+                        <span className="w-1.5 h-1.5 rounded-full bg-base-content/20" />
+                      )}
+                    </div>
+                    {isActive && (
+                      <span className={`text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.2 rounded-md ${cat.badgeClass}`}>
+                        Active
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Foreground Bottom Row: Category Label */}
+                  <span
+                    className={`relative z-10 text-[12px] leading-tight truncate w-full tracking-tight ${
+                      isActive
+                        ? "font-extrabold text-base-content"
+                        : "font-medium text-base-content/70 group-hover:text-base-content"
+                    }`}
+                  >
+                    {cat.label}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* ================================================================ */}
+        {/* MOBILE FILTER BOTTOM SHEET                                       */}
+        {/* ================================================================ */}
+        {isMobileInvFilterOpen && (
+          <div
+            className="fixed inset-0 z-[100] flex items-end justify-center bg-black/60 backdrop-blur-md transition-opacity duration-200 animate-in fade-in"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setIsMobileInvFilterOpen(false);
+            }}
+          >
+            <div
+              className="bg-base-100 rounded-t-3xl shadow-2xl w-full max-h-[85vh] flex flex-col overflow-hidden border-t border-x border-base-300 mobile-drawer-slide-up"
+              style={{ paddingBottom: "env(safe-area-inset-bottom, 16px)" }}
+            >
+              {/* Drag Handle & Sheet Header */}
+              <div className="border-b border-base-200 bg-base-200/60 select-none touch-none">
+                <div className="pt-3 pb-1.5 px-4 flex justify-center items-center">
+                  <div className="h-1.5 w-12 rounded-full bg-base-content/30" />
+                </div>
+                <div className="px-4 pb-3 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Filter size={15} className="text-primary" />
+                    <h3 className="font-bold text-sm text-base-content">
+                      {categories.find((c) => c.id === activeTab)?.label} Filters
+                    </h3>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (activeTab === "stocks") clearAllFilters();
+                        else if (activeTab === "mf") setMfSearchTerm("");
+                        else if (activeTab === "fd") setFdSearchTerm("");
+                        else if (activeTab === "rd") setRdSearchTerm("");
+                        else if (activeTab === "salary") {
+                          setSalarySearchTerm("");
+                          setSalaryCompanyFilter("all");
+                          setSalaryYearFilter("all");
+                        } else if (activeTab === "pf") {
+                          setPfSearchTerm("");
+                          setPfCompanyFilter("all");
+                          setPfYearFilter("all");
+                        }
+                      }}
+                      className="btn btn-ghost btn-xs text-xs text-error font-semibold cursor-pointer"
+                    >
+                      Reset
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIsMobileInvFilterOpen(false)}
+                      className="btn btn-ghost btn-circle btn-xs text-base-content/60 hover:text-base-content cursor-pointer"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Filter Body Content */}
+              <div className="p-4 space-y-4 overflow-y-auto max-h-[60vh]">
+                {/* Stocks Tab Filters */}
+                {activeTab === "stocks" && (
+                  <div className="space-y-3.5">
+                    <div>
+                      <label className="text-xs font-bold text-base-content/70 uppercase tracking-wider block mb-1.5">
+                        Search Trades
+                      </label>
+                      <div className="relative">
+                        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-base-content/40" />
+                        <input
+                          type="text"
+                          placeholder="Search by Stock Name..."
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          className="input input-sm pl-9 pr-8 w-full rounded-xl bg-base-200/70 border-base-300 text-xs"
+                        />
+                        {searchQuery && (
+                          <button
+                            type="button"
+                            onClick={() => setSearchQuery("")}
+                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-base-content/40"
+                          >
+                            <X size={12} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-bold text-base-content/70 uppercase tracking-wider block mb-1.5">
+                        Trade Type
+                      </label>
+                      <div className="grid grid-cols-3 gap-1.5 bg-base-200 p-1 rounded-xl">
+                        {[
+                          { id: "all", label: `All (${stocksData.length})` },
+                          { id: "delivery", label: "Delivery" },
+                          { id: "intraday", label: "Intraday" },
+                        ].map((t) => (
+                          <button
+                            key={t.id}
+                            type="button"
+                            onClick={() => setStocksTypeFilter(t.id)}
+                            className={`py-1.5 px-2 rounded-lg text-xs font-bold transition-all ${
+                              stocksTypeFilter === t.id
+                                ? "bg-primary text-primary-content shadow-xs"
+                                : "text-base-content/70 hover:text-base-content"
+                            }`}
+                          >
+                            {t.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-bold text-base-content/70 uppercase tracking-wider block mb-1.5">
+                        Position Status
+                      </label>
+                      <div className="grid grid-cols-3 gap-1.5 bg-base-200 p-1 rounded-xl">
+                        {[
+                          { id: "all", label: "All" },
+                          { id: "holding", label: "Holding" },
+                          { id: "sold", label: "Sold Out" },
+                        ].map((s) => (
+                          <button
+                            key={s.id}
+                            type="button"
+                            onClick={() => setStatusFilter(s.id)}
+                            className={`py-1.5 px-2 rounded-lg text-xs font-bold transition-all ${
+                              statusFilter === s.id
+                                ? "bg-primary text-primary-content shadow-xs"
+                                : "text-base-content/70 hover:text-base-content"
+                            }`}
+                          >
+                            {s.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-xs font-bold text-base-content/70 uppercase tracking-wider block mb-1.5">
+                          Market Cap
+                        </label>
+                        <select
+                          value={capFilter}
+                          onChange={(e) => setCapFilter(e.target.value)}
+                          className="select select-sm select-bordered w-full rounded-xl text-xs bg-base-200/70"
+                        >
+                          <option value="all">All Caps</option>
+                          <option value="large">Large Cap</option>
+                          <option value="mid">Mid Cap</option>
+                          <option value="small">Small Cap</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="text-xs font-bold text-base-content/70 uppercase tracking-wider block mb-1.5">
+                          Platform / Broker
+                        </label>
+                        <select
+                          value={platformFilter}
+                          onChange={(e) => setPlatformFilter(e.target.value)}
+                          className="select select-sm select-bordered w-full rounded-xl text-xs bg-base-200/70 capitalize"
+                        >
+                          <option value="all">All Brokers</option>
+                          <option value="zerodha">Zerodha</option>
+                          <option value="groww">Groww</option>
+                          <option value="angelone">AngelOne</option>
+                          <option value="upstox">Upstox</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-bold text-base-content/70 uppercase tracking-wider block mb-1.5">
+                        Sort Order
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <select
+                          value={sortBy}
+                          onChange={(e) => setSortBy(e.target.value)}
+                          className="select select-sm select-bordered flex-1 rounded-xl text-xs bg-base-200/70"
+                        >
+                          <option value="default">Default (SlNo)</option>
+                          <option value="bDate">Buy Date</option>
+                          <option value="sDate">Sell Date</option>
+                          <option value="gainRs">Money Gain (₹)</option>
+                          <option value="bStock">Cost Value</option>
+                        </select>
+                        <button
+                          type="button"
+                          onClick={() => setSortOrder((p) => (p === "asc" ? "desc" : "asc"))}
+                          className="btn btn-sm btn-outline rounded-xl px-3 flex items-center gap-1 text-xs"
+                        >
+                          {sortOrder === "asc" ? <ArrowUp size={13} /> : <ArrowDown size={13} />}
+                          <span className="capitalize">{sortOrder}</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Mutual Funds Filters */}
+                {activeTab === "mf" && (
+                  <div className="space-y-3.5">
+                    <div>
+                      <label className="text-xs font-bold text-base-content/70 uppercase tracking-wider block mb-1.5">
+                        Search Funds
+                      </label>
+                      <div className="relative">
+                        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-base-content/40" />
+                        <input
+                          type="text"
+                          placeholder="Search by Fund Name, AMC..."
+                          value={mfSearchTerm}
+                          onChange={(e) => setMfSearchTerm(e.target.value)}
+                          className="input input-sm pl-9 pr-8 w-full rounded-xl bg-base-200/70 border-base-300 text-xs"
+                        />
+                        {mfSearchTerm && (
+                          <button
+                            type="button"
+                            onClick={() => setMfSearchTerm("")}
+                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-base-content/40"
+                          >
+                            <X size={12} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsMobileInvFilterOpen(false);
+                        setIsOrganizeModalOpen(true);
+                      }}
+                      className="btn btn-sm btn-outline w-full rounded-xl gap-2 font-bold text-xs cursor-pointer"
+                    >
+                      <FolderTree size={14} className="text-secondary" />
+                      <span>Organize Groups & Ordering</span>
+                    </button>
+                  </div>
+                )}
+
+                {/* Fixed Deposits Filters */}
+                {activeTab === "fd" && (
+                  <div className="space-y-3.5">
+                    <div>
+                      <label className="text-xs font-bold text-base-content/70 uppercase tracking-wider block mb-1.5">
+                        Search Fixed Deposits
+                      </label>
+                      <div className="relative">
+                        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-base-content/40" />
+                        <input
+                          type="text"
+                          placeholder="Search by Bank, Account #, Scheme..."
+                          value={fdSearchTerm}
+                          onChange={(e) => setFdSearchTerm(e.target.value)}
+                          className="input input-sm pl-9 pr-8 w-full rounded-xl bg-base-200/70 border-base-300 text-xs"
+                        />
+                        {fdSearchTerm && (
+                          <button
+                            type="button"
+                            onClick={() => setFdSearchTerm("")}
+                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-base-content/40"
+                          >
+                            <X size={12} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsMobileInvFilterOpen(false);
+                        setIsOrganizeFdModalOpen(true);
+                      }}
+                      className="btn btn-sm btn-outline w-full rounded-xl gap-2 font-bold text-xs cursor-pointer"
+                    >
+                      <FolderTree size={14} className="text-primary" />
+                      <span>Organize FD Groups & Ordering</span>
+                    </button>
+                  </div>
+                )}
+
+                {/* Recurring Deposits Filters */}
+                {activeTab === "rd" && (
+                  <div className="space-y-3.5">
+                    <div>
+                      <label className="text-xs font-bold text-base-content/70 uppercase tracking-wider block mb-1.5">
+                        Search Recurring Deposits
+                      </label>
+                      <div className="relative">
+                        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-base-content/40" />
+                        <input
+                          type="text"
+                          placeholder="Search by Bank, Account #..."
+                          value={rdSearchTerm}
+                          onChange={(e) => setRdSearchTerm(e.target.value)}
+                          className="input input-sm pl-9 pr-8 w-full rounded-xl bg-base-200/70 border-base-300 text-xs"
+                        />
+                        {rdSearchTerm && (
+                          <button
+                            type="button"
+                            onClick={() => setRdSearchTerm("")}
+                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-base-content/40"
+                          >
+                            <X size={12} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsMobileInvFilterOpen(false);
+                        setIsOrganizeRdModalOpen(true);
+                      }}
+                      className="btn btn-sm btn-outline w-full rounded-xl gap-2 font-bold text-xs cursor-pointer"
+                    >
+                      <FolderTree size={14} className="text-primary" />
+                      <span>Organize RD Groups & Ordering</span>
+                    </button>
+                  </div>
+                )}
+
+                {/* Salary Filters */}
+                {activeTab === "salary" && (
+                  <div className="space-y-3.5">
+                    <div>
+                      <label className="text-xs font-bold text-base-content/70 uppercase tracking-wider block mb-1.5">
+                        Search Payslips
+                      </label>
+                      <div className="relative">
+                        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-base-content/40" />
+                        <input
+                          type="text"
+                          placeholder="Search by Company, Month..."
+                          value={salarySearchTerm}
+                          onChange={(e) => setSalarySearchTerm(e.target.value)}
+                          className="input input-sm pl-9 pr-8 w-full rounded-xl bg-base-200/70 border-base-300 text-xs"
+                        />
+                        {salarySearchTerm && (
+                          <button
+                            type="button"
+                            onClick={() => setSalarySearchTerm("")}
+                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-base-content/40"
+                          >
+                            <X size={12} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-xs font-bold text-base-content/70 uppercase tracking-wider block mb-1.5">
+                          Company
+                        </label>
+                        <select
+                          value={salaryCompanyFilter}
+                          onChange={(e) => setSalaryCompanyFilter(e.target.value)}
+                          className="select select-sm select-bordered w-full rounded-xl text-xs bg-base-200/70"
+                        >
+                          <option value="all">All Companies</option>
+                          {salaryCompanies.map((c) => (
+                            <option key={c} value={c}>{c}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="text-xs font-bold text-base-content/70 uppercase tracking-wider block mb-1.5">
+                          Year
+                        </label>
+                        <select
+                          value={salaryYearFilter}
+                          onChange={(e) => setSalaryYearFilter(e.target.value)}
+                          className="select select-sm select-bordered w-full rounded-xl text-xs bg-base-200/70"
+                        >
+                          <option value="all">All Years</option>
+                          {salaryYears.map((y) => (
+                            <option key={y} value={y}>{y}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-bold text-base-content/70 uppercase tracking-wider block mb-1.5">
+                        Table Mode
+                      </label>
+                      <div className="grid grid-cols-2 gap-1.5 bg-base-200 p-1 rounded-xl">
+                        <button
+                          type="button"
+                          onClick={() => handleSalaryViewChange("detailed")}
+                          className={`py-1.5 px-2 rounded-lg text-xs font-bold transition-all ${
+                            salaryTableViewMode === "detailed"
+                              ? "bg-primary text-primary-content shadow-xs"
+                              : "text-base-content/70 hover:text-base-content"
+                          }`}
+                        >
+                          Detailed View
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleSalaryViewChange("summary")}
+                          className={`py-1.5 px-2 rounded-lg text-xs font-bold transition-all ${
+                            salaryTableViewMode === "summary"
+                              ? "bg-primary text-primary-content shadow-xs"
+                              : "text-base-content/70 hover:text-base-content"
+                          }`}
+                        >
+                          Earnings/Deductions
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* PF Filters */}
+                {activeTab === "pf" && (
+                  <div className="space-y-3.5">
+                    <div>
+                      <label className="text-xs font-bold text-base-content/70 uppercase tracking-wider block mb-1.5">
+                        Search PF Records
+                      </label>
+                      <div className="relative">
+                        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-base-content/40" />
+                        <input
+                          type="text"
+                          placeholder={
+                            pfSubTab === "deposits"
+                              ? "Search PF records by Company, Month..."
+                              : "Search withdrawals by Reason, Date..."
+                          }
+                          value={pfSearchTerm}
+                          onChange={(e) => setPfSearchTerm(e.target.value)}
+                          className="input input-sm pl-9 pr-8 w-full rounded-xl bg-base-200/70 border-base-300 text-xs"
+                        />
+                        {pfSearchTerm && (
+                          <button
+                            type="button"
+                            onClick={() => setPfSearchTerm("")}
+                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-base-content/40"
+                          >
+                            <X size={12} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-bold text-base-content/70 uppercase tracking-wider block mb-1.5">
+                        Sub-Tab
+                      </label>
+                      <div className="grid grid-cols-2 gap-1.5 bg-base-200 p-1 rounded-xl">
+                        <button
+                          type="button"
+                          onClick={() => setPfSubTab("deposits")}
+                          className={`py-1.5 px-2 rounded-lg text-xs font-bold transition-all ${
+                            pfSubTab === "deposits"
+                              ? "bg-primary text-primary-content shadow-xs"
+                              : "text-base-content/70 hover:text-base-content"
+                          }`}
+                        >
+                          Deposited ({salaryData.length})
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setPfSubTab("withdrawals")}
+                          className={`py-1.5 px-2 rounded-lg text-xs font-bold transition-all ${
+                            pfSubTab === "withdrawals"
+                              ? "bg-primary text-primary-content shadow-xs"
+                              : "text-base-content/70 hover:text-base-content"
+                          }`}
+                        >
+                          Withdrawals ({pfWithdrawals.length})
+                        </button>
+                      </div>
+                    </div>
+
+                    {pfSubTab === "deposits" && (
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-xs font-bold text-base-content/70 uppercase tracking-wider block mb-1.5">
+                            Company
+                          </label>
+                          <select
+                            value={pfCompanyFilter}
+                            onChange={(e) => setPfCompanyFilter(e.target.value)}
+                            className="select select-sm select-bordered w-full rounded-xl text-xs bg-base-200/70"
+                          >
+                            <option value="all">All Companies</option>
+                            {salaryCompanies.map((c) => (
+                              <option key={c} value={c}>{c}</option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="text-xs font-bold text-base-content/70 uppercase tracking-wider block mb-1.5">
+                            Year
+                          </label>
+                          <select
+                            value={pfYearFilter}
+                            onChange={(e) => setPfYearFilter(e.target.value)}
+                            className="select select-sm select-bordered w-full rounded-xl text-xs bg-base-200/70"
+                          >
+                            <option value="all">All Years</option>
+                            {salaryYears.map((y) => (
+                              <option key={y} value={y}>{y}</option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Done Button */}
+              <div className="p-3 bg-base-200/50 border-t border-base-200">
+                <button
+                  type="button"
+                  onClick={() => setIsMobileInvFilterOpen(false)}
+                  className="btn btn-primary btn-sm w-full rounded-xl font-bold cursor-pointer"
+                >
+                  Apply & Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ================================================================ */}
+        {/* TAB 1: STOCKS MOBILE CONTENT                                     */}
+        {/* ================================================================ */}
+        {activeTab === "stocks" && (
+          <div className="space-y-3 px-1 w-full animate-in fade-in duration-200">
+            {/* 3-Stat Summary Strip */}
+            <div className="grid grid-cols-3 gap-2">
+              <div className="bg-base-100 p-2.5 rounded-2xl border border-base-200 shadow-2xs">
+                <div className="text-[10px] font-bold text-base-content/60 uppercase">Trades</div>
+                <div className="text-sm font-black text-base-content font-mono">{filteredStocks.length}</div>
+              </div>
+              <div className="bg-base-100 p-2.5 rounded-2xl border border-base-200 shadow-2xs">
+                <div className="text-[10px] font-bold text-base-content/60 uppercase">Holding</div>
+                <div className="text-sm font-black text-success font-mono">
+                  {filteredStocks.filter((s) => s.qLeft > 0).length}
+                </div>
+              </div>
+              <div className="bg-base-100 p-2.5 rounded-2xl border border-base-200 shadow-2xs">
+                <div className="text-[10px] font-bold text-base-content/60 uppercase">Realized PnL</div>
+                <div className={`text-sm font-black font-mono truncate ${tableTotals.gainRs >= 0 ? "text-success" : "text-error"}`}>
+                  {hideStockNumbers ? "••••" : (tableTotals.gainRs >= 0 ? `+₹${Math.round(tableTotals.gainRs).toLocaleString("en-IN")}` : `-₹${Math.round(Math.abs(tableTotals.gainRs)).toLocaleString("en-IN")}`)}
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Filter Pills Row */}
+            <div className="flex items-center justify-between gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+              <div className="flex items-center gap-1 bg-base-200 p-1 rounded-xl shrink-0 text-xs font-bold border border-base-300/60">
+                <button
+                  type="button"
+                  onClick={() => setStocksTypeFilter("all")}
+                  className={`px-2 py-1 rounded-lg text-[11px] font-bold transition-all ${
+                    stocksTypeFilter === "all" ? "bg-base-100 text-primary shadow-xs" : "text-base-content/70"
+                  }`}
+                >
+                  All ({stocksData.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStocksTypeFilter("delivery")}
+                  className={`px-2 py-1 rounded-lg text-[11px] font-bold transition-all ${
+                    stocksTypeFilter === "delivery" ? "bg-base-100 text-primary shadow-xs" : "text-base-content/70"
+                  }`}
+                >
+                  Delivery
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStocksTypeFilter("intraday")}
+                  className={`px-2 py-1 rounded-lg text-[11px] font-bold transition-all ${
+                    stocksTypeFilter === "intraday" ? "bg-base-100 text-primary shadow-xs" : "text-base-content/70"
+                  }`}
+                >
+                  Intraday
+                </button>
+              </div>
+
+              <div className="flex items-center gap-1 bg-base-200 p-1 rounded-xl shrink-0 text-xs font-bold border border-base-300/60">
+                <button
+                  type="button"
+                  onClick={() => setStatusFilter("holding")}
+                  className={`px-2 py-1 rounded-lg text-[11px] font-bold transition-all ${
+                    statusFilter === "holding" ? "bg-base-100 text-success shadow-xs font-black" : "text-base-content/70"
+                  }`}
+                >
+                  Holding
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStatusFilter("sold")}
+                  className={`px-2 py-1 rounded-lg text-[11px] font-bold transition-all ${
+                    statusFilter === "sold" ? "bg-base-100 text-secondary shadow-xs font-black" : "text-base-content/70"
+                  }`}
+                >
+                  Sold
+                </button>
+              </div>
+            </div>
+
+            {/* Content List */}
+            {loadingStocks ? (
+              <div className="h-48 flex items-center justify-center">
+                <span className="loading loading-spinner loading-md text-primary"></span>
+              </div>
+            ) : filteredStocks.length === 0 ? (
+              <div className="bg-base-100 rounded-2xl border border-base-200 p-8 text-center shadow-xs">
+                <Layers size={28} className="mx-auto text-base-content/30 mb-2" />
+                <p className="font-bold text-xs text-base-content">No Stock Trades Found</p>
+                <p className="text-[11px] text-base-content/60 mt-0.5">Try resetting your search query or filters.</p>
+                <button
+                  type="button"
+                  onClick={clearAllFilters}
+                  className="btn btn-xs btn-outline btn-primary mt-3 font-bold"
+                >
+                  Reset Filters
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {paginatedStocks.map((stock) => {
+                  const isProfit = stock.gainRs >= 0;
+                  const isSold = stock.sQty > 0 || (stock.sDate && stock.sDate !== "-");
+
+                  return (
+                    <div
+                      key={stock.id}
+                      className="bg-base-100 rounded-2xl border border-base-200 p-3.5 shadow-2xs space-y-3"
+                    >
+                      {/* Top Header Row */}
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="space-y-1 min-w-0">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="font-mono text-[10px] font-semibold text-base-content/50">
+                              #{stock.slNo}
+                            </span>
+                            <span
+                              className="bg-primary/10 text-primary px-2 py-0.5 rounded-lg text-xs font-black truncate max-w-[170px]"
+                              title={stock.name}
+                            >
+                              {stock.name}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1 text-[9.5px] font-bold flex-wrap">
+                            <span className="px-1.5 py-0.5 rounded-md bg-primary text-primary-content">
+                              {calculateStockTerm(stock)}
+                            </span>
+                            <span className="px-1.5 py-0.5 rounded-md bg-base-200 text-base-content/70 border border-base-300">
+                              {stock.platform}
+                            </span>
+                            <span className="px-1.5 py-0.5 rounded-md bg-base-200 text-base-content/70 border border-base-300">
+                              {stock.exchange}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex items-center gap-0.5 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenInfoModal(stock)}
+                            className="btn btn-ghost btn-xs btn-square text-info hover:bg-info/10"
+                            title="View Calculation Details"
+                          >
+                            <Info size={14} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEditModal(stock)}
+                            className="btn btn-ghost btn-xs btn-square text-primary hover:bg-primary/10"
+                            title="Edit Stock Trade"
+                          >
+                            <Edit size={13} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteStockTrade(stock.id)}
+                            className="btn btn-ghost btn-xs btn-square text-error hover:bg-error/10"
+                            title="Delete Stock Trade"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Buy & Sell Info Grid */}
+                      <div className="grid grid-cols-2 gap-2 text-xs bg-base-200/50 p-2.5 rounded-xl border border-base-200">
+                        {/* Buy Column */}
+                        <div className="space-y-0.5 pr-2 border-r border-base-200">
+                          <div className="text-[9px] font-extrabold uppercase text-primary tracking-wider mb-1">
+                            Buy Info
+                          </div>
+                          <div className="flex justify-between text-[11px]">
+                            <span className="text-base-content/60">Date:</span>
+                            <span className="font-medium">{formatDateCell(stock.bDate)}</span>
+                          </div>
+                          <div className="flex justify-between text-[11px]">
+                            <span className="text-base-content/60">Qty:</span>
+                            <span className="font-bold">{hideStockNumbers ? "••" : stock.bQty}</span>
+                          </div>
+                          <div className="flex justify-between text-[11px]">
+                            <span className="text-base-content/60">Price:</span>
+                            <span>{hideStockNumbers ? "₹ ••••" : formatINR(stock.bShare)}</span>
+                          </div>
+                          <div className="flex justify-between text-[11px]">
+                            <span className="text-base-content/60">Charges:</span>
+                            <span className="text-warning font-semibold">{hideStockNumbers ? "₹ •••" : formatINR(stock.bBkgPdc)}</span>
+                          </div>
+                          <div className="flex justify-between pt-1 border-t border-base-200 font-bold text-[11px]">
+                            <span>Cost:</span>
+                            <span className="text-primary">{hideStockNumbers ? "₹ ••••••" : formatINR(stock.bFStock)}</span>
+                          </div>
+                        </div>
+
+                        {/* Sell Column */}
+                        <div className="space-y-0.5 pl-1 flex flex-col justify-between">
+                          <div className="text-[9px] font-extrabold uppercase text-secondary tracking-wider mb-1">
+                            Sell Info
+                          </div>
+                          {isSold ? (
+                            <>
+                              <div className="flex justify-between text-[11px]">
+                                <span className="text-base-content/60">Date:</span>
+                                <span className="font-medium">{formatDateCell(stock.sDate)}</span>
+                              </div>
+                              <div className="flex justify-between text-[11px]">
+                                <span className="text-base-content/60">Qty:</span>
+                                <span className="font-bold">{hideStockNumbers ? "••" : stock.sQty}</span>
+                              </div>
+                              <div className="flex justify-between text-[11px]">
+                                <span className="text-base-content/60">Price:</span>
+                                <span>{hideStockNumbers ? "₹ ••••" : formatINR(stock.sShare)}</span>
+                              </div>
+                              <div className="flex justify-between text-[11px]">
+                                <span className="text-base-content/60">Charges:</span>
+                                <span className="text-warning font-semibold">{hideStockNumbers ? "₹ •••" : formatINR(stock.sBkgPdc + stock.dp)}</span>
+                              </div>
+                              <div className="flex justify-between pt-1 border-t border-base-200 font-bold text-[11px]">
+                                <span>Net:</span>
+                                <span className="text-secondary">{hideStockNumbers ? "₹ ••••••" : formatINR(stock.sFStock)}</span>
+                              </div>
+                            </>
+                          ) : (
+                            <div className="my-auto text-center space-y-0.5 py-2">
+                              <div className="text-[9px] uppercase font-extrabold text-primary/80 tracking-wider">
+                                Holding Active
+                              </div>
+                              <div className="text-xs font-black text-primary">
+                                {stock.qLeft > 0 ? (hideStockNumbers ? "•• Shares" : `${stock.qLeft} Shares`) : "Holding"}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Footer Realized Gain Banner */}
+                      <div>
+                        {isSold ? (
+                          <div
+                            className={`p-2.5 rounded-xl border flex items-center justify-between font-bold ${
+                              isProfit
+                                ? "bg-success/10 border-success/30 text-success"
+                                : "bg-error/10 border-error/30 text-error"
+                            }`}
+                          >
+                            <span className="text-[10px] font-extrabold uppercase tracking-wide">
+                              Realized PnL ({stock.period}d)
+                            </span>
+                            <div className="flex items-center gap-1 text-xs font-black">
+                              {isProfit ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
+                              <span>
+                                {hideStockNumbers
+                                  ? (isProfit ? "+₹ •••••• (••%)" : "-₹ •••••• (••%)")
+                                  : `${isProfit ? "+" : ""}${formatINR(stock.gainRs)} (${stock.gainPct}%)`}
+                              </span>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="p-2 rounded-xl border border-base-300 bg-base-200/50 flex items-center justify-between text-[11px] text-base-content/70">
+                            <span className="font-semibold">Holding Position</span>
+                            <span className="badge badge-xs badge-outline text-[10px]">
+                              {stock.period} Days
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Mobile Pagination */}
+            {filteredStocks.length > 0 && itemsPerPage !== "all" && totalPages > 1 && (
+              <div className="flex items-center justify-between bg-base-100 p-2.5 rounded-xl border border-base-200 text-xs shadow-2xs">
+                <button
+                  type="button"
+                  className="btn btn-soft btn-secondary btn-xs font-bold rounded-lg cursor-pointer"
+                  onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+                  disabled={currentPage === 1}
+                >
+                  Prev
+                </button>
+                <span className="font-bold text-base-content/80 text-[11px]">
+                  Page {currentPage} of {totalPages}
+                </span>
+                <button
+                  type="button"
+                  className="btn btn-soft btn-secondary btn-xs font-bold rounded-lg cursor-pointer"
+                  onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                >
+                  Next
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ================================================================ */}
+        {/* TAB 2: MUTUAL FUNDS MOBILE CONTENT                               */}
+        {/* ================================================================ */}
+        {activeTab === "mf" && (
+          <div className="space-y-3 px-1 w-full animate-in fade-in duration-200">
+            {/* Summary Strip */}
+            <div className="grid grid-cols-2 gap-2">
+              <div className="bg-base-100 p-2.5 rounded-2xl border border-base-200 shadow-2xs">
+                <div className="text-[10px] font-bold text-base-content/60 uppercase">Total Funds</div>
+                <div className="text-sm font-black text-base-content font-mono">{filteredMutualFunds.length}</div>
+              </div>
+              <div className="bg-base-100 p-2.5 rounded-2xl border border-base-200 shadow-2xs">
+                <div className="text-[10px] font-bold text-base-content/60 uppercase">Total Invested</div>
+                <div className="text-sm font-black text-secondary font-mono">
+                  {hideMfNumbers
+                    ? "₹ ••••••"
+                    : `₹${filteredMutualFunds
+                        .reduce((sum, f) => sum + (getMfDetailedSummary(f)?.totalInvested || 0), 0)
+                        .toLocaleString("en-IN")}`}
+                </div>
+              </div>
+            </div>
+
+            {/* Content List */}
+            {loadingMf ? (
+              <div className="h-48 flex items-center justify-center">
+                <span className="loading loading-spinner loading-md text-secondary"></span>
+              </div>
+            ) : mfData.length === 0 ? (
+              <div className="bg-base-100 p-8 rounded-2xl border border-base-200 text-center shadow-xs">
+                <PieChart size={32} className="mx-auto text-secondary mb-2" />
+                <h3 className="font-bold text-xs text-base-content">No Mutual Funds Yet</h3>
+                <p className="text-[11px] text-base-content/60 mt-0.5">Add a mutual fund to start tracking your SIPs.</p>
+                <button
+                  type="button"
+                  onClick={handleOpenAddMfModal}
+                  className="btn btn-secondary btn-xs mt-3 font-bold rounded-xl"
+                >
+                  <Plus size={13} />
+                  <span>Add Mutual Fund</span>
+                </button>
+              </div>
+            ) : filteredMutualFunds.length === 0 ? (
+              <div className="bg-base-100 p-8 rounded-2xl border border-base-200 text-center shadow-xs">
+                <Search size={28} className="mx-auto text-secondary mb-2" />
+                <h3 className="font-bold text-xs text-base-content">No Funds Found</h3>
+                <p className="text-[11px] text-base-content/60 mt-0.5">No funds matched "{mfSearchTerm}".</p>
+                <button
+                  type="button"
+                  onClick={() => setMfSearchTerm("")}
+                  className="btn btn-ghost btn-xs text-secondary font-bold mt-2"
+                >
+                  Clear Search
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {groupedMutualFunds.map((group) => {
+                  const isGroupCollapsed = collapsedGroupIds.has(group.id);
+
+                  return (
+                    <div key={group.id} className="space-y-2.5">
+                      {/* Collapsible Group Header */}
+                      <div
+                        onClick={() => toggleGroupCollapse(group.id)}
+                        className="flex items-center justify-between px-3.5 py-2 bg-base-100 rounded-xl border border-base-200/90 shadow-2xs cursor-pointer select-none"
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div className={`p-1 rounded-lg bg-secondary/10 text-secondary transition-transform duration-200 shrink-0 ${isGroupCollapsed ? '-rotate-90' : 'rotate-0'}`}>
+                            <ChevronDown size={14} />
+                          </div>
+                          <h3 className="font-extrabold text-xs text-base-content truncate">
+                            {group.name}
+                          </h3>
+                          <span className="px-1.5 py-0.2 rounded-full bg-secondary/15 text-secondary text-[10px] font-bold">
+                            {group.funds.length}
+                          </span>
+                        </div>
+                        <div className="text-xs font-bold text-base-content font-mono">
+                          {hideMfNumbers ? "••••" : `₹${group.totalInvested.toLocaleString("en-IN")}`}
+                        </div>
+                      </div>
+
+                      {/* Group Fund Cards Grid */}
+                      {!isGroupCollapsed && (
+                        <div className="grid grid-cols-1 gap-3.5">
+                          {group.funds.map((fund, fundIdx) => {
+                            const summary = getMfDetailedSummary(fund);
+                            return (
+                              <MutualFundCard
+                                key={fund.id}
+                                index={fundIdx + 1}
+                                fund={fund}
+                                summary={summary}
+                                hideNumbers={hideMfNumbers}
+                                onOpenInfo={handleOpenMfInfoModal}
+                                onOpenTable={(targetFund, mode) => {
+                                  setMfTableViewMode(mode || "deposit");
+                                  setViewingMfTableFundId(targetFund.id);
+                                }}
+                                onOpenAddSip={(targetFund, mode) =>
+                                  handleOpenAddSipModal(targetFund, mode || "deposit")
+                                }
+                                onOpenAddWithdrawal={(targetFund) =>
+                                  handleOpenAddWithdrawalModal(targetFund)
+                                }
+                                onEdit={() => handleEditMf(fund)}
+                                onDelete={() => handleDeleteMf(fund.id)}
+                              />
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ================================================================ */}
+        {/* TAB 3: FIXED DEPOSITS MOBILE CONTENT                             */}
+        {/* ================================================================ */}
+        {activeTab === "fd" && (
+          <div className="space-y-3 px-1 w-full animate-in fade-in duration-200">
+            {/* Summary Strip */}
+            <div className="grid grid-cols-2 gap-2">
+              <div className="bg-base-100 p-2.5 rounded-2xl border border-base-200 shadow-2xs">
+                <div className="text-[10px] font-bold text-base-content/60 uppercase">Total FDs</div>
+                <div className="text-sm font-black text-base-content font-mono">{filteredFixedDeposits.length}</div>
+              </div>
+              <div className="bg-base-100 p-2.5 rounded-2xl border border-base-200 shadow-2xs">
+                <div className="text-[10px] font-bold text-base-content/60 uppercase">Active Principal</div>
+                <div className="text-sm font-black text-primary font-mono">
+                  {hideFdNumbers
+                    ? "₹ ••••••"
+                    : `₹${filteredFixedDeposits
+                        .reduce((sum, fd) => sum + (Number(fd.principalAmount) || 0), 0)
+                        .toLocaleString("en-IN")}`}
+                </div>
+              </div>
+            </div>
+
+            {/* Content List */}
+            {loadingFd ? (
+              <div className="h-48 flex items-center justify-center">
+                <span className="loading loading-spinner loading-md text-primary"></span>
+              </div>
+            ) : fdData.length === 0 ? (
+              <div className="bg-base-100 p-8 rounded-2xl border border-base-200 text-center shadow-xs">
+                <Landmark size={32} className="mx-auto text-primary mb-2" />
+                <h3 className="font-bold text-xs text-base-content">No Fixed Deposits Yet</h3>
+                <p className="text-[11px] text-base-content/60 mt-0.5">Add a fixed deposit to track guaranteed returns.</p>
+                <button
+                  type="button"
+                  onClick={handleOpenAddFdModal}
+                  className="btn btn-primary btn-xs mt-3 font-bold rounded-xl"
+                >
+                  <Plus size={13} />
+                  <span>Add Fixed Deposit</span>
+                </button>
+              </div>
+            ) : filteredFixedDeposits.length === 0 ? (
+              <div className="bg-base-100 p-8 rounded-2xl border border-base-200 text-center shadow-xs">
+                <Search size={28} className="mx-auto text-primary mb-2" />
+                <h3 className="font-bold text-xs text-base-content">No FDs Found</h3>
+                <p className="text-[11px] text-base-content/60 mt-0.5">No records matched "{fdSearchTerm}".</p>
+                <button
+                  type="button"
+                  onClick={() => setFdSearchTerm("")}
+                  className="btn btn-ghost btn-xs text-primary font-bold mt-2"
+                >
+                  Clear Search
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {groupedFixedDeposits.map((group) => {
+                  const isGroupCollapsed = collapsedFdGroupIds.has(group.id);
+
+                  return (
+                    <div key={group.id} className="space-y-2.5">
+                      <div
+                        onClick={() => toggleFdGroupCollapse(group.id)}
+                        className="flex items-center justify-between px-3.5 py-2 bg-base-100 rounded-xl border border-base-200/90 shadow-2xs cursor-pointer select-none"
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div className={`p-1 rounded-lg bg-primary/10 text-primary transition-transform duration-200 shrink-0 ${isGroupCollapsed ? '-rotate-90' : 'rotate-0'}`}>
+                            <ChevronDown size={14} />
+                          </div>
+                          <h3 className="font-extrabold text-xs text-base-content truncate">
+                            {group.name}
+                          </h3>
+                          <span className="px-1.5 py-0.2 rounded-full bg-primary/15 text-primary text-[10px] font-bold">
+                            {group.fds.length}
+                          </span>
+                        </div>
+                        <div className="text-xs font-bold text-base-content font-mono">
+                          {hideFdNumbers ? "••••" : `₹${group.totalInvested.toLocaleString("en-IN")}`}
+                        </div>
+                      </div>
+
+                      {!isGroupCollapsed && (
+                        <div className="grid grid-cols-1 gap-3.5">
+                          {group.fds.map((fd, fdIdx) => (
+                            <FixedDepositCard
+                              key={fd.id}
+                              index={fdIdx + 1}
+                              fd={fd}
+                              hideNumbers={hideFdNumbers}
+                              onOpenInfo={setViewingInfoFd}
+                              onOpenWithdraw={setWithdrawingFd}
+                              onRemoveWithdrawal={handleRemoveFdWithdrawal}
+                              onEdit={() => handleEditFd(fd)}
+                              onDelete={() => handleDeleteFd(fd.id)}
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ================================================================ */}
+        {/* TAB 4: RECURRING DEPOSITS MOBILE CONTENT                          */}
+        {/* ================================================================ */}
+        {activeTab === "rd" && (
+          <div className="space-y-3 px-1 w-full animate-in fade-in duration-200">
+            {/* Summary Strip */}
+            <div className="grid grid-cols-2 gap-2">
+              <div className="bg-base-100 p-2.5 rounded-2xl border border-base-200 shadow-2xs">
+                <div className="text-[10px] font-bold text-base-content/60 uppercase">Total RDs</div>
+                <div className="text-sm font-black text-base-content font-mono">{filteredRecurringDeposits.length}</div>
+              </div>
+              <div className="bg-base-100 p-2.5 rounded-2xl border border-base-200 shadow-2xs">
+                <div className="text-[10px] font-bold text-base-content/60 uppercase">Active Principal</div>
+                <div className="text-sm font-black text-primary font-mono">
+                  {hideRdNumbers
+                    ? "₹ ••••••"
+                    : `₹${filteredRecurringDeposits
+                        .reduce((sum, rd) => sum + (Number(rd.monthlyAmount) || 0), 0)
+                        .toLocaleString("en-IN")}`}
+                </div>
+              </div>
+            </div>
+
+            {/* Content List */}
+            {loadingRd ? (
+              <div className="h-48 flex items-center justify-center">
+                <span className="loading loading-spinner loading-md text-primary"></span>
+              </div>
+            ) : rdData.length === 0 ? (
+              <div className="bg-base-100 p-8 rounded-2xl border border-base-200 text-center shadow-xs">
+                <PiggyBank size={32} className="mx-auto text-primary mb-2" />
+                <h3 className="font-bold text-xs text-base-content">No Recurring Deposits Yet</h3>
+                <p className="text-[11px] text-base-content/60 mt-0.5">Track your recurring monthly savings.</p>
+                <button
+                  type="button"
+                  onClick={handleOpenAddRdModal}
+                  className="btn btn-primary btn-xs mt-3 font-bold rounded-xl"
+                >
+                  <Plus size={13} />
+                  <span>Add Recurring Deposit</span>
+                </button>
+              </div>
+            ) : filteredRecurringDeposits.length === 0 ? (
+              <div className="bg-base-100 p-8 rounded-2xl border border-base-200 text-center shadow-xs">
+                <Search size={28} className="mx-auto text-primary mb-2" />
+                <h3 className="font-bold text-xs text-base-content">No RDs Found</h3>
+                <p className="text-[11px] text-base-content/60 mt-0.5">No records matched "{rdSearchTerm}".</p>
+                <button
+                  type="button"
+                  onClick={() => setRdSearchTerm("")}
+                  className="btn btn-ghost btn-xs text-primary font-bold mt-2"
+                >
+                  Clear Search
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {groupedRecurringDeposits.map((group) => {
+                  const isGroupCollapsed = collapsedRdGroupIds.has(group.id);
+
+                  return (
+                    <div key={group.id} className="space-y-2.5">
+                      <div
+                        onClick={() => toggleRdGroupCollapse(group.id)}
+                        className="flex items-center justify-between px-3.5 py-2 bg-base-100 rounded-xl border border-base-200/90 shadow-2xs cursor-pointer select-none"
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div className={`p-1 rounded-lg bg-primary/10 text-primary transition-transform duration-200 shrink-0 ${isGroupCollapsed ? '-rotate-90' : 'rotate-0'}`}>
+                            <ChevronDown size={14} />
+                          </div>
+                          <h3 className="font-extrabold text-xs text-base-content truncate">
+                            {group.name}
+                          </h3>
+                          <span className="px-1.5 py-0.2 rounded-full bg-primary/15 text-primary text-[10px] font-bold">
+                            {group.rds.length}
+                          </span>
+                        </div>
+                        <div className="text-xs font-bold text-base-content font-mono">
+                          {hideRdNumbers ? "••••" : `₹${group.totalInvested.toLocaleString("en-IN")}`}
+                        </div>
+                      </div>
+
+                      {!isGroupCollapsed && (
+                        <div className="grid grid-cols-1 gap-3.5">
+                          {group.rds.map((rd, rdIdx) => (
+                            <RecurringDepositCard
+                              key={rd.id}
+                              index={rdIdx + 1}
+                              rd={rd}
+                              hideNumbers={hideRdNumbers}
+                              onOpenWithdraw={setWithdrawingRd}
+                              onRemoveWithdrawal={handleRemoveRdWithdrawal}
+                              onOpenAddDeposit={(targetRd) => handleOpenAddRdDeposit(targetRd)}
+                              onOpenTable={(targetRd) => handleOpenRdTable(targetRd)}
+                              onEdit={() => handleEditRd(rd)}
+                              onDelete={() => handleDeleteRd(rd.id)}
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ================================================================ */}
+        {/* TAB 5: SALARY MOBILE CONTENT                                     */}
+        {/* ================================================================ */}
+        {activeTab === "salary" && (
+          <div className="space-y-3 px-1 w-full animate-in fade-in duration-200">
+            {/* Stat Cards Grid (4-pack + CTC card) */}
+            <div className="grid grid-cols-2 gap-2">
+              <div className="bg-base-100 p-2.5 rounded-2xl border border-base-200 shadow-2xs space-y-0.5">
+                <span className="text-[10px] font-bold text-base-content/60 uppercase">Experience</span>
+                <div className="text-xs font-black text-secondary truncate">{salarySummary.experienceText}</div>
+                <span className="text-[9.5px] text-base-content/50 block">{salarySummary.totalMonths} months</span>
+              </div>
+              <div className="bg-base-100 p-2.5 rounded-2xl border border-base-200 shadow-2xs space-y-0.5">
+                <span className="text-[10px] font-bold text-base-content/60 uppercase">In Hand Total</span>
+                <div className="text-xs font-black text-success truncate">
+                  ₹{salarySummary.totalInHand.toLocaleString("en-IN")}
+                </div>
+                <span className="text-[9.5px] text-base-content/50 block">{salarySummary.count} entries</span>
+              </div>
+              <div className="bg-base-100 p-2.5 rounded-2xl border border-base-200 shadow-2xs space-y-0.5">
+                <span className="text-[10px] font-bold text-base-content/60 uppercase">Employer PF</span>
+                <div className="text-xs font-black text-primary truncate">
+                  ₹{salarySummary.totalErPf.toLocaleString("en-IN")}
+                </div>
+                <span className="text-[9.5px] text-base-content/50 block">Provident Fund</span>
+              </div>
+              <div className="bg-base-100 p-2.5 rounded-2xl border border-base-200 shadow-2xs space-y-0.5">
+                <span className="text-[10px] font-bold text-base-content/60 uppercase">Taxes & Dues</span>
+                <div className="text-xs font-black text-error truncate">
+                  ₹{salarySummary.totalTaxes.toLocaleString("en-IN")}
+                </div>
+                <span className="text-[9.5px] text-base-content/50 block">TDS + Others</span>
+              </div>
+            </div>
+
+            {/* Total CTC Hero Card */}
+            <div className="bg-primary/10 border border-primary/20 p-2.5 rounded-2xl flex items-center justify-between shadow-2xs">
+              <div>
+                <span className="text-[10px] font-black uppercase text-primary tracking-wider block">Total CTC</span>
+                <span className="text-[10px] text-base-content/60">Earnings + Employer PF</span>
+              </div>
+              <div className="text-base font-black text-primary font-mono">
+                ₹{salarySummary.totalCtc.toLocaleString("en-IN")}
+              </div>
+            </div>
+
+            {/* Content List */}
+            {loadingSalary ? (
+              <div className="h-48 flex items-center justify-center">
+                <span className="loading loading-spinner loading-md text-primary"></span>
+              </div>
+            ) : salaryData.length === 0 ? (
+              <div className="bg-base-100 p-8 rounded-2xl border border-base-200 text-center shadow-xs">
+                <Briefcase size={32} className="mx-auto text-primary mb-2" />
+                <h3 className="font-bold text-xs text-base-content">No Salary Records Yet</h3>
+                <p className="text-[11px] text-base-content/60 mt-0.5">Add monthly payslips to track compensation.</p>
+                <button
+                  type="button"
+                  onClick={handleOpenAddSalaryModal}
+                  className="btn btn-primary btn-xs mt-3 font-bold rounded-xl"
+                >
+                  <Plus size={13} />
+                  <span>Add Salary Record</span>
+                </button>
+              </div>
+            ) : filteredSalaries.length === 0 ? (
+              <div className="bg-base-100 p-8 rounded-2xl border border-base-200 text-center shadow-xs">
+                <Search size={28} className="mx-auto text-primary mb-2" />
+                <h3 className="font-bold text-xs text-base-content">No Records Match</h3>
+                <p className="text-[11px] text-base-content/60 mt-0.5">Try clearing filters or search query.</p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSalarySearchTerm("");
+                    setSalaryCompanyFilter("all");
+                    setSalaryYearFilter("all");
+                  }}
+                  className="btn btn-ghost btn-xs text-primary font-bold mt-2"
+                >
+                  Clear Filters
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {filteredSalaries.map((item) => {
+                  const basic = Number(item.basicSalary || 0);
+                  const hra = Number(item.hra || 0);
+                  const flexi = Number(item.flexi || 0);
+                  const bonus = Number(item.bonus || 0);
+                  const gratuity = Number(item.gratuity || 0);
+                  const variablePay = Number(item.variablePay || 0);
+                  const gross = Number(item.gross || 0) || (basic + hra + flexi + bonus);
+                  const rowEarnings = gross + gratuity + variablePay;
+                  const erPf = Number(item.erPf || 0);
+                  const taxes = Number(item.taxes || 0);
+                  const inHand = Number(item.inHand || 0) || (gross - (erPf + taxes));
+                  const ctc = Number(item.ctc || 0) || (rowEarnings + erPf);
+
+                  return (
+                    <div
+                      key={item.id || item._id}
+                      className="bg-base-100 rounded-2xl border border-base-200 p-3.5 shadow-2xs space-y-3"
+                    >
+                      {/* Card Header: Company, Month, Actions */}
+                      <div className="flex items-center justify-between gap-2 border-b border-base-200 pb-2.5">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <CompanyLogo name={item.company} size="w-7 h-7" type="company" />
+                          <div className="min-w-0">
+                            <h4 className="font-bold text-xs text-base-content truncate">{item.company}</h4>
+                            <div className="flex items-center gap-1 text-[10px] text-base-content/60">
+                              <Calendar size={11} className="text-primary shrink-0" />
+                              <span>{dayjs(item.month).format("MMM YYYY")}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => handleEditSalary(item)}
+                            className="btn btn-ghost btn-xs btn-square text-primary hover:bg-primary/10"
+                            title="Edit Salary"
+                          >
+                            <Edit size={13} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteSalary(item.id || item._id)}
+                            className="btn btn-ghost btn-xs btn-square text-error hover:bg-error/10"
+                            title="Delete Salary"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* 2x2 Metric Grid */}
+                      <div className="grid grid-cols-2 gap-2 text-xs bg-base-200/50 p-2.5 rounded-xl border border-base-200">
+                        <div>
+                          <span className="text-[9.5px] font-extrabold uppercase text-success tracking-wider block">In Hand</span>
+                          <span className="text-sm font-black text-success font-mono">₹{inHand.toLocaleString("en-IN")}</span>
+                        </div>
+                        <div>
+                          <span className="text-[9.5px] font-extrabold uppercase text-info tracking-wider block">CTC</span>
+                          <span className="text-sm font-black text-info font-mono">₹{ctc.toLocaleString("en-IN")}</span>
+                        </div>
+                        <div>
+                          <span className="text-[9.5px] font-bold text-base-content/60 uppercase block">Basic + HRA</span>
+                          <span className="font-mono text-base-content/90">₹{(basic + hra).toLocaleString("en-IN")}</span>
+                        </div>
+                        <div>
+                          <span className="text-[9.5px] font-bold text-error uppercase block">Taxes & PF</span>
+                          <span className="font-mono text-error font-bold">₹{(taxes + erPf).toLocaleString("en-IN")}</span>
+                        </div>
+                      </div>
+
+                      {/* Optional Bonus or Allowance badge row */}
+                      {(bonus > 0 || flexi > 0 || variablePay > 0) && (
+                        <div className="flex items-center gap-1.5 flex-wrap text-[10px]">
+                          {bonus > 0 && (
+                            <span className="badge badge-xs badge-success badge-soft font-bold">
+                              Bonus: ₹{bonus.toLocaleString("en-IN")}
+                            </span>
+                          )}
+                          {flexi > 0 && (
+                            <span className="badge badge-xs badge-info badge-soft font-bold">
+                              Flexi: ₹{flexi.toLocaleString("en-IN")}
+                            </span>
+                          )}
+                          {variablePay > 0 && (
+                            <span className="badge badge-xs badge-warning badge-soft font-bold">
+                              Var: ₹{variablePay.toLocaleString("en-IN")}
+                            </span>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Breakdown Modal Button */}
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setSalaryBreakdownModal({
+                            title: "Salary Earnings Breakdown",
+                            company: item.company,
+                            month: dayjs(item.month).format("MMMM YYYY"),
+                            type: "earnings",
+                            totalValue: rowEarnings,
+                            totalLabel: "Total Gross Earnings",
+                            bottomNote: "Includes basic pay, allowances, bonuses, and variable pay.",
+                            items: [
+                              { label: "Basic Salary", value: basic },
+                              { label: "House Rent Allowance (HRA)", value: hra },
+                              { label: "Flexi / Special Allowance", value: flexi },
+                              ...(bonus > 0 ? [{ label: "Performance Bonus", value: bonus, highlight: true }] : []),
+                              ...(gratuity > 0 ? [{ label: "Gratuity", value: gratuity }] : []),
+                              ...(variablePay > 0 ? [{ label: "Variable Pay", value: variablePay }] : []),
+                            ],
+                          })
+                        }
+                        className="btn btn-xs btn-outline btn-primary w-full rounded-xl font-bold cursor-pointer"
+                      >
+                        <Info size={13} />
+                        <span>View Detailed Breakdown</span>
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ================================================================ */}
+        {/* TAB 6: PROVIDENT FUND MOBILE CONTENT                             */}
+        {/* ================================================================ */}
+        {activeTab === "pf" && (
+          <div className="space-y-3 px-1 w-full animate-in fade-in duration-200">
+            {/* Hero Available PF Balance Card */}
+            <div className="bg-gradient-to-br from-success/10 to-base-100 p-3.5 rounded-2xl border border-success/30 shadow-2xs space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-success flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-success animate-pulse"></span>
+                  Available PF Balance
+                </span>
+                <span className="badge badge-xs badge-success badge-soft font-bold">Auto-synced</span>
+              </div>
+              <div className="text-xl font-black text-success font-mono">
+                ₹{availablePfBalance.toLocaleString("en-IN")}
+              </div>
+            </div>
+
+            {/* 3-metric sub-grid */}
+            <div className="grid grid-cols-3 gap-2">
+              <div className="bg-base-100 p-2.5 rounded-2xl border border-base-200 shadow-2xs space-y-0.5">
+                <span className="text-[9.5px] font-bold text-base-content/60 uppercase block">Employer PF</span>
+                <div className="text-xs font-black text-primary font-mono truncate">
+                  ₹{pfSummary.totalEmployerShare.toLocaleString("en-IN")}
+                </div>
+              </div>
+              <div className="bg-base-100 p-2.5 rounded-2xl border border-base-200 shadow-2xs space-y-0.5">
+                <span className="text-[9.5px] font-bold text-base-content/60 uppercase block">Employee PF</span>
+                <div className="text-xs font-black text-info font-mono truncate">
+                  ₹{pfSummary.totalEmployeeShare.toLocaleString("en-IN")}
+                </div>
+              </div>
+              <div className="bg-base-100 p-2.5 rounded-2xl border border-base-200 shadow-2xs space-y-0.5">
+                <span className="text-[9.5px] font-bold text-base-content/60 uppercase block">Withdrawn</span>
+                <div className="text-xs font-black text-error font-mono truncate">
+                  ₹{totalPfWithdrawn.toLocaleString("en-IN")}
+                </div>
+              </div>
+            </div>
+
+            {/* Subtab Switcher */}
+            <div className="grid grid-cols-2 gap-1.5 bg-base-200 p-1 rounded-xl">
+              <button
+                type="button"
+                onClick={() => setPfSubTab("deposits")}
+                className={`py-1.5 px-2 rounded-lg text-xs font-bold transition-all ${
+                  pfSubTab === "deposits"
+                    ? "bg-primary text-primary-content shadow-xs"
+                    : "text-base-content/70 hover:text-base-content"
+                }`}
+              >
+                Deposited ({salaryData.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setPfSubTab("withdrawals")}
+                className={`py-1.5 px-2 rounded-lg text-xs font-bold transition-all ${
+                  pfSubTab === "withdrawals"
+                    ? "bg-primary text-primary-content shadow-xs"
+                    : "text-base-content/70 hover:text-base-content"
+                }`}
+              >
+                Withdrawals ({pfWithdrawals.length})
+              </button>
+            </div>
+
+            {/* Subtab 1: Deposited PF Cards */}
+            {pfSubTab === "deposits" && (
+              <div className="space-y-2.5">
+                {filteredPf.length === 0 ? (
+                  <div className="bg-base-100 p-8 rounded-2xl border border-base-200 text-center shadow-xs">
+                    <Percent size={28} className="mx-auto text-primary mb-2" />
+                    <h3 className="font-bold text-xs text-base-content">No PF Deposits Recorded</h3>
+                    <p className="text-[11px] text-base-content/60 mt-0.5">Add salary entries to sync PF contributions.</p>
+                  </div>
+                ) : (
+                  filteredPf.map((item, idx) => {
+                    const erPf = Number(item.erPf || 0);
+                    const eePf = Number(item.eePf || item.erPf || 0);
+                    const totalPf = erPf + eePf;
+
+                    return (
+                      <div
+                        key={item.id || item._id || idx}
+                        className="bg-base-100 rounded-2xl border border-base-200 p-3 shadow-2xs space-y-2"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <CompanyLogo name={item.company} size="w-6 h-6" type="company" />
+                            <div className="min-w-0">
+                              <span className="font-bold text-xs text-base-content truncate block">{item.company}</span>
+                              <span className="text-[10px] text-base-content/60">{dayjs(item.month).format("MMM YYYY")}</span>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <span className="text-[9.5px] uppercase font-bold text-base-content/50 block">Monthly PF</span>
+                            <span className="text-xs font-black text-primary font-mono">₹{totalPf.toLocaleString("en-IN")}</span>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2 text-[11px] bg-base-200/50 p-2 rounded-xl border border-base-200">
+                          <div>
+                            <span className="text-base-content/60 block">Employer:</span>
+                            <span className="font-bold font-mono text-primary">₹{erPf.toLocaleString("en-IN")}</span>
+                          </div>
+                          <div>
+                            <span className="text-base-content/60 block">Employee:</span>
+                            <span className="font-bold font-mono text-info">₹{eePf.toLocaleString("en-IN")}</span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            )}
+
+            {/* Subtab 2: Withdrawals Cards */}
+            {pfSubTab === "withdrawals" && (
+              <div className="space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-base-content/70">Withdrawal History</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingPfWithdrawal(null);
+                      setIsAddPfWithdrawalModalOpen(true);
+                    }}
+                    disabled={availablePfBalance <= 0}
+                    className="btn btn-xs btn-primary font-bold rounded-xl gap-1 cursor-pointer"
+                  >
+                    <Plus size={12} />
+                    <span>Add Withdrawal</span>
+                  </button>
+                </div>
+
+                {filteredPfWithdrawals.length === 0 ? (
+                  <div className="bg-base-100 p-8 rounded-2xl border border-base-200 text-center shadow-xs">
+                    <ArrowUpRight size={28} className="mx-auto text-error mb-2" />
+                    <h3 className="font-bold text-xs text-base-content">No PF Withdrawals</h3>
+                    <p className="text-[11px] text-base-content/60 mt-0.5">
+                      You haven't recorded any PF withdrawals yet.
+                    </p>
+                  </div>
+                ) : (
+                  filteredPfWithdrawals.map((item, idx) => (
+                    <div
+                      key={item.id || item._id || idx}
+                      className="bg-base-100 rounded-2xl border border-base-200 p-3 shadow-2xs space-y-2"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <span className="badge badge-xs badge-error badge-soft font-bold text-[10px]">
+                            {item.reason || "PF Withdrawal"}
+                          </span>
+                          <span className="text-[10px] text-base-content/60 block mt-0.5">
+                            {formatDateDDMMMYYYY(item.date)}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span className="text-sm font-black text-error font-mono mr-1">
+                            -₹{Number(item.amount || 0).toLocaleString("en-IN")}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingPfWithdrawal(item);
+                              setIsAddPfWithdrawalModalOpen(true);
+                            }}
+                            className="btn btn-ghost btn-xs btn-square text-primary"
+                          >
+                            <Edit size={13} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeletePfWithdrawal(item.id || item._id)}
+                            className="btn btn-ghost btn-xs btn-square text-error"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      </div>
+                      {item.notes && (
+                        <p className="text-[10px] text-base-content/60 italic bg-base-200/50 p-1.5 rounded-lg">
+                          "{item.notes}"
+                        </p>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ================================================================ */}
+        {/* OTHER TABS: EMERGENCY FUND MOBILE CONTENT                        */}
+        {/* ================================================================ */}
+        {activeTab !== "stocks" && activeTab !== "mf" && activeTab !== "fd" && activeTab !== "rd" && activeTab !== "salary" && activeTab !== "pf" && (
+          <div className="bg-base-100 p-8 rounded-2xl border border-base-200 text-center shadow-xs space-y-3">
+            <div className="p-3 bg-primary/10 text-primary rounded-2xl w-max mx-auto">
+              <ShieldAlert size={32} />
+            </div>
+            <div>
+              <h3 className="font-bold text-sm text-base-content">
+                {categories.find((c) => c.id === activeTab)?.label} Tracking
+              </h3>
+              <p className="text-[11px] text-base-content/60 mt-1">
+                Configure entries, interest calculations, and schedules.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Phone View Floating Action Button (FAB) */}
+        <div className="fixed bottom-6 right-5 z-40">
+          <button
+            type="button"
+            onClick={() => {
+              if (activeTab === "stocks") handleOpenAddModal();
+              else if (activeTab === "mf") handleOpenAddMfModal();
+              else if (activeTab === "fd") handleOpenAddFdModal();
+              else if (activeTab === "rd") handleOpenAddRdModal();
+              else if (activeTab === "salary") handleOpenAddSalaryModal();
+              else if (activeTab === "pf") {
+                if (pfSubTab === "withdrawals") {
+                  setEditingPfWithdrawal(null);
+                  setIsAddPfWithdrawalModalOpen(true);
+                } else {
+                  handleOpenAddSalaryModal();
+                }
+              }
+            }}
+            className="btn btn-circle btn-primary shadow-2xl h-12 w-12 border-2 border-primary-content/20 flex items-center justify-center hover:scale-105 active:scale-95 transition-all cursor-pointer"
+            title={`Add ${categories.find((c) => c.id === activeTab)?.label || "Entry"}`}
+          >
+            <Plus size={22} className="text-primary-content" />
+          </button>
+        </div>
+      </div>
 
       {/* Add / Edit Stock Trade Wide 4-Section Popup Modal */}
       <AddStockTradeModal

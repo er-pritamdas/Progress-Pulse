@@ -424,7 +424,7 @@ const AddTransactionModal = ({ isOpen, onClose }) => {
       <button
         type="button"
         onClick={() => handleTypeSelect("Debit")}
-        className={`p-3 rounded-2xl text-left transition-all flex items-center justify-between border-transparent cursor-pointer ${
+        className={`w-full p-3 rounded-2xl text-left transition-all flex items-center justify-between border-transparent cursor-pointer ${
           transactionType === "Debit"
             ? "bg-rose-500/15 text-rose-600 dark:text-rose-400 font-bold shadow-xs"
             : "bg-base-200/50 hover:bg-base-200 text-base-content/80"
@@ -446,7 +446,7 @@ const AddTransactionModal = ({ isOpen, onClose }) => {
       <button
         type="button"
         onClick={() => handleTypeSelect("DebitMoney")}
-        className={`p-3 rounded-2xl text-left transition-all flex items-center justify-between border-transparent cursor-pointer ${
+        className={`w-full p-3 rounded-2xl text-left transition-all flex items-center justify-between border-transparent cursor-pointer ${
           transactionType === "DebitMoney"
             ? "bg-rose-500/15 text-rose-600 dark:text-rose-400 font-bold shadow-xs"
             : "bg-base-200/50 hover:bg-base-200 text-base-content/80"
@@ -468,7 +468,7 @@ const AddTransactionModal = ({ isOpen, onClose }) => {
       <button
         type="button"
         onClick={() => handleTypeSelect("Credit")}
-        className={`p-3 rounded-2xl text-left transition-all flex items-center justify-between border-transparent cursor-pointer ${
+        className={`w-full p-3 rounded-2xl text-left transition-all flex items-center justify-between border-transparent cursor-pointer ${
           transactionType === "Credit"
             ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-bold shadow-xs"
             : "bg-base-200/50 hover:bg-base-200 text-base-content/80"
@@ -490,7 +490,7 @@ const AddTransactionModal = ({ isOpen, onClose }) => {
       <button
         type="button"
         onClick={() => handleTypeSelect("Transfer")}
-        className={`p-3 rounded-2xl text-left transition-all flex items-center justify-between border-transparent cursor-pointer ${
+        className={`w-full p-3 rounded-2xl text-left transition-all flex items-center justify-between border-transparent cursor-pointer ${
           transactionType === "Transfer"
             ? "bg-blue-500/15 text-blue-600 dark:text-blue-400 font-bold shadow-xs"
             : "bg-base-200/50 hover:bg-base-200 text-base-content/80"
@@ -549,10 +549,10 @@ const AddTransactionModal = ({ isOpen, onClose }) => {
           key={s._id}
           type="button"
           onClick={() => setSourceId(s._id)}
-          className={`p-2.5 rounded-2xl text-left transition-all flex items-center justify-between gap-1.5 border-transparent cursor-pointer ${
+          className={`w-full p-3 rounded-2xl text-left transition-all flex items-center justify-between gap-1.5 border-transparent cursor-pointer ${
             isSelected
               ? `${tagStyle.bg} ${tagStyle.text} font-bold shadow-xs`
-              : "bg-transparent hover:bg-base-200/50 text-base-content/80"
+              : "bg-base-200/50 hover:bg-base-200 text-base-content/80"
           }`}
         >
           <div className="flex items-center gap-2 min-w-0">
@@ -613,10 +613,10 @@ const AddTransactionModal = ({ isOpen, onClose }) => {
                     key={s._id}
                     type="button"
                     onClick={() => setTargetSourceId(s._id)}
-                    className={`p-2.5 rounded-2xl text-left transition-all flex items-center justify-between gap-1.5 border-transparent cursor-pointer w-full ${
+                    className={`w-full p-3 rounded-2xl text-left transition-all flex items-center justify-between gap-1.5 border-transparent cursor-pointer ${
                       isSelected
                         ? `${tagStyle.bg} ${tagStyle.text} font-bold shadow-xs`
-                        : "bg-transparent hover:bg-base-200/50 text-base-content/80"
+                        : "bg-base-200/50 hover:bg-base-200 text-base-content/80"
                     }`}
                   >
                     <div className="flex items-center gap-2 min-w-0">
@@ -661,10 +661,10 @@ const AddTransactionModal = ({ isOpen, onClose }) => {
                     key={s._id}
                     type="button"
                     onClick={() => setTargetSourceId(s._id)}
-                    className={`p-2.5 rounded-2xl text-left transition-all flex items-center justify-between gap-1.5 border-transparent cursor-pointer w-full ${
+                    className={`w-full p-3 rounded-2xl text-left transition-all flex items-center justify-between gap-1.5 border-transparent cursor-pointer ${
                       isSelected
                         ? `${tagStyle.bg} ${tagStyle.text} font-bold shadow-xs`
-                        : "bg-transparent hover:bg-base-200/50 text-base-content/80"
+                        : "bg-base-200/50 hover:bg-base-200 text-base-content/80"
                     }`}
                   >
                     <div className="flex items-center gap-2 min-w-0">
@@ -731,10 +731,10 @@ const AddTransactionModal = ({ isOpen, onClose }) => {
           key={c._id}
           type="button"
           onClick={() => handleCategorySelect(c._id)}
-          className={`p-2.5 rounded-2xl text-left transition-all flex items-center justify-between gap-1.5 border-transparent cursor-pointer ${
+          className={`w-full p-3 rounded-2xl text-left transition-all flex items-center justify-between gap-1.5 border-transparent cursor-pointer ${
             isSelected
               ? `${style.bg} ${style.text} font-bold shadow-xs`
-              : "bg-transparent hover:bg-base-200/50 text-base-content/80"
+              : "bg-base-200/50 hover:bg-base-200 text-base-content/80"
           }`}
         >
           <div className="flex items-center gap-2 min-w-0">
@@ -804,10 +804,10 @@ const AddTransactionModal = ({ isOpen, onClose }) => {
           key={sub._id}
           type="button"
           onClick={() => setSubCategoryId(prev => prev === sub._id ? "" : sub._id)}
-          className={`p-2.5 rounded-2xl text-left transition-all flex items-center justify-between gap-1.5 border-transparent cursor-pointer ${
+          className={`w-full p-3 rounded-2xl text-left transition-all flex items-center justify-between gap-1.5 border-transparent cursor-pointer ${
             isSelected
               ? `${activeStyle.bg} ${activeStyle.text} font-bold shadow-xs`
-              : "bg-transparent hover:bg-base-200/50 text-base-content/80"
+              : "bg-base-200/50 hover:bg-base-200 text-base-content/80"
           }`}
         >
           <span className="font-bold text-xs truncate">{sub.name}</span>
@@ -1093,7 +1093,7 @@ const AddTransactionModal = ({ isOpen, onClose }) => {
                 <Layers size={14} className="text-base-content/40" />
               </div>
 
-              <div className="flex flex-col gap-2 overflow-y-auto flex-1 min-h-0 pr-0.5">
+              <div className="flex flex-col gap-2 overflow-y-auto flex-1 min-h-0 pr-0.5 w-full">
                 {renderTypeOptions()}
               </div>
 
@@ -1115,7 +1115,7 @@ const AddTransactionModal = ({ isOpen, onClose }) => {
                 <Wallet size={14} className="text-base-content/40" />
               </div>
 
-              <div className="flex flex-col gap-1.5 overflow-y-auto flex-1 min-h-0 pr-0.5">
+              <div className="flex flex-col gap-2 overflow-y-auto flex-1 min-h-0 pr-0.5 w-full">
                 {renderSourceOptions()}
               </div>
 
@@ -1137,7 +1137,7 @@ const AddTransactionModal = ({ isOpen, onClose }) => {
                 <Folder size={14} className="text-base-content/40" />
               </div>
 
-              <div className="flex flex-col gap-1.5 overflow-y-auto flex-1 min-h-0 pr-0.5">
+              <div className="flex flex-col gap-2 overflow-y-auto flex-1 min-h-0 pr-0.5 w-full">
                 {renderTargetOrCategoryOptions()}
               </div>
 
@@ -1157,7 +1157,7 @@ const AddTransactionModal = ({ isOpen, onClose }) => {
                 <Tag size={14} className="text-base-content/40" />
               </div>
 
-              <div className="flex flex-col gap-1.5 overflow-y-auto flex-1 min-h-0 pr-0.5">
+              <div className="flex flex-col gap-2 overflow-y-auto flex-1 min-h-0 pr-0.5 w-full">
                 {renderSubCategoryOptions()}
               </div>
 
@@ -1297,27 +1297,27 @@ const AddTransactionModal = ({ isOpen, onClose }) => {
             {/* Dynamic Active Tab Body */}
             <div className="flex-1 min-h-0 overflow-y-auto pr-0.5 py-3 [scrollbar-width:thin]">
               {activeMobileTab === "type" && (
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-2 w-full">
                   {renderTypeOptions()}
                 </div>
               )}
               {activeMobileTab === "source" && (
-                <div className="flex flex-col gap-1.5">
+                <div className="flex flex-col gap-2 w-full">
                   {renderSourceOptions()}
                 </div>
               )}
               {(activeMobileTab === "target" || activeMobileTab === "category") && (
-                <div className="flex flex-col gap-1.5">
+                <div className="flex flex-col gap-2 w-full">
                   {renderTargetOrCategoryOptions()}
                 </div>
               )}
               {activeMobileTab === "subcategory" && (
-                <div className="flex flex-col gap-1.5">
+                <div className="flex flex-col gap-2 w-full">
                   {renderSubCategoryOptions()}
                 </div>
               )}
               {activeMobileTab === "details" && (
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-2 w-full">
                   {renderDetailsInputs()}
                 </div>
               )}

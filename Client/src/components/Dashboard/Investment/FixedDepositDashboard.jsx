@@ -560,6 +560,15 @@ export default function FixedDepositDashboard({
       },
       labels: chartData.labels,
       colors: chartData.colors,
+      fill: {
+        type: "solid",
+        opacity: 0.8,
+      },
+      stroke: {
+        show: true,
+        width: 2,
+        colors: ["#1e293b"],
+      },
       plotOptions: {
         pie: {
           donut: {
@@ -597,7 +606,6 @@ export default function FixedDepositDashboard({
         },
       },
       dataLabels: { enabled: false },
-      stroke: { colors: ["rgba(0,0,0,0.1)"], width: 1.5 },
       legend: {
         show: true,
         position: "bottom",

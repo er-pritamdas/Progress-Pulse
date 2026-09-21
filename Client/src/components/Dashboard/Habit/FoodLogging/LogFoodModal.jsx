@@ -127,6 +127,7 @@ function LogFoodModal({ isOpen, onClose, selectedDate, initialMeal = "Breakfast"
 
   const [stagedItems, setStagedItems] = useState([]);
   const [editingQueueItem, setEditingQueueItem] = useState(null);
+  const [showMobileQueue, setShowMobileQueue] = useState(false);
 
   const [sourceTab, setSourceTab] = useState("database"); // "database" | "history"
   const [historyDate, setHistoryDate] = useState(() => getYesterdayDateStr(selectedDate));
@@ -165,6 +166,7 @@ function LogFoodModal({ isOpen, onClose, selectedDate, initialMeal = "Breakfast"
       setCategorySearchQuery("");
       setError("");
       setStagedItems([]);
+      setShowMobileQueue(false);
       setSourceTab("database");
       setHistoryDate(getYesterdayDateStr(selectedDate));
       setHistoryMealFilter("All");
@@ -272,6 +274,7 @@ function LogFoodModal({ isOpen, onClose, selectedDate, initialMeal = "Breakfast"
     setSelectedFood(null);
     setServings(1);
     setEditingQueueItem(null);
+    setShowMobileQueue(false);
   };
 
   const handleBackToQueue = () => {
@@ -280,6 +283,7 @@ function LogFoodModal({ isOpen, onClose, selectedDate, initialMeal = "Breakfast"
       setEditingQueueItem(null);
     }
     setSelectedFood(null);
+    setShowMobileQueue(true);
   };
 
   const handleRemoveFromQueue = (id) => {
@@ -325,175 +329,22 @@ function LogFoodModal({ isOpen, onClose, selectedDate, initialMeal = "Breakfast"
     setStagedItems((prev) => prev.filter((i) => i.id !== item.id));
   };
 
-  const pendingDataRef = useRef({
-    stagedItems: [],
-    selectedFood: null,
-    mealType: initialMeal,
-    servings: 1,
-    selectedDate: selectedDate,
-  });
-
-  const isExplicitlySavedRef = useRef(false);
-  const isAutoSavingRef = useRef(false);
-  const isDiscardedRef = useRef(false);
-
-  useEffect(() => {
-    pendingDataRef.current = {
-      stagedItems,
-      selectedFood,
-      mealType,
-      servings,
-      selectedDate,
-    };
-  }, [stagedItems, selectedFood, mealType, servings, selectedDate]);
-
-  const performAutoSave = async () => {
-    if (isExplicitlySavedRef.current || isAutoSavingRef.current || isDiscardedRef.current) {
-      return;
-    }
-
-    const {
-      stagedItems: staged,
-      selectedFood: sel,
-      mealType: mType,
-      servings: serv,
-      selectedDate: sDate,
-    } = pendingDataRef.current;
-
-    const itemsToSave = [];
-
-    if (staged && staged.length > 0) {
-      staged.forEach((item) => {
-        const fId = item.food?._id || item.food?.id;
-        if (fId) {
-          itemsToSave.push({
-            date: sDate,
-            mealType: item.mealType || "Breakfast",
-            foodId: fId,
-            servings: Number(item.servings) || 1,
-            foodName: item.food?.name,
-          });
-        }
-      });
-    }
-
-    if (sel) {
-      const fId = sel._id || sel.id;
-      if (fId) {
-        itemsToSave.push({
-          date: sDate,
-          mealType: mType || "Breakfast",
-          foodId: fId,
-          servings: Number(serv) || 1,
-          foodName: sel.name,
-        });
-      }
-    }
-
-    if (itemsToSave.length === 0) return;
-
-    isAutoSavingRef.current = true;
-
-    try {
-      const token = localStorage.getItem("token");
-      const payload =
-        itemsToSave.length === 1
-          ? {
-              date: itemsToSave[0].date,
-              mealType: itemsToSave[0].mealType,
-              foodId: itemsToSave[0].foodId,
-              servings: itemsToSave[0].servings,
-            }
-          : {
-              items: itemsToSave.map(({ date, mealType, foodId, servings }) => ({
-                date,
-                mealType,
-                foodId,
-                servings,
-              })),
-            };
-
-      await fetch("/api/v1/dashboard/habit/food/log", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify(payload),
-        keepalive: true,
-      });
-
-      apiCache.invalidate("/habit");
-      apiCache.invalidate("/dashboard");
-
-      const count = itemsToSave.length;
-      const notificationMsg =
-        count === 1
-          ? `Auto-saved ${itemsToSave[0].foodName || "food item"}!`
-          : `Auto-saved ${count} food items!`;
-
-      window.dispatchEvent(
-        new CustomEvent("pulse-notify", {
-          detail: {
-            message: notificationMsg,
-            type: "success",
-            duration: 4000,
-          },
-        })
-      );
-
-      window.dispatchEvent(new CustomEvent("food-logs-updated"));
-      if (onFoodLogged) onFoodLogged();
-    } catch (err) {
-      console.error("Auto-save food entry error:", err);
-    }
-  };
-
   const handleClose = () => {
-    performAutoSave();
     onClose();
   };
 
   const handleDiscard = () => {
-    isDiscardedRef.current = true;
     setStagedItems([]);
     setSelectedFood(null);
+    setShowMobileQueue(false);
     onClose();
   };
-
-  const prevIsOpenRef = useRef(isOpen);
-  useEffect(() => {
-    if (prevIsOpenRef.current && !isOpen) {
-      performAutoSave();
-    }
-    if (!prevIsOpenRef.current && isOpen) {
-      isExplicitlySavedRef.current = false;
-      isAutoSavingRef.current = false;
-      isDiscardedRef.current = false;
-    }
-    prevIsOpenRef.current = isOpen;
-  }, [isOpen]);
-
-  useEffect(() => {
-    const handleBeforeUnload = () => {
-      performAutoSave();
-    };
-    window.addEventListener("beforeunload", handleBeforeUnload);
-    window.addEventListener("pagehide", handleBeforeUnload);
-
-    return () => {
-      window.removeEventListener("beforeunload", handleBeforeUnload);
-      window.removeEventListener("pagehide", handleBeforeUnload);
-      performAutoSave();
-    };
-  }, []);
 
   const handleLogAllStaged = async () => {
     if (stagedItems.length === 0) return;
     try {
       setLogLoading(true);
       setError("");
-      isExplicitlySavedRef.current = true;
       const itemsPayload = stagedItems.map((item) => ({
         date: selectedDate,
         mealType: item.mealType,
@@ -516,7 +367,6 @@ function LogFoodModal({ isOpen, onClose, selectedDate, initialMeal = "Breakfast"
       if (onFoodLogged) onFoodLogged();
       onClose();
     } catch (err) {
-      isExplicitlySavedRef.current = false;
       setError(err.response?.data?.message || "Failed to log queued food items.");
     } finally {
       setLogLoading(false);
@@ -528,7 +378,6 @@ function LogFoodModal({ isOpen, onClose, selectedDate, initialMeal = "Breakfast"
     try {
       setLogLoading(true);
       setError("");
-      isExplicitlySavedRef.current = true;
       await axiosInstance.post("/v1/dashboard/habit/food/log", {
         date: selectedDate,
         mealType,
@@ -549,7 +398,6 @@ function LogFoodModal({ isOpen, onClose, selectedDate, initialMeal = "Breakfast"
       if (onFoodLogged) onFoodLogged();
       onClose();
     } catch (err) {
-      isExplicitlySavedRef.current = false;
       setError(err.response?.data?.message || "Failed to log food item.");
     } finally {
       setLogLoading(false);
@@ -674,16 +522,16 @@ function LogFoodModal({ isOpen, onClose, selectedDate, initialMeal = "Breakfast"
           {/* Main Popup: Log Food Modal */}
           <div className="bg-base-200 rounded-2xl sm:rounded-3xl flex-1 h-full border border-base-300 shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200 min-w-0 max-w-5xl">
             {/* Header */}
-            <div className="p-3 sm:p-4 border-b border-base-300 flex justify-between items-center shrink-0">
+            <div className="p-2.5 sm:p-4 border-b border-base-300 flex justify-between items-center shrink-0">
               <div>
-                <h3 className="font-extrabold text-lg sm:text-xl flex items-center gap-2">
-                  <Utensils className="text-primary w-5 h-5 sm:w-6 sm:h-6" /> Log Food
+                <h3 className="font-extrabold text-sm sm:text-base md:text-xl flex items-center gap-1.5 sm:gap-2">
+                  <Utensils className="text-primary w-4 h-4 md:w-6 md:h-6" /> Log Food
                 </h3>
-                <p className="text-[11px] sm:text-xs text-base-content/70">
+                <p className="hidden md:block text-[11px] sm:text-xs text-base-content/70">
                   Search food database or pick from history to log into your daily intake.
                 </p>
               </div>
-              <button className="btn btn-sm btn-circle btn-ghost" onClick={handleClose} title="Close (auto-saves entered data)">
+              <button className="btn btn-xs sm:btn-sm btn-circle btn-ghost" onClick={handleClose} title="Close">
                 ✕
               </button>
             </div>
@@ -699,9 +547,9 @@ function LogFoodModal({ isOpen, onClose, selectedDate, initialMeal = "Breakfast"
 
               <div className="grid grid-cols-1 md:grid-cols-12 gap-3 sm:gap-4 flex-1 min-h-0 overflow-y-auto md:overflow-hidden">
                 {/* Left Column: Search, Filter & List (6 cols) */}
-                <div className="md:col-span-6 flex flex-col gap-3 min-h-[280px] md:h-full md:min-h-0 overflow-hidden">
-                  {/* Source Selection Tabs: Database vs Logged History */}
-                  <div className="tabs tabs-boxed bg-base-100 p-1 rounded-xl border border-base-300 shrink-0">
+                <div className={`${selectedFood || showMobileQueue ? "hidden md:flex" : "flex"} md:col-span-6 flex-col gap-2.5 md:gap-3 h-full md:min-h-0 overflow-hidden`}>
+                  {/* Desktop Tabs: Original exact styling restored */}
+                  <div className="hidden md:flex tabs tabs-boxed bg-base-100 p-1 rounded-xl border border-base-300 shrink-0">
                     <button
                       className={`tab tab-sm flex-1 font-bold text-xs gap-1.5 transition-all ${
                         sourceTab === "database" ? "tab-active bg-primary text-primary-content shadow-xs" : ""
@@ -717,6 +565,40 @@ function LogFoodModal({ isOpen, onClose, selectedDate, initialMeal = "Breakfast"
                       onClick={() => setSourceTab("history")}
                     >
                       <History size={14} /> Logged History
+                    </button>
+                  </div>
+
+                  {/* Mobile Tabs: Compact with Add Custom Food Icon */}
+                  <div className="flex md:hidden items-center gap-1.5 shrink-0">
+                    <div className="tabs tabs-boxed bg-base-100 p-0.5 rounded-lg border border-base-300 flex-1">
+                      <button
+                        className={`tab h-7 min-h-0 text-[11px] flex-1 font-bold gap-1 transition-all ${
+                          sourceTab === "database" ? "tab-active bg-primary text-primary-content shadow-xs" : ""
+                        }`}
+                        onClick={() => setSourceTab("database")}
+                      >
+                        <Search size={12} /> Database
+                      </button>
+                      <button
+                        className={`tab h-7 min-h-0 text-[11px] flex-1 font-bold gap-1 transition-all ${
+                          sourceTab === "history" ? "tab-active bg-primary text-primary-content shadow-xs" : ""
+                        }`}
+                        onClick={() => setSourceTab("history")}
+                      >
+                        <History size={12} /> History
+                      </button>
+                    </div>
+
+                    <button
+                      type="button"
+                      title="Add Custom Food"
+                      className="btn btn-xs btn-ghost border border-base-300 rounded-lg h-7 w-7 min-h-0 p-0 flex items-center justify-center text-primary hover:bg-primary/10 shrink-0"
+                      onClick={() => {
+                        onClose();
+                        onOpenCustomFoodModal();
+                      }}
+                    >
+                      <Plus size={14} />
                     </button>
                   </div>
 
@@ -769,29 +651,29 @@ function LogFoodModal({ isOpen, onClose, selectedDate, initialMeal = "Breakfast"
                             <div
                               key={food._id}
                               onClick={() => setSelectedFood(food)}
-                              className={`p-3 rounded-lg cursor-pointer transition-all flex justify-between items-center border ${
+                              className={`p-2 md:p-3 rounded-lg cursor-pointer transition-all flex justify-between items-center border ${
                                 isSelected
                                   ? "bg-primary/10 border-primary shadow-sm"
                                   : "bg-base-200/50 hover:bg-base-200 border-transparent"
                               }`}
                             >
-                              <div>
-                                <div className="font-semibold text-sm flex items-center gap-1.5">
-                                  {food.name}
+                              <div className="min-w-0 flex-1">
+                                <div className="font-semibold text-xs md:text-sm flex items-center gap-1.5 truncate">
+                                  <span className="truncate">{food.name}</span>
                                   {food.isCustom && (
-                                    <span className="badge badge-xs badge-secondary">Custom</span>
+                                    <span className="badge badge-xs badge-secondary shrink-0">Custom</span>
                                   )}
                                 </div>
-                                <div className="text-xs text-base-content/70 flex items-center gap-2 mt-0.5">
-                                  <span>{food.brand || "Generic"}</span>
+                                <div className="text-[10px] md:text-xs text-base-content/70 flex items-center gap-1.5 md:gap-2 mt-0.5">
+                                  <span className="truncate max-w-[80px] sm:max-w-none">{food.brand || "Generic"}</span>
                                   <span>•</span>
-                                  <span>{formatFoodPortionLabel(food)}</span>
+                                  <span className="truncate">{formatFoodPortionLabel(food)}</span>
                                 </div>
                               </div>
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-1.5 md:gap-2 shrink-0 ml-2">
                                 <div className="text-right">
-                                  <div className="font-bold text-sm text-primary">{food.calories} kcal</div>
-                                  <div className="text-[11px] text-base-content/60">
+                                  <div className="font-bold text-xs md:text-sm text-primary">{food.calories} kcal</div>
+                                  <div className="text-[10px] md:text-[11px] text-base-content/60">
                                     P:{food.protein}g | C:{food.carbohydrates}g | F:{food.fat}g
                                   </div>
                                 </div>
@@ -804,7 +686,7 @@ function LogFoodModal({ isOpen, onClose, selectedDate, initialMeal = "Breakfast"
                                     setDetailFoodItem(food);
                                   }}
                                 >
-                                  <Info size={16} />
+                                  <Info size={14} className="md:w-4 md:h-4" />
                                 </button>
                               </div>
                             </div>
@@ -942,29 +824,29 @@ function LogFoodModal({ isOpen, onClose, selectedDate, initialMeal = "Breakfast"
                             <div
                               key={yLog._id}
                               onClick={() => handleSelectYesterdayItem(yLog)}
-                              className={`p-3 rounded-lg cursor-pointer transition-all flex justify-between items-center border ${
+                              className={`p-2 md:p-3 rounded-lg cursor-pointer transition-all flex justify-between items-center border ${
                                 isSelected
                                   ? "bg-primary/10 border-primary shadow-sm"
                                   : "bg-base-200/50 hover:bg-base-200 border-transparent"
                               }`}
                             >
-                              <div>
-                                <div className="font-semibold text-sm flex items-center gap-1.5">
-                                  <span>{yLog.foodName || foodObj.name}</span>
+                              <div className="min-w-0 flex-1">
+                                <div className="font-semibold text-xs md:text-sm flex items-center gap-1.5 truncate">
+                                  <span className="truncate">{yLog.foodName || foodObj.name}</span>
                                   {yLog.mealType && (
-                                    <span className="badge badge-xs badge-outline badge-primary">
+                                    <span className="badge badge-xs badge-outline badge-primary shrink-0">
                                       {yLog.mealType}
                                     </span>
                                   )}
                                 </div>
-                                <div className="text-xs text-base-content/70 flex items-center gap-2 mt-0.5">
-                                  <span>{yLog.servings || 1} serving(s) ({formatFoodPortionLabel(yLog)})</span>
+                                <div className="text-[10px] md:text-xs text-base-content/70 flex items-center gap-1.5 md:gap-2 mt-0.5">
+                                  <span className="truncate">{yLog.servings || 1} serving(s) ({formatFoodPortionLabel(yLog)})</span>
                                 </div>
                               </div>
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-1.5 md:gap-2 shrink-0 ml-2">
                                 <div className="text-right">
-                                  <div className="font-bold text-sm text-primary">{yLog.calories} kcal</div>
-                                  <div className="text-[11px] text-base-content/60">
+                                  <div className="font-bold text-xs md:text-sm text-primary">{yLog.calories} kcal</div>
+                                  <div className="text-[10px] md:text-[11px] text-base-content/60">
                                     P:{yLog.protein}g | C:{yLog.carbohydrates}g | F:{yLog.fat}g
                                   </div>
                                 </div>
@@ -977,7 +859,8 @@ function LogFoodModal({ isOpen, onClose, selectedDate, initialMeal = "Breakfast"
                   </div>
                 )}
 
-                <div className="text-center pt-1 shrink-0">
+                {/* Desktop Only: Middle Custom Food Link (Hidden on Phone View) */}
+                <div className="text-center pt-1 shrink-0 hidden md:block">
                   <button
                     className="btn btn-xs btn-ghost text-primary hover:underline gap-1"
                     onClick={() => {
@@ -988,10 +871,58 @@ function LogFoodModal({ isOpen, onClose, selectedDate, initialMeal = "Breakfast"
                     <Sparkles size={14} /> Can't find food? Add custom food to Database
                   </button>
                 </div>
+
+                {/* Mobile Only: Bottom Queue Summary Bar when items are queued */}
+                {stagedItems.length > 0 && (
+                  <div className="md:hidden p-2 rounded-xl bg-base-100 border border-primary/20 shadow-xs flex items-center justify-between shrink-0 mt-auto">
+                    <div className="flex items-center gap-1.5">
+                      <span className="badge badge-xs badge-secondary font-bold">
+                        {stagedItems.length} queued
+                      </span>
+                      <span className="text-[11px] font-bold text-base-content/80">
+                        {stagedItems.reduce((acc, item) => acc + item.calories, 0)} kcal
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        className="btn btn-xs btn-ghost border border-base-300 font-bold text-[11px] px-2 h-6 min-h-0"
+                        onClick={() => setShowMobileQueue(true)}
+                      >
+                        View Queue
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-xs btn-success text-white font-bold text-[11px] px-2 h-6 min-h-0"
+                        disabled={logLoading}
+                        onClick={handleLogAllStaged}
+                      >
+                        Log All
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Right Column: Logging Details & Batch Queue (6 cols) */}
-              <div className="md:col-span-6 bg-base-100 rounded-xl p-3 sm:p-4 border border-base-300 flex flex-col justify-between min-h-[300px] md:h-full md:min-h-0 overflow-y-auto">
+              <div className={`${selectedFood || showMobileQueue ? "flex" : "hidden md:flex"} md:col-span-6 bg-base-100 rounded-xl p-3 sm:p-4 border border-base-300 flex-col justify-between h-full md:min-h-0 overflow-y-auto`}>
+                {/* Mobile Only: Back to Food List Navigation Header */}
+                <div className="md:hidden flex items-center justify-between pb-2 mb-2 border-b border-base-300 shrink-0">
+                  <button
+                    type="button"
+                    className="btn btn-xs btn-ghost gap-1 font-bold text-base-content/80 hover:text-base-content px-1.5 -ml-1"
+                    onClick={() => {
+                      setSelectedFood(null);
+                      setShowMobileQueue(false);
+                    }}
+                  >
+                    <ChevronLeft size={16} /> Back to Foods
+                  </button>
+                  <span className="text-[11px] font-bold text-primary">
+                    {selectedFood ? "Edit Serving" : `Queued Items (${stagedItems.length})`}
+                  </span>
+                </div>
+
                 <div className="space-y-4 flex-1 min-h-0 overflow-y-auto">
                   {selectedFood ? (
                     <>

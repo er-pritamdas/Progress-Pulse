@@ -66,53 +66,73 @@ const monthNamesList = [
 const CATEGORY_THEMES = [
   {
     color: "text-cyan-500",
-    activeBorder: "border border-cyan-500/50 dark:border-cyan-500/40",
-    activeDot: "bg-cyan-500 ring-2 ring-cyan-500/30",
+    activeBorder: "border-cyan-500/50 dark:border-cyan-500/40",
+    activeBg: "bg-cyan-500/[0.05] dark:bg-cyan-500/[0.08]",
+    activeDot: "bg-cyan-500",
+    badgeClass: "bg-cyan-500/15 text-cyan-600 dark:text-cyan-400",
   },
   {
     color: "text-amber-500",
-    activeBorder: "border border-amber-500/50 dark:border-amber-500/40",
-    activeDot: "bg-amber-500 ring-2 ring-amber-500/30",
+    activeBorder: "border-amber-500/50 dark:border-amber-500/40",
+    activeBg: "bg-amber-500/[0.05] dark:bg-amber-500/[0.08]",
+    activeDot: "bg-amber-500",
+    badgeClass: "bg-amber-500/15 text-amber-600 dark:text-amber-400",
   },
   {
     color: "text-violet-500",
-    activeBorder: "border border-violet-500/50 dark:border-violet-500/40",
-    activeDot: "bg-violet-500 ring-2 ring-violet-500/30",
+    activeBorder: "border-violet-500/50 dark:border-violet-500/40",
+    activeBg: "bg-violet-500/[0.05] dark:bg-violet-500/[0.08]",
+    activeDot: "bg-violet-500",
+    badgeClass: "bg-violet-500/15 text-violet-600 dark:text-violet-400",
   },
   {
     color: "text-sky-500",
-    activeBorder: "border border-sky-500/50 dark:border-sky-500/40",
-    activeDot: "bg-sky-500 ring-2 ring-sky-500/30",
+    activeBorder: "border-sky-500/50 dark:border-sky-500/40",
+    activeBg: "bg-sky-500/[0.05] dark:bg-sky-500/[0.08]",
+    activeDot: "bg-sky-500",
+    badgeClass: "bg-sky-500/15 text-sky-600 dark:text-sky-400",
   },
   {
     color: "text-fuchsia-500",
-    activeBorder: "border border-fuchsia-500/50 dark:border-fuchsia-500/40",
-    activeDot: "bg-fuchsia-500 ring-2 ring-fuchsia-500/30",
+    activeBorder: "border-fuchsia-500/50 dark:border-fuchsia-500/40",
+    activeBg: "bg-fuchsia-500/[0.05] dark:bg-fuchsia-500/[0.08]",
+    activeDot: "bg-fuchsia-500",
+    badgeClass: "bg-fuchsia-500/15 text-fuchsia-600 dark:text-fuchsia-400",
   },
   {
     color: "text-emerald-500",
-    activeBorder: "border border-emerald-500/50 dark:border-emerald-500/40",
-    activeDot: "bg-emerald-500 ring-2 ring-emerald-500/30",
+    activeBorder: "border-emerald-500/50 dark:border-emerald-500/40",
+    activeBg: "bg-emerald-500/[0.05] dark:bg-emerald-500/[0.08]",
+    activeDot: "bg-emerald-500",
+    badgeClass: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400",
   },
   {
     color: "text-pink-500",
-    activeBorder: "border border-pink-500/50 dark:border-pink-500/40",
-    activeDot: "bg-pink-500 ring-2 ring-pink-500/30",
+    activeBorder: "border-pink-500/50 dark:border-pink-500/40",
+    activeBg: "bg-pink-500/[0.05] dark:bg-pink-500/[0.08]",
+    activeDot: "bg-pink-500",
+    badgeClass: "bg-pink-500/15 text-pink-600 dark:text-pink-400",
   },
   {
     color: "text-blue-500",
-    activeBorder: "border border-blue-500/50 dark:border-blue-500/40",
-    activeDot: "bg-blue-500 ring-2 ring-blue-500/30",
+    activeBorder: "border-blue-500/50 dark:border-blue-500/40",
+    activeBg: "bg-blue-500/[0.05] dark:bg-blue-500/[0.08]",
+    activeDot: "bg-blue-500",
+    badgeClass: "bg-blue-500/15 text-blue-600 dark:text-blue-400",
   },
   {
     color: "text-orange-500",
-    activeBorder: "border border-orange-500/50 dark:border-orange-500/40",
-    activeDot: "bg-orange-500 ring-2 ring-orange-500/30",
+    activeBorder: "border-orange-500/50 dark:border-orange-500/40",
+    activeBg: "bg-orange-500/[0.05] dark:bg-orange-500/[0.08]",
+    activeDot: "bg-orange-500",
+    badgeClass: "bg-orange-500/15 text-orange-600 dark:text-orange-400",
   },
   {
     color: "text-teal-500",
-    activeBorder: "border border-teal-500/50 dark:border-teal-500/40",
-    activeDot: "bg-teal-500 ring-2 ring-teal-500/30",
+    activeBorder: "border-teal-500/50 dark:border-teal-500/40",
+    activeBg: "bg-teal-500/[0.05] dark:bg-teal-500/[0.08]",
+    activeDot: "bg-teal-500",
+    badgeClass: "bg-teal-500/15 text-teal-600 dark:text-teal-400",
   },
 ];
 
@@ -398,7 +418,7 @@ const ExpDashboard = () => {
   // Clean name for selected category
   const categoryCleanName = isSalaryMode ? "Salary" : isCreditCardMode ? "Credit Cards Expenses" : (selectedCategory ? selectedCategory.name : "Category");
 
-  // Mobile Category / Mode Carousel Tabs
+  // Mobile & Sticky Category Carousel Tabs
   const mobileTabs = useMemo(() => {
     return [
       {
@@ -406,16 +426,20 @@ const ExpDashboard = () => {
         label: "Salary / Income",
         icon: Banknote,
         color: "text-emerald-500",
-        activeBorder: "border border-emerald-500/50 dark:border-emerald-500/40",
-        activeDot: "bg-emerald-500 ring-2 ring-emerald-500/30",
+        activeBorder: "border-emerald-500/50 dark:border-emerald-500/40",
+        activeBg: "bg-emerald-500/[0.05] dark:bg-emerald-500/[0.08]",
+        activeDot: "bg-emerald-500",
+        badgeClass: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400",
       },
       {
         id: "CREDIT_CARDS",
         label: "Credit Cards",
         icon: CreditCard,
         color: "text-rose-500",
-        activeBorder: "border border-rose-500/50 dark:border-rose-500/40",
-        activeDot: "bg-rose-500 ring-2 ring-rose-500/30",
+        activeBorder: "border-rose-500/50 dark:border-rose-500/40",
+        activeBg: "bg-rose-500/[0.05] dark:bg-rose-500/[0.08]",
+        activeDot: "bg-rose-500",
+        badgeClass: "bg-rose-500/15 text-rose-600 dark:text-rose-400",
       },
       ...availableCategories.map((cat, idx) => {
         const theme = CATEGORY_THEMES[idx % CATEGORY_THEMES.length];
@@ -425,7 +449,9 @@ const ExpDashboard = () => {
           icon: Folder,
           color: theme.color,
           activeBorder: theme.activeBorder,
+          activeBg: theme.activeBg,
           activeDot: theme.activeDot,
+          badgeClass: theme.badgeClass,
         };
       }),
     ];
@@ -718,8 +744,16 @@ const ExpDashboard = () => {
   }, [sources, transactions]);
 
   const cardColorPalette = useMemo(() => [
-    "#ef4444", "#8b5cf6", "#3b82f6", "#f59e0b", "#06b6d4",
-    "#ec4899", "#10b981", "#6366f1", "#14b8a6", "#e11d48"
+    "#818cf8", // Soft Indigo
+    "#38bdf8", // Soft Sky Blue
+    "#2dd4bf", // Soft Teal
+    "#fbbf24", // Soft Amber
+    "#f472b6", // Soft Rose/Pink
+    "#a78bfa", // Soft Violet/Purple
+    "#34d399", // Soft Emerald
+    "#fb923c", // Soft Orange
+    "#60a5fa", // Soft Cobalt
+    "#f87171", // Soft Coral
   ], []);
 
   const cardColorMap = useMemo(() => {
@@ -1707,6 +1741,10 @@ const ExpDashboard = () => {
         width: 2,
         colors: ["#1e293b"],
       },
+      fill: {
+        type: "solid",
+        opacity: 0.8,
+      },
       dataLabels: {
         enabled: true,
         formatter: function (val) {
@@ -1714,10 +1752,18 @@ const ExpDashboard = () => {
         },
         style: {
           fontSize: "11px",
-          fontWeight: "700",
+          fontFamily: "monospace",
+          fontWeight: "800",
           colors: ["#ffffff"],
         },
-        dropShadow: { enabled: false },
+        dropShadow: {
+          enabled: true,
+          top: 1,
+          left: 1,
+          blur: 3,
+          color: "#000000",
+          opacity: 0.95,
+        },
       },
       plotOptions: {
         pie: {
@@ -1875,8 +1921,12 @@ const ExpDashboard = () => {
       colors: creditCardDonutData.colors,
       stroke: {
         show: true,
-        width: 2,
-        colors: ["#1e293b"],
+        width: 2.5,
+        colors: ["#0f172a"],
+      },
+      fill: {
+        type: "solid",
+        opacity: 0.8,
       },
       dataLabels: {
         enabled: true,
@@ -1884,11 +1934,19 @@ const ExpDashboard = () => {
           return Number(val) >= 4 ? `${Math.round(val)}%` : "";
         },
         style: {
-          fontSize: "11px",
-          fontWeight: "700",
+          fontSize: "12px",
+          fontFamily: "monospace",
+          fontWeight: "800",
           colors: ["#ffffff"],
         },
-        dropShadow: { enabled: false },
+        dropShadow: {
+          enabled: true,
+          top: 1,
+          left: 1,
+          blur: 3,
+          color: "#000000",
+          opacity: 0.95,
+        },
       },
       plotOptions: {
         pie: {
@@ -2092,9 +2150,9 @@ const ExpDashboard = () => {
   const isInvalidRange = fromMonthStr > toMonthStr;
 
   return (
-    <div className="w-full space-y-6 pb-20">
-      {/* Desktop Sticky Header (md and up: 100% original & untouched) */}
-      <div className="hidden md:block sticky top-[-17px] z-40 bg-base-100/95 backdrop-blur-md shadow-md border-b border-base-300/40 -mx-4 px-4 py-2 mt-[-16px]">
+    <div className="w-full pb-20">
+      {/* Desktop Sticky Header (md and up) */}
+      <div className="hidden md:block sticky top-0 z-40 bg-base-100/95 backdrop-blur-md shadow-md border-b border-base-300/40 px-4 py-2">
         <div className="flex items-center justify-between p-3 flex-wrap gap-3 max-w-[1600px] mx-auto px-4 md:px-6">
           {/* Left: Category Dropdown & Title */}
           <div className="flex items-center gap-1.5 flex-wrap">
@@ -2257,7 +2315,7 @@ const ExpDashboard = () => {
       </div>
 
       {/* Sticky Header - Mobile Phone View (Hidden on Desktop) */}
-      <div className="block md:hidden sticky top-[-17px] -mt-2 pt-2 z-40 bg-base-100/95 dark:bg-base-900/95 backdrop-blur-md border-b border-base-300 -mx-2 px-3 py-2 shadow-xs space-y-2">
+      <div className="block md:hidden sticky top-0 z-40 bg-base-100/95 dark:bg-base-900/95 backdrop-blur-md border-b border-base-300 px-3 py-2 shadow-xs space-y-2">
         {/* Row 1: Active Category Badge + Privacy Eye Toggle + Compact Date Filter Button */}
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-base-200 border border-base-300/60 shadow-xs min-w-0">
@@ -2292,7 +2350,7 @@ const ExpDashboard = () => {
           </div>
         </div>
 
-        {/* Row 2: Horizontal Scrollable Rectangular Category Boxes (No background, thin low-opacity borders) */}
+        {/* Row 2: Horizontal Scrollable Category Boxes with Watermark Background Icon */}
         <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 -mx-1 px-1">
           {mobileTabs.map((tab) => {
             const Icon = tab.icon;
@@ -2302,34 +2360,51 @@ const ExpDashboard = () => {
                 key={tab.id}
                 type="button"
                 onClick={() => setSelectedCatId(tab.id)}
-                className={`shrink-0 min-w-[96px] max-w-[125px] h-13 rounded-xl transition-all cursor-pointer flex flex-col justify-between p-2 text-left select-none bg-transparent ${
+                className={`group relative shrink-0 min-w-[100px] max-w-[130px] h-14 rounded-2xl transition-all duration-200 cursor-pointer flex flex-col justify-between p-2.5 text-left select-none overflow-hidden ${
                   isActive
-                    ? `${tab.activeBorder} shadow-xs`
-                    : "border border-base-content/10 hover:border-base-content/20"
+                    ? `border ${tab.activeBorder} ${tab.activeBg} shadow-2xs scale-[1.01]`
+                    : "border border-base-content/8 hover:border-base-content/15 bg-base-100/50 dark:bg-base-200/25 hover:bg-base-200/50 shadow-2xs"
                 }`}
               >
-                {/* Foreground Header / Small Active Dot & Icon */}
-                <div className="flex items-center justify-between w-full">
+                {/* Enlarged Watermark Background Icon */}
+                <div className="absolute -right-2 -bottom-2.5 pointer-events-none select-none transition-transform duration-300 group-hover:scale-110 group-active:scale-95">
                   <Icon
-                    className={`w-3.5 h-3.5 ${
-                      isActive ? tab.color : `${tab.color} opacity-70`
+                    size={52}
+                    strokeWidth={1.5}
+                    className={`transition-all duration-200 ${
+                      isActive
+                        ? `${tab.color} opacity-20 dark:opacity-25`
+                        : "text-base-content opacity-10 dark:opacity-12 group-hover:opacity-16"
+                    }`}
+                  />
+                </div>
+
+                {/* Top: Status indicator & Category Badge */}
+                <div className="flex items-center justify-between z-10">
+                  <span
+                    className={`w-1.5 h-1.5 rounded-full transition-all ${
+                      isActive
+                        ? `${tab.activeDot} ring-2 ring-current/20 scale-110`
+                        : "bg-base-content/30"
                     }`}
                   />
                   {isActive && (
-                    <span className={`w-1.5 h-1.5 rounded-full ${tab.activeDot} animate-pulse`} />
+                    <span className={`badge badge-2xs text-[9px] font-black tracking-tight px-1 py-0.5 rounded-md border-0 ${tab.badgeClass}`}>
+                      Active
+                    </span>
                   )}
                 </div>
 
-                {/* Foreground Label */}
-                <span
-                  className={`text-[11px] leading-tight truncate w-full ${
-                    isActive
-                      ? "font-bold text-base-content"
-                      : "font-medium text-base-content/60"
-                  }`}
-                >
-                  {tab.label}
-                </span>
+                {/* Bottom: Label */}
+                <div className="z-10 leading-none">
+                  <span
+                    className={`text-xs font-black tracking-tight block truncate transition-colors ${
+                      isActive ? tab.color : "text-base-content/85 group-hover:text-base-content"
+                    }`}
+                  >
+                    {tab.label}
+                  </span>
+                </div>
               </button>
             );
           })}
@@ -2507,7 +2582,7 @@ const ExpDashboard = () => {
       )}
 
 
-      <div className="px-0 sm:px-4 md:px-6 w-full max-w-[1600px] mx-auto space-y-3.5 sm:space-y-4 md:space-y-6">
+      <div className="px-0 sm:px-4 md:px-6 w-full max-w-[1600px] mx-auto space-y-3.5 sm:space-y-4 md:space-y-6 mt-4">
 
       
       {isInvalidRange && (
@@ -2612,7 +2687,7 @@ const ExpDashboard = () => {
                   <button
                     className={`px-4 py-2 text-xs font-extrabold rounded-xl transition-all flex items-center gap-2 cursor-pointer ${
                       cardViewTab === "graph"
-                        ? "bg-primary text-primary-content shadow-sm"
+                        ? "bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30 shadow-xs"
                         : "text-base-content/70 hover:text-base-content hover:bg-base-300/50"
                     }`}
                     onClick={() => setCardViewTab("graph")}
@@ -2622,7 +2697,7 @@ const ExpDashboard = () => {
                   <button
                     className={`px-4 py-2 text-xs font-extrabold rounded-xl transition-all flex items-center gap-2 cursor-pointer ${
                       cardViewTab === "table"
-                        ? "bg-primary text-primary-content shadow-sm"
+                        ? "bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30 shadow-xs"
                         : "text-base-content/70 hover:text-base-content hover:bg-base-300/50"
                     }`}
                     onClick={() => setCardViewTab("table")}
@@ -2945,7 +3020,9 @@ const ExpDashboard = () => {
               <button
                 className={`px-4 py-2 text-xs font-extrabold rounded-xl transition-all flex items-center gap-2 cursor-pointer ${
                   mainCategoryTab === "graph"
-                    ? "bg-primary text-primary-content shadow-sm"
+                    ? isSalaryMode
+                      ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 shadow-xs"
+                      : "bg-primary/15 text-primary border border-primary/30 shadow-xs"
                     : "text-base-content/70 hover:text-base-content hover:bg-base-300/50"
                 }`}
                 onClick={() => setMainCategoryTab("graph")}
@@ -2955,7 +3032,9 @@ const ExpDashboard = () => {
               <button
                 className={`px-4 py-2 text-xs font-extrabold rounded-xl transition-all flex items-center gap-2 cursor-pointer ${
                   mainCategoryTab === "table"
-                    ? "bg-primary text-primary-content shadow-sm"
+                    ? isSalaryMode
+                      ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 shadow-xs"
+                      : "bg-primary/15 text-primary border border-primary/30 shadow-xs"
                     : "text-base-content/70 hover:text-base-content hover:bg-base-300/50"
                 }`}
                 onClick={() => setMainCategoryTab("table")}
@@ -3167,7 +3246,7 @@ const ExpDashboard = () => {
               <button
                 className={`px-4 py-2 text-xs font-extrabold rounded-xl transition-all flex items-center gap-2 cursor-pointer ${
                   subCategoryTab === "graph"
-                    ? "bg-secondary text-secondary-content shadow-sm"
+                    ? "bg-secondary/15 text-secondary border border-secondary/30 shadow-xs"
                     : "text-base-content/70 hover:text-base-content hover:bg-base-300/50"
                 }`}
                 onClick={() => setSubCategoryTab("graph")}
@@ -3177,7 +3256,7 @@ const ExpDashboard = () => {
               <button
                 className={`px-4 py-2 text-xs font-extrabold rounded-xl transition-all flex items-center gap-2 cursor-pointer ${
                   subCategoryTab === "table"
-                    ? "bg-secondary text-secondary-content shadow-sm"
+                    ? "bg-secondary/15 text-secondary border border-secondary/30 shadow-xs"
                     : "text-base-content/70 hover:text-base-content hover:bg-base-300/50"
                 }`}
                 onClick={() => setSubCategoryTab("table")}

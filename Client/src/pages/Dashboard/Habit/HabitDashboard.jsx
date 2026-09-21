@@ -57,64 +57,80 @@ function HabitDashboard() {
       label: "Calorie",
       icon: Flame,
       color: "text-red-500",
-      activeBorder: "border border-red-500/50 dark:border-red-500/40",
-      activeDot: "bg-red-500 ring-2 ring-red-500/30",
+      activeBorder: "border-red-500/50 dark:border-red-500/40",
+      activeBg: "bg-red-500/[0.05] dark:bg-red-500/[0.08]",
+      activeDot: "bg-red-500",
+      badgeClass: "bg-red-500/15 text-red-600 dark:text-red-400",
     },
     {
       id: "water",
       label: "Water",
       icon: Droplet,
       color: "text-sky-500",
-      activeBorder: "border border-sky-500/50 dark:border-sky-500/40",
-      activeDot: "bg-sky-500 ring-2 ring-sky-500/30",
+      activeBorder: "border-sky-500/50 dark:border-sky-500/40",
+      activeBg: "bg-sky-500/[0.05] dark:bg-sky-500/[0.08]",
+      activeDot: "bg-sky-500",
+      badgeClass: "bg-sky-500/15 text-sky-600 dark:text-sky-400",
     },
     {
       id: "sleep",
       label: "Sleep",
       icon: Moon,
       color: "text-indigo-500",
-      activeBorder: "border border-indigo-500/50 dark:border-indigo-500/40",
-      activeDot: "bg-indigo-500 ring-2 ring-indigo-500/30",
+      activeBorder: "border-indigo-500/50 dark:border-indigo-500/40",
+      activeBg: "bg-indigo-500/[0.05] dark:bg-indigo-500/[0.08]",
+      activeDot: "bg-indigo-500",
+      badgeClass: "bg-indigo-500/15 text-indigo-600 dark:text-indigo-400",
     },
     {
       id: "read",
       label: "Read",
       icon: BookOpen,
       color: "text-amber-500",
-      activeBorder: "border border-amber-500/50 dark:border-amber-500/40",
-      activeDot: "bg-amber-500 ring-2 ring-amber-500/30",
+      activeBorder: "border-amber-500/50 dark:border-amber-500/40",
+      activeBg: "bg-amber-500/[0.05] dark:bg-amber-500/[0.08]",
+      activeDot: "bg-amber-500",
+      badgeClass: "bg-amber-500/15 text-amber-600 dark:text-amber-400",
     },
     {
       id: "selfcare",
       label: "Self Care",
       icon: Heart,
       color: "text-rose-500",
-      activeBorder: "border border-rose-500/50 dark:border-rose-500/40",
-      activeDot: "bg-rose-500 ring-2 ring-rose-500/30",
+      activeBorder: "border-rose-500/50 dark:border-rose-500/40",
+      activeBg: "bg-rose-500/[0.05] dark:bg-rose-500/[0.08]",
+      activeDot: "bg-rose-500",
+      badgeClass: "bg-rose-500/15 text-rose-600 dark:text-rose-400",
     },
     {
       id: "mood",
       label: "Mood",
       icon: Smile,
       color: "text-purple-500",
-      activeBorder: "border border-purple-500/50 dark:border-purple-500/40",
-      activeDot: "bg-purple-500 ring-2 ring-purple-500/30",
+      activeBorder: "border-purple-500/50 dark:border-purple-500/40",
+      activeBg: "bg-purple-500/[0.05] dark:bg-purple-500/[0.08]",
+      activeDot: "bg-purple-500",
+      badgeClass: "bg-purple-500/15 text-purple-600 dark:text-purple-400",
     },
     {
       id: "scores",
       label: "Scores",
       icon: Trophy,
-      color: "text-amber-500",
-      activeBorder: "border border-amber-500/50 dark:border-amber-500/40",
-      activeDot: "bg-amber-500 ring-2 ring-amber-500/30",
+      color: "text-yellow-500",
+      activeBorder: "border-yellow-500/50 dark:border-yellow-500/40",
+      activeBg: "bg-yellow-500/[0.05] dark:bg-yellow-500/[0.08]",
+      activeDot: "bg-yellow-500",
+      badgeClass: "bg-yellow-500/15 text-yellow-600 dark:text-yellow-400",
     },
     {
       id: "nutrients",
       label: "Nutrients",
       icon: Apple,
       color: "text-emerald-500",
-      activeBorder: "border border-emerald-500/50 dark:border-emerald-500/40",
-      activeDot: "bg-emerald-500 ring-2 ring-emerald-500/30",
+      activeBorder: "border-emerald-500/50 dark:border-emerald-500/40",
+      activeBg: "bg-emerald-500/[0.05] dark:bg-emerald-500/[0.08]",
+      activeDot: "bg-emerald-500",
+      badgeClass: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400",
     },
   ];
 
@@ -241,11 +257,11 @@ function HabitDashboard() {
 
 
   return (
-    <>
+    <div className="w-full pb-20">
       {/* Sticky Heading - Desktop View (Hidden on Phone) */}
-      <div className="hidden md:block sticky top-[-20px] z-30 bg-opacity-90 backdrop-blur-md shadow-sm border-b border-base-300/30">
+      <div className="hidden md:block sticky top-0 z-40 bg-base-100/95 backdrop-blur-md shadow-md border-b border-base-300/40 px-4 py-2">
         {/* Top Row: Heading and Filter Controls */}
-        <div className="flex items-center justify-between p-3 flex-wrap gap-3">
+        <div className="flex items-center justify-between p-3 flex-wrap gap-3 max-w-[1600px] mx-auto px-4 md:px-6">
           <div className="flex items-center gap-1.5 flex-wrap">
             <div className="dropdown dropdown-bottom">
               <div
@@ -429,7 +445,7 @@ function HabitDashboard() {
       </div>
 
       {/* Sticky Header - Mobile Phone View (Hidden on Desktop) */}
-      <div className="block md:hidden sticky top-0 z-30 bg-base-100/95 backdrop-blur-md border-b border-base-300 px-3 py-2 shadow-xs space-y-2">
+      <div className="block md:hidden sticky top-0 z-40 bg-base-100/95 dark:bg-base-900/95 backdrop-blur-md border-b border-base-300 px-3 py-2 shadow-xs space-y-2">
         {/* Row 1: Active Category Badge + Compact Date Filter Button */}
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-base-200 border border-base-300/60 shadow-xs">
@@ -451,7 +467,7 @@ function HabitDashboard() {
           </button>
         </div>
 
-        {/* Row 2: Horizontal Scrollable Rectangular Category Boxes (No background, thin low-opacity borders) */}
+        {/* Row 2: Horizontal Scrollable Category Boxes with Watermark Background Icon (Phone View Only) */}
         <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 -mx-1 px-1">
           {DASHBOARD_TABS.map((tab) => {
             const Icon = tab.icon;
@@ -461,34 +477,51 @@ function HabitDashboard() {
                 key={tab.id}
                 type="button"
                 onClick={() => setActiveTab(tab.id)}
-                className={`shrink-0 w-24 h-13 rounded-xl transition-all cursor-pointer flex flex-col justify-between p-2 text-left select-none bg-transparent ${
+                className={`group relative shrink-0 min-w-[100px] max-w-[130px] h-14 rounded-2xl transition-all duration-200 cursor-pointer flex flex-col justify-between p-2.5 text-left select-none overflow-hidden ${
                   isActive
-                    ? `${tab.activeBorder} shadow-xs`
-                    : "border border-base-content/10 hover:border-base-content/20"
+                    ? `border ${tab.activeBorder} ${tab.activeBg} shadow-2xs scale-[1.01]`
+                    : "border border-base-content/8 hover:border-base-content/15 bg-base-100/50 dark:bg-base-200/25 hover:bg-base-200/50 shadow-2xs"
                 }`}
               >
-                {/* Foreground Header / Small Active Dot & Icon */}
-                <div className="flex items-center justify-between w-full">
+                {/* Enlarged Watermark Background Icon */}
+                <div className="absolute -right-2 -bottom-2.5 pointer-events-none select-none transition-transform duration-300 group-hover:scale-110 group-active:scale-95">
                   <Icon
-                    className={`w-3.5 h-3.5 ${
-                      isActive ? tab.color : `${tab.color} opacity-70`
+                    size={52}
+                    strokeWidth={1.5}
+                    className={`transition-all duration-200 ${
+                      isActive
+                        ? `${tab.color} opacity-20 dark:opacity-25`
+                        : "text-base-content opacity-10 dark:opacity-12 group-hover:opacity-16"
+                    }`}
+                  />
+                </div>
+
+                {/* Top: Status indicator & Category Badge */}
+                <div className="flex items-center justify-between z-10">
+                  <span
+                    className={`w-1.5 h-1.5 rounded-full transition-all ${
+                      isActive
+                        ? `${tab.activeDot} ring-2 ring-current/20 scale-110`
+                        : "bg-base-content/30"
                     }`}
                   />
                   {isActive && (
-                    <span className={`w-1.5 h-1.5 rounded-full ${tab.activeDot} animate-pulse`} />
+                    <span className={`badge badge-2xs text-[9px] font-black tracking-tight px-1 py-0.5 rounded-md border-0 ${tab.badgeClass}`}>
+                      Active
+                    </span>
                   )}
                 </div>
 
-                {/* Foreground Label */}
-                <span
-                  className={`text-[11px] leading-tight truncate ${
-                    isActive
-                      ? "font-bold text-base-content"
-                      : "font-medium text-base-content/60"
-                  }`}
-                >
-                  {tab.label}
-                </span>
+                {/* Bottom: Label */}
+                <div className="z-10 leading-none">
+                  <span
+                    className={`text-xs font-black tracking-tight block truncate transition-colors ${
+                      isActive ? tab.color : "text-base-content/85 group-hover:text-base-content"
+                    }`}
+                  >
+                    {tab.label}
+                  </span>
+                </div>
               </button>
             );
           })}
@@ -702,7 +735,7 @@ function HabitDashboard() {
         </div>
       )}
 
-      <div className="w-full h-full overflow-y-auto overflow-x-hidden p-2 sm:p-4 md:p-6 bg-base-200">
+      <div className="px-2 sm:px-4 md:px-6 w-full max-w-[1600px] mx-auto space-y-3.5 sm:space-y-4 md:space-y-6 mt-4">
       {dashboardLoading ? (
         <div className="h-[60vh] flex items-center justify-center">
           <span className="loading loading-spinner loading-lg text-primary"></span>
@@ -856,7 +889,7 @@ function HabitDashboard() {
           </div>
       )}
       </div>
-    </>
+    </div>
   );
 }
 

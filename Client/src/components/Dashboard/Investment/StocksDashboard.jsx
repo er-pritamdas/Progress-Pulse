@@ -431,6 +431,15 @@ export default function StocksDashboard({
       },
       labels: unifiedChartData.labels,
       colors: unifiedChartData.colors,
+      fill: {
+        type: "solid",
+        opacity: 0.8,
+      },
+      stroke: {
+        show: true,
+        width: 2,
+        colors: ["#1e293b"],
+      },
       plotOptions: {
         pie: {
           donut: {

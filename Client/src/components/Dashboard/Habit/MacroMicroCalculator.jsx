@@ -714,9 +714,9 @@ const MacroMicroCalculator = ({ maintenanceCalories, age, gender }) => {
           </div>
 
           {/* ── Phone View (block md:hidden) — Separate Macros & Micros, No Tabs ── */}
-          <div className="block md:hidden space-y-4 mt-0 w-full">
+          <div className="block md:hidden space-y-4 mt-0 w-full max-w-full overflow-x-hidden">
             {/* ═══ SECTION 1: MACRO TARGETS & SINGLE HORIZONTAL INTERACTIVE PROGRESS BAR ═══ */}
-            <div className="bg-base-100 rounded-2xl p-3.5 border border-base-content/10 shadow-xs space-y-3.5 w-full">
+            <div className="bg-base-100 rounded-2xl p-3.5 border border-base-content/10 shadow-xs space-y-3.5 w-full overflow-hidden">
               {/* Header */}
               <div className="flex items-center justify-between border-b border-base-200/80 pb-2">
                 <div className="min-w-0">
@@ -771,7 +771,7 @@ const MacroMicroCalculator = ({ maintenanceCalories, age, gender }) => {
 
                   {/* Divider Handle 1 (Between Protein and Carbs) */}
                   <div
-                    style={{ left: `${ratios.protein}%` }}
+                    style={{ left: `${Math.min(Math.max(ratios.protein, 3), 97)}%` }}
                     className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 z-20 cursor-col-resize touch-none px-2 py-1 h-11 flex items-center justify-center select-none"
                     onPointerDown={(e) => handlePointerDown(1, e)}
                     title="Drag to change Protein & Carbs ratio"
@@ -800,7 +800,7 @@ const MacroMicroCalculator = ({ maintenanceCalories, age, gender }) => {
 
                   {/* Divider Handle 2 (Between Carbs and Fats) */}
                   <div
-                    style={{ left: `${ratios.protein + ratios.carbs}%` }}
+                    style={{ left: `${Math.min(Math.max(ratios.protein + ratios.carbs, 3), 97)}%` }}
                     className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 z-20 cursor-col-resize touch-none px-2 py-1 h-11 flex items-center justify-center select-none"
                     onPointerDown={(e) => handlePointerDown(2, e)}
                     title="Drag to change Carbs & Fats ratio"
