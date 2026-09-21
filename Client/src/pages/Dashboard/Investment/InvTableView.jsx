@@ -54,7 +54,7 @@ const ASSET_THEMES = {
     barColor: "bg-emerald-500",
     icon: Landmark,
     link: "/dashboard/expense/table-entry",
-    linkText: "Expense Table Entry",
+    linkText: "Expenses",
   },
   demat: {
     label: "Demat Holdings",

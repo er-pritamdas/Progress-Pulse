@@ -16,6 +16,9 @@ export default function ThemedBreadcrumbs() {
   };
 
   const subCategoryIcon = {
+    'Expenses': <Grid2x2Plus className="w-4 h-4" />,
+    'Budgeting': <Grid2x2Check className="w-4 h-4" />,
+    'Sources': <Settings2 className="w-4 h-4" />,
     'Table Entry': <Grid2x2Plus className="w-4 h-4" />,
     'Dashboard': <Dashboard />,
     'Table View': <Grid2x2Check className="w-4 h-4" />,
@@ -47,6 +50,12 @@ export default function ThemedBreadcrumbs() {
       .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
       .join(' ')
     : null;
+
+  if (mainCategoryRaw === 'expense') {
+    if (subCategoryRaw === 'table-entry') subCategory = 'Expenses';
+    if (subCategoryRaw === 'table-view') subCategory = 'Budgeting';
+    if (subCategoryRaw === 'settings') subCategory = 'Sources';
+  }
 
   if (mainCategoryRaw === 'investment' && (subCategoryRaw === 'table-view' || subCategoryRaw === 'portfolio')) {
     subCategory = 'Portfolio';

@@ -116,6 +116,34 @@ html {
   animation: pulse 8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
+/* Mobile Bottom Drawer Animations */
+@keyframes drawerSlideUp {
+  0% {
+    transform: translateY(100%);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+@keyframes drawerSlideDown {
+  0% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(100%);
+  }
+}
+
+@media (max-width: 767px) {
+  .mobile-drawer-slide-up {
+    animation: drawerSlideUp 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .mobile-drawer-slide-down {
+    animation: drawerSlideDown 0.22s cubic-bezier(0.32, 0, 0.67, 0) forwards;
+  }
+}
+
 /* -------------------------------------------------------------------------- */
 /* Global Form Controls Focus Style - Remove heavy outline/ring across app    */
 /* -------------------------------------------------------------------------- */

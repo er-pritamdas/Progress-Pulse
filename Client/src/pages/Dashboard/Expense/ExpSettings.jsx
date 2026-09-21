@@ -8,7 +8,7 @@ import { message } from 'antd';
 import dayjs from 'dayjs';
 
 function ExpSettings() {
-    TitleChanger("Progress Pulse | Expense Settings");
+    TitleChanger("Progress Pulse | Expense Sources");
     const dispatch = useDispatch();
     const { sources, transactions, currentMonth, salary, categories, loading, error } = useSelector((state) => state.expense);
     const [initialLoading, setInitialLoading] = useState(true);
@@ -172,7 +172,7 @@ function ExpSettings() {
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 pb-4 border-b border-base-300">
                 <div>
                     <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-                        Expense Settings
+                        Expense Sources
                     </h1>
                     <p className="text-sm opacity-60 mt-1">Manage payment sources, bank accounts, and credit card limits</p>
                 </div>

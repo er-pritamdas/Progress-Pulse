@@ -40,10 +40,10 @@ const TRACKERS = [
     border: "border-violet-500/20",
     defaultRoute: "/dashboard/expense/table-entry",
     tabs: [
-      { name: "Table Entry", route: "/dashboard/expense/table-entry", icon: TableEntry },
+      { name: "Expenses", route: "/dashboard/expense/table-entry", icon: TableEntry },
       { name: "Dashboard", route: "/dashboard/expense/dashboard", icon: Dashboard },
-      { name: "Table View", route: "/dashboard/expense/table-view", icon: TableView },
-      { name: "Settings", route: "/dashboard/expense/settings", icon: Settings },
+      { name: "Budgeting", route: "/dashboard/expense/table-view", icon: TableView },
+      { name: "Sources", route: "/dashboard/expense/settings", icon: Settings },
     ],
   },
   {
@@ -124,11 +124,11 @@ function MobileBottomNav() {
                   <button
                     type="button"
                     onClick={() => window.dispatchEvent(new Event("toggle_quick_calculator"))}
-                    className="flex items-center gap-1 px-2.5 py-1 rounded-full font-bold text-xs bg-primary/10 hover:bg-primary/20 text-primary border border-primary/25 shadow-2xs transition-all active:scale-95 cursor-pointer"
+                    className="flex items-center justify-center h-7 w-7 rounded-full font-bold bg-primary/10 hover:bg-primary/20 text-primary border border-primary/25 shadow-2xs transition-all active:scale-95 cursor-pointer shrink-0"
                     title="Quick Calculator"
+                    aria-label="Quick Calculator"
                   >
-                    <Calculator size={13} className="shrink-0" />
-                    <span>Calc</span>
+                    <Calculator size={14} className="shrink-0" />
                   </button>
                 )}
 

@@ -139,14 +139,14 @@ function FileTree({ open, setOpen }) {
                         </summary>
                         <ul className='ml-0'>
                             <li>
-                                <Tooltip title={!open ? "Table Entry" : ""} placement="right" arrow slotProps={tooltipSlotProps}>
+                                <Tooltip title={!open ? "Expenses" : ""} placement="right" arrow slotProps={tooltipSlotProps}>
                                     <Link
                                         to="/dashboard/expense/table-entry"
                                         onClick={handleLinkClick}
                                         className={getLinkClass("/dashboard/expense/table-entry")}
                                     >
                                         <TableEntry />
-                                        {open && <span className="ml-2">Table Entry</span>}
+                                        {open && <span className="ml-2">Expenses</span>}
                                     </Link>
                                 </Tooltip>
                             </li>
@@ -163,26 +163,26 @@ function FileTree({ open, setOpen }) {
                                 </Tooltip>
                             </li>
                             <li>
-                                <Tooltip title={!open ? "Table View" : ""} placement="right" arrow slotProps={tooltipSlotProps}>
+                                <Tooltip title={!open ? "Budgeting" : ""} placement="right" arrow slotProps={tooltipSlotProps}>
                                     <Link
                                         to="/dashboard/expense/table-view"
                                         onClick={handleLinkClick}
                                         className={getLinkClass("/dashboard/expense/table-view")}
                                     >
                                         <TableView />
-                                        {open && <span className="ml-2">Table View</span>}
+                                        {open && <span className="ml-2">Budgeting</span>}
                                     </Link>
                                 </Tooltip>
                             </li>
                             <li>
-                                <Tooltip title={!open ? "Settings" : ""} placement="right" arrow slotProps={tooltipSlotProps}>
+                                <Tooltip title={!open ? "Sources" : ""} placement="right" arrow slotProps={tooltipSlotProps}>
                                     <Link
                                         to="/dashboard/expense/settings"
                                         onClick={handleLinkClick}
                                         className={getLinkClass("/dashboard/expense/settings")}
                                     >
                                         <Settings />
-                                        {open && <span className="ml-2">Settings</span>}
+                                        {open && <span className="ml-2">Sources</span>}
                                     </Link>
                                 </Tooltip>
                             </li>

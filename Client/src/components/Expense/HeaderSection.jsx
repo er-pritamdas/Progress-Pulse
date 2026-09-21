@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import dayjs from "dayjs";
 import { updateSalary } from "../../services/redux/slice/ExpenseSlice";
-import { Eye, EyeOff, Wallet, Banknote, Calculator, PiggyBank, Flame, ChevronLeft, ChevronRight, Pencil } from "lucide-react";
+import { Eye, EyeOff, Wallet, Banknote, Calculator, PiggyBank, Flame, ChevronLeft, ChevronRight, Pencil, Building2, CreditCard } from "lucide-react";
 import EditSalaryModal from "./EditSalaryModal";
 import { message } from "antd";
 
@@ -12,8 +12,37 @@ const HeaderSection = () => {
 
     const [showSalaryModal, setShowSalaryModal] = useState(false);
 
-    // Privacy State
-    const [showBalance, setShowBalance] = useState(true);
+    // Privacy State (synced with expense_hide_numbers across the app)
+    const [hideNumbers, setHideNumbers] = useState(() => {
+        try {
+            const saved = localStorage.getItem("expense_hide_numbers");
+            return saved ? JSON.parse(saved) : false;
+        } catch (e) {
+            return false;
+        }
+    });
+
+    useEffect(() => {
+        const handleHideSync = () => {
+            try {
+                const saved = localStorage.getItem("expense_hide_numbers");
+                setHideNumbers(saved ? JSON.parse(saved) : false);
+            } catch (e) {}
+        };
+        window.addEventListener("expense_hide_numbers_updated", handleHideSync);
+        return () => window.removeEventListener("expense_hide_numbers_updated", handleHideSync);
+    }, []);
+
+    const toggleHideNumbers = () => {
+        const nextVal = !hideNumbers;
+        setHideNumbers(nextVal);
+        try {
+            localStorage.setItem("expense_hide_numbers", JSON.stringify(nextVal));
+            window.dispatchEvent(new Event("expense_hide_numbers_updated"));
+        } catch (e) {}
+    };
+
+    const showBalance = !hideNumbers;
     const headerScrollRef = useRef(null);
 
 
@@ -111,14 +140,16 @@ const HeaderSection = () => {
 
     return (
         <div className="flex flex-col gap-6 w-full">
-            {/* Summary Stats Header (DaisyUI Stats) */}
-            <div className="stats shadow-sm border border-base-300 w-full bg-base-200 flex flex-col md:flex-row relative group rounded-2xl">
+            {/* ========================================================================= */}
+            {/* 1. DESKTOP VIEW (md and up) - 100% ORIGINAL & UNTOUCHED                    */}
+            {/* ========================================================================= */}
+            <div className="hidden md:flex stats shadow-sm border border-base-300 w-full bg-base-200 flex-row relative group rounded-2xl">
 
                 {/* Privacy Toggle */}
                 <div className="absolute top-2 right-2 z-10 flex items-center gap-2">
                     <button
-                        onClick={() => setShowBalance(!showBalance)}
-                        className="btn btn-xs btn-ghost btn-circle opacity-40 hover:opacity-100"
+                        onClick={toggleHideNumbers}
+                        className="btn btn-xs btn-ghost btn-circle opacity-40 hover:opacity-100 cursor-pointer"
                         title={showBalance ? "Hide Balances" : "Show Balances"}
                     >
                         {showBalance ? <EyeOff size={14} /> : <Eye size={14} />}
@@ -361,6 +392,163 @@ const HeaderSection = () => {
                     );
                 })()}
 
+            </div>
+
+            {/* ========================================================================= */}
+            {/* 2. PHONE VIEW (< md) - COMPACT FINTECH FINANCIAL PULSE                     */}
+            {/* ========================================================================= */}
+            <div className="md:hidden flex flex-col gap-2.5 w-full">
+                {/* Net Balance Card - Mirrored exactly from Table Entry */}
+                <div className="bg-gradient-to-br from-base-100 to-base-200 border border-base-content/10 rounded-2xl p-3.5 shadow-sm space-y-3">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <span className="text-[10px] font-extrabold uppercase tracking-wider text-base-content/60 block">
+                                {currentMonth === dayjs().format("YYYY-MM") ? "Net Available Balance" : `${dayjs(currentMonth).format("MMM 'YY")} Closing Net`}
+                            </span>
+                            <div className={`text-2xl font-black font-mono tracking-tight ${netAssetsAfterCards < 0 ? 'text-error' : 'text-success'}`}>
+                                {!showBalance ? "••••••••" : (netAssetsAfterCards < 0 ? `-₹${Math.abs(netAssetsAfterCards).toLocaleString()}` : `₹${netAssetsAfterCards.toLocaleString()}`)}
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                            {excludedSourceIds.length > 0 && (
+                                <span className="text-[9.5px] text-amber-500 font-bold bg-amber-500/10 px-1.5 py-0.5 rounded-md">
+                                    {excludedSourceIds.length} Excluded
+                                </span>
+                            )}
+                            <button
+                                type="button"
+                                onClick={toggleHideNumbers}
+                                className="btn btn-xs btn-ghost btn-circle text-base-content/60 hover:text-primary cursor-pointer"
+                                title={showBalance ? "Hide Balances" : "Show Balances"}
+                            >
+                                {showBalance ? <EyeOff size={14} /> : <Eye size={14} />}
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Sub-breakdown: Banks & Cards Due */}
+                    <div className="grid grid-cols-2 gap-2 pt-2.5 border-t border-base-content/10">
+                        <div className="bg-base-200/50 p-2.5 rounded-xl border border-base-content/5">
+                            <div className="flex items-center justify-between text-[10px] text-base-content/60 font-semibold mb-0.5">
+                                <span className="flex items-center gap-1">
+                                    <Building2 size={11} className="text-primary" /> Banks
+                                </span>
+                            </div>
+                            <div className={`text-xs font-extrabold font-mono ${totalBankBalance < 0 ? 'text-error' : 'text-success'}`}>
+                                {!showBalance ? "••••••••" : (totalBankBalance < 0 ? `-₹${Math.abs(totalBankBalance).toLocaleString()}` : `₹${totalBankBalance.toLocaleString()}`)}
+                            </div>
+                        </div>
+
+                        <div className="bg-base-200/50 p-2.5 rounded-xl border border-base-content/5">
+                            <div className="flex items-center justify-between text-[10px] text-base-content/60 font-semibold mb-0.5">
+                                <span className="flex items-center gap-1">
+                                    <CreditCard size={11} className="text-error" /> CC Dues
+                                </span>
+                            </div>
+                            <div className="text-xs font-extrabold font-mono text-error">
+                                {!showBalance ? "••••••••" : `-₹${totalCardSpent.toLocaleString()}`}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Scrollable Bank & Card chips */}
+                    {sortedSources.length > 0 && (
+                        <div className="flex items-center gap-1.5 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden pt-2 border-t border-base-content/5 -mx-0.5 px-0.5">
+                            {sortedSources.map((source) => {
+                                const isCard = source.type === 'Card';
+                                const rawAmt = isCard
+                                    ? (sourceTotals.find(s => s._id === source._id)?.spent ?? source.balance ?? 0)
+                                    : (source.balance || 0);
+                                const isErrorColor = isCard || (!isCard && rawAmt < 0);
+                                const isExcluded = excludedSourceIds.includes(String(source._id));
+
+                                return (
+                                    <button
+                                        key={source._id}
+                                        type="button"
+                                        onClick={() => toggleExcludeSource(source._id)}
+                                        className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10.5px] font-bold border transition-all shrink-0 cursor-pointer ${
+                                            isExcluded
+                                                ? 'opacity-40 line-through bg-base-200 border-base-300 text-base-content/40'
+                                                : 'bg-base-200/70 hover:bg-base-200 border-base-content/10 text-base-content/80'
+                                        }`}
+                                    >
+                                        <span className="truncate max-w-[90px]">{source.name}:</span>
+                                        <span className={`font-mono ${isExcluded ? '' : (isErrorColor ? 'text-error' : 'text-success')}`}>
+                                            {showBalance
+                                                ? (isCard ? `-₹${Math.abs(rawAmt).toLocaleString()}` : (rawAmt < 0 ? `-₹${Math.abs(rawAmt).toLocaleString()}` : `₹${rawAmt.toLocaleString()}`))
+                                                : "••••"
+                                            }
+                                        </span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    )}
+                </div>
+
+                {/* 3-Card High-Density Financial Pulse */}
+                {(() => {
+                    const monthCategories = categories.filter(c => !c.month || c.month === currentMonth);
+                    const totalBudgeted = monthCategories.reduce((acc, cat) => acc + (cat.subCategories || []).reduce((subAcc, sub) => subAcc + (Number(sub.budget) || 0), 0), 0);
+                    const spentPctSalary = salary > 0 ? Math.min(((totalUsed / salary) * 100), 100) : 0;
+
+                    return (
+                        <div className="grid grid-cols-3 gap-2">
+                            {/* Salary / Planned Card */}
+                            <div
+                                onClick={() => setShowSalaryModal(true)}
+                                className="bg-base-100 dark:bg-base-900 border border-base-content/10 p-2.5 rounded-2xl shadow-xs cursor-pointer hover:border-primary/40 transition-colors"
+                            >
+                                <div className="flex items-center justify-between text-[9.5px] font-bold uppercase tracking-wider text-base-content/50 mb-0.5">
+                                    <span>Salary</span>
+                                    <Pencil size={10} className="text-primary" />
+                                </div>
+                                <div className="text-sm font-black font-mono text-primary truncate">
+                                    {showBalance ? `₹${(Number(salary) || 0).toLocaleString()}` : "••••"}
+                                </div>
+                                <div className="text-[9.5px] text-base-content/50 font-medium truncate mt-0.5">
+                                    Plan: <span className="font-mono font-bold text-info">₹{totalBudgeted.toLocaleString()}</span>
+                                </div>
+                            </div>
+
+                            {/* Total Spent Card */}
+                            <div className="bg-base-100 dark:bg-base-900 border border-base-content/10 p-2.5 rounded-2xl shadow-xs">
+                                <div className="text-[9.5px] font-bold uppercase tracking-wider text-base-content/50 mb-0.5 flex items-center gap-0.5">
+                                    <Flame size={10} className="text-warning" />
+                                    <span>Spent</span>
+                                </div>
+                                <div className="text-sm font-black font-mono text-warning truncate">
+                                    {showBalance ? `₹${totalUsed.toLocaleString()}` : "••••"}
+                                </div>
+                                <div className="flex items-center gap-1 mt-1">
+                                    <progress
+                                        className="progress progress-warning h-1 w-full"
+                                        value={spentPctSalary}
+                                        max="100"
+                                    />
+                                    <span className="text-[9px] font-mono font-bold text-base-content/50 shrink-0">
+                                        {spentPctSalary.toFixed(0)}%
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* Actual Remaining Card */}
+                            <div className="bg-base-100 dark:bg-base-900 border border-base-content/10 p-2.5 rounded-2xl shadow-xs">
+                                <div className="text-[9.5px] font-bold uppercase tracking-wider text-base-content/50 mb-0.5 flex items-center gap-0.5">
+                                    <PiggyBank size={10} className={totalRemaining < 0 ? 'text-error' : 'text-success'} />
+                                    <span>Remaining</span>
+                                </div>
+                                <div className={`text-sm font-black font-mono truncate ${totalRemaining < 0 ? 'text-error' : 'text-success'}`}>
+                                    {showBalance ? (totalRemaining < 0 ? `-₹${Math.abs(totalRemaining).toLocaleString()}` : `+₹${totalRemaining.toLocaleString()}`) : "••••"}
+                                </div>
+                                <div className="text-[9.5px] text-base-content/50 font-medium truncate mt-0.5">
+                                    {totalRemaining < 0 ? "Over budget" : "Available"}
+                                </div>
+                            </div>
+                        </div>
+                    );
+                })()}
             </div>
 
             {/* Edit Salary & Import from Slip Modal */}
