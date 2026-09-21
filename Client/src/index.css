@@ -135,6 +135,17 @@ html {
   }
 }
 
+@keyframes slideUp {
+  0% {
+    transform: translateY(100%);
+    opacity: 0.5;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
 @media (max-width: 767px) {
   .mobile-drawer-slide-up {
     animation: drawerSlideUp 0.32s cubic-bezier(0.16, 1, 0.3, 1);

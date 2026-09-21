@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import dayjs from "dayjs";
 import { fetchRangeData } from "../../../services/redux/slice/ExpenseSlice";
@@ -18,7 +18,8 @@ import {
   Tooltip,
   Legend,
   ReferenceLine,
-  LabelList
+  LabelList,
+  Cell
 } from "recharts";
 import {
   Banknote,
@@ -40,7 +41,11 @@ import {
   CreditCard,
   ArrowUpRight,
   ArrowDownLeft,
-  Receipt
+  Receipt,
+  Filter,
+  X,
+  TrendingDown,
+  Award
 } from "lucide-react";
 
 const monthNamesList = [
@@ -56,6 +61,59 @@ const monthNamesList = [
   { value: "10", label: "Oct" },
   { value: "11", label: "Nov" },
   { value: "12", label: "Dec" }
+];
+
+const CATEGORY_THEMES = [
+  {
+    color: "text-cyan-500",
+    activeBorder: "border border-cyan-500/50 dark:border-cyan-500/40",
+    activeDot: "bg-cyan-500 ring-2 ring-cyan-500/30",
+  },
+  {
+    color: "text-amber-500",
+    activeBorder: "border border-amber-500/50 dark:border-amber-500/40",
+    activeDot: "bg-amber-500 ring-2 ring-amber-500/30",
+  },
+  {
+    color: "text-violet-500",
+    activeBorder: "border border-violet-500/50 dark:border-violet-500/40",
+    activeDot: "bg-violet-500 ring-2 ring-violet-500/30",
+  },
+  {
+    color: "text-sky-500",
+    activeBorder: "border border-sky-500/50 dark:border-sky-500/40",
+    activeDot: "bg-sky-500 ring-2 ring-sky-500/30",
+  },
+  {
+    color: "text-fuchsia-500",
+    activeBorder: "border border-fuchsia-500/50 dark:border-fuchsia-500/40",
+    activeDot: "bg-fuchsia-500 ring-2 ring-fuchsia-500/30",
+  },
+  {
+    color: "text-emerald-500",
+    activeBorder: "border border-emerald-500/50 dark:border-emerald-500/40",
+    activeDot: "bg-emerald-500 ring-2 ring-emerald-500/30",
+  },
+  {
+    color: "text-pink-500",
+    activeBorder: "border border-pink-500/50 dark:border-pink-500/40",
+    activeDot: "bg-pink-500 ring-2 ring-pink-500/30",
+  },
+  {
+    color: "text-blue-500",
+    activeBorder: "border border-blue-500/50 dark:border-blue-500/40",
+    activeDot: "bg-blue-500 ring-2 ring-blue-500/30",
+  },
+  {
+    color: "text-orange-500",
+    activeBorder: "border border-orange-500/50 dark:border-orange-500/40",
+    activeDot: "bg-orange-500 ring-2 ring-orange-500/30",
+  },
+  {
+    color: "text-teal-500",
+    activeBorder: "border border-teal-500/50 dark:border-teal-500/40",
+    activeDot: "bg-teal-500 ring-2 ring-teal-500/30",
+  },
 ];
 
 // Color coding rule for percentage progress bars & badges:
@@ -145,7 +203,20 @@ const ExpDashboard = () => {
       : "Progress Pulse | Detailed Category Analysis"
   );
 
-  // Credit Card Section View Tab ("graph" | "table")
+  // Current month string – defined early so it can be used as initial state values
+  const currentMonthStr = dayjs().format("YYYY-MM");
+
+  // Selected Month filter for Option 2 visualization (currentMonthStr or "all")
+  const [mobileSubCatSelectedMonth, setMobileSubCatSelectedMonth] = useState(currentMonthStr);
+  const [mobileCardSelectedMonth, setMobileCardSelectedMonth] = useState(currentMonthStr);
+
+  // Reset selected month filter to current month when category changes
+  useEffect(() => {
+    setMobileSubCatSelectedMonth(currentMonthStr);
+    setMobileCardSelectedMonth(currentMonthStr);
+  }, [selectedCatId]);
+
+  // Credit Card Section View Tab for Desktop ("graph" | "table")
   const [cardViewTab, setCardViewTab] = useState("graph");
   const [expandedCardMonths, setExpandedCardMonths] = useState(new Set());
 
@@ -169,15 +240,13 @@ const ExpDashboard = () => {
     setExpandedCardMonths(new Set());
   };
 
-  // Category Section View Tab ("graph" | "table")
+  // Category Section View Tab for Desktop ("graph" | "table")
   const [mainCategoryTab, setMainCategoryTab] = useState("graph");
 
-  // Sub-Category View Tab ("graph" | "table")
+  // Sub-Category View Tab for Desktop ("graph" | "table")
   const [subCategoryTab, setSubCategoryTab] = useState("graph");
-  const [activeSubTab, setActiveSubTab] = useState("allotment");
-  const [selectedSubCatName, setSelectedSubCatName] = useState("");
 
-  // Expanded Month Rows in Sub-Category Table View
+  // Expanded Month Rows in Sub-Category Table View for Desktop
   const [expandedSubMonths, setExpandedSubMonths] = useState(new Set());
 
   const toggleExpandSubMonth = (rawMonth) => {
@@ -198,6 +267,56 @@ const ExpDashboard = () => {
 
   const collapseAllSubMonths = () => {
     setExpandedSubMonths(new Set());
+  };
+
+  // Mobile scrubber auto-scroll refs
+  const mobileCatScrubberRef = useRef(null);
+  const mobileCardScrubberRef = useRef(null);
+  const monthPillRefs = useRef({});
+  const cardMonthPillRefs = useRef({});
+
+  useEffect(() => {
+    const targetMonth = mobileSubCatSelectedMonth !== "all" ? mobileSubCatSelectedMonth : currentMonthStr;
+    const targetEl = monthPillRefs.current[targetMonth];
+    if (targetEl && mobileCatScrubberRef.current) {
+      targetEl.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+    }
+  }, [selectedCatId, mobileSubCatSelectedMonth]);
+
+  useEffect(() => {
+    const targetMonth = mobileCardSelectedMonth !== "all" ? mobileCardSelectedMonth : currentMonthStr;
+    const targetEl = cardMonthPillRefs.current[targetMonth];
+    if (targetEl && mobileCardScrubberRef.current) {
+      targetEl.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+    }
+  }, [selectedCatId, mobileCardSelectedMonth]);
+
+  // Privacy Mode State (Synced with localStorage expense_hide_numbers)
+  const [hideNumbers, setHideNumbers] = useState(() => {
+    try {
+      const saved = localStorage.getItem("expense_hide_numbers");
+      return saved ? JSON.parse(saved) : false;
+    } catch (e) {
+      return false;
+    }
+  });
+
+  useEffect(() => {
+    const handleSync = () => {
+      try {
+        const saved = localStorage.getItem("expense_hide_numbers");
+        setHideNumbers(saved ? JSON.parse(saved) : false);
+      } catch (e) {}
+    };
+    window.addEventListener("expense_hide_numbers_updated", handleSync);
+    return () => window.removeEventListener("expense_hide_numbers_updated", handleSync);
+  }, []);
+
+  const toggleHideNumbers = () => {
+    const nextVal = !hideNumbers;
+    setHideNumbers(nextVal);
+    localStorage.setItem("expense_hide_numbers", JSON.stringify(nextVal));
+    window.dispatchEvent(new Event("expense_hide_numbers_updated"));
   };
 
   // Hidden sub-categories state for interactive Tab 1 filtering
@@ -278,6 +397,155 @@ const ExpDashboard = () => {
 
   // Clean name for selected category
   const categoryCleanName = isSalaryMode ? "Salary" : isCreditCardMode ? "Credit Cards Expenses" : (selectedCategory ? selectedCategory.name : "Category");
+
+  // Mobile Category / Mode Carousel Tabs
+  const mobileTabs = useMemo(() => {
+    return [
+      {
+        id: "SALARY",
+        label: "Salary / Income",
+        icon: Banknote,
+        color: "text-emerald-500",
+        activeBorder: "border border-emerald-500/50 dark:border-emerald-500/40",
+        activeDot: "bg-emerald-500 ring-2 ring-emerald-500/30",
+      },
+      {
+        id: "CREDIT_CARDS",
+        label: "Credit Cards",
+        icon: CreditCard,
+        color: "text-rose-500",
+        activeBorder: "border border-rose-500/50 dark:border-rose-500/40",
+        activeDot: "bg-rose-500 ring-2 ring-rose-500/30",
+      },
+      ...availableCategories.map((cat, idx) => {
+        const theme = CATEGORY_THEMES[idx % CATEGORY_THEMES.length];
+        return {
+          id: String(cat._id),
+          label: cat.name,
+          icon: Folder,
+          color: theme.color,
+          activeBorder: theme.activeBorder,
+          activeDot: theme.activeDot,
+        };
+      }),
+    ];
+  }, [availableCategories]);
+
+  const activeMobileTabObj = useMemo(() => {
+    return mobileTabs.find((t) => t.id === selectedCatId) || mobileTabs[0];
+  }, [mobileTabs, selectedCatId]);
+
+  const ActiveMobileIcon = activeMobileTabObj.icon;
+
+  // Mobile Date Filter Modal State
+  const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
+  const [tempFromYear, setTempFromYear] = useState(fromYear);
+  const [tempFromMonth, setTempFromMonth] = useState(fromMonth);
+  const [tempToYear, setTempToYear] = useState(toYear);
+  const [tempToMonth, setTempToMonth] = useState(toMonth);
+
+  const openMobileFilter = () => {
+    setTempFromYear(fromYear);
+    setTempFromMonth(fromMonth);
+    setTempToYear(toYear);
+    setTempToMonth(toMonth);
+    setIsMobileFilterOpen(true);
+  };
+
+  const applyMobileFilter = () => {
+    setFromYear(tempFromYear);
+    setFromMonth(tempFromMonth);
+    setToYear(tempToYear);
+    setToMonth(tempToMonth);
+    setIsMobileFilterOpen(false);
+  };
+
+  const resetMobileFilter = () => {
+    const curY = dayjs().format("YYYY");
+    setTempFromYear(curY);
+    setTempFromMonth("01");
+    setTempToYear(curY);
+    setTempToMonth("12");
+  };
+
+  const applyMobilePreset = (startY, startM, endY, endM) => {
+    setTempFromYear(String(startY));
+    setTempFromMonth(String(startM).padStart(2, "0"));
+    setTempToYear(String(endY));
+    setTempToMonth(String(endM).padStart(2, "0"));
+  };
+
+  const datePresets = useMemo(() => {
+    const now = dayjs();
+    const curY = now.format("YYYY");
+    const curM = now.format("MM");
+
+    const prevMonthDate = now.subtract(1, "month");
+    const prevM_Y = prevMonthDate.format("YYYY");
+    const prevM_M = prevMonthDate.format("MM");
+
+    const last3Date = now.subtract(2, "month");
+    const last3_Y = last3Date.format("YYYY");
+    const last3_M = last3Date.format("MM");
+
+    const last6Date = now.subtract(5, "month");
+    const last6_Y = last6Date.format("YYYY");
+    const last6_M = last6Date.format("MM");
+
+    const prevYearStr = now.subtract(1, "year").format("YYYY");
+
+    return [
+      {
+        label: "This Month",
+        startY: curY,
+        startM: curM,
+        endY: curY,
+        endM: curM,
+      },
+      {
+        label: "Last Month",
+        startY: prevM_Y,
+        startM: prevM_M,
+        endY: prevM_Y,
+        endM: prevM_M,
+      },
+      {
+        label: "Last 3 Months",
+        startY: last3_Y,
+        startM: last3_M,
+        endY: curY,
+        endM: curM,
+      },
+      {
+        label: "Last 6 Months",
+        startY: last6_Y,
+        startM: last6_M,
+        endY: curY,
+        endM: curM,
+      },
+      {
+        label: "Year to Date",
+        startY: curY,
+        startM: "01",
+        endY: curY,
+        endM: curM,
+      },
+      {
+        label: "Full Year",
+        startY: curY,
+        startM: "01",
+        endY: curY,
+        endM: "12",
+      },
+      {
+        label: "Previous Year",
+        startY: prevYearStr,
+        startM: "01",
+        endY: prevYearStr,
+        endM: "12",
+      },
+    ];
+  }, []);
 
   // Helper to resolve salary entered in Table View for month m (strictly 0 if not entered)
   const getSalaryForMonth = (m) => {
@@ -369,6 +637,36 @@ const ExpDashboard = () => {
     const totalLeft = monthlyPlotData.reduce((sum, d) => sum + d.left, 0);
     const overallPct = totalAllotted > 0 ? Number(((totalUsed / totalAllotted) * 100).toFixed(2)) : 0;
     return { totalAllotted, totalUsed, totalLeft, overallPct };
+  }, [monthlyPlotData]);
+
+  // Month-over-Month (MoM) delta for category / salary monthly trend and velocity scrubber
+  const monthlyPlotDataWithMoM = useMemo(() => {
+    return monthlyPlotData.map((d, index) => {
+      let momDeltaPct = null;
+      let momDeltaType = "neutral";
+      if (index > 0) {
+        const prevUsed = monthlyPlotData[index - 1].used || 0;
+        const currUsed = d.used || 0;
+        if (prevUsed > 0) {
+          const delta = ((currUsed - prevUsed) / prevUsed) * 100;
+          momDeltaPct = Number(delta.toFixed(1));
+          if (momDeltaPct > 0) momDeltaType = "increase";
+          else if (momDeltaPct < 0) momDeltaType = "decrease";
+          else momDeltaType = "neutral";
+        } else if (currUsed > 0) {
+          momDeltaPct = 100;
+          momDeltaType = "increase";
+        } else {
+          momDeltaPct = 0;
+          momDeltaType = "neutral";
+        }
+      }
+      return {
+        ...d,
+        momDeltaPct,
+        momDeltaType,
+      };
+    });
   }, [monthlyPlotData]);
 
   // --- Credit Cards Data Structures & Calculations ---
@@ -505,6 +803,36 @@ const ExpDashboard = () => {
       totalTxCount
     };
   }, [creditCardMonthlyData, creditCards, rangeMonths]);
+
+  // Month-over-Month (MoM) delta for credit card monthly trend and velocity scrubber
+  const creditCardMonthlyDataWithMoM = useMemo(() => {
+    return creditCardMonthlyData.map((d, index) => {
+      let momDeltaPct = null;
+      let momDeltaType = "neutral";
+      if (index > 0) {
+        const prevUsed = creditCardMonthlyData[index - 1].totalCardSpend || 0;
+        const currUsed = d.totalCardSpend || 0;
+        if (prevUsed > 0) {
+          const delta = ((currUsed - prevUsed) / prevUsed) * 100;
+          momDeltaPct = Number(delta.toFixed(1));
+          if (momDeltaPct > 0) momDeltaType = "increase";
+          else if (momDeltaPct < 0) momDeltaType = "decrease";
+          else momDeltaType = "neutral";
+        } else if (currUsed > 0) {
+          momDeltaPct = 100;
+          momDeltaType = "increase";
+        } else {
+          momDeltaPct = 0;
+          momDeltaType = "neutral";
+        }
+      }
+      return {
+        ...d,
+        momDeltaPct,
+        momDeltaType,
+      };
+    });
+  }, [creditCardMonthlyData]);
 
   // Credit Card ApexChart Series (Stacked bars per card + Total Card Spend Line)
   const creditCardApexSeries = useMemo(() => {
@@ -705,6 +1033,31 @@ const ExpDashboard = () => {
     };
   }, [creditCards, creditCardMonthlyData, cardColorMap, cardColorPalette]);
 
+  // Helper to resolve the subcategory name of a transaction within matching categories
+  const getTxSubcategoryName = (tx, matchingCats, hasConfiguredSubCats) => {
+    if (tx.subCategoryId && typeof tx.subCategoryId === "object" && tx.subCategoryId.name) {
+      return tx.subCategoryId.name;
+    }
+    const rawSubId = tx.subCategoryId && typeof tx.subCategoryId === "object" ? tx.subCategoryId._id : tx.subCategoryId;
+    if (rawSubId) {
+      const subIdStr = String(rawSubId);
+      for (const cat of matchingCats) {
+        for (const sub of cat.subCategories || []) {
+          if (String(sub._id) === subIdStr && sub.name) {
+            return sub.name;
+          }
+        }
+      }
+      if (typeof rawSubId === "string" && rawSubId.length > 0 && !rawSubId.match(/^[0-9a-fA-F]{24}$/)) {
+        return rawSubId;
+      }
+    }
+    if (tx.subCategory && typeof tx.subCategory === "string" && tx.subCategory.trim()) {
+      return tx.subCategory.trim();
+    }
+    return hasConfiguredSubCats ? "General / Direct" : "Direct Spend";
+  };
+
   // --- Sub-Category or Category Breakdown Names ---
   const subCategoryNames = useMemo(() => {
     if (isCreditCardMode) return [];
@@ -719,8 +1072,26 @@ const ExpDashboard = () => {
         if (sub.name) namesSet.add(sub.name);
       });
     });
+
+    const hasConfiguredSubCats = namesSet.size > 0;
+    const matchingCatIds = new Set(matchingCats.map((c) => String(c._id)));
+
+    // Also collect subcategory names from actual transactions in this category
+    transactions.forEach((t) => {
+      if (t.type === "Credit" || t.type === "Transfer") return;
+      const catId = String(t.categoryId?._id || t.categoryId || "");
+      if (matchingCatIds.has(catId)) {
+        const subName = getTxSubcategoryName(t, matchingCats, hasConfiguredSubCats);
+        namesSet.add(subName);
+      }
+    });
+
+    if (namesSet.size === 0) {
+      return ["Direct Spend"];
+    }
+
     return Array.from(namesSet);
-  }, [isSalaryMode, isCreditCardMode, availableCategories, selectedCategory, categories]);
+  }, [isSalaryMode, isCreditCardMode, availableCategories, selectedCategory, categories, transactions]);
 
   // Color Palettes for Dual Stacked Bars (Stack 1 = Allotted, Stack 2 = Actual Spent)
   const subCatAllottedPalette = useMemo(() => [
@@ -784,6 +1155,7 @@ const ExpDashboard = () => {
     // Normal Category Mode: Sub-Category breakdown
     const matchingCats = categories.filter((c) => c.name === selectedCategory.name);
     const matchingCatIds = new Set(matchingCats.map((c) => String(c._id)));
+    const hasConfiguredSubCats = matchingCats.some((c) => (c.subCategories || []).some((s) => s.name));
 
     return rangeMonths.map((m) => {
       const monthLabel = dayjs(`${m}-01`).format("MMM YYYY");
@@ -803,23 +1175,15 @@ const ExpDashboard = () => {
 
         const subSpent = transactions
           .filter((t) => {
-            if (t.type === "Credit" || t.type === "Transfer" || t.type !== "Debit") return false;
+            if (t.type === "Credit" || t.type === "Transfer") return false;
             const tMonth = dayjs(t.date).format("YYYY-MM");
             if (tMonth !== m) return false;
 
             const catId = String(t.categoryId?._id || t.categoryId);
             if (!matchingCatIds.has(catId)) return false;
 
-            const tSubId = String(t.subCategoryId?._id || t.subCategoryId || "");
-            const matchingSubCatIds = new Set();
-            matchingCats.forEach((c) => {
-              (c.subCategories || []).forEach((sub) => {
-                if (sub.name === subName && sub._id) matchingSubCatIds.add(String(sub._id));
-              });
-            });
-
-            if (tSubId && matchingSubCatIds.has(tSubId)) return true;
-            return false;
+            const tSubName = getTxSubcategoryName(t, matchingCats, hasConfiguredSubCats);
+            return tSubName === subName;
           })
           .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
 
@@ -1133,6 +1497,7 @@ const ExpDashboard = () => {
     // Normal Category Mode
     const matchingCats = categories.filter((c) => c.name === selectedCategory.name);
     const matchingCatIds = new Set(matchingCats.map((c) => String(c._id)));
+    const hasConfiguredSubCats = matchingCats.some((c) => (c.subCategories || []).some((s) => s.name));
 
     return rangeMonths.map((m) => {
       const monthLabel = dayjs(`${m}-01`).format("MMM YYYY");
@@ -1159,16 +1524,8 @@ const ExpDashboard = () => {
             const catId = String(t.categoryId?._id || t.categoryId);
             if (!matchingCatIds.has(catId)) return false;
 
-            const tSubId = String(t.subCategoryId?._id || t.subCategoryId || "");
-            const matchingSubCatIds = new Set();
-            matchingCats.forEach((c) => {
-              (c.subCategories || []).forEach((sub) => {
-                if (sub.name === subName && sub._id) matchingSubCatIds.add(String(sub._id));
-              });
-            });
-
-            if (tSubId && matchingSubCatIds.has(tSubId)) return true;
-            return false;
+            const tSubName = getTxSubcategoryName(t, matchingCats, hasConfiguredSubCats);
+            return tSubName === subName;
           })
           .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
 
@@ -1215,40 +1572,394 @@ const ExpDashboard = () => {
     return { allotted, used, remaining, overallPct };
   }, [subCatMonthlyTableData]);
 
+  // Mobile SubCategory / Category Split Horizontal Bars Data
+  const mobileSubCategoryBars = useMemo(() => {
+    if (subCategoryNames.length === 0) return [];
 
+    let items = [];
 
-  // Data for the Monthly Breakdown Table (Months, Alloted, Used, Remaining, Percentage Used)
-  const tableRows = useMemo(() => {
-    if (activeSubTab === "comparison") {
-      return subCatMonthlyComparisonData.list;
+    if (mobileSubCatSelectedMonth === "all") {
+      // Entire Range Aggregate
+      const totalRangeExpenses = subCatRangeTotals.used || 1;
+      const maxUsed = Math.max(
+        ...subCategoryNames.map((name) => {
+          return subCatDualStackedPlotData.reduce((sum, m) => sum + (m[`${name}_spent`] || 0), 0);
+        }),
+        1
+      );
+
+      items = subCategoryNames.map((name, idx) => {
+        const color = subCatSpentPalette[idx % subCatSpentPalette.length];
+        const used = subCatDualStackedPlotData.reduce((sum, m) => sum + (m[`${name}_spent`] || 0), 0);
+        const allotted = subCatDualStackedPlotData.reduce((sum, m) => sum + (m[`${name}_allotted`] || 0), 0);
+        const remaining = allotted - used;
+        const sharePct = Math.round((used / totalRangeExpenses) * 100);
+        const utilizedPct = allotted > 0 ? Math.round((used / allotted) * 100) : (used > 0 ? 100 : 0);
+        const barPct = Math.round((used / maxUsed) * 100);
+
+        return {
+          name,
+          color,
+          used,
+          allotted,
+          remaining,
+          sharePct,
+          utilizedPct,
+          barPct
+        };
+      });
+    } else {
+      // Specific Month Selected
+      const mRow = subCatMonthlyTableData.find((m) => m.rawMonth === mobileSubCatSelectedMonth);
+      const totalMonthUsed = mRow ? mRow.totalUsed : 0;
+      const maxUsed = mRow && mRow.subRows ? Math.max(...mRow.subRows.map((s) => s.used || 0), 1) : 1;
+
+      if (mRow && mRow.subRows) {
+        items = mRow.subRows.map((sub, idx) => {
+          const color = subCatSpentPalette[idx % subCatSpentPalette.length];
+          const used = sub.used || 0;
+          const allotted = sub.allotted || 0;
+          const remaining = sub.remaining;
+          const sharePct = totalMonthUsed > 0 ? Math.round((used / totalMonthUsed) * 100) : 0;
+          const utilizedPct = Math.round(sub.pct || 0);
+          const barPct = Math.round((used / maxUsed) * 100);
+
+          return {
+            name: sub.subName,
+            color,
+            used,
+            allotted,
+            remaining,
+            sharePct,
+            utilizedPct,
+            barPct
+          };
+        });
+      }
     }
-    if (activeSubTab === "usage" && selectedSubCatName && selectedSubCatName !== "ALL") {
-      return subCatUsagePlotData.list.map((d) => ({
-        monthLabel: d.monthLabel,
-        rawMonth: d.rawMonth,
-        allotted: d.allotted,
-        used: d.used,
-        remaining: d.left,
-        percentage: d.allotted > 0 ? Number(((d.used / d.allotted) * 100).toFixed(2)) : 0
-      }));
-    }
-    return monthlyPlotData.map((d) => ({
-      monthLabel: d.monthLabel,
-      rawMonth: d.rawMonth,
-      allotted: d.allotted,
-      used: d.used,
-      remaining: d.left,
-      percentage: d.percentage
-    }));
-  }, [activeSubTab, selectedSubCatName, subCatMonthlyComparisonData, subCatUsagePlotData, monthlyPlotData]);
 
-  const tableTotals = useMemo(() => {
-    const totalAllotted = tableRows.reduce((sum, r) => sum + r.allotted, 0);
-    const totalUsed = tableRows.reduce((sum, r) => sum + r.used, 0);
-    const totalRemaining = tableRows.reduce((sum, r) => sum + r.remaining, 0);
-    const overallPct = totalAllotted > 0 ? Number(((totalUsed / totalAllotted) * 100).toFixed(2)) : 0;
-    return { totalAllotted, totalUsed, totalRemaining, overallPct };
-  }, [tableRows]);
+    // Only show sub-categories that have actual spend in the selected period
+    return items.filter((item) => item.used > 0).sort((a, b) => b.used - a.used);
+  }, [
+    subCategoryNames,
+    mobileSubCatSelectedMonth,
+    subCatRangeTotals,
+    subCatDualStackedPlotData,
+    subCatMonthlyTableData,
+    subCatSpentPalette
+  ]);
+
+  // --- Option 2: Interactive Donut & Spending Distribution Data (Category / Salary) ---
+  const donutChartData = useMemo(() => {
+    const activeItems = mobileSubCategoryBars.filter((b) => b.used > 0);
+    const series = activeItems.map((b) => b.used);
+    const labels = activeItems.map((b) => b.name);
+    const colors = activeItems.map((b) => b.color);
+
+    const calculatedSum = series.reduce((sum, v) => sum + v, 0);
+
+    const periodTotalSpent = mobileSubCatSelectedMonth === "all"
+      ? (rangeTotals.totalUsed || calculatedSum)
+      : (monthlyPlotData.find((m) => m.rawMonth === mobileSubCatSelectedMonth)?.used ?? calculatedSum);
+
+    const periodTotalBudget = mobileSubCatSelectedMonth === "all"
+      ? rangeTotals.totalAllotted
+      : (monthlyPlotData.find((m) => m.rawMonth === mobileSubCatSelectedMonth)?.allotted || 0);
+
+    const periodTotalLeft = mobileSubCatSelectedMonth === "all"
+      ? rangeTotals.totalLeft
+      : (monthlyPlotData.find((m) => m.rawMonth === mobileSubCatSelectedMonth)?.left || 0);
+
+    const periodLabel = mobileSubCatSelectedMonth === "all"
+      ? "All Range"
+      : (monthlyPlotData.find((m) => m.rawMonth === mobileSubCatSelectedMonth)?.monthLabel || "");
+
+    return {
+      series,
+      labels,
+      colors,
+      periodTotalSpent,
+      periodTotalBudget,
+      periodTotalLeft,
+      periodLabel,
+      hasData: series.length > 0 && periodTotalSpent > 0,
+    };
+  }, [mobileSubCategoryBars, mobileSubCatSelectedMonth, rangeTotals, monthlyPlotData]);
+
+  const donutApexOptions = useMemo(() => {
+    const currentTotal = donutChartData.periodTotalSpent;
+
+    return {
+      chart: {
+        type: "donut",
+        background: "transparent",
+        animations: {
+          enabled: true,
+          easing: "easeinout",
+          speed: 500,
+        },
+        dropShadow: { enabled: false },
+      },
+      labels: donutChartData.labels,
+      colors: donutChartData.colors,
+      stroke: {
+        show: true,
+        width: 2,
+        colors: ["#1e293b"],
+      },
+      dataLabels: {
+        enabled: true,
+        formatter: function (val) {
+          return Number(val) >= 4 ? `${Math.round(val)}%` : "";
+        },
+        style: {
+          fontSize: "11px",
+          fontWeight: "700",
+          colors: ["#ffffff"],
+        },
+        dropShadow: { enabled: false },
+      },
+      plotOptions: {
+        pie: {
+          donut: {
+            size: "72%",
+            background: "transparent",
+            labels: {
+              show: true,
+              name: {
+                show: true,
+                fontSize: "11px",
+                fontWeight: "700",
+                color: "#94a3b8",
+                offsetY: -4,
+                formatter: () => "Total Spent",
+              },
+              value: {
+                show: true,
+                fontSize: "18px",
+                fontWeight: "900",
+                fontFamily: "monospace",
+                color: "#ffffff",
+                offsetY: 4,
+                formatter: () => (hideNumbers ? "••••••" : `₹${formatCurrency2Dec(currentTotal)}`),
+              },
+              total: {
+                show: true,
+                showAlways: true,
+                label: "Total Spent",
+                fontSize: "11px",
+                fontWeight: "700",
+                color: "#94a3b8",
+                formatter: () => (hideNumbers ? "••••••" : `₹${formatCurrency2Dec(currentTotal)}`),
+              },
+            },
+          },
+        },
+      },
+      legend: {
+        show: true,
+        position: "bottom",
+        horizontalAlign: "center",
+        labels: { colors: "#FFFFFF" },
+        itemMargin: { horizontal: 8, vertical: 4 },
+        fontSize: "11px",
+      },
+      tooltip: {
+        theme: "dark",
+        y: {
+          formatter: (val) => (hideNumbers ? "••••••" : `₹${formatCurrency2Dec(val)}`),
+        },
+      },
+      responsive: [
+        {
+          breakpoint: 640,
+          options: {
+            chart: { height: 270 },
+            legend: { position: "bottom", fontSize: "10px" },
+            plotOptions: {
+              pie: {
+                donut: {
+                  size: "68%",
+                  labels: { value: { fontSize: "15px" } },
+                },
+              },
+            },
+          },
+        },
+      ],
+    };
+  }, [donutChartData, hideNumbers]);
+
+  // --- Option 2: Credit Card Donut & Spending Distribution Data ---
+  const creditCardDonutData = useMemo(() => {
+    if (creditCards.length === 0 || creditCardMonthlyData.length === 0) {
+      return { series: [], labels: [], colors: [], totalSpent: 0, rankedCards: [], periodLabel: "", hasData: false };
+    }
+
+    let totalSpent = 0;
+    let periodLabel = "All Range";
+    let cardsData = [];
+
+    if (mobileCardSelectedMonth === "all") {
+      totalSpent = creditCardRangeTotals.totalSpend;
+      periodLabel = "All Range";
+      cardsData = creditCards.map((c, idx) => {
+        const spent = creditCardMonthlyData.reduce((sum, d) => sum + (d.cardSpends[c.name] || 0), 0);
+        const sharePct = totalSpent > 0 ? Math.round((spent / totalSpent) * 100) : 0;
+        return {
+          name: c.name,
+          color: cardColorMap[c.name] || cardColorPalette[idx % cardColorPalette.length],
+          spent,
+          sharePct,
+          limit: c.limit,
+          due: c.cardDue,
+        };
+      });
+    } else {
+      const mRow = creditCardMonthlyData.find((m) => m.rawMonth === mobileCardSelectedMonth);
+      totalSpent = mRow ? mRow.totalCardSpend : 0;
+      periodLabel = mRow ? mRow.monthLabel : "";
+      cardsData = creditCards.map((c, idx) => {
+        const spent = mRow ? (mRow.cardSpends[c.name] || 0) : 0;
+        const sharePct = totalSpent > 0 ? Math.round((spent / totalSpent) * 100) : 0;
+        return {
+          name: c.name,
+          color: cardColorMap[c.name] || cardColorPalette[idx % cardColorPalette.length],
+          spent,
+          sharePct,
+          limit: c.limit,
+          due: c.cardDue,
+        };
+      });
+    }
+
+    const maxSpent = Math.max(...cardsData.map((c) => c.spent), 1);
+    const rankedCards = cardsData
+      .map((c) => ({
+        ...c,
+        barPct: Math.round((c.spent / maxSpent) * 100),
+      }))
+      .sort((a, b) => b.spent - a.spent);
+
+    const activeCards = rankedCards.filter((c) => c.spent > 0);
+    const series = activeCards.map((c) => c.spent);
+    const labels = activeCards.map((c) => c.name);
+    const colors = activeCards.map((c) => c.color);
+
+    return {
+      series,
+      labels,
+      colors,
+      totalSpent,
+      periodLabel,
+      rankedCards,
+      hasData: series.length > 0 && totalSpent > 0,
+    };
+  }, [creditCards, creditCardMonthlyData, creditCardRangeTotals, mobileCardSelectedMonth, cardColorMap, cardColorPalette]);
+
+  const creditCardDonutApexOptions = useMemo(() => {
+    const currentTotal = creditCardDonutData.totalSpent;
+
+    return {
+      chart: {
+        type: "donut",
+        background: "transparent",
+        animations: {
+          enabled: true,
+          easing: "easeinout",
+          speed: 500,
+        },
+        dropShadow: { enabled: false },
+      },
+      labels: creditCardDonutData.labels,
+      colors: creditCardDonutData.colors,
+      stroke: {
+        show: true,
+        width: 2,
+        colors: ["#1e293b"],
+      },
+      dataLabels: {
+        enabled: true,
+        formatter: function (val) {
+          return Number(val) >= 4 ? `${Math.round(val)}%` : "";
+        },
+        style: {
+          fontSize: "11px",
+          fontWeight: "700",
+          colors: ["#ffffff"],
+        },
+        dropShadow: { enabled: false },
+      },
+      plotOptions: {
+        pie: {
+          donut: {
+            size: "72%",
+            background: "transparent",
+            labels: {
+              show: true,
+              name: {
+                show: true,
+                fontSize: "11px",
+                fontWeight: "700",
+                color: "#94a3b8",
+                offsetY: -4,
+                formatter: () => "Card Spend",
+              },
+              value: {
+                show: true,
+                fontSize: "18px",
+                fontWeight: "900",
+                fontFamily: "monospace",
+                color: "#ffffff",
+                offsetY: 4,
+                formatter: () => (hideNumbers ? "••••••" : `₹${formatCurrency2Dec(currentTotal)}`),
+              },
+              total: {
+                show: true,
+                showAlways: true,
+                label: "Total Card Spend",
+                fontSize: "11px",
+                fontWeight: "700",
+                color: "#94a3b8",
+                formatter: () => (hideNumbers ? "••••••" : `₹${formatCurrency2Dec(currentTotal)}`),
+              },
+            },
+          },
+        },
+      },
+      legend: {
+        show: true,
+        position: "bottom",
+        horizontalAlign: "center",
+        labels: { colors: "#FFFFFF" },
+        itemMargin: { horizontal: 8, vertical: 4 },
+        fontSize: "11px",
+      },
+      tooltip: {
+        theme: "dark",
+        y: {
+          formatter: (val) => (hideNumbers ? "••••••" : `₹${formatCurrency2Dec(val)}`),
+        },
+      },
+      responsive: [
+        {
+          breakpoint: 640,
+          options: {
+            chart: { height: 270 },
+            legend: { position: "bottom", fontSize: "10px" },
+            plotOptions: {
+              pie: {
+                donut: {
+                  size: "68%",
+                  labels: { value: { fontSize: "15px" } },
+                },
+              },
+            },
+          },
+        },
+      ],
+    };
+  }, [creditCardDonutData, hideNumbers]);
 
   // --- Tooltips ---
   const MainCategoryTooltip = ({ active, payload, label }) => {
@@ -1378,49 +2089,12 @@ const ExpDashboard = () => {
     return null;
   };
 
-  const SubCatUsageTooltip = ({ active, payload, label }) => {
-    if (active && payload && payload.length) {
-      const dataItem = payload[0].payload;
-      return (
-        <div className="bg-base-100/95 backdrop-blur-md border border-base-300 p-4 rounded-2xl shadow-xl space-y-2 min-w-[200px] text-xs">
-          <p className="font-extrabold text-sm border-b border-base-200 pb-1.5 flex justify-between items-center">
-            <span>{label}</span>
-            <span className="text-[11px] opacity-60 font-mono">{selectedSubCatName}</span>
-          </p>
-          <div className="space-y-1.5 font-medium">
-            <div className="flex justify-between items-center gap-4">
-              <span className="text-base-content/70">Allotted:</span>
-              <span className="font-mono font-bold text-primary">₹{(dataItem.allotted || 0).toLocaleString()}</span>
-            </div>
-            <div className="flex justify-between items-center gap-4">
-              <span className="text-base-content/70 flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-rose-500 inline-block"></span> Used:
-              </span>
-              <span className="font-mono font-bold text-rose-500">₹{(dataItem.used || 0).toLocaleString()}</span>
-            </div>
-            <div className="flex justify-between items-center gap-4">
-              <span className="text-base-content/70 flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block"></span> Left:
-              </span>
-              <span className="font-mono font-bold text-emerald-500">₹{(dataItem.left || 0).toLocaleString()}</span>
-            </div>
-            <div className="flex justify-between items-center gap-4 pt-1.5 border-t border-base-200">
-              <span className="text-amber-500 font-bold">Range Avg:</span>
-              <span className="font-mono font-bold text-amber-500">₹{Math.round(subCatUsagePlotData.avgUsage).toLocaleString()}</span>
-            </div>
-          </div>
-        </div>
-      );
-    }
-    return null;
-  };
-
   const isInvalidRange = fromMonthStr > toMonthStr;
 
   return (
     <div className="w-full space-y-6 pb-20">
-      {/* Sticky Header */}
-      <div className="sticky top-[-17px] z-40 bg-base-100/95 backdrop-blur-md shadow-md border-b border-base-300/40 -mx-4 px-4 py-2 mt-[-16px]">
+      {/* Desktop Sticky Header (md and up: 100% original & untouched) */}
+      <div className="hidden md:block sticky top-[-17px] z-40 bg-base-100/95 backdrop-blur-md shadow-md border-b border-base-300/40 -mx-4 px-4 py-2 mt-[-16px]">
         <div className="flex items-center justify-between p-3 flex-wrap gap-3 max-w-[1600px] mx-auto px-4 md:px-6">
           {/* Left: Category Dropdown & Title */}
           <div className="flex items-center gap-1.5 flex-wrap">
@@ -1428,7 +2102,7 @@ const ExpDashboard = () => {
               <div
                 tabIndex={0}
                 role="button"
-                className="btn btn-ghost text-lg font-bold p-0 min-h-0 h-auto hover:bg-base-200/70 px-2.5 py-1 rounded-xl flex items-center gap-2 transition-all border border-base-300/40 shadow-xs"
+                className="btn btn-ghost text-lg font-bold p-0 min-h-0 h-auto hover:bg-base-200/70 px-2.5 py-1 rounded-xl flex items-center gap-2 transition-all border border-base-300/40 shadow-xs cursor-pointer"
               >
                 {isSalaryMode ? (
                   <Banknote className="text-primary w-5 h-5" />
@@ -1522,6 +2196,15 @@ const ExpDashboard = () => {
 
           {/* Right: From & To Date Selection */}
           <div className="flex items-center gap-3 ml-auto flex-wrap">
+            <button
+              type="button"
+              onClick={toggleHideNumbers}
+              className="btn btn-xs btn-ghost btn-square rounded-xl text-base-content/60 hover:text-primary cursor-pointer"
+              title={hideNumbers ? "Show numbers" : "Hide numbers (Privacy Mode)"}
+            >
+              {hideNumbers ? <EyeOff size={16} className="text-primary font-bold" /> : <Eye size={16} />}
+            </button>
+
             {/* FROM */}
             <div className="flex items-center gap-1.5 bg-base-200/70 p-1.5 rounded-xl border border-base-300/50 text-xs font-medium">
               <span className="text-[11px] font-bold uppercase opacity-60 px-1">From:</span>
@@ -1573,17 +2256,271 @@ const ExpDashboard = () => {
         </div>
       </div>
 
-      <div className="px-4 md:px-6 w-full max-w-[1600px] mx-auto space-y-6">
+      {/* Sticky Header - Mobile Phone View (Hidden on Desktop) */}
+      <div className="block md:hidden sticky top-[-17px] -mt-2 pt-2 z-40 bg-base-100/95 dark:bg-base-900/95 backdrop-blur-md border-b border-base-300 -mx-2 px-3 py-2 shadow-xs space-y-2">
+        {/* Row 1: Active Category Badge + Privacy Eye Toggle + Compact Date Filter Button */}
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-base-200 border border-base-300/60 shadow-xs min-w-0">
+            <ActiveMobileIcon className={`${activeMobileTabObj.color} w-4 h-4 shrink-0`} />
+            <span className="font-bold text-xs tracking-tight text-base-content truncate">
+              {activeMobileTabObj.label}
+            </span>
+          </div>
 
-      {/* Date Range Error Alert */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              type="button"
+              onClick={toggleHideNumbers}
+              className="btn btn-xs btn-ghost btn-square rounded-xl text-base-content/60 hover:text-primary cursor-pointer h-7 w-7"
+              title={hideNumbers ? "Show numbers" : "Hide numbers (Privacy Mode)"}
+            >
+              {hideNumbers ? <EyeOff size={15} className="text-primary font-bold" /> : <Eye size={15} />}
+            </button>
+
+            <button
+              type="button"
+              onClick={openMobileFilter}
+              className="btn btn-xs h-7 px-2.5 rounded-xl font-medium bg-base-200 hover:bg-base-300 border border-base-300/80 shadow-xs flex items-center gap-1.5 text-xs text-base-content cursor-pointer"
+              title="Filter by Date"
+            >
+              <Calendar className="w-3.5 h-3.5 text-primary shrink-0" />
+              <span className="truncate max-w-[130px] font-semibold text-[11px]">
+                {dayjs(`${fromYear}-${fromMonth}-01`).format("MMM 'YY")} - {dayjs(`${toYear}-${toMonth}-01`).format("MMM 'YY")}
+              </span>
+              <Filter className="w-3 h-3 opacity-60 shrink-0" />
+            </button>
+          </div>
+        </div>
+
+        {/* Row 2: Horizontal Scrollable Rectangular Category Boxes (No background, thin low-opacity borders) */}
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 -mx-1 px-1">
+          {mobileTabs.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = selectedCatId === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setSelectedCatId(tab.id)}
+                className={`shrink-0 min-w-[96px] max-w-[125px] h-13 rounded-xl transition-all cursor-pointer flex flex-col justify-between p-2 text-left select-none bg-transparent ${
+                  isActive
+                    ? `${tab.activeBorder} shadow-xs`
+                    : "border border-base-content/10 hover:border-base-content/20"
+                }`}
+              >
+                {/* Foreground Header / Small Active Dot & Icon */}
+                <div className="flex items-center justify-between w-full">
+                  <Icon
+                    className={`w-3.5 h-3.5 ${
+                      isActive ? tab.color : `${tab.color} opacity-70`
+                    }`}
+                  />
+                  {isActive && (
+                    <span className={`w-1.5 h-1.5 rounded-full ${tab.activeDot} animate-pulse`} />
+                  )}
+                </div>
+
+                {/* Foreground Label */}
+                <span
+                  className={`text-[11px] leading-tight truncate w-full ${
+                    isActive
+                      ? "font-bold text-base-content"
+                      : "font-medium text-base-content/60"
+                  }`}
+                >
+                  {tab.label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Mobile Date Filter Bottom Sheet (Phone View Only - Desktop View Untouched) */}
+      {isMobileFilterOpen && (
+        <div
+          className="fixed inset-0 z-[100] flex items-end justify-center bg-black/60 backdrop-blur-md transition-opacity duration-200 animate-in fade-in"
+          onClick={(e) => { if (e.target === e.currentTarget) setIsMobileFilterOpen(false); }}
+        >
+          <div
+            className="bg-base-100 rounded-t-3xl shadow-2xl w-full max-h-[92vh] flex flex-col overflow-hidden border-t border-x border-base-300 mobile-drawer-slide-up"
+            style={{ paddingBottom: "env(safe-area-inset-bottom, 16px)" }}
+          >
+
+            {/* Drag Handle & Sheet Header — same pattern as CategoryCard */}
+            <div className="border-b border-base-200 bg-base-200/60 select-none touch-none">
+              {/* Grab Pill */}
+              <div className="pt-3 pb-1.5 px-4 flex justify-center items-center">
+                <div className="h-1.5 w-12 rounded-full bg-base-content/30" />
+              </div>
+
+              {/* Header row */}
+              <div className="px-3.5 pb-3.5 flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="p-2 rounded-xl bg-base-100 border border-base-300 text-primary shrink-0">
+                    <Calendar size={16} />
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="font-extrabold text-sm text-base-content truncate">Filter Date Range</h3>
+                    <span className="text-[10px] opacity-60 font-medium block truncate">Quick presets or choose custom months</span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsMobileFilterOpen(false)}
+                  className="btn btn-xs btn-ghost btn-circle rounded-full shrink-0 text-base-content/60 cursor-pointer"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            </div>
+
+            {/* Scrollable content */}
+            <div className="overflow-y-auto flex-1 p-4 space-y-4">
+              {/* Quick Presets Section */}
+              <div className="space-y-2">
+                <span className="text-[11px] font-bold text-base-content/70 uppercase tracking-wider block">
+                  Quick Presets
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  {datePresets.map((p) => {
+                    const isPresetActive =
+                      tempFromYear === p.startY &&
+                      tempFromMonth === p.startM &&
+                      tempToYear === p.endY &&
+                      tempToMonth === p.endM;
+                    return (
+                      <button
+                        key={p.label}
+                        type="button"
+                        onClick={() => applyMobilePreset(p.startY, p.startM, p.endY, p.endM)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer border ${
+                          isPresetActive
+                            ? "bg-primary text-primary-content border-primary shadow-xs font-bold"
+                            : "bg-base-200/80 hover:bg-base-200 text-base-content/80 border-base-300/80"
+                        }`}
+                      >
+                        {p.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Custom Month Range Section */}
+              <div className="space-y-2.5 pt-2 border-t border-base-300/60">
+                <span className="text-[11px] font-bold text-base-content/70 uppercase tracking-wider block">
+                  Custom Month Range
+                </span>
+
+                <div className="grid grid-cols-2 gap-2.5">
+                  {/* From Selector Card */}
+                  <div className="bg-base-200/50 p-2.5 rounded-2xl border border-base-300/70 space-y-1.5">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-base-content/60 block">From Month</span>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      <select
+                        className="select select-sm w-full bg-base-100 border border-base-300 rounded-xl text-xs font-semibold text-base-content focus:border-primary focus:outline-none cursor-pointer px-2"
+                        value={tempFromMonth}
+                        onChange={(e) => setTempFromMonth(e.target.value)}
+                      >
+                        {monthNamesList.map((m) => (
+                          <option key={`temp-fm-${m.value}`} value={m.value}>{m.label}</option>
+                        ))}
+                      </select>
+                      <select
+                        className="select select-sm w-full bg-base-100 border border-base-300 rounded-xl text-xs font-semibold text-base-content focus:border-primary focus:outline-none cursor-pointer px-2"
+                        value={tempFromYear}
+                        onChange={(e) => setTempFromYear(e.target.value)}
+                      >
+                        {yearOptions.map((y) => (
+                          <option key={`temp-fy-${y}`} value={y}>{y}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* To Selector Card */}
+                  <div className="bg-base-200/50 p-2.5 rounded-2xl border border-base-300/70 space-y-1.5">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-base-content/60 block">To Month</span>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      <select
+                        className="select select-sm w-full bg-base-100 border border-base-300 rounded-xl text-xs font-semibold text-base-content focus:border-primary focus:outline-none cursor-pointer px-2"
+                        value={tempToMonth}
+                        onChange={(e) => setTempToMonth(e.target.value)}
+                      >
+                        {monthNamesList.map((m) => (
+                          <option key={`temp-tm-${m.value}`} value={m.value}>{m.label}</option>
+                        ))}
+                      </select>
+                      <select
+                        className="select select-sm w-full bg-base-100 border border-base-300 rounded-xl text-xs font-semibold text-base-content focus:border-primary focus:outline-none cursor-pointer px-2"
+                        value={tempToYear}
+                        onChange={(e) => setTempToYear(e.target.value)}
+                      >
+                        {yearOptions.map((y) => (
+                          <option key={`temp-ty-${y}`} value={y}>{y}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Validation / Summary message */}
+                <div className="pt-1">
+                  {`${tempFromYear}-${tempFromMonth}` > `${tempToYear}-${tempToMonth}` ? (
+                    <div className="flex items-center gap-1.5 text-error text-[11px] font-semibold bg-error/10 px-2.5 py-1.5 rounded-xl border border-error/20">
+                      <AlertTriangle size={14} className="shrink-0" />
+                      <span>Invalid: "From" date cannot be after "To" date</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1.5 text-base-content/70 text-[11px] font-medium bg-base-200/60 px-2.5 py-1.5 rounded-xl border border-base-300/50">
+                      <CheckCircle2 size={14} className="text-success shrink-0" />
+                      <span>
+                        Range: <strong className="text-base-content">{dayjs(`${tempFromYear}-${tempFromMonth}-01`).format("MMM YYYY")}</strong> – <strong className="text-base-content">{dayjs(`${tempToYear}-${tempToMonth}-01`).format("MMM YYYY")}</strong>
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center justify-between gap-3 pt-3 border-t border-base-300">
+                <button
+                  type="button"
+                  onClick={resetMobileFilter}
+                  className="btn btn-sm btn-ghost border border-base-300 rounded-xl px-4 cursor-pointer text-xs"
+                >
+                  Reset
+                </button>
+                <button
+                  type="button"
+                  disabled={`${tempFromYear}-${tempFromMonth}` > `${tempToYear}-${tempToMonth}`}
+                  onClick={applyMobileFilter}
+                  className="btn btn-sm btn-primary rounded-xl px-6 font-bold shadow-sm cursor-pointer text-xs disabled:opacity-50"
+                >
+                  Apply Filter
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+
+      <div className="px-0 sm:px-4 md:px-6 w-full max-w-[1600px] mx-auto space-y-3.5 sm:space-y-4 md:space-y-6">
+
+      
       {isInvalidRange && (
-        <div className="alert alert-error shadow-sm text-xs font-bold rounded-2xl">
+        <div className="alert alert-error shadow-sm text-xs font-bold rounded-2xl mx-2 sm:mx-0">
           <span>Invalid Date Range: "From" date ({fromMonthStr}) cannot be after "To" date ({toMonthStr}). Please adjust your selection.</span>
         </div>
       )}
 
-      {/* Conditionally Render Credit Cards Dashboard OR Category / Salary Dashboard */}
-      {isCreditCardMode ? (
+      {/* ========================================================================= */}
+      {/* DESKTOP VIEW (md and up: 100% original, untouched, revert back to normal) */}
+      {/* ========================================================================= */}
+      <div className="hidden md:block space-y-6">
+{isCreditCardMode ? (
         <div className="space-y-6">
           {/* 1. Range Summary Cards for Credit Cards */}
           <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
@@ -2448,6 +3385,643 @@ const ExpDashboard = () => {
       </section>
         </>
       )}
+      </div>
+
+      {/* ========================================================================= */}
+      {/* PHONE VIEW (mobile only: minimal single-line headers, no trajectory, etc) */}
+      {/* ========================================================================= */}
+<div className="block md:hidden space-y-4">
+        {isCreditCardMode ? (
+          <div className="space-y-4">
+            {/* 1. Range Summary Cards for Credit Cards */}
+            <section className="grid grid-cols-2 gap-2 px-1">
+              <div className="card bg-base-100 shadow-xs border border-base-content/10 p-2.5 rounded-2xl">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-base-content/50 truncate">
+                    Total Card Expenses
+                  </span>
+                  <div className="w-7 h-7 rounded-xl bg-rose-500/10 flex items-center justify-center text-rose-500 shrink-0">
+                    <CreditCard size={15} />
+                  </div>
+                </div>
+                <span className="text-base font-black font-mono text-rose-500 mt-1.5 block truncate">
+                  {hideNumbers ? "••••••" : `₹${formatCurrency2Dec(creditCardRangeTotals.totalSpend)}`}
+                </span>
+                <span className="text-[9.5px] opacity-60 mt-1 block truncate">
+                  {rangeMonths.length} Months • {creditCardRangeTotals.totalTxCount} Txns
+                </span>
+              </div>
+
+              <div className="card bg-base-100 shadow-xs border border-base-content/10 p-2.5 rounded-2xl">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-base-content/50 truncate">
+                    Outstanding Dues
+                  </span>
+                  <div className="w-7 h-7 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-500 shrink-0">
+                    <AlertTriangle size={15} />
+                  </div>
+                </div>
+                <span className="text-base font-black font-mono text-amber-500 mt-1.5 block truncate">
+                  {hideNumbers ? "••••••" : `₹${formatCurrency2Dec(creditCardRangeTotals.totalDue)}`}
+                </span>
+                <span className="text-[9.5px] opacity-60 mt-1 block truncate">
+                  {creditCards.length} Cards • {creditCardRangeTotals.overallUtilization}% Limit
+                </span>
+              </div>
+
+              <div className="card bg-base-100 shadow-xs border border-base-content/10 p-2.5 rounded-2xl">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-base-content/50 truncate">
+                    Avg Monthly Spend
+                  </span>
+                  <div className="w-7 h-7 rounded-xl bg-primary/10 flex items-center justify-center text-primary shrink-0">
+                    <TrendingUp size={15} />
+                  </div>
+                </div>
+                <span className="text-base font-black font-mono text-primary mt-1.5 block truncate">
+                  {hideNumbers ? "••••••" : `₹${formatCurrency2Dec(creditCardRangeTotals.avgMonthlySpend)}`}
+                </span>
+                <span className="text-[9.5px] opacity-60 mt-1 block truncate">
+                  Across {rangeMonths.length} Months
+                </span>
+              </div>
+
+              <div className="card bg-base-100 shadow-xs border border-base-content/10 p-2.5 rounded-2xl">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-base-content/50 truncate">
+                    Peak Month
+                  </span>
+                  <div className="w-7 h-7 rounded-xl bg-secondary/10 flex items-center justify-center text-secondary shrink-0">
+                    <ArrowUpRight size={15} />
+                  </div>
+                </div>
+                <span className="text-base font-black font-mono text-secondary mt-1.5 block truncate">
+                  {hideNumbers ? "••••••" : `₹${formatCurrency2Dec(creditCardRangeTotals.highestMonth.amount)}`}
+                </span>
+                <span className="text-[9.5px] opacity-60 mt-1 block truncate">
+                  {creditCardRangeTotals.highestMonth.monthLabel}
+                </span>
+              </div>
+            </section>
+
+            {/* 2. Credit Cards Analysis Section */}
+            <section className="card bg-base-100 shadow-xs border border-base-content/10 rounded-2xl">
+              <div className="card-body p-3 space-y-3.5">
+                {/* Minimal Single-line Heading & Subtitle */}
+                <div className="flex items-center justify-between border-b border-base-200 pb-2.5">
+                  <div className="min-w-0 flex-1">
+                    <h2 className="text-sm font-bold flex items-center gap-1.5 truncate">
+                      <CreditCard size={16} className="text-primary shrink-0" />
+                      <span className="truncate">Credit Cards</span>
+                    </h2>
+                    <p className="text-[11px] text-base-content/60 truncate mt-0.5">
+                      Monthly spend breakdown per credit card
+                    </p>
+                  </div>
+                </div>
+
+                {loading ? (
+                  <div className="h-60 flex items-center justify-center">
+                    <span className="loading loading-spinner loading-lg text-primary"></span>
+                  </div>
+                ) : creditCards.length > 0 && creditCardMonthlyData.length > 0 ? (
+                  <div className="space-y-3.5">
+                    {/* Monthly Velocity Scrubber */}
+                    <div className="space-y-2 bg-base-200/40 p-2.5 rounded-2xl border border-base-content/10">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-extrabold text-base-content/70 uppercase tracking-wider flex items-center gap-1.5">
+                          <Sparkles size={13} className="text-primary" />
+                          Monthly Velocity
+                        </span>
+                      </div>
+
+                      <div
+                        ref={mobileCardScrubberRef}
+                        className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 -mx-0.5 px-0.5"
+                      >
+                        {/* 'All Range' Pill */}
+                        <button
+                          ref={(el) => { cardMonthPillRefs.current["all"] = el; }}
+                          type="button"
+                          onClick={() => setMobileCardSelectedMonth("all")}
+                          className={`px-3 py-2 rounded-2xl flex flex-col items-start gap-0.5 whitespace-nowrap transition-all cursor-pointer shrink-0 border ${
+                            mobileCardSelectedMonth === "all"
+                              ? "bg-base-200/90 dark:bg-base-800/90 border-primary/50 text-base-content shadow-xs ring-1 ring-primary/30"
+                              : "bg-base-100/60 dark:bg-base-900/40 hover:bg-base-200/60 text-base-content/80 border-base-content/10"
+                          }`}
+                        >
+                          <span className={`text-[10px] font-black uppercase tracking-wider ${mobileCardSelectedMonth === "all" ? "text-primary" : "text-base-content/70"}`}>
+                            All Range
+                          </span>
+                          <span className="font-mono font-black text-xs text-base-content">
+                            {hideNumbers ? "••••••" : `₹${formatCurrency2Dec(creditCardRangeTotals.totalSpend)}`}
+                          </span>
+                          <span className="text-[9px] text-base-content/50 font-semibold">
+                            {rangeMonths.length} Months Total
+                          </span>
+                        </button>
+
+                        {/* Month Pills with MoM Delta */}
+                        {creditCardMonthlyDataWithMoM.filter((d) => d.totalCardSpend > 0).map((d) => {
+                          const isSelected = mobileCardSelectedMonth === d.rawMonth;
+                          const shortMonth = dayjs(`${d.rawMonth}-01`).format("MMM 'YY");
+
+                          return (
+                            <button
+                              key={`scrubber-card-${d.rawMonth}`}
+                              ref={(el) => { cardMonthPillRefs.current[d.rawMonth] = el; }}
+                              type="button"
+                              onClick={() => setMobileCardSelectedMonth(d.rawMonth)}
+                              className={`px-3 py-2 rounded-2xl flex flex-col items-start gap-0.5 whitespace-nowrap transition-all cursor-pointer shrink-0 border ${
+                                isSelected
+                                  ? "bg-base-200/90 dark:bg-base-800/90 border-primary/50 text-base-content shadow-xs ring-1 ring-primary/30"
+                                  : "bg-base-100/60 dark:bg-base-900/40 hover:bg-base-200/60 text-base-content/80 border-base-content/10"
+                              }`}
+                            >
+                              <div className="flex items-center gap-1.5 w-full justify-between">
+                                <span className={`text-[10px] font-black uppercase tracking-wider ${isSelected ? "text-primary" : "text-base-content/70"}`}>
+                                  {shortMonth}
+                                </span>
+                                {d.momDeltaPct !== null ? (
+                                  <span
+                                    className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md flex items-center gap-0.5 ${
+                                      d.momDeltaType === "increase"
+                                        ? "bg-rose-500/15 text-rose-500"
+                                        : d.momDeltaType === "decrease"
+                                        ? "bg-emerald-500/15 text-emerald-500"
+                                        : "bg-base-content/10 text-base-content/60"
+                                    }`}
+                                  >
+                                    {d.momDeltaType === "increase" ? (
+                                      <ArrowUpRight size={10} className="shrink-0" />
+                                    ) : d.momDeltaType === "decrease" ? (
+                                      <ArrowDownLeft size={10} className="shrink-0" />
+                                    ) : null}
+                                    {d.momDeltaPct > 0 ? `+${d.momDeltaPct}%` : `${d.momDeltaPct}%`}
+                                  </span>
+                                ) : (
+                                  <span className="text-[9px] opacity-40 font-mono">—</span>
+                                )}
+                              </div>
+                              <span className="font-mono font-black text-xs text-base-content">
+                                {hideNumbers ? "••••••" : `₹${formatCurrency2Dec(d.totalCardSpend)}`}
+                              </span>
+                              <span className="text-[9px] text-base-content/50 font-semibold">
+                                {d.transactions.length} Card Txns
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Donut Chart for Cards */}
+                    <div className="bg-base-200/40 border border-base-content/10 rounded-2xl p-3 flex flex-col items-center justify-center">
+                      <div className="w-full flex items-center justify-between border-b border-base-200 pb-2 mb-2">
+                        <div className="flex items-center gap-2">
+                          <PieChart size={16} className="text-primary shrink-0" />
+                          <span className="text-xs font-extrabold text-base-content">
+                            Cards Spend Distribution
+                          </span>
+                        </div>
+                        <span className="text-[10px] font-bold font-mono px-2 py-0.5 rounded-lg bg-base-200 text-base-content/70">
+                          {creditCardDonutData.periodLabel}
+                        </span>
+                      </div>
+
+                      {creditCardDonutData.hasData ? (
+                        <div className="w-full">
+                          <Chart
+                            key={`card-donut-${mobileCardSelectedMonth}-${creditCardDonutData.totalSpent}-${creditCardDonutData.series.join("-")}`}
+                            options={creditCardDonutApexOptions}
+                            series={creditCardDonutData.series}
+                            type="donut"
+                            height={280}
+                          />
+                        </div>
+                      ) : (
+                        <div className="py-10 flex flex-col items-center justify-center text-center space-y-2">
+                          <div className="w-12 h-12 rounded-2xl bg-base-200 flex items-center justify-center text-base-content/40">
+                            <PieChart size={24} />
+                          </div>
+                          <p className="text-xs font-semibold text-base-content/60">
+                            No card expenses in {creditCardDonutData.periodLabel}.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Ranked Card Spending Breakdown Cards */}
+                    <div className="space-y-2.5">
+                      <div className="flex items-center justify-between px-1">
+                        <span className="text-xs font-extrabold text-base-content uppercase tracking-wider flex items-center gap-1.5">
+                          <Award size={14} className="text-primary" />
+                          Ranked Credit Card Expenses
+                        </span>
+                        <span className="text-[10px] font-mono text-base-content/50">
+                          {creditCardDonutData.rankedCards.length} Cards
+                        </span>
+                      </div>
+
+                      {creditCardDonutData.rankedCards.length > 0 ? (
+                        <div className="space-y-2">
+                          {creditCardDonutData.rankedCards.map((card, idx) => (
+                            <div
+                              key={card._id || card.name}
+                              className="bg-base-200/40 border border-base-content/10 rounded-2xl p-3 space-y-2"
+                            >
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <span className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black bg-base-300 text-base-content/70 shrink-0">
+                                    {idx + 1}
+                                  </span>
+                                  <span
+                                    className="w-2.5 h-2.5 rounded-full shrink-0"
+                                    style={{ backgroundColor: card.color }}
+                                  />
+                                  <span className="font-bold text-xs text-base-content truncate">
+                                    {card.name}
+                                  </span>
+                                </div>
+                                <span className="font-mono text-xs font-black text-rose-500 shrink-0">
+                                  {hideNumbers ? "••••••" : `₹${formatCurrency2Dec(card.used)}`}
+                                </span>
+                              </div>
+
+                              <div className="w-full bg-base-300/70 h-2 rounded-full overflow-hidden">
+                                <div
+                                  className="h-full rounded-full transition-all duration-300"
+                                  style={{
+                                    width: `${Math.max(card.barPct, 2)}%`,
+                                    backgroundColor: card.color,
+                                  }}
+                                />
+                              </div>
+
+                              <div className="flex items-center justify-between text-[10.5px] font-mono text-base-content/60 pt-0.5">
+                                <span className="truncate">
+                                  Balance: {hideNumbers ? "••••" : `₹${formatCurrency2Dec(card.currentBalance)}`}
+                                </span>
+                                <span className="font-bold text-base-content/80">
+                                  {card.sharePct}% share
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="p-8 text-center text-xs opacity-50 italic bg-base-200/20 rounded-2xl border border-base-content/10">
+                          No credit card expenses recorded for this period.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-8 text-center text-sm opacity-50 italic">
+                    No credit card transactions available for this period.
+                  </div>
+                )}
+              </div>
+            </section>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {/* 1. Range Summary Cards for Selected Category / Salary */}
+            <section className="grid grid-cols-2 gap-2 px-1">
+              <div className="card bg-base-100 shadow-xs border border-base-content/10 p-2.5 rounded-2xl">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-base-content/50 truncate">
+                  {isSalaryMode ? "Total Income" : "Total Budget"}
+                </span>
+                <span className="text-base font-black font-mono text-primary mt-1.5 block truncate">
+                  {hideNumbers ? "••••••" : `₹${formatCurrency2Dec(rangeTotals.totalAllotted)}`}
+                </span>
+                <span className="text-[9.5px] opacity-60 mt-1 block truncate">
+                  Across {rangeMonths.length} Months
+                </span>
+              </div>
+
+              <div className="card bg-base-100 shadow-xs border border-base-content/10 p-2.5 rounded-2xl">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-base-content/50 truncate">
+                  Total Spent
+                </span>
+                <span className="text-base font-black font-mono text-rose-500 mt-1.5 block truncate">
+                  {hideNumbers ? "••••••" : `₹${formatCurrency2Dec(rangeTotals.totalUsed)}`}
+                </span>
+                <span className="text-[9.5px] opacity-60 mt-1 block truncate">
+                  {rangeTotals.overallPct}% Budget Spent
+                </span>
+              </div>
+
+              <div className="card bg-base-100 shadow-xs border border-base-content/10 p-2.5 rounded-2xl">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-base-content/50 truncate">
+                  {isSalaryMode ? "Net Savings" : "Total Left"}
+                </span>
+                <span className="text-base font-black font-mono text-emerald-600 dark:text-emerald-400 mt-1.5 block truncate">
+                  {hideNumbers ? "••••••" : `₹${formatCurrency2Dec(rangeTotals.totalLeft)}`}
+                </span>
+                <span className="text-[9.5px] opacity-60 mt-1 block truncate">
+                  Remaining Amount
+                </span>
+              </div>
+
+              <div className="card bg-base-100 shadow-xs border border-base-content/10 p-2.5 rounded-2xl">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-base-content/50 truncate">
+                  Budget Utilization
+                </span>
+                <span className="text-base font-black font-mono mt-1.5 block truncate">
+                  {rangeTotals.overallPct}%
+                </span>
+                <div className="w-full bg-base-300 h-1.5 rounded-full overflow-hidden mt-1.5">
+                  <div
+                    className={`h-full rounded-full ${
+                      rangeTotals.overallPct > 100
+                        ? "bg-rose-500"
+                        : rangeTotals.overallPct > 80
+                        ? "bg-amber-500"
+                        : "bg-emerald-500"
+                    }`}
+                    style={{ width: `${Math.min(rangeTotals.overallPct, 100)}%` }}
+                  />
+                </div>
+              </div>
+            </section>
+
+            {/* 2. Category / Salary Analysis Section */}
+            <section className="card bg-base-100 shadow-xs border border-base-content/10 rounded-2xl">
+              <div className="card-body p-3 space-y-3.5">
+                {/* Minimal Single-line Heading & Subtitle (Month & Reset completely REMOVED) */}
+                <div className="flex items-center justify-between border-b border-base-200 pb-2.5">
+                  <div className="min-w-0 flex-1">
+                    <h2 className="text-sm font-bold flex items-center gap-1.5 truncate">
+                      {isSalaryMode ? (
+                        <Banknote size={16} className="text-primary shrink-0" />
+                      ) : (
+                        <Folder size={16} className="text-primary shrink-0" />
+                      )}
+                      <span className="truncate">{categoryCleanName}</span>
+                    </h2>
+                    <p className="text-[11px] text-base-content/60 truncate mt-0.5">
+                      {isSalaryMode
+                        ? "Category allocation & spend distribution"
+                        : `Sub-category breakdown & spend for ${categoryCleanName}`}
+                    </p>
+                  </div>
+                </div>
+
+                {loading ? (
+                  <div className="h-60 flex items-center justify-center">
+                    <span className="loading loading-spinner loading-lg text-primary"></span>
+                  </div>
+                ) : subCategoryNames.length === 0 ? (
+                  <div className="p-8 text-center text-sm opacity-50 italic">
+                    {isSalaryMode
+                      ? "No categories configured. Add categories in Expenses to view category split."
+                      : `No sub-categories configured under ${categoryCleanName}.`}
+                  </div>
+                ) : (
+                  <div className="space-y-3.5">
+                    {/* Monthly Velocity Scrubber */}
+                    <div className="space-y-2 bg-base-200/40 p-2.5 rounded-2xl border border-base-content/10">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-extrabold text-base-content/70 uppercase tracking-wider flex items-center gap-1.5">
+                          <Sparkles size={13} className="text-primary" />
+                          Monthly Velocity
+                        </span>
+                      </div>
+
+                      <div
+                        ref={mobileCatScrubberRef}
+                        className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 -mx-0.5 px-0.5"
+                      >
+                        {/* 'All Range' Pill */}
+                        <button
+                          ref={(el) => { monthPillRefs.current["all"] = el; }}
+                          type="button"
+                          onClick={() => setMobileSubCatSelectedMonth("all")}
+                          className={`px-3 py-2 rounded-2xl flex flex-col items-start gap-0.5 whitespace-nowrap transition-all cursor-pointer shrink-0 border ${
+                            mobileSubCatSelectedMonth === "all"
+                              ? "bg-base-200/90 dark:bg-base-800/90 border-primary/50 text-base-content shadow-xs ring-1 ring-primary/30"
+                              : "bg-base-100/60 dark:bg-base-900/40 hover:bg-base-200/60 text-base-content/80 border-base-content/10"
+                          }`}
+                        >
+                          <span className={`text-[10px] font-black uppercase tracking-wider ${mobileSubCatSelectedMonth === "all" ? "text-primary" : "text-base-content/70"}`}>
+                            All Range
+                          </span>
+                          <span className="font-mono font-black text-xs text-base-content">
+                            {hideNumbers ? "••••••" : `₹${formatCurrency2Dec(rangeTotals.totalUsed)}`}
+                          </span>
+                          <span className="text-[9px] text-base-content/50 font-semibold">
+                            {rangeMonths.length} Months Total
+                          </span>
+                        </button>
+
+                        {/* Month Pills with MoM Delta */}
+                        {monthlyPlotDataWithMoM.filter((m) => m.allotted > 0 || m.used > 0).map((m) => {
+                          const isSelected = mobileSubCatSelectedMonth === m.rawMonth;
+                          const shortMonth = dayjs(`${m.rawMonth}-01`).format("MMM 'YY");
+
+                          return (
+                            <button
+                              key={`scrubber-${m.rawMonth}`}
+                              ref={(el) => { monthPillRefs.current[m.rawMonth] = el; }}
+                              type="button"
+                              onClick={() => setMobileSubCatSelectedMonth(m.rawMonth)}
+                              className={`px-3 py-2 rounded-2xl flex flex-col items-start gap-0.5 whitespace-nowrap transition-all cursor-pointer shrink-0 border ${
+                                isSelected
+                                  ? "bg-base-200/90 dark:bg-base-800/90 border-primary/50 text-base-content shadow-xs ring-1 ring-primary/30"
+                                  : "bg-base-100/60 dark:bg-base-900/40 hover:bg-base-200/60 text-base-content/80 border-base-content/10"
+                              }`}
+                            >
+                              <div className="flex items-center gap-1.5 w-full justify-between">
+                                <span className={`text-[10px] font-black uppercase tracking-wider ${isSelected ? "text-primary" : "text-base-content/70"}`}>
+                                  {shortMonth}
+                                </span>
+                                {m.momDeltaPct !== null ? (
+                                  <span
+                                    className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md flex items-center gap-0.5 ${
+                                      m.momDeltaType === "increase"
+                                        ? "bg-rose-500/15 text-rose-500"
+                                        : m.momDeltaType === "decrease"
+                                        ? "bg-emerald-500/15 text-emerald-500"
+                                        : "bg-base-content/10 text-base-content/60"
+                                    }`}
+                                  >
+                                    {m.momDeltaType === "increase" ? (
+                                      <ArrowUpRight size={10} className="shrink-0" />
+                                    ) : m.momDeltaType === "decrease" ? (
+                                      <ArrowDownLeft size={10} className="shrink-0" />
+                                    ) : null}
+                                    {m.momDeltaPct > 0 ? `+${m.momDeltaPct}%` : `${m.momDeltaPct}%`}
+                                  </span>
+                                ) : (
+                                  <span className="text-[9px] opacity-40 font-mono">—</span>
+                                )}
+                              </div>
+                              <span className="font-mono font-black text-xs text-base-content">
+                                {hideNumbers ? "••••••" : `₹${formatCurrency2Dec(m.used)}`}
+                              </span>
+                              <span className="text-[9px] text-base-content/50 font-semibold">
+                                {m.allotted > 0 ? `${Number(m.percentage).toFixed(0)}% budget` : "No budget"}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Donut Chart */}
+                    <div className="bg-base-200/40 border border-base-content/10 rounded-2xl p-3 flex flex-col items-center justify-center">
+                      <div className="w-full flex items-center justify-between border-b border-base-200 pb-2 mb-2">
+                        <div className="flex items-center gap-2">
+                          <PieChart size={16} className="text-primary shrink-0" />
+                          <span className="text-xs font-extrabold text-base-content">
+                            Spending Distribution
+                          </span>
+                        </div>
+                        <span className="text-[10px] font-bold font-mono px-2 py-0.5 rounded-lg bg-base-200 text-base-content/70">
+                          {donutChartData.periodLabel}
+                        </span>
+                      </div>
+
+                      {donutChartData.hasData ? (
+                        <div className="w-full">
+                          <Chart
+                            key={`donut-${selectedCatId}-${mobileSubCatSelectedMonth}-${donutChartData.periodTotalSpent}-${donutChartData.series.join("-")}`}
+                            options={donutApexOptions}
+                            series={donutChartData.series}
+                            type="donut"
+                            height={280}
+                          />
+                        </div>
+                      ) : (
+                        <div className="py-10 flex flex-col items-center justify-center text-center space-y-2">
+                          <div className="w-12 h-12 rounded-2xl bg-base-200 flex items-center justify-center text-base-content/40">
+                            <PieChart size={24} />
+                          </div>
+                          <p className="text-xs font-semibold text-base-content/60">
+                            No expenses recorded for {donutChartData.periodLabel}.
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Quick Summary Bar below Donut */}
+                      <div className="w-full grid grid-cols-3 gap-2 pt-3 border-t border-base-200 text-center text-xs">
+                        <div className="bg-base-100/70 p-2 rounded-xl border border-base-content/5">
+                          <span className="text-[9px] uppercase font-bold text-base-content/50 block truncate">
+                            Period Budget
+                          </span>
+                          <span className="font-mono font-black text-xs text-primary block truncate mt-0.5">
+                            {hideNumbers ? "••••" : `₹${formatCurrency2Dec(donutChartData.periodTotalBudget)}`}
+                          </span>
+                        </div>
+                        <div className="bg-base-100/70 p-2 rounded-xl border border-base-content/5">
+                          <span className="text-[9px] uppercase font-bold text-base-content/50 block truncate">
+                            Period Spent
+                          </span>
+                          <span className="font-mono font-black text-xs text-rose-500 block truncate mt-0.5">
+                            {hideNumbers ? "••••" : `₹${formatCurrency2Dec(donutChartData.periodTotalSpent)}`}
+                          </span>
+                        </div>
+                        <div className="bg-base-100/70 p-2 rounded-xl border border-base-content/5">
+                          <span className="text-[9px] uppercase font-bold text-base-content/50 block truncate">
+                            Remaining
+                          </span>
+                          <span className="font-mono font-black text-xs text-emerald-600 dark:text-emerald-400 block truncate mt-0.5">
+                            {hideNumbers ? "••••" : `₹${formatCurrency2Dec(donutChartData.periodTotalLeft)}`}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Ranked Expense Cards (Trajectory Graph REMOVED!) */}
+                    <div className="space-y-2.5">
+                      <div className="flex items-center justify-between px-1">
+                        <span className="text-xs font-extrabold text-base-content uppercase tracking-wider flex items-center gap-1.5">
+                          <Award size={14} className="text-primary" />
+                          {isSalaryMode ? "Ranked Category Expenses" : "Ranked Sub-Category Expenses"}
+                        </span>
+                        <span className="text-[10px] font-mono text-base-content/50">
+                          {mobileSubCategoryBars.filter((b) => b.used > 0).length} of {mobileSubCategoryBars.length} Active
+                        </span>
+                      </div>
+
+                      {mobileSubCategoryBars.length > 0 ? (
+                        <div className="space-y-2">
+                          {mobileSubCategoryBars.map((bar, idx) => {
+                            return (
+                              <div
+                                key={bar.name}
+                                className="bg-base-200/40 border border-base-content/10 rounded-2xl p-3 space-y-2"
+                              >
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-2 min-w-0">
+                                    <span className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black bg-base-300 text-base-content/70 shrink-0">
+                                      {idx + 1}
+                                    </span>
+                                    <span
+                                      className="w-2.5 h-2.5 rounded-full shrink-0"
+                                      style={{ backgroundColor: bar.color }}
+                                    />
+                                    <span className="font-bold text-xs text-base-content truncate">
+                                      {bar.name}
+                                    </span>
+                                  </div>
+                                  <span className="font-mono text-xs font-black text-rose-500 shrink-0">
+                                    {hideNumbers ? "••••••" : `₹${formatCurrency2Dec(bar.used)}`}
+                                  </span>
+                                </div>
+
+                                <div className="w-full bg-base-300/70 h-2 rounded-full overflow-hidden">
+                                  <div
+                                    className="h-full rounded-full transition-all duration-300"
+                                    style={{
+                                      width: `${Math.max(bar.barPct, 2)}%`,
+                                      backgroundColor: bar.color,
+                                    }}
+                                  />
+                                </div>
+
+                                <div className="flex items-center justify-between text-[10.5px] font-mono text-base-content/60 pt-0.5">
+                                  <span className="truncate max-w-[60%]">
+                                    {bar.allotted > 0
+                                      ? `Budget: ${hideNumbers ? "••••" : `₹${formatCurrency2Dec(bar.allotted)}`}`
+                                      : "No budget"}
+                                  </span>
+                                  <div className="flex items-center gap-1.5 shrink-0">
+                                    <span className="font-bold text-base-content/80">
+                                      {bar.sharePct}% share
+                                    </span>
+                                    {bar.allotted > 0 && (
+                                      <span
+                                        className="badge badge-xs font-bold border"
+                                        style={{
+                                          borderColor: `${bar.color}50`,
+                                          backgroundColor: `${bar.color}18`,
+                                          color: bar.color,
+                                        }}
+                                      >
+                                        {bar.utilizedPct}%
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="p-8 text-center text-xs opacity-50 italic bg-base-200/20 rounded-2xl border border-base-content/10">
+                          No expenses recorded for this period.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </section>
+          </div>
+        )}
+      </div>
       </div>
     </div>
   );
