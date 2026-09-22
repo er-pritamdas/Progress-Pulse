@@ -793,6 +793,8 @@ export default function InvDashboard() {
       avgMonthlyGross,
       overallTakeHomePct,
       overallDeductionPct,
+      deductionRatio: overallDeductionPct,
+      avgInHandRatio: overallTakeHomePct,
       monthsCount,
       expText,
     };
@@ -2283,6 +2285,11 @@ export default function InvDashboard() {
       totalWithdrawalCount,
       activeFundsCount: activeMfFunds.length,
       txnsCount: filteredMfTransactions.length,
+      currentValue: allTimeNetInvested,
+      absoluteGain: 0,
+      absoluteReturnPct: 0,
+      activeSipAmount: 0,
+      activeSipsCount: totalSipCount,
     };
   }, [mfMonthlyPlotData, rawMfTransactions, activeMfFunds, filteredMfTransactions]);
 
@@ -4025,7 +4032,7 @@ export default function InvDashboard() {
                     </div>
                     <div className="flex items-center gap-1.5 sm:gap-2 mt-1 sm:mt-1.5 text-[11px] sm:text-xs text-base-content/60 font-medium">
                       <span className="badge badge-xs badge-success font-bold text-[9px] sm:text-[10px]">
-                        {kpiSummary.overallTakeHomePct.toFixed(0)}% Net
+                        {((kpiSummary.overallTakeHomePct) || 0).toFixed(0)}% Net
                       </span>
                       <span className="truncate">Take-Home</span>
                     </div>
@@ -5006,9 +5013,9 @@ export default function InvDashboard() {
                       {mfKpiSummary.allTimeUnitsHeld.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </div>
                     <div className="flex items-center gap-1.5 sm:gap-2 mt-1 sm:mt-1.5 text-[11px] sm:text-xs text-base-content/60 font-medium truncate">
-                      <span>+{mfKpiSummary.periodUnitsAdded.toFixed(1)} u</span>
+                      <span>+{(mfKpiSummary.periodUnitsAdded || 0).toFixed(1)} u</span>
                       <span>•</span>
-                      <span>-{mfKpiSummary.periodUnitsWithdrawn.toFixed(1)} u</span>
+                      <span>-{(mfKpiSummary.periodUnitsWithdrawn || 0).toFixed(1)} u</span>
                     </div>
                   </div>
                 </div>
@@ -5032,7 +5039,7 @@ export default function InvDashboard() {
                     </div>
                     <div className="flex items-center gap-1.5 sm:gap-2 mt-1 sm:mt-1.5 text-[11px] sm:text-xs text-base-content/60 font-medium truncate">
                       <span className="badge badge-xs badge-info font-bold text-[9px] sm:text-[10px]">
-                        Avg NAV: ₹{mfKpiSummary.avgAcquisitionNav.toFixed(1)}
+                        Avg NAV: ₹{(mfKpiSummary.avgAcquisitionNav || 0).toFixed(1)}
                       </span>
                       <span>Period: ₹{formatCurrencyCompact(mfKpiSummary.periodEr)}</span>
                     </div>
@@ -5878,7 +5885,7 @@ export default function InvDashboard() {
                       {hideNumbers ? "••••••" : `₹${formatCurrency2Dec(kpiSummary.totalDeductions)}`}
                     </span>
                     <span className="text-[9.5px] opacity-60 mt-1 block truncate">
-                      {kpiSummary.deductionRatio.toFixed(1)}% Tax & PF
+                      {((kpiSummary.deductionRatio ?? kpiSummary.overallDeductionPct) || 0).toFixed(1)}% Tax & PF
                     </span>
                   </div>
 
@@ -5892,7 +5899,7 @@ export default function InvDashboard() {
                       </div>
                     </div>
                     <span className="text-base font-black font-mono text-teal-600 dark:text-teal-400 mt-1.5 block truncate">
-                      {kpiSummary.avgInHandRatio.toFixed(1)}%
+                      {((kpiSummary.avgInHandRatio ?? kpiSummary.overallTakeHomePct) || 0).toFixed(1)}%
                     </span>
                     <span className="text-[9.5px] opacity-60 mt-1 block truncate">
                       Compensation Yield
@@ -6519,51 +6526,51 @@ export default function InvDashboard() {
                   <div className="card bg-base-100 shadow-xs border border-base-content/10 p-2.5 rounded-2xl">
                     <div className="flex items-center justify-between">
                       <span className="text-[10px] font-bold uppercase tracking-wider text-base-content/50 truncate">
-                        Current Value
+                        Redemptions
                       </span>
-                      <div className="w-7 h-7 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500 shrink-0">
-                        <Landmark size={15} />
+                      <div className="w-7 h-7 rounded-xl bg-rose-500/10 flex items-center justify-center text-rose-500 shrink-0">
+                        <ArrowDownLeft size={15} />
                       </div>
                     </div>
-                    <span className="text-base font-black font-mono text-blue-600 dark:text-blue-400 mt-1.5 block truncate">
-                      {hideNumbers ? "••••••" : `₹${formatCurrency2Dec(mfKpiSummary.currentValue)}`}
+                    <span className="text-base font-black font-mono text-rose-500 mt-1.5 block truncate">
+                      {hideNumbers ? "••••••" : `₹${formatCurrency2Dec(mfKpiSummary.allTimeWithdrawn)}`}
                     </span>
                     <span className="text-[9.5px] opacity-60 mt-1 block truncate">
-                      Portfolio Valuation
+                      {mfKpiSummary.totalWithdrawalCount || 0} Claims Logged
                     </span>
                   </div>
 
                   <div className="card bg-base-100 shadow-xs border border-base-content/10 p-2.5 rounded-2xl">
                     <div className="flex items-center justify-between">
                       <span className="text-[10px] font-bold uppercase tracking-wider text-base-content/50 truncate">
-                        Absolute Gain
+                        Units Held
                       </span>
-                      <div className={`w-7 h-7 rounded-xl flex items-center justify-center shrink-0 ${mfKpiSummary.absoluteGain >= 0 ? "bg-emerald-500/10 text-emerald-500" : "bg-rose-500/10 text-rose-500"}`}>
-                        <TrendingUp size={15} />
+                      <div className="w-7 h-7 rounded-xl bg-sky-500/10 flex items-center justify-center text-sky-500 shrink-0">
+                        <Layers size={15} />
                       </div>
                     </div>
-                    <span className={`text-base font-black font-mono mt-1.5 block truncate ${mfKpiSummary.absoluteGain >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
-                      {hideNumbers ? "••••••" : `${mfKpiSummary.absoluteGain >= 0 ? "+" : ""}₹${formatCurrency2Dec(mfKpiSummary.absoluteGain)}`}
+                    <span className="text-base font-black font-mono text-sky-600 dark:text-sky-400 mt-1.5 block truncate">
+                      {hideNumbers ? "••••••" : `${(mfKpiSummary.allTimeUnitsHeld || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} u`}
                     </span>
                     <span className="text-[9.5px] opacity-60 mt-1 block truncate">
-                      {mfKpiSummary.absoluteReturnPct >= 0 ? "+" : ""}{mfKpiSummary.absoluteReturnPct.toFixed(1)}% Return
+                      Avg NAV ₹{((mfKpiSummary.avgAcquisitionNav) || 0).toFixed(1)}
                     </span>
                   </div>
 
                   <div className="card bg-base-100 shadow-xs border border-base-content/10 p-2.5 rounded-2xl">
                     <div className="flex items-center justify-between">
                       <span className="text-[10px] font-bold uppercase tracking-wider text-base-content/50 truncate">
-                        Monthly SIPs
+                        Total Expense Ratio
                       </span>
-                      <div className="w-7 h-7 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-500 shrink-0">
-                        <Clock size={15} />
+                      <div className="w-7 h-7 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-500 shrink-0">
+                        <Percent size={15} />
                       </div>
                     </div>
-                    <span className="text-base font-black font-mono text-indigo-600 dark:text-indigo-400 mt-1.5 block truncate">
-                      {hideNumbers ? "••••••" : `₹${formatCurrency2Dec(mfKpiSummary.activeSipAmount)}`}
+                    <span className="text-base font-black font-mono text-amber-500 mt-1.5 block truncate">
+                      {hideNumbers ? "••••••" : `₹${formatCurrency2Dec(mfKpiSummary.allTimeEr)}`}
                     </span>
                     <span className="text-[9.5px] opacity-60 mt-1 block truncate">
-                      {mfKpiSummary.activeSipsCount} Active Plans
+                      Management ER Paid
                     </span>
                   </div>
                 </section>
@@ -6712,18 +6719,18 @@ export default function InvDashboard() {
                         </div>
                         <div className="bg-base-100/70 p-2 rounded-xl border border-base-content/5">
                           <span className="text-[9px] uppercase font-bold text-base-content/50 block truncate">
-                            Current
+                            Redeemed
                           </span>
-                          <span className="font-mono font-black text-xs text-blue-500 block truncate mt-0.5">
-                            {hideNumbers ? "••••" : `₹${formatCurrencyCompact(mfKpiSummary.currentValue)}`}
+                          <span className="font-mono font-black text-xs text-rose-500 block truncate mt-0.5">
+                            {hideNumbers ? "••••" : `₹${formatCurrencyCompact(mfKpiSummary.allTimeWithdrawn)}`}
                           </span>
                         </div>
                         <div className="bg-base-100/70 p-2 rounded-xl border border-base-content/5">
                           <span className="text-[9px] uppercase font-bold text-base-content/50 block truncate">
-                            Net Gain
+                            Units Held
                           </span>
-                          <span className={`font-mono font-black text-xs block truncate mt-0.5 ${mfKpiSummary.absoluteGain >= 0 ? "text-emerald-500" : "text-rose-500"}`}>
-                            {hideNumbers ? "••••" : `${mfKpiSummary.absoluteGain >= 0 ? "+" : ""}₹${formatCurrencyCompact(mfKpiSummary.absoluteGain)}`}
+                          <span className="font-mono font-black text-xs text-sky-500 block truncate mt-0.5">
+                            {hideNumbers ? "••••" : `${(mfKpiSummary.allTimeUnitsHeld || 0).toFixed(1)} u`}
                           </span>
                         </div>
                       </div>
