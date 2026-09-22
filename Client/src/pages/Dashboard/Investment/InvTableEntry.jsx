@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import { createPortal } from "react-dom";
 import dayjs from "dayjs";
@@ -58,6 +58,7 @@ import OrganizeMfGroupsModal from "../../../components/Dashboard/Investment/Orga
 import MutualFundCard from "../../../components/Dashboard/Investment/MutualFundCard";
 import MutualFundTableModal from "../../../components/Dashboard/Investment/MutualFundTableModal";
 import MutualFundInfoModal from "../../../components/Dashboard/Investment/MutualFundInfoModal";
+import { calcMfHoldingValue } from "./InvTableView";
 import AddFixedDepositModal from "../../../components/Dashboard/Investment/AddFixedDepositModal";
 import WithdrawFdModal from "../../../components/Dashboard/Investment/WithdrawFdModal";
 import OrganizeFdGroupsModal from "../../../components/Dashboard/Investment/OrganizeFdGroupsModal";
@@ -233,6 +234,42 @@ export default function InvTableEntry() {
   const [stocksData, setStocksData] = useState(INITIAL_STOCKS_DATA);
   const [isAddStockModalOpen, setIsAddStockModalOpen] = useState(false);
   const [editingStock, setEditingStock] = useState(null);
+  const [expandedStockIds, setExpandedStockIds] = useState(new Set());
+
+  const toggleStockExpand = (stockId) => {
+    setExpandedStockIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(stockId)) {
+        next.delete(stockId);
+      } else {
+        next.add(stockId);
+      }
+      return next;
+    });
+  };
+
+  // Mobile Sticky Header Dynamic Height Tracker
+  const mobileHeaderRef = useRef(null);
+  const [mobileHeaderHeight, setMobileHeaderHeight] = useState(110);
+
+  useEffect(() => {
+    const updateHeaderHeight = () => {
+      if (mobileHeaderRef.current) {
+        setMobileHeaderHeight(mobileHeaderRef.current.offsetHeight);
+      }
+    };
+    updateHeaderHeight();
+    window.addEventListener("resize", updateHeaderHeight);
+    let observer;
+    if (mobileHeaderRef.current && window.ResizeObserver) {
+      observer = new ResizeObserver(updateHeaderHeight);
+      observer.observe(mobileHeaderRef.current);
+    }
+    return () => {
+      window.removeEventListener("resize", updateHeaderHeight);
+      if (observer) observer.disconnect();
+    };
+  }, [activeTab]);
 
   // Mutual Fund State
   // Each fund = { id, amc, category, subCategory, plan, optionType, folioNumber, investmentType, transactions: [{id, term, type, date, amtDeposit, er, actualAmt, nav, units}] }
@@ -628,7 +665,9 @@ export default function InvTableEntry() {
           id: "default-group",
           name: "General Mutual Funds",
           funds: filteredMutualFunds,
-          totalInvested: filteredMutualFunds.reduce((acc, f) => acc + (getMfDetailedSummary(f).totalInvested || 0), 0),
+          totalInvested: filteredMutualFunds.reduce((acc, f) => {
+            return acc + calcMfHoldingValue(f);
+          }, 0),
         },
       ];
     }
@@ -649,7 +688,9 @@ export default function InvTableEntry() {
           id: group.id,
           name: group.name,
           funds: groupFunds,
-          totalInvested: groupFunds.reduce((acc, f) => acc + (getMfDetailedSummary(f).totalInvested || 0), 0),
+          totalInvested: groupFunds.reduce((acc, f) => {
+            return acc + calcMfHoldingValue(f);
+          }, 0),
         });
       }
     });
@@ -660,7 +701,9 @@ export default function InvTableEntry() {
         id: "unassigned-group",
         name: "Other Mutual Funds",
         funds: unassignedFunds,
-        totalInvested: unassignedFunds.reduce((acc, f) => acc + (getMfDetailedSummary(f).totalInvested || 0), 0),
+        totalInvested: unassignedFunds.reduce((acc, f) => {
+          return acc + calcMfHoldingValue(f);
+        }, 0),
       });
     }
 
@@ -3083,6 +3126,44 @@ export default function InvTableEntry() {
     }).format(val);
   };
 
+  const formatCompactINR = (val, includeRupee = true) => {
+    if (val === undefined || val === null || isNaN(val) || val === "-") return "-";
+    const num = Number(val);
+    const isNegative = num < 0;
+    const abs = Math.abs(num);
+    const prefix = includeRupee ? "₹" : "";
+
+    let formatted = "";
+    if (abs >= 10000000) {
+      const cr = abs / 10000000;
+      formatted = (cr >= 100 ? cr.toFixed(1) : parseFloat(cr.toFixed(2))) + "Cr";
+    } else if (abs >= 100000) {
+      const l = abs / 100000;
+      formatted = (l >= 100 ? l.toFixed(1) : parseFloat(l.toFixed(2))) + "L";
+    } else if (abs >= 10000) {
+      const k = abs / 1000;
+      formatted = parseFloat(k.toFixed(2)) + "K";
+    } else {
+      formatted = abs % 1 === 0
+        ? abs.toLocaleString("en-IN")
+        : abs.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    return `${isNegative ? "-" : ""}${prefix}${formatted}`;
+  };
+
+  const formatCompactPnL = (val) => {
+    if (val === undefined || val === null || isNaN(val) || val === "-") return "-";
+    const num = Number(val);
+    if (num === 0) return "₹0";
+    const isPositive = num > 0;
+    const isNegative = num < 0;
+    const formatted = formatCompactINR(Math.abs(num), true);
+    if (isPositive) return `+${formatted}`;
+    if (isNegative) return `-${formatted}`;
+    return formatted;
+  };
+
   const formatDateCell = (dStr) => {
     if (!dStr || dStr === "-") return "-";
     const d = new Date(dStr);
@@ -3095,7 +3176,7 @@ export default function InvTableEntry() {
   };
 
   return (
-    <div className="pb-12 max-w-full overflow-visible space-y-4">
+    <div className="pb-12 w-full max-w-full overflow-x-clip md:overflow-visible md:space-y-4">
       {/* ================================================================== */}
       {/* DESKTOP VIEW (hidden md:block) - ZERO CHANGES TO DESKTOP           */}
       {/* ================================================================== */}
@@ -3670,7 +3751,7 @@ export default function InvTableEntry() {
 
         {/* Single-Line Controls & Filters Bar for Mutual Funds */}
         {activeTab === "mf" && (
-          <div className="bg-base-100/80 backdrop-blur-md p-2.5 rounded-2xl border border-base-200/70 shadow-sm overflow-visible">
+          <div className="bg-base-100/80 backdrop-blur-md p-2.5 rounded-2xl border border-base-content/8 dark:border-base-content/8 shadow-sm overflow-visible">
             <div className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-2.5 w-full">
               {/* Left Side: Search Bar */}
               <div className="relative flex-1 min-w-[200px] max-w-md">
@@ -3698,7 +3779,7 @@ export default function InvTableEntry() {
                 <button
                   type="button"
                   onClick={() => setIsOrganizeModalOpen(true)}
-                  className="btn btn-xs btn-ghost rounded-lg px-2.5 font-bold text-xs border border-base-300/60 hover:bg-base-200 transition-all cursor-pointer"
+                  className="btn btn-xs btn-ghost rounded-lg px-2.5 font-bold text-xs border border-base-content/8 dark:border-base-content/8 hover:bg-base-200 transition-all cursor-pointer"
                   title="Organize Fund Groups & Order"
                 >
                   <FolderTree size={14} className="text-secondary" />
@@ -3711,14 +3792,14 @@ export default function InvTableEntry() {
                   className={`btn btn-xs rounded-xl px-2.5 font-bold text-xs transition-all cursor-pointer border ${
                     hideMfNumbers
                       ? "btn-warning bg-warning/15 border-warning/30 text-warning shadow-xs"
-                      : "btn-ghost border-base-300/60 text-base-content/70 hover:text-base-content hover:bg-base-200"
+                      : "btn-ghost border-base-content/8 dark:border-base-content/8 text-base-content/70 hover:text-base-content hover:bg-base-200"
                   }`}
                   title={hideMfNumbers ? "Numbers Hidden (Click to Show Numbers)" : "Hide Numbers in MF Cards"}
                 >
                   {hideMfNumbers ? <EyeOff size={14} /> : <Eye size={14} />}
                 </button>
 
-                <div className="join bg-base-200 p-0.5 rounded-xl border border-base-300/60 shrink-0">
+                <div className="join bg-base-200 p-0.5 rounded-xl border border-base-content/8 dark:border-base-content/8 shrink-0">
                   <button
                     type="button"
                     onClick={() => handleMfLayoutChange("2-col")}
@@ -4644,7 +4725,7 @@ export default function InvTableEntry() {
                     {/* Full-Width Collapsible Group Header */}
                     <div
                       onClick={() => toggleGroupCollapse(group.id)}
-                      className="flex items-center justify-between px-4 py-2.5 bg-base-100/90 backdrop-blur-md rounded-2xl border border-base-200/90 shadow-2xs cursor-pointer hover:bg-base-200/40 transition-all select-none group"
+                      className="flex items-center justify-between px-4 py-2.5 bg-base-100/90 backdrop-blur-md rounded-2xl border border-base-content/8 dark:border-base-content/8 shadow-2xs cursor-pointer hover:bg-base-200/40 transition-all select-none group"
                     >
                       <div className="flex items-center gap-3 min-w-0">
                         <div className={`p-1 rounded-xl bg-secondary/10 text-secondary transition-transform duration-200 shrink-0 ${isGroupCollapsed ? '-rotate-90' : 'rotate-0'}`}>
@@ -5943,22 +6024,33 @@ export default function InvTableEntry() {
       {/* ================================================================== */}
       {/* PHONE VIEW (block md:hidden) - FULL MOBILE OPTIMIZED EXPERIENCE    */}
       {/* ================================================================== */}
-      <div className="block md:hidden space-y-3 pb-24 w-full">
-        {/* Sticky Header - Mobile Phone View */}
-        <div className="sticky top-[-17px] -mt-2 pt-2 z-40 bg-base-100/95 dark:bg-base-900/95 backdrop-blur-md border-b border-base-300 -mx-2 px-3 py-2 shadow-xs space-y-2">
-          {/* Row 1: Active Category Badge + Privacy Eye Toggle + Filter Drawer Button + Quick Add */}
+      <div className="block md:hidden space-y-3 pb-24 w-full max-w-full overflow-x-clip">
+        {/* Sticky Header - Mobile Phone View (Fixed at Top) */}
+        <div ref={mobileHeaderRef} className="sticky top-0 z-40 bg-base-100/95 dark:bg-base-900/95 backdrop-blur-md border-b border-base-200 dark:border-base-800 px-3 pt-2 pb-2.5 shadow-sm space-y-2 w-full max-w-full">
+          {/* Row 1: Active Category Badge + Table View + Privacy Eye Toggle + Filter Drawer Button + Quick Add */}
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-base-200 border border-base-300/60 shadow-xs min-w-0">
               {(() => {
                 const cat = categories.find((c) => c.id === activeTab) || categories[0];
                 const Icon = cat.icon;
+                let count = 0;
+                if (activeTab === "stocks") count = filteredStocks.length;
+                else if (activeTab === "mf") count = filteredMutualFunds.length;
+                else if (activeTab === "fd") count = filteredFixedDeposits.length;
+                else if (activeTab === "rd") count = filteredRecurringDeposits.length;
+                else if (activeTab === "salary") count = filteredSalaries.length;
+                else if (activeTab === "pf") count = pfSubTab === "withdrawals" ? filteredPfWithdrawals.length : filteredPf.length;
+
                 return (
-                  <>
+                  <div className="flex items-center gap-1.5 min-w-0">
                     <Icon size={14} className="text-primary shrink-0" />
-                    <span className="font-bold text-xs tracking-tight text-base-content truncate">
+                    <span className="font-extrabold text-xs tracking-tight text-base-content truncate">
                       {cat.label}
                     </span>
-                  </>
+                    <span className="badge badge-xs badge-neutral font-mono font-bold text-[9.5px] px-1.5 py-0.5">
+                      {count}
+                    </span>
+                  </div>
                 );
               })()}
             </div>
@@ -5974,33 +6066,49 @@ export default function InvTableEntry() {
                   else if (activeTab === "rd") toggleHideRdNumbers();
                   else toggleHideStockNumbers();
                 }}
-                className="btn btn-xs btn-ghost btn-square rounded-xl text-base-content/60 hover:text-primary cursor-pointer h-7 w-7"
+                className={`btn btn-xs btn-square rounded-xl transition-colors cursor-pointer h-7 w-7 ${
+                  (activeTab === "stocks" && hideStockNumbers) ||
+                  (activeTab === "mf" && hideMfNumbers) ||
+                  (activeTab === "fd" && hideFdNumbers) ||
+                  (activeTab === "rd" && hideRdNumbers)
+                    ? "bg-primary/15 text-primary border border-primary/30"
+                    : "btn-ghost text-base-content/60 hover:text-primary"
+                }`}
                 title="Privacy Mode (Hide/Show Numbers)"
               >
                 {activeTab === "stocks" ? (
-                  hideStockNumbers ? <EyeOff size={15} className="text-primary font-bold" /> : <Eye size={15} />
+                  hideStockNumbers ? <EyeOff size={14} className="text-primary font-bold" /> : <Eye size={14} />
                 ) : activeTab === "mf" ? (
-                  hideMfNumbers ? <EyeOff size={15} className="text-primary font-bold" /> : <Eye size={15} />
+                  hideMfNumbers ? <EyeOff size={14} className="text-primary font-bold" /> : <Eye size={14} />
                 ) : activeTab === "fd" ? (
-                  hideFdNumbers ? <EyeOff size={15} className="text-primary font-bold" /> : <Eye size={15} />
+                  hideFdNumbers ? <EyeOff size={14} className="text-primary font-bold" /> : <Eye size={14} />
                 ) : activeTab === "rd" ? (
-                  hideRdNumbers ? <EyeOff size={15} className="text-primary font-bold" /> : <Eye size={15} />
+                  hideRdNumbers ? <EyeOff size={14} className="text-primary font-bold" /> : <Eye size={14} />
                 ) : hideStockNumbers ? (
-                  <EyeOff size={15} className="text-primary font-bold" />
+                  <EyeOff size={14} className="text-primary font-bold" />
                 ) : (
-                  <Eye size={15} />
+                  <Eye size={14} />
                 )}
               </button>
 
-              {/* Filter Button */}
+              {/* Filter Button with Active Dot */}
               <button
                 type="button"
                 onClick={() => setIsMobileInvFilterOpen(true)}
-                className="btn btn-xs h-7 px-2.5 rounded-xl font-medium bg-base-200 hover:bg-base-300 border border-base-300/80 shadow-xs flex items-center gap-1.5 text-xs text-base-content cursor-pointer"
+                className="relative btn btn-xs h-7 px-2.5 rounded-xl font-medium bg-base-200 hover:bg-base-300 border border-base-300/80 shadow-xs flex items-center gap-1.5 text-xs text-base-content cursor-pointer"
                 title="Open Filters"
               >
                 <Filter size={12} className="text-primary shrink-0" />
                 <span className="font-semibold text-[11px]">Filter</span>
+                {/* Active Indicator Dot */}
+                {((activeTab === "stocks" && (stocksTypeFilter !== "all" || statusFilter !== "all" || capFilter !== "all" || platformFilter !== "all" || searchQuery.trim().length > 0)) ||
+                  (activeTab === "mf" && mfSearchTerm.trim().length > 0) ||
+                  (activeTab === "fd" && fdSearchTerm.trim().length > 0) ||
+                  (activeTab === "rd" && rdSearchTerm.trim().length > 0) ||
+                  (activeTab === "salary" && (salarySearchTerm.trim().length > 0 || salaryCompanyFilter !== "all" || salaryYearFilter !== "all")) ||
+                  (activeTab === "pf" && (pfSearchTerm.trim().length > 0 || pfCompanyFilter !== "all" || pfYearFilter !== "all"))) && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse -ml-0.5" />
+                )}
               </button>
 
               {/* Quick Add Button */}
@@ -6030,7 +6138,7 @@ export default function InvTableEntry() {
           </div>
 
           {/* Row 2: Horizontal Scrollable Category Boxes */}
-          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 -mx-1 px-1">
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 px-0.5 overscroll-x-contain touch-pan-x w-full">
             {categories.map((cat) => {
               const Icon = cat.icon;
               const isActive = activeTab === cat.id;
@@ -6039,16 +6147,16 @@ export default function InvTableEntry() {
                   key={cat.id}
                   type="button"
                   onClick={() => setActiveTab(cat.id)}
-                  className={`group relative shrink-0 min-w-[100px] max-w-[130px] h-14 rounded-2xl transition-all duration-200 cursor-pointer flex flex-col justify-between p-2.5 text-left select-none overflow-hidden ${
+                  className={`group relative shrink-0 min-w-[94px] max-w-[122px] h-12 rounded-xl transition-all duration-200 cursor-pointer flex flex-col justify-between p-2 text-left select-none overflow-hidden ${
                     isActive
                       ? `border ${cat.activeBorder} ${cat.activeBg} shadow-2xs scale-[1.01]`
                       : "border border-base-content/8 hover:border-base-content/15 bg-base-100/50 dark:bg-base-200/25 hover:bg-base-200/50 shadow-2xs"
                   }`}
                 >
                   {/* Enlarged Watermark Background Icon */}
-                  <div className="absolute -right-2 -bottom-2.5 pointer-events-none select-none transition-transform duration-300 group-hover:scale-110 group-active:scale-95">
+                  <div className="absolute -right-2 -bottom-2 pointer-events-none select-none transition-transform duration-300 group-hover:scale-110 group-active:scale-95">
                     <Icon
-                      size={52}
+                      size={44}
                       strokeWidth={1.5}
                       className={`transition-all duration-200 ${
                         isActive
@@ -6071,7 +6179,7 @@ export default function InvTableEntry() {
                       )}
                     </div>
                     {isActive && (
-                      <span className={`text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.2 rounded-md ${cat.badgeClass}`}>
+                      <span className={`text-[8.5px] font-bold uppercase tracking-wider px-1 py-0.2 rounded-md ${cat.badgeClass}`}>
                         Active
                       </span>
                     )}
@@ -6079,7 +6187,7 @@ export default function InvTableEntry() {
 
                   {/* Foreground Bottom Row: Category Label */}
                   <span
-                    className={`relative z-10 text-[12px] leading-tight truncate w-full tracking-tight ${
+                    className={`relative z-10 text-[11.5px] leading-tight truncate w-full tracking-tight ${
                       isActive
                         ? "font-extrabold text-base-content"
                         : "font-medium text-base-content/70 group-hover:text-base-content"
@@ -6634,85 +6742,149 @@ export default function InvTableEntry() {
         )}
 
         {/* ================================================================ */}
-        {/* TAB 1: STOCKS MOBILE CONTENT                                     */}
+        {/* TAB 1: STOCKS MOBILE CONTENT - FINTECH CARD FEED                 */}
         {/* ================================================================ */}
         {activeTab === "stocks" && (
-          <div className="space-y-3 px-1 w-full animate-in fade-in duration-200">
-            {/* 3-Stat Summary Strip */}
-            <div className="grid grid-cols-3 gap-2">
-              <div className="bg-base-100 p-2.5 rounded-2xl border border-base-200 shadow-2xs">
-                <div className="text-[10px] font-bold text-base-content/60 uppercase">Trades</div>
-                <div className="text-sm font-black text-base-content font-mono">{filteredStocks.length}</div>
-              </div>
-              <div className="bg-base-100 p-2.5 rounded-2xl border border-base-200 shadow-2xs">
-                <div className="text-[10px] font-bold text-base-content/60 uppercase">Holding</div>
-                <div className="text-sm font-black text-success font-mono">
-                  {filteredStocks.filter((s) => s.qLeft > 0).length}
+          <div className="space-y-3 px-2.5 w-full max-w-full animate-in fade-in duration-200">
+            {/* 1. Modern Fintech Hero Portfolio Banner */}
+            <div className="bg-gradient-to-br from-base-100 to-base-200/90 rounded-2xl border border-base-200/90 p-3.5 shadow-sm space-y-3">
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <span className="text-[10px] font-black uppercase tracking-wider text-base-content/60">
+                    Realized P&L
+                  </span>
+                  <div className={`text-2xl font-black font-mono tracking-tight mt-0.5 ${tableTotals.gainRs >= 0 ? "text-success" : "text-error"}`}>
+                    {hideStockNumbers ? "••••••••" : formatCompactPnL(tableTotals.gainRs)}
+                  </div>
+                </div>
+
+                <div className="flex flex-col items-end gap-1">
+                  <span className={`badge font-bold font-mono text-xs px-2.5 py-1 rounded-xl ${
+                    tableTotals.gainRs >= 0
+                      ? "bg-success/15 text-success border border-success/30"
+                      : "bg-error/15 text-error border border-error/30"
+                  }`}>
+                    {tableTotals.gainRs >= 0 ? "+" : ""}{tableTotals.gainPct.toFixed(2)}%
+                  </span>
+                  <span className="text-[10px] font-semibold text-base-content/50">
+                    Return on Sold
+                  </span>
                 </div>
               </div>
-              <div className="bg-base-100 p-2.5 rounded-2xl border border-base-200 shadow-2xs">
-                <div className="text-[10px] font-bold text-base-content/60 uppercase">Realized PnL</div>
-                <div className={`text-sm font-black font-mono truncate ${tableTotals.gainRs >= 0 ? "text-success" : "text-error"}`}>
-                  {hideStockNumbers ? "••••" : (tableTotals.gainRs >= 0 ? `+₹${Math.round(tableTotals.gainRs).toLocaleString("en-IN")}` : `-₹${Math.round(Math.abs(tableTotals.gainRs)).toLocaleString("en-IN")}`)}
+
+              {/* Sub-Metric 3-Pack */}
+              <div className="grid grid-cols-3 gap-2 pt-2.5 border-t border-base-content/10">
+                <div className="bg-base-100/70 p-2 rounded-xl border border-base-content/5">
+                  <div className="text-[9.5px] font-bold text-base-content/60 uppercase">Holdings</div>
+                  <div className="text-xs font-black font-mono text-success truncate">
+                    {filteredStocks.filter((s) => s.qLeft > 0).length} <span className="text-[9.5px] font-semibold text-base-content/50">open</span>
+                  </div>
+                </div>
+                <div className="bg-base-100/70 p-2 rounded-xl border border-base-content/5">
+                  <div className="text-[9.5px] font-bold text-base-content/60 uppercase">Closed</div>
+                  <div className="text-xs font-black font-mono text-base-content truncate">
+                    {filteredStocks.filter((s) => s.sQty > 0 || (s.sDate && s.sDate !== "-")).length} <span className="text-[9.5px] font-semibold text-base-content/50">trades</span>
+                  </div>
+                </div>
+                <div className="bg-base-100/70 p-2 rounded-xl border border-base-content/5">
+                  <div className="text-[9.5px] font-bold text-base-content/60 uppercase">Total Buy</div>
+                  <div className="text-xs font-black font-mono text-primary truncate">
+                    {hideStockNumbers ? "••••" : formatCompactINR(tableTotals.bFStock)}
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Quick Filter Pills Row */}
-            <div className="flex items-center justify-between gap-1.5 overflow-x-auto no-scrollbar py-0.5">
-              <div className="flex items-center gap-1 bg-base-200 p-1 rounded-xl shrink-0 text-xs font-bold border border-base-300/60">
-                <button
-                  type="button"
-                  onClick={() => setStocksTypeFilter("all")}
-                  className={`px-2 py-1 rounded-lg text-[11px] font-bold transition-all ${
-                    stocksTypeFilter === "all" ? "bg-base-100 text-primary shadow-xs" : "text-base-content/70"
-                  }`}
-                >
-                  All ({stocksData.length})
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setStocksTypeFilter("delivery")}
-                  className={`px-2 py-1 rounded-lg text-[11px] font-bold transition-all ${
-                    stocksTypeFilter === "delivery" ? "bg-base-100 text-primary shadow-xs" : "text-base-content/70"
-                  }`}
-                >
-                  Delivery
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setStocksTypeFilter("intraday")}
-                  className={`px-2 py-1 rounded-lg text-[11px] font-bold transition-all ${
-                    stocksTypeFilter === "intraday" ? "bg-base-100 text-primary shadow-xs" : "text-base-content/70"
-                  }`}
-                >
-                  Intraday
-                </button>
+            {/* 2. Sticky Filter Tabs & Inline Search (Row 1: All 6 Filter Tabs in ONE Line, Row 2: Full-Width Search Bar) */}
+            <div
+              className="sticky z-30 bg-base-100/95 dark:bg-base-900/95 backdrop-blur-md py-2 -mx-2.5 px-2.5 border-b border-base-200/80 shadow-xs space-y-1.5 transition-all"
+              style={{ top: `${mobileHeaderHeight}px` }}
+            >
+              {/* Row 1: All 6 Filter Tabs in ONE Single Line (50% Type / 50% Status) */}
+              <div className="grid grid-cols-2 gap-1.5 w-full">
+                {/* Left 3: Trade Type (All, Delivery, Intraday) */}
+                <div className="grid grid-cols-3 gap-0.5 bg-base-200/80 dark:bg-base-800/60 p-0.5 rounded-xl border border-base-300/60">
+                  {[
+                    { id: "all", label: "All" },
+                    { id: "delivery", label: "Delivery" },
+                    { id: "intraday", label: "Intraday" },
+                  ].map((t) => {
+                    const isActive = stocksTypeFilter === t.id;
+                    return (
+                      <button
+                        key={t.id}
+                        type="button"
+                        onClick={() => setStocksTypeFilter(t.id)}
+                        className={`h-7 rounded-lg text-[10px] font-bold transition-all cursor-pointer flex items-center justify-center px-0.5 ${
+                          isActive
+                            ? "bg-base-100 dark:bg-base-900 text-primary shadow-xs font-black border border-base-300/50 scale-[1.01]"
+                            : "text-base-content/65 hover:text-base-content"
+                        }`}
+                        title={t.label}
+                      >
+                        <span className="truncate">{t.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Right 3: Position Status (All, Holding, Sold) */}
+                <div className="grid grid-cols-3 gap-0.5 bg-base-200/80 dark:bg-base-800/60 p-0.5 rounded-xl border border-base-300/60">
+                  {[
+                    { id: "all", label: "All" },
+                    { id: "holding", label: "Holding" },
+                    { id: "sold", label: "Sold" },
+                  ].map((s) => {
+                    const isActive = statusFilter === s.id;
+                    return (
+                      <button
+                        key={s.id}
+                        type="button"
+                        onClick={() => setStatusFilter(s.id)}
+                        className={`h-7 rounded-lg text-[10px] font-bold transition-all cursor-pointer flex items-center justify-center gap-1 px-0.5 ${
+                          isActive
+                            ? s.id === "holding"
+                              ? "bg-base-100 dark:bg-base-900 text-success shadow-xs font-black border border-base-300/50"
+                              : s.id === "sold"
+                              ? "bg-base-100 dark:bg-base-900 text-secondary shadow-xs font-black border border-base-300/50"
+                              : "bg-base-100 dark:bg-base-900 text-primary shadow-xs font-black border border-base-300/50"
+                            : "text-base-content/65 hover:text-base-content"
+                        }`}
+                        title={s.label}
+                      >
+                        {s.id === "holding" && isActive && (
+                          <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse shrink-0" />
+                        )}
+                        <span className="truncate">{s.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
-              <div className="flex items-center gap-1 bg-base-200 p-1 rounded-xl shrink-0 text-xs font-bold border border-base-300/60">
-                <button
-                  type="button"
-                  onClick={() => setStatusFilter("holding")}
-                  className={`px-2 py-1 rounded-lg text-[11px] font-bold transition-all ${
-                    statusFilter === "holding" ? "bg-base-100 text-success shadow-xs font-black" : "text-base-content/70"
-                  }`}
-                >
-                  Holding
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setStatusFilter("sold")}
-                  className={`px-2 py-1 rounded-lg text-[11px] font-bold transition-all ${
-                    statusFilter === "sold" ? "bg-base-100 text-secondary shadow-xs font-black" : "text-base-content/70"
-                  }`}
-                >
-                  Sold
-                </button>
+              {/* Row 2: Full-Width Search Bar */}
+              <div className="relative w-full">
+                <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-base-content/40" />
+                <input
+                  type="text"
+                  placeholder="Search stock, broker, exchange..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="input input-xs h-8 pl-8 pr-8 w-full rounded-xl bg-base-200/60 dark:bg-base-800/60 border border-base-300/60 text-xs placeholder:text-base-content/40 focus:border-primary"
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery("")}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-base-content/40 hover:text-base-content p-0.5 cursor-pointer"
+                  >
+                    <X size={12} />
+                  </button>
+                )}
               </div>
             </div>
 
-            {/* Content List */}
+            {/* 3. Content List / Cards Feed (All Stocks at Once, No Pagination) */}
             {loadingStocks ? (
               <div className="h-48 flex items-center justify-center">
                 <span className="loading loading-spinner loading-md text-primary"></span>
@@ -6721,7 +6893,7 @@ export default function InvTableEntry() {
               <div className="bg-base-100 rounded-2xl border border-base-200 p-8 text-center shadow-xs">
                 <Layers size={28} className="mx-auto text-base-content/30 mb-2" />
                 <p className="font-bold text-xs text-base-content">No Stock Trades Found</p>
-                <p className="text-[11px] text-base-content/60 mt-0.5">Try resetting your search query or filters.</p>
+                <p className="text-[11px] text-base-content/60 mt-0.5">Try resetting your search query.</p>
                 <button
                   type="button"
                   onClick={clearAllFilters}
@@ -6732,588 +6904,978 @@ export default function InvTableEntry() {
               </div>
             ) : (
               <div className="space-y-3">
-                {paginatedStocks.map((stock) => {
+                {filteredStocks.map((stock) => {
                   const isProfit = stock.gainRs >= 0;
                   const isSold = stock.sQty > 0 || (stock.sDate && stock.sDate !== "-");
+                  const isExpanded = expandedStockIds.has(stock.id);
 
                   return (
                     <div
                       key={stock.id}
-                      className="bg-base-100 rounded-2xl border border-base-200 p-3.5 shadow-2xs space-y-3"
+                      className="bg-base-100 rounded-2xl border border-base-content/10 dark:border-base-content/10 shadow-2xs hover:shadow-sm transition-all overflow-hidden"
                     >
-                      {/* Top Header Row */}
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="space-y-1 min-w-0">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="font-mono text-[10px] font-semibold text-base-content/50">
-                              #{stock.slNo}
-                            </span>
-                            <span
-                              className="bg-primary/10 text-primary px-2 py-0.5 rounded-lg text-xs font-black truncate max-w-[170px]"
-                              title={stock.name}
-                            >
-                              {stock.name}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-1 text-[9.5px] font-bold flex-wrap">
-                            <span className="px-1.5 py-0.5 rounded-md bg-primary text-primary-content">
-                              {calculateStockTerm(stock)}
-                            </span>
-                            <span className="px-1.5 py-0.5 rounded-md bg-base-200 text-base-content/70 border border-base-300">
-                              {stock.platform}
-                            </span>
-                            <span className="px-1.5 py-0.5 rounded-md bg-base-200 text-base-content/70 border border-base-300">
-                              {stock.exchange}
-                            </span>
+                      {/* Top Main Section */}
+                      <div className="p-3.5 space-y-3">
+                        {/* Row 1: Logo + Line 1 (#SlNo + Full Name + Status) + Line 2 (Metrics) */}
+                        <div className="flex items-start gap-2.5">
+                          <CompanyLogo
+                            name={stock.name}
+                            size="w-9 h-9"
+                            rounded="rounded-xl"
+                            type="stock"
+                          />
+                          <div className="flex-1 min-w-0 space-y-1">
+                            {/* Line 1: Serial Number First, then Full Stock Name */}
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <span className="font-mono text-[11px] font-black text-primary px-1.5 py-0.5 rounded-md bg-primary/10 border border-primary/20 shrink-0">
+                                #{stock.slNo}
+                              </span>
+                              <h4
+                                className="font-black text-xs text-base-content tracking-tight truncate"
+                                title={stock.name}
+                              >
+                                {stock.name}
+                              </h4>
+                            </div>
+
+                            {/* Line 2: All Metrics (Short term, Groww, NSE, Large cap) */}
+                            <div className="flex items-center gap-1.5 text-[9.5px] text-base-content/60 font-semibold flex-wrap">
+                              <span className="px-1.5 py-0.5 rounded-md bg-base-200 border border-base-300/60 font-bold text-base-content/80">
+                                {calculateStockTerm(stock)}
+                              </span>
+                              {stock.platform && <span>•</span>}
+                              {stock.platform && <span>{stock.platform}</span>}
+                              {stock.exchange && <span>•</span>}
+                              {stock.exchange && <span>{stock.exchange}</span>}
+                              {stock.cap && (
+                                <>
+                                  <span>•</span>
+                                  <span className="capitalize">{stock.cap} Cap</span>
+                                </>
+                              )}
+                            </div>
                           </div>
                         </div>
 
-                        {/* Actions */}
-                        <div className="flex items-center gap-0.5 shrink-0">
-                          <button
-                            type="button"
-                            onClick={() => handleOpenInfoModal(stock)}
-                            className="btn btn-ghost btn-xs btn-square text-info hover:bg-info/10"
-                            title="View Calculation Details"
-                          >
-                            <Info size={14} />
-                          </button>
+                        {/* Row 2: Financial Realization Grid */}
+                        <div className="grid grid-cols-2 gap-2 p-2.5 rounded-xl bg-base-200/50 border border-base-content/10 dark:border-base-content/10">
+                          {/* Buy Side */}
+                          <div className="space-y-0.5 border-r border-base-200/80 pr-2">
+                            <div className="flex items-center justify-between text-[10px]">
+                              <span className="text-base-content/60 font-semibold">Buy Price</span>
+                              <span className="font-mono font-bold text-base-content">
+                                {hideStockNumbers ? "••••" : formatCompactINR(stock.bShare)}
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between text-[10px]">
+                              <span className="text-base-content/60 font-semibold">Bought Qty</span>
+                              <span className="font-mono font-bold text-base-content">
+                                {hideStockNumbers ? "••" : stock.bQty}
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between text-[10px] pt-1 border-t border-base-200/60">
+                              <span className="text-base-content/70 font-bold">Total Cost</span>
+                              <span className="font-mono font-black text-primary text-[11px]">
+                                {hideStockNumbers ? "••••••" : formatCompactINR(stock.bFStock)}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Sell / PnL Side */}
+                          <div className="space-y-0.5 pl-1.5 flex flex-col justify-between">
+                            {isSold ? (
+                              <>
+                                <div className="flex items-center justify-between text-[10px]">
+                                  <span className="text-base-content/60 font-semibold">Sell Price</span>
+                                  <span className="font-mono font-bold text-base-content">
+                                    {hideStockNumbers ? "••••" : formatCompactINR(stock.sShare)}
+                                  </span>
+                                </div>
+                                <div className="flex items-center justify-between text-[10px]">
+                                  <span className="text-base-content/60 font-semibold">Realized P&L</span>
+                                  <span className={`font-mono font-black text-[11px] ${isProfit ? "text-success" : "text-error"}`}>
+                                    {hideStockNumbers ? "••••" : formatCompactPnL(stock.gainRs)}
+                                  </span>
+                                </div>
+                                <div className="flex items-center justify-between text-[10px] pt-1 border-t border-base-200/60">
+                                  <span className="text-base-content/70 font-bold">Net Return</span>
+                                  <span className={`font-mono font-black text-[11px] ${isProfit ? "text-success" : "text-error"}`}>
+                                    {hideStockNumbers ? "••%" : `${isProfit ? "+" : ""}${Number(stock.gainPct || 0).toFixed(2)}%`}
+                                  </span>
+                                </div>
+                              </>
+                            ) : (
+                              <div className="h-full flex flex-col justify-center items-center text-center py-1 space-y-0.5">
+                                <span className="text-[9.5px] uppercase font-extrabold text-primary/80 tracking-wider">
+                                  Holding Position
+                                </span>
+                                <span className="text-xs font-black text-primary font-mono">
+                                  {hideStockNumbers ? "•• Shares" : `${stock.qLeft} Shares Left`}
+                                </span>
+                                <span className="text-[9px] text-base-content/50">
+                                  Bought {formatDateCell(stock.bDate)}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Expandable Accordion Toggle Bar */}
+                        <button
+                          type="button"
+                          onClick={() => toggleStockExpand(stock.id)}
+                          className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl bg-base-200/30 hover:bg-base-200/60 border border-base-200/60 text-[10.5px] font-semibold text-base-content/70 transition-colors cursor-pointer select-none"
+                        >
+                          <span className="flex items-center gap-1.5">
+                            <Coins size={12} className="text-primary" />
+                            <span>{isExpanded ? "Hide Charges & Price Breakdown" : "View Charges & Price Breakdown"}</span>
+                          </span>
+                          <ChevronDown
+                            size={13}
+                            className={`transition-transform duration-200 text-base-content/50 ${isExpanded ? "rotate-180" : "rotate-0"}`}
+                          />
+                        </button>
+
+                        {/* Expandable Breakdown Drawer */}
+                        {isExpanded && (
+                          <div className="p-3 bg-base-200/60 rounded-xl border border-base-200 text-xs space-y-2.5 animate-in fade-in slide-in-from-top-1 duration-200">
+                            <div className="grid grid-cols-2 gap-3 text-[10.5px]">
+                              {/* Buy Detailed Breakdown */}
+                              <div className="space-y-1 pr-2 border-r border-base-300/60">
+                                <span className="text-[9.5px] font-extrabold uppercase text-primary tracking-wider block">
+                                  Buy Leg Breakdown
+                                </span>
+                                <div className="flex justify-between text-base-content/70">
+                                  <span>Date:</span>
+                                  <span className="font-medium text-base-content">{formatDateCell(stock.bDate)}</span>
+                                </div>
+                                <div className="flex justify-between text-base-content/70">
+                                  <span>Gross Stock:</span>
+                                  <span className="font-mono text-base-content">{hideStockNumbers ? "••••" : formatCompactINR(stock.bStock)}</span>
+                                </div>
+                                <div className="flex justify-between text-base-content/70">
+                                  <span>Brokerage:</span>
+                                  <span className="font-mono text-warning font-semibold">{hideStockNumbers ? "••" : formatCompactINR(stock.bBkg)}</span>
+                                </div>
+                                <div className="flex justify-between text-base-content/70">
+                                  <span>PDC / Taxes:</span>
+                                  <span className="font-mono text-warning font-semibold">{hideStockNumbers ? "••" : formatCompactINR(stock.bPdc)}</span>
+                                </div>
+                                <div className="flex justify-between text-base-content/70">
+                                  <span>Total Buy Taxes:</span>
+                                  <span className="font-mono text-warning font-bold">{hideStockNumbers ? "••" : formatCompactINR(stock.bBkgPdc)}</span>
+                                </div>
+                                <div className="flex justify-between pt-1 border-t border-base-300/60 font-bold">
+                                  <span>Final Share Price:</span>
+                                  <span className="font-mono text-primary">{hideStockNumbers ? "••••" : formatCompactINR(stock.bFShare)}</span>
+                                </div>
+                              </div>
+
+                              {/* Sell Detailed Breakdown */}
+                              <div className="space-y-1 pl-1">
+                                <span className="text-[9.5px] font-extrabold uppercase text-secondary tracking-wider block">
+                                  Sell Leg Breakdown
+                                </span>
+                                {isSold ? (
+                                  <>
+                                    <div className="flex justify-between text-base-content/70">
+                                      <span>Date:</span>
+                                      <span className="font-medium text-base-content">{formatDateCell(stock.sDate)}</span>
+                                    </div>
+                                    <div className="flex justify-between text-base-content/70">
+                                      <span>Gross Stock:</span>
+                                      <span className="font-mono text-base-content">{hideStockNumbers ? "••••" : formatCompactINR(stock.sStock)}</span>
+                                    </div>
+                                    <div className="flex justify-between text-base-content/70">
+                                      <span>Brokerage:</span>
+                                      <span className="font-mono text-warning font-semibold">{hideStockNumbers ? "••" : formatCompactINR(stock.sBkg)}</span>
+                                    </div>
+                                    <div className="flex justify-between text-base-content/70">
+                                      <span>PDC / STT:</span>
+                                      <span className="font-mono text-warning font-semibold">{hideStockNumbers ? "••" : formatCompactINR(stock.sPdc)}</span>
+                                    </div>
+                                    <div className="flex justify-between text-base-content/70">
+                                      <span>DP Charges:</span>
+                                      <span className="font-mono text-warning font-semibold">{hideStockNumbers ? "••" : formatCompactINR(stock.dp)}</span>
+                                    </div>
+                                    <div className="flex justify-between text-base-content/70">
+                                      <span>Total Sell Taxes:</span>
+                                      <span className="font-mono text-warning font-bold">{hideStockNumbers ? "••" : formatCompactINR(stock.sBkgPdc + stock.dp)}</span>
+                                    </div>
+                                    <div className="flex justify-between pt-1 border-t border-base-300/60 font-bold">
+                                      <span>Net Final Share:</span>
+                                      <span className="font-mono text-secondary">{hideStockNumbers ? "••••" : formatCompactINR(stock.sFShare)}</span>
+                                    </div>
+                                  </>
+                                ) : (
+                                  <div className="h-full flex flex-col justify-center items-center text-center py-2 text-base-content/50">
+                                    <span className="text-[10px] italic">Not sold yet</span>
+                                    <span className="text-[9px]">Sell leg charges will appear when position is closed.</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Card Footer: Status & Days Held on Left, Edit & Delete on Right */}
+                      <div className="px-3.5 py-2 bg-base-200/40 border-t border-base-content/10 dark:border-base-content/10 flex items-center justify-between gap-2">
+                        {/* Left: Position Status (Sold Out / Holding) + Days Held */}
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          {isSold ? (
+                            <span className="badge badge-xs badge-neutral badge-soft font-bold text-[9.5px] px-2 py-0.5 shrink-0">
+                              Sold Out
+                            </span>
+                          ) : (
+                            <span className="badge badge-xs badge-success badge-soft font-bold text-[9.5px] px-2 py-0.5 gap-1 shrink-0">
+                              <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
+                              Holding ({stock.qLeft})
+                            </span>
+                          )}
+                          {stock.period !== undefined && stock.period !== null && stock.period !== "" && (
+                            <span className="text-[10px] font-mono text-base-content/60 font-semibold truncate">
+                              • {stock.period}d held
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Right: Action Buttons */}
+                        <div className="flex items-center gap-1 shrink-0">
                           <button
                             type="button"
                             onClick={() => handleOpenEditModal(stock)}
-                            className="btn btn-ghost btn-xs btn-square text-primary hover:bg-primary/10"
-                            title="Edit Stock Trade"
+                            className="btn btn-ghost btn-xs rounded-lg gap-1 text-[11px] font-bold text-primary hover:bg-primary/10 cursor-pointer"
+                            title="Edit Trade"
                           >
-                            <Edit size={13} />
+                            <Edit size={12} />
+                            <span>Edit</span>
                           </button>
                           <button
                             type="button"
                             onClick={() => handleDeleteStockTrade(stock.id)}
-                            className="btn btn-ghost btn-xs btn-square text-error hover:bg-error/10"
-                            title="Delete Stock Trade"
+                            className="btn btn-ghost btn-xs rounded-lg gap-1 text-[11px] font-bold text-error hover:bg-error/10 cursor-pointer"
+                            title="Delete Trade"
                           >
-                            <Trash2 size={13} />
+                            <Trash2 size={12} />
+                            <span>Delete</span>
                           </button>
                         </div>
                       </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
 
-                      {/* Buy & Sell Info Grid */}
-                      <div className="grid grid-cols-2 gap-2 text-xs bg-base-200/50 p-2.5 rounded-xl border border-base-200">
-                        {/* Buy Column */}
-                        <div className="space-y-0.5 pr-2 border-r border-base-200">
-                          <div className="text-[9px] font-extrabold uppercase text-primary tracking-wider mb-1">
-                            Buy Info
+        {/* ================================================================ */}
+        {/* TAB 2: MUTUAL FUNDS MOBILE CONTENT - FINTECH FEED                */}
+        {/* ================================================================ */}
+        {activeTab === "mf" && (() => {
+          let totalInvestedAll = 0;
+          let totalDepositedAll = 0;
+          let totalErAll = 0;
+          let totalWithdrawnAll = 0;
+          let activeFundsCount = 0;
+          let totalMfHoldingValueAll = 0;
+
+          filteredMutualFunds.forEach((f) => {
+            const s = getMfDetailedSummary(f);
+            totalInvestedAll += s.totalInvested || 0;
+            totalDepositedAll += s.totalDeposited || 0;
+            totalErAll += s.totalEr || 0;
+            totalWithdrawnAll += s.totalWithdrawn || 0;
+            totalMfHoldingValueAll += calcMfHoldingValue(f);
+            if (!s.isFullyRedeemed) activeFundsCount += 1;
+          });
+
+          return (
+            <div className="space-y-3 px-2.5 w-full max-w-full animate-in fade-in duration-200">
+              {/* 1. Fintech Hero Portfolio Banner */}
+              <div className="bg-gradient-to-br from-base-100 to-base-200/90 rounded-2xl border border-base-content/8 dark:border-base-content/8 p-3.5 shadow-sm space-y-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <span className="text-[10px] font-black uppercase tracking-wider text-base-content/60 flex items-center gap-1.5">
+                      <PieChart size={13} className="text-secondary" />
+                      Total MF Value Invested
+                    </span>
+                    <div className="text-2xl font-black font-mono tracking-tight mt-0.5 text-secondary">
+                      {hideMfNumbers
+                        ? "••••••••"
+                        : `₹${Math.round(totalMfHoldingValueAll).toLocaleString("en-IN")}`}
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col items-end gap-1">
+                    <span className="badge font-bold font-mono text-xs px-2.5 py-1 rounded-xl bg-secondary/15 text-secondary border border-secondary/30">
+                      {filteredMutualFunds.length} Funds
+                    </span>
+                    <span className="text-[10px] font-semibold text-base-content/50">
+                      {activeFundsCount} Active · {filteredMutualFunds.length - activeFundsCount} Redeemed
+                    </span>
+                  </div>
+                </div>
+
+                {/* Sub-Metric 3-Pack */}
+                <div className="grid grid-cols-3 gap-2 pt-2.5 border-t border-base-content/8 dark:border-base-content/8">
+                  <div className="bg-base-100/70 p-2 rounded-xl border border-base-content/6 dark:border-base-content/6">
+                    <div className="text-[9.5px] font-bold text-base-content/60 uppercase">Gross Deposited</div>
+                    <div className="text-xs font-black font-mono text-base-content truncate">
+                      {hideMfNumbers ? "••••" : `₹${Math.round(totalDepositedAll).toLocaleString("en-IN")}`}
+                    </div>
+                  </div>
+                  <div className="bg-base-100/70 p-2 rounded-xl border border-base-content/6 dark:border-base-content/6">
+                    <div className="text-[9.5px] font-bold text-base-content/60 uppercase">Total ER</div>
+                    <div className="text-xs font-black font-mono text-error truncate">
+                      {hideMfNumbers ? "••••" : `₹${Math.round(totalErAll).toLocaleString("en-IN")}`}
+                    </div>
+                  </div>
+                  <div className="bg-base-100/70 p-2 rounded-xl border border-base-content/6 dark:border-base-content/6">
+                    <div className="text-[9.5px] font-bold text-base-content/60 uppercase">Withdrawn</div>
+                    <div className="text-xs font-black font-mono text-amber-500 truncate">
+                      {hideMfNumbers ? "••••" : `₹${Math.round(totalWithdrawnAll).toLocaleString("en-IN")}`}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* 2. Sticky Inline Search & Organize Toolbar */}
+              <div
+                className="sticky z-30 bg-base-100/95 dark:bg-base-900/95 backdrop-blur-md py-2 -mx-2.5 px-2.5 border-b border-base-content/8 dark:border-base-content/8 shadow-xs flex items-center gap-2 transition-all"
+                style={{ top: `${mobileHeaderHeight}px` }}
+              >
+                <div className="relative flex-1">
+                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-base-content/40" />
+                  <input
+                    type="text"
+                    placeholder="Search AMC, category, scheme, folio..."
+                    value={mfSearchTerm}
+                    onChange={(e) => setMfSearchTerm(e.target.value)}
+                    className="input input-xs h-8 pl-8 pr-8 w-full rounded-xl bg-base-200/60 dark:bg-base-800/60 border border-base-content/8 dark:border-base-content/8 text-xs placeholder:text-base-content/40 focus:border-secondary"
+                  />
+                  {mfSearchTerm && (
+                    <button
+                      type="button"
+                      onClick={() => setMfSearchTerm("")}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-base-content/40 hover:text-base-content p-0.5 cursor-pointer"
+                    >
+                      <X size={12} />
+                    </button>
+                  )}
+                </div>
+
+                {/* Organize Groups Button */}
+                <button
+                  type="button"
+                  onClick={() => setIsOrganizeModalOpen(true)}
+                  className="btn btn-xs h-8 px-2.5 rounded-xl bg-base-200/80 dark:bg-base-800/80 hover:bg-base-200 border border-base-content/10 dark:border-base-content/10 shadow-2xs flex items-center gap-1.5 font-bold text-xs text-base-content shrink-0 cursor-pointer"
+                  title="Organize MF Groups"
+                >
+                  <FolderTree size={13} className="text-secondary" />
+                  <span>Groups</span>
+                </button>
+              </div>
+
+              {/* 3. Content List */}
+              {loadingMf ? (
+                <div className="h-48 flex items-center justify-center">
+                  <span className="loading loading-spinner loading-md text-secondary"></span>
+                </div>
+              ) : mfData.length === 0 ? (
+                <div className="bg-base-100 p-8 rounded-2xl border border-base-content/10 dark:border-base-content/10 text-center shadow-xs">
+                  <PieChart size={32} className="mx-auto text-secondary mb-2" />
+                  <h3 className="font-bold text-xs text-base-content">No Mutual Funds Yet</h3>
+                  <p className="text-[11px] text-base-content/60 mt-0.5">Add a mutual fund to start tracking your SIPs.</p>
+                  <button
+                    type="button"
+                    onClick={handleOpenAddMfModal}
+                    className="btn btn-secondary btn-xs mt-3 font-bold rounded-xl cursor-pointer"
+                  >
+                    <Plus size={13} />
+                    <span>Add Mutual Fund</span>
+                  </button>
+                </div>
+              ) : filteredMutualFunds.length === 0 ? (
+                <div className="bg-base-100 p-8 rounded-2xl border border-base-content/10 dark:border-base-content/10 text-center shadow-xs">
+                  <Search size={28} className="mx-auto text-secondary mb-2" />
+                  <h3 className="font-bold text-xs text-base-content">No Funds Found</h3>
+                  <p className="text-[11px] text-base-content/60 mt-0.5">No funds matched "{mfSearchTerm}".</p>
+                  <button
+                    type="button"
+                    onClick={() => setMfSearchTerm("")}
+                    className="btn btn-ghost btn-xs text-secondary font-bold mt-2 cursor-pointer"
+                  >
+                    Clear Search
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {groupedMutualFunds.map((group) => {
+                    const isGroupCollapsed = collapsedGroupIds.has(group.id);
+
+                    return (
+                      <div key={group.id} className="space-y-2.5">
+                        {/* Sticky Collapsible Group Header */}
+                        <div
+                          onClick={() => toggleGroupCollapse(group.id)}
+                          className="sticky z-20 bg-base-100/95 dark:bg-base-900/95 backdrop-blur-md flex items-center justify-between px-3.5 py-2.5 rounded-xl border border-base-content/8 dark:border-base-content/8 shadow-2xs cursor-pointer select-none transition-all"
+                          style={{ top: `${mobileHeaderHeight + 48}px` }}
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            <div className={`p-1 rounded-lg bg-secondary/10 text-secondary transition-transform duration-200 shrink-0 ${isGroupCollapsed ? '-rotate-90' : 'rotate-0'}`}>
+                              <ChevronDown size={14} />
+                            </div>
+                            <h3 className="font-extrabold text-xs text-base-content truncate">
+                              {group.name}
+                            </h3>
+                            <span className="px-1.5 py-0.2 rounded-full bg-secondary/15 text-secondary text-[10px] font-bold">
+                              {group.funds.length}
+                            </span>
                           </div>
-                          <div className="flex justify-between text-[11px]">
-                            <span className="text-base-content/60">Date:</span>
-                            <span className="font-medium">{formatDateCell(stock.bDate)}</span>
-                          </div>
-                          <div className="flex justify-between text-[11px]">
-                            <span className="text-base-content/60">Qty:</span>
-                            <span className="font-bold">{hideStockNumbers ? "••" : stock.bQty}</span>
-                          </div>
-                          <div className="flex justify-between text-[11px]">
-                            <span className="text-base-content/60">Price:</span>
-                            <span>{hideStockNumbers ? "₹ ••••" : formatINR(stock.bShare)}</span>
-                          </div>
-                          <div className="flex justify-between text-[11px]">
-                            <span className="text-base-content/60">Charges:</span>
-                            <span className="text-warning font-semibold">{hideStockNumbers ? "₹ •••" : formatINR(stock.bBkgPdc)}</span>
-                          </div>
-                          <div className="flex justify-between pt-1 border-t border-base-200 font-bold text-[11px]">
-                            <span>Cost:</span>
-                            <span className="text-primary">{hideStockNumbers ? "₹ ••••••" : formatINR(stock.bFStock)}</span>
+                          <div className="text-xs font-bold text-base-content font-mono">
+                            {hideMfNumbers ? "••••" : `₹${group.totalInvested.toLocaleString("en-IN")}`}
                           </div>
                         </div>
 
-                        {/* Sell Column */}
-                        <div className="space-y-0.5 pl-1 flex flex-col justify-between">
-                          <div className="text-[9px] font-extrabold uppercase text-secondary tracking-wider mb-1">
-                            Sell Info
-                          </div>
-                          {isSold ? (
-                            <>
-                              <div className="flex justify-between text-[11px]">
-                                <span className="text-base-content/60">Date:</span>
-                                <span className="font-medium">{formatDateCell(stock.sDate)}</span>
-                              </div>
-                              <div className="flex justify-between text-[11px]">
-                                <span className="text-base-content/60">Qty:</span>
-                                <span className="font-bold">{hideStockNumbers ? "••" : stock.sQty}</span>
-                              </div>
-                              <div className="flex justify-between text-[11px]">
-                                <span className="text-base-content/60">Price:</span>
-                                <span>{hideStockNumbers ? "₹ ••••" : formatINR(stock.sShare)}</span>
-                              </div>
-                              <div className="flex justify-between text-[11px]">
-                                <span className="text-base-content/60">Charges:</span>
-                                <span className="text-warning font-semibold">{hideStockNumbers ? "₹ •••" : formatINR(stock.sBkgPdc + stock.dp)}</span>
-                              </div>
-                              <div className="flex justify-between pt-1 border-t border-base-200 font-bold text-[11px]">
-                                <span>Net:</span>
-                                <span className="text-secondary">{hideStockNumbers ? "₹ ••••••" : formatINR(stock.sFStock)}</span>
-                              </div>
-                            </>
-                          ) : (
-                            <div className="my-auto text-center space-y-0.5 py-2">
-                              <div className="text-[9px] uppercase font-extrabold text-primary/80 tracking-wider">
-                                Holding Active
-                              </div>
-                              <div className="text-xs font-black text-primary">
-                                {stock.qLeft > 0 ? (hideStockNumbers ? "•• Shares" : `${stock.qLeft} Shares`) : "Holding"}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Footer Realized Gain Banner */}
-                      <div>
-                        {isSold ? (
-                          <div
-                            className={`p-2.5 rounded-xl border flex items-center justify-between font-bold ${
-                              isProfit
-                                ? "bg-success/10 border-success/30 text-success"
-                                : "bg-error/10 border-error/30 text-error"
-                            }`}
-                          >
-                            <span className="text-[10px] font-extrabold uppercase tracking-wide">
-                              Realized PnL ({stock.period}d)
-                            </span>
-                            <div className="flex items-center gap-1 text-xs font-black">
-                              {isProfit ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
-                              <span>
-                                {hideStockNumbers
-                                  ? (isProfit ? "+₹ •••••• (••%)" : "-₹ •••••• (••%)")
-                                  : `${isProfit ? "+" : ""}${formatINR(stock.gainRs)} (${stock.gainPct}%)`}
-                              </span>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="p-2 rounded-xl border border-base-300 bg-base-200/50 flex items-center justify-between text-[11px] text-base-content/70">
-                            <span className="font-semibold">Holding Position</span>
-                            <span className="badge badge-xs badge-outline text-[10px]">
-                              {stock.period} Days
-                            </span>
+                        {/* Group Fund Cards Grid */}
+                        {!isGroupCollapsed && (
+                          <div className="grid grid-cols-1 gap-3.5">
+                            {group.funds.map((fund, fundIdx) => {
+                              const summary = getMfDetailedSummary(fund);
+                              return (
+                                <MutualFundCard
+                                  key={fund.id}
+                                  index={fundIdx + 1}
+                                  fund={fund}
+                                  summary={summary}
+                                  hideNumbers={hideMfNumbers}
+                                  onOpenInfo={handleOpenMfInfoModal}
+                                  onOpenTable={(targetFund, mode) => {
+                                    setMfTableViewMode(mode || "deposit");
+                                    setViewingMfTableFundId(targetFund.id);
+                                  }}
+                                  onOpenAddSip={(targetFund, mode) =>
+                                    handleOpenAddSipModal(targetFund, mode || "deposit")
+                                  }
+                                  onOpenAddWithdrawal={(targetFund) =>
+                                    handleOpenAddWithdrawalModal(targetFund)
+                                  }
+                                  onEdit={() => handleEditMf(fund)}
+                                  onDelete={() => handleDeleteMf(fund.id)}
+                                />
+                              );
+                            })}
                           </div>
                         )}
                       </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
+        {/* ================================================================ */}
+        {/* TAB 3: FIXED DEPOSITS MOBILE CONTENT - FINTECH FEED              */}
+        {/* ================================================================ */}
+        {activeTab === "fd" && (() => {
+          let activePrincipal = 0;
+          let activeCount = 0;
+          let withdrawnCount = 0;
+
+          filteredFixedDeposits.forEach((fd) => {
+            const p = Number(
+              fd.amount !== undefined && fd.amount !== null && fd.amount !== ""
+                ? fd.amount
+                : (fd.transactions?.[0]?.amtDeposit || fd.transactions?.[0]?.amount || 0)
+            );
+            if (fd.isWithdrawn) {
+              withdrawnCount += 1;
+            } else {
+              activeCount += 1;
+              activePrincipal += p;
+            }
+          });
+
+          return (
+            <div className="space-y-3 px-2.5 w-full max-w-full animate-in fade-in duration-200">
+              {/* 1. Fintech Hero Portfolio Banner */}
+              <div className="bg-gradient-to-br from-base-100 to-base-200/90 rounded-2xl border border-base-content/8 dark:border-base-content/8 p-3.5 shadow-sm space-y-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <span className="text-[10px] font-black uppercase tracking-wider text-base-content/60 flex items-center gap-1.5">
+                      <Landmark size={13} className="text-primary" />
+                      Active FD Principal
+                    </span>
+                    <div className="text-2xl font-black font-mono tracking-tight mt-0.5 text-primary">
+                      {hideFdNumbers
+                        ? "••••••••"
+                        : `₹${Math.round(activePrincipal).toLocaleString("en-IN")}`}
                     </div>
-                  );
-                })}
-              </div>
-            )}
+                  </div>
 
-            {/* Mobile Pagination */}
-            {filteredStocks.length > 0 && itemsPerPage !== "all" && totalPages > 1 && (
-              <div className="flex items-center justify-between bg-base-100 p-2.5 rounded-xl border border-base-200 text-xs shadow-2xs">
-                <button
-                  type="button"
-                  className="btn btn-soft btn-secondary btn-xs font-bold rounded-lg cursor-pointer"
-                  onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
-                  disabled={currentPage === 1}
-                >
-                  Prev
-                </button>
-                <span className="font-bold text-base-content/80 text-[11px]">
-                  Page {currentPage} of {totalPages}
-                </span>
-                <button
-                  type="button"
-                  className="btn btn-soft btn-secondary btn-xs font-bold rounded-lg cursor-pointer"
-                  onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
-                  disabled={currentPage === totalPages}
-                >
-                  Next
-                </button>
-              </div>
-            )}
-          </div>
-        )}
+                  <div className="flex flex-col items-end gap-1">
+                    <span className="badge font-bold font-mono text-xs px-2.5 py-1 rounded-xl bg-primary/15 text-primary border border-primary/30">
+                      {filteredFixedDeposits.length} FDs
+                    </span>
+                    <span className="text-[10px] font-semibold text-base-content/50">
+                      {activeCount} Active · {withdrawnCount} Settled
+                    </span>
+                  </div>
+                </div>
 
-        {/* ================================================================ */}
-        {/* TAB 2: MUTUAL FUNDS MOBILE CONTENT                               */}
-        {/* ================================================================ */}
-        {activeTab === "mf" && (
-          <div className="space-y-3 px-1 w-full animate-in fade-in duration-200">
-            {/* Summary Strip */}
-            <div className="grid grid-cols-2 gap-2">
-              <div className="bg-base-100 p-2.5 rounded-2xl border border-base-200 shadow-2xs">
-                <div className="text-[10px] font-bold text-base-content/60 uppercase">Total Funds</div>
-                <div className="text-sm font-black text-base-content font-mono">{filteredMutualFunds.length}</div>
-              </div>
-              <div className="bg-base-100 p-2.5 rounded-2xl border border-base-200 shadow-2xs">
-                <div className="text-[10px] font-bold text-base-content/60 uppercase">Total Invested</div>
-                <div className="text-sm font-black text-secondary font-mono">
-                  {hideMfNumbers
-                    ? "₹ ••••••"
-                    : `₹${filteredMutualFunds
-                        .reduce((sum, f) => sum + (getMfDetailedSummary(f)?.totalInvested || 0), 0)
-                        .toLocaleString("en-IN")}`}
+                {/* Sub-Metric 3-Pack */}
+                <div className="grid grid-cols-3 gap-2 pt-2.5 border-t border-base-content/8 dark:border-base-content/8">
+                  <div className="bg-base-100/70 p-2 rounded-xl border border-base-content/6 dark:border-base-content/6">
+                    <div className="text-[9.5px] font-bold text-base-content/60 uppercase">Active FDs</div>
+                    <div className="text-xs font-black font-mono text-success truncate">
+                      {activeCount} <span className="text-[9.5px] font-semibold text-base-content/50">running</span>
+                    </div>
+                  </div>
+                  <div className="bg-base-100/70 p-2 rounded-xl border border-base-content/6 dark:border-base-content/6">
+                    <div className="text-[9.5px] font-bold text-base-content/60 uppercase">Settled</div>
+                    <div className="text-xs font-black font-mono text-base-content truncate">
+                      {withdrawnCount} <span className="text-[9.5px] font-semibold text-base-content/50">closed</span>
+                    </div>
+                  </div>
+                  <div className="bg-base-100/70 p-2 rounded-xl border border-base-content/6 dark:border-base-content/6">
+                    <div className="text-[9.5px] font-bold text-base-content/60 uppercase">Total Accounts</div>
+                    <div className="text-xs font-black font-mono text-primary truncate">
+                      {filteredFixedDeposits.length}
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* Content List */}
-            {loadingMf ? (
-              <div className="h-48 flex items-center justify-center">
-                <span className="loading loading-spinner loading-md text-secondary"></span>
-              </div>
-            ) : mfData.length === 0 ? (
-              <div className="bg-base-100 p-8 rounded-2xl border border-base-200 text-center shadow-xs">
-                <PieChart size={32} className="mx-auto text-secondary mb-2" />
-                <h3 className="font-bold text-xs text-base-content">No Mutual Funds Yet</h3>
-                <p className="text-[11px] text-base-content/60 mt-0.5">Add a mutual fund to start tracking your SIPs.</p>
+              {/* 2. Sticky Inline Search & Organize Toolbar */}
+              <div
+                className="sticky z-30 bg-base-100/95 dark:bg-base-900/95 backdrop-blur-md py-2 -mx-2.5 px-2.5 border-b border-base-content/8 dark:border-base-content/8 shadow-xs flex items-center gap-2 transition-all"
+                style={{ top: `${mobileHeaderHeight}px` }}
+              >
+                <div className="relative flex-1">
+                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-base-content/40" />
+                  <input
+                    type="text"
+                    placeholder="Search bank, scheme, FD number..."
+                    value={fdSearchTerm}
+                    onChange={(e) => setFdSearchTerm(e.target.value)}
+                    className="input input-xs h-8 pl-8 pr-8 w-full rounded-xl bg-base-200/60 dark:bg-base-800/60 border border-base-content/8 dark:border-base-content/8 text-xs placeholder:text-base-content/40 focus:border-primary"
+                  />
+                  {fdSearchTerm && (
+                    <button
+                      type="button"
+                      onClick={() => setFdSearchTerm("")}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-base-content/40 hover:text-base-content p-0.5 cursor-pointer"
+                    >
+                      <X size={12} />
+                    </button>
+                  )}
+                </div>
+
+                {/* Organize Groups Button */}
                 <button
                   type="button"
-                  onClick={handleOpenAddMfModal}
-                  className="btn btn-secondary btn-xs mt-3 font-bold rounded-xl"
+                  onClick={() => setIsOrganizeFdModalOpen(true)}
+                  className="btn btn-xs h-8 px-2.5 rounded-xl bg-base-200/80 dark:bg-base-800/80 hover:bg-base-200 border border-base-content/10 dark:border-base-content/10 shadow-2xs flex items-center gap-1.5 font-bold text-xs text-base-content shrink-0 cursor-pointer"
+                  title="Organize FD Groups"
                 >
-                  <Plus size={13} />
-                  <span>Add Mutual Fund</span>
+                  <FolderTree size={13} className="text-primary" />
+                  <span>Groups</span>
                 </button>
               </div>
-            ) : filteredMutualFunds.length === 0 ? (
-              <div className="bg-base-100 p-8 rounded-2xl border border-base-200 text-center shadow-xs">
-                <Search size={28} className="mx-auto text-secondary mb-2" />
-                <h3 className="font-bold text-xs text-base-content">No Funds Found</h3>
-                <p className="text-[11px] text-base-content/60 mt-0.5">No funds matched "{mfSearchTerm}".</p>
-                <button
-                  type="button"
-                  onClick={() => setMfSearchTerm("")}
-                  className="btn btn-ghost btn-xs text-secondary font-bold mt-2"
-                >
-                  Clear Search
-                </button>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {groupedMutualFunds.map((group) => {
-                  const isGroupCollapsed = collapsedGroupIds.has(group.id);
 
-                  return (
-                    <div key={group.id} className="space-y-2.5">
-                      {/* Collapsible Group Header */}
-                      <div
-                        onClick={() => toggleGroupCollapse(group.id)}
-                        className="flex items-center justify-between px-3.5 py-2 bg-base-100 rounded-xl border border-base-200/90 shadow-2xs cursor-pointer select-none"
-                      >
-                        <div className="flex items-center gap-2 min-w-0">
-                          <div className={`p-1 rounded-lg bg-secondary/10 text-secondary transition-transform duration-200 shrink-0 ${isGroupCollapsed ? '-rotate-90' : 'rotate-0'}`}>
-                            <ChevronDown size={14} />
+              {/* 3. Content List */}
+              {loadingFd ? (
+                <div className="h-48 flex items-center justify-center">
+                  <span className="loading loading-spinner loading-md text-primary"></span>
+                </div>
+              ) : fdData.length === 0 ? (
+                <div className="bg-base-100 p-8 rounded-2xl border border-base-content/10 dark:border-base-content/10 text-center shadow-xs">
+                  <Landmark size={32} className="mx-auto text-primary mb-2" />
+                  <h3 className="font-bold text-xs text-base-content">No Fixed Deposits Yet</h3>
+                  <p className="text-[11px] text-base-content/60 mt-0.5">Add a fixed deposit to track guaranteed returns.</p>
+                  <button
+                    type="button"
+                    onClick={handleOpenAddFdModal}
+                    className="btn btn-primary btn-xs mt-3 font-bold rounded-xl cursor-pointer"
+                  >
+                    <Plus size={13} />
+                    <span>Add Fixed Deposit</span>
+                  </button>
+                </div>
+              ) : filteredFixedDeposits.length === 0 ? (
+                <div className="bg-base-100 p-8 rounded-2xl border border-base-content/10 dark:border-base-content/10 text-center shadow-xs">
+                  <Search size={28} className="mx-auto text-primary mb-2" />
+                  <h3 className="font-bold text-xs text-base-content">No FDs Found</h3>
+                  <p className="text-[11px] text-base-content/60 mt-0.5">No records matched "{fdSearchTerm}".</p>
+                  <button
+                    type="button"
+                    onClick={() => setFdSearchTerm("")}
+                    className="btn btn-ghost btn-xs text-primary font-bold mt-2 cursor-pointer"
+                  >
+                    Clear Search
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {groupedFixedDeposits.map((group) => {
+                    const isGroupCollapsed = collapsedFdGroupIds.has(group.id);
+
+                    return (
+                      <div key={group.id} className="space-y-2.5">
+                        {/* Sticky Collapsible Group Header */}
+                        <div
+                          onClick={() => toggleFdGroupCollapse(group.id)}
+                          className="sticky z-20 bg-base-100/95 dark:bg-base-900/95 backdrop-blur-md flex items-center justify-between px-3.5 py-2.5 rounded-xl border border-base-content/8 dark:border-base-content/8 shadow-2xs cursor-pointer select-none transition-all"
+                          style={{ top: `${mobileHeaderHeight + 48}px` }}
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            <div className={`p-1 rounded-lg bg-primary/10 text-primary transition-transform duration-200 shrink-0 ${isGroupCollapsed ? '-rotate-90' : 'rotate-0'}`}>
+                              <ChevronDown size={14} />
+                            </div>
+                            <h3 className="font-extrabold text-xs text-base-content truncate">
+                              {group.name}
+                            </h3>
+                            <span className="px-1.5 py-0.2 rounded-full bg-primary/15 text-primary text-[10px] font-bold">
+                              {group.fds.length}
+                            </span>
                           </div>
-                          <h3 className="font-extrabold text-xs text-base-content truncate">
-                            {group.name}
-                          </h3>
-                          <span className="px-1.5 py-0.2 rounded-full bg-secondary/15 text-secondary text-[10px] font-bold">
-                            {group.funds.length}
-                          </span>
+                          <div className="text-xs font-bold text-base-content font-mono">
+                            {hideFdNumbers ? "••••" : `₹${group.totalInvested.toLocaleString("en-IN")}`}
+                          </div>
                         </div>
-                        <div className="text-xs font-bold text-base-content font-mono">
-                          {hideMfNumbers ? "••••" : `₹${group.totalInvested.toLocaleString("en-IN")}`}
-                        </div>
-                      </div>
 
-                      {/* Group Fund Cards Grid */}
-                      {!isGroupCollapsed && (
-                        <div className="grid grid-cols-1 gap-3.5">
-                          {group.funds.map((fund, fundIdx) => {
-                            const summary = getMfDetailedSummary(fund);
-                            return (
-                              <MutualFundCard
-                                key={fund.id}
-                                index={fundIdx + 1}
-                                fund={fund}
-                                summary={summary}
-                                hideNumbers={hideMfNumbers}
-                                onOpenInfo={handleOpenMfInfoModal}
-                                onOpenTable={(targetFund, mode) => {
-                                  setMfTableViewMode(mode || "deposit");
-                                  setViewingMfTableFundId(targetFund.id);
-                                }}
-                                onOpenAddSip={(targetFund, mode) =>
-                                  handleOpenAddSipModal(targetFund, mode || "deposit")
-                                }
-                                onOpenAddWithdrawal={(targetFund) =>
-                                  handleOpenAddWithdrawalModal(targetFund)
-                                }
-                                onEdit={() => handleEditMf(fund)}
-                                onDelete={() => handleDeleteMf(fund.id)}
+                        {!isGroupCollapsed && (
+                          <div className="grid grid-cols-1 gap-3.5">
+                            {group.fds.map((fd, fdIdx) => (
+                              <FixedDepositCard
+                                key={fd.id}
+                                index={fdIdx + 1}
+                                fd={fd}
+                                hideNumbers={hideFdNumbers}
+                                onOpenInfo={setViewingInfoFd}
+                                onOpenWithdraw={setWithdrawingFd}
+                                onRemoveWithdrawal={handleRemoveFdWithdrawal}
+                                onEdit={() => handleEditFd(fd)}
+                                onDelete={() => handleDeleteFd(fd.id)}
                               />
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        )}
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         {/* ================================================================ */}
-        {/* TAB 3: FIXED DEPOSITS MOBILE CONTENT                             */}
+        {/* TAB 4: RECURRING DEPOSITS MOBILE CONTENT - FINTECH FEED           */}
         {/* ================================================================ */}
-        {activeTab === "fd" && (
-          <div className="space-y-3 px-1 w-full animate-in fade-in duration-200">
-            {/* Summary Strip */}
-            <div className="grid grid-cols-2 gap-2">
-              <div className="bg-base-100 p-2.5 rounded-2xl border border-base-200 shadow-2xs">
-                <div className="text-[10px] font-bold text-base-content/60 uppercase">Total FDs</div>
-                <div className="text-sm font-black text-base-content font-mono">{filteredFixedDeposits.length}</div>
-              </div>
-              <div className="bg-base-100 p-2.5 rounded-2xl border border-base-200 shadow-2xs">
-                <div className="text-[10px] font-bold text-base-content/60 uppercase">Active Principal</div>
-                <div className="text-sm font-black text-primary font-mono">
-                  {hideFdNumbers
-                    ? "₹ ••••••"
-                    : `₹${filteredFixedDeposits
-                        .reduce((sum, fd) => sum + (Number(fd.principalAmount) || 0), 0)
-                        .toLocaleString("en-IN")}`}
+        {activeTab === "rd" && (() => {
+          let activeMonthly = 0;
+          let totalInvestedSoFar = 0;
+          let activeCount = 0;
+          let withdrawnCount = 0;
+
+          filteredRecurringDeposits.forEach((rd) => {
+            const m = Number(rd.monthlyAmount || 0);
+            const sumTxns = (rd.transactions || []).reduce((acc, t) => acc + Number(t.amtDeposit || t.amount || 0), 0);
+            totalInvestedSoFar += sumTxns;
+            if (rd.isWithdrawn) {
+              withdrawnCount += 1;
+            } else {
+              activeCount += 1;
+              activeMonthly += m;
+            }
+          });
+
+          return (
+            <div className="space-y-3 px-2.5 w-full max-w-full animate-in fade-in duration-200">
+              {/* 1. Fintech Hero Portfolio Banner */}
+              <div className="bg-gradient-to-br from-base-100 to-base-200/90 rounded-2xl border border-base-200/90 p-3.5 shadow-sm space-y-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <span className="text-[10px] font-black uppercase tracking-wider text-base-content/60 flex items-center gap-1.5">
+                      <PiggyBank size={13} className="text-primary" />
+                      Active Monthly RD Savings
+                    </span>
+                    <div className="text-2xl font-black font-mono tracking-tight mt-0.5 text-primary">
+                      {hideRdNumbers
+                        ? "••••••••"
+                        : `₹${Math.round(activeMonthly).toLocaleString("en-IN")}/mo`}
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col items-end gap-1">
+                    <span className="badge font-bold font-mono text-xs px-2.5 py-1 rounded-xl bg-primary/15 text-primary border border-primary/30">
+                      {filteredRecurringDeposits.length} RDs
+                    </span>
+                    <span className="text-[10px] font-semibold text-base-content/50">
+                      {activeCount} Active · {withdrawnCount} Settled
+                    </span>
+                  </div>
+                </div>
+
+                {/* Sub-Metric 3-Pack */}
+                <div className="grid grid-cols-3 gap-2 pt-2.5 border-t border-base-content/10">
+                  <div className="bg-base-100/70 p-2 rounded-xl border border-base-content/5">
+                    <div className="text-[9.5px] font-bold text-base-content/60 uppercase">Active Plans</div>
+                    <div className="text-xs font-black font-mono text-success truncate">
+                      {activeCount} <span className="text-[9.5px] font-semibold text-base-content/50">running</span>
+                    </div>
+                  </div>
+                  <div className="bg-base-100/70 p-2 rounded-xl border border-base-content/5">
+                    <div className="text-[9.5px] font-bold text-base-content/60 uppercase">Deposited</div>
+                    <div className="text-xs font-black font-mono text-primary truncate">
+                      {hideRdNumbers ? "••••" : `₹${Math.round(totalInvestedSoFar).toLocaleString("en-IN")}`}
+                    </div>
+                  </div>
+                  <div className="bg-base-100/70 p-2 rounded-xl border border-base-content/5">
+                    <div className="text-[9.5px] font-bold text-base-content/60 uppercase">Closed Plans</div>
+                    <div className="text-xs font-black font-mono text-base-content truncate">
+                      {withdrawnCount} <span className="text-[9.5px] font-semibold text-base-content/50">settled</span>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* Content List */}
-            {loadingFd ? (
-              <div className="h-48 flex items-center justify-center">
-                <span className="loading loading-spinner loading-md text-primary"></span>
-              </div>
-            ) : fdData.length === 0 ? (
-              <div className="bg-base-100 p-8 rounded-2xl border border-base-200 text-center shadow-xs">
-                <Landmark size={32} className="mx-auto text-primary mb-2" />
-                <h3 className="font-bold text-xs text-base-content">No Fixed Deposits Yet</h3>
-                <p className="text-[11px] text-base-content/60 mt-0.5">Add a fixed deposit to track guaranteed returns.</p>
-                <button
-                  type="button"
-                  onClick={handleOpenAddFdModal}
-                  className="btn btn-primary btn-xs mt-3 font-bold rounded-xl"
-                >
-                  <Plus size={13} />
-                  <span>Add Fixed Deposit</span>
-                </button>
-              </div>
-            ) : filteredFixedDeposits.length === 0 ? (
-              <div className="bg-base-100 p-8 rounded-2xl border border-base-200 text-center shadow-xs">
-                <Search size={28} className="mx-auto text-primary mb-2" />
-                <h3 className="font-bold text-xs text-base-content">No FDs Found</h3>
-                <p className="text-[11px] text-base-content/60 mt-0.5">No records matched "{fdSearchTerm}".</p>
-                <button
-                  type="button"
-                  onClick={() => setFdSearchTerm("")}
-                  className="btn btn-ghost btn-xs text-primary font-bold mt-2"
-                >
-                  Clear Search
-                </button>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {groupedFixedDeposits.map((group) => {
-                  const isGroupCollapsed = collapsedFdGroupIds.has(group.id);
-
-                  return (
-                    <div key={group.id} className="space-y-2.5">
-                      <div
-                        onClick={() => toggleFdGroupCollapse(group.id)}
-                        className="flex items-center justify-between px-3.5 py-2 bg-base-100 rounded-xl border border-base-200/90 shadow-2xs cursor-pointer select-none"
-                      >
-                        <div className="flex items-center gap-2 min-w-0">
-                          <div className={`p-1 rounded-lg bg-primary/10 text-primary transition-transform duration-200 shrink-0 ${isGroupCollapsed ? '-rotate-90' : 'rotate-0'}`}>
-                            <ChevronDown size={14} />
-                          </div>
-                          <h3 className="font-extrabold text-xs text-base-content truncate">
-                            {group.name}
-                          </h3>
-                          <span className="px-1.5 py-0.2 rounded-full bg-primary/15 text-primary text-[10px] font-bold">
-                            {group.fds.length}
-                          </span>
-                        </div>
-                        <div className="text-xs font-bold text-base-content font-mono">
-                          {hideFdNumbers ? "••••" : `₹${group.totalInvested.toLocaleString("en-IN")}`}
-                        </div>
-                      </div>
-
-                      {!isGroupCollapsed && (
-                        <div className="grid grid-cols-1 gap-3.5">
-                          {group.fds.map((fd, fdIdx) => (
-                            <FixedDepositCard
-                              key={fd.id}
-                              index={fdIdx + 1}
-                              fd={fd}
-                              hideNumbers={hideFdNumbers}
-                              onOpenInfo={setViewingInfoFd}
-                              onOpenWithdraw={setWithdrawingFd}
-                              onRemoveWithdrawal={handleRemoveFdWithdrawal}
-                              onEdit={() => handleEditFd(fd)}
-                              onDelete={() => handleDeleteFd(fd.id)}
-                            />
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ================================================================ */}
-        {/* TAB 4: RECURRING DEPOSITS MOBILE CONTENT                          */}
-        {/* ================================================================ */}
-        {activeTab === "rd" && (
-          <div className="space-y-3 px-1 w-full animate-in fade-in duration-200">
-            {/* Summary Strip */}
-            <div className="grid grid-cols-2 gap-2">
-              <div className="bg-base-100 p-2.5 rounded-2xl border border-base-200 shadow-2xs">
-                <div className="text-[10px] font-bold text-base-content/60 uppercase">Total RDs</div>
-                <div className="text-sm font-black text-base-content font-mono">{filteredRecurringDeposits.length}</div>
-              </div>
-              <div className="bg-base-100 p-2.5 rounded-2xl border border-base-200 shadow-2xs">
-                <div className="text-[10px] font-bold text-base-content/60 uppercase">Active Principal</div>
-                <div className="text-sm font-black text-primary font-mono">
-                  {hideRdNumbers
-                    ? "₹ ••••••"
-                    : `₹${filteredRecurringDeposits
-                        .reduce((sum, rd) => sum + (Number(rd.monthlyAmount) || 0), 0)
-                        .toLocaleString("en-IN")}`}
+              {/* 2. Inline Search & Organize Toolbar */}
+              <div className="flex items-center gap-2">
+                <div className="relative flex-1">
+                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-base-content/40" />
+                  <input
+                    type="text"
+                    placeholder="Search bank, RD number, scheme..."
+                    value={rdSearchTerm}
+                    onChange={(e) => setRdSearchTerm(e.target.value)}
+                    className="input input-xs h-8 pl-8 pr-8 w-full rounded-xl bg-base-100 border border-base-200 text-xs placeholder:text-base-content/40 focus:border-primary"
+                  />
+                  {rdSearchTerm && (
+                    <button
+                      type="button"
+                      onClick={() => setRdSearchTerm("")}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-base-content/40 hover:text-base-content"
+                    >
+                      <X size={12} />
+                    </button>
+                  )}
                 </div>
-              </div>
-            </div>
 
-            {/* Content List */}
-            {loadingRd ? (
-              <div className="h-48 flex items-center justify-center">
-                <span className="loading loading-spinner loading-md text-primary"></span>
-              </div>
-            ) : rdData.length === 0 ? (
-              <div className="bg-base-100 p-8 rounded-2xl border border-base-200 text-center shadow-xs">
-                <PiggyBank size={32} className="mx-auto text-primary mb-2" />
-                <h3 className="font-bold text-xs text-base-content">No Recurring Deposits Yet</h3>
-                <p className="text-[11px] text-base-content/60 mt-0.5">Track your recurring monthly savings.</p>
+                {/* Organize Groups Button */}
                 <button
                   type="button"
-                  onClick={handleOpenAddRdModal}
-                  className="btn btn-primary btn-xs mt-3 font-bold rounded-xl"
+                  onClick={() => setIsOrganizeRdModalOpen(true)}
+                  className="btn btn-xs h-8 px-2.5 rounded-xl bg-base-100 hover:bg-base-200 border border-base-200 shadow-2xs flex items-center gap-1.5 font-bold text-xs text-base-content shrink-0 cursor-pointer"
+                  title="Organize RD Groups"
                 >
-                  <Plus size={13} />
-                  <span>Add Recurring Deposit</span>
+                  <FolderTree size={13} className="text-primary" />
+                  <span>Groups</span>
                 </button>
               </div>
-            ) : filteredRecurringDeposits.length === 0 ? (
-              <div className="bg-base-100 p-8 rounded-2xl border border-base-200 text-center shadow-xs">
-                <Search size={28} className="mx-auto text-primary mb-2" />
-                <h3 className="font-bold text-xs text-base-content">No RDs Found</h3>
-                <p className="text-[11px] text-base-content/60 mt-0.5">No records matched "{rdSearchTerm}".</p>
-                <button
-                  type="button"
-                  onClick={() => setRdSearchTerm("")}
-                  className="btn btn-ghost btn-xs text-primary font-bold mt-2"
-                >
-                  Clear Search
-                </button>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {groupedRecurringDeposits.map((group) => {
-                  const isGroupCollapsed = collapsedRdGroupIds.has(group.id);
 
-                  return (
-                    <div key={group.id} className="space-y-2.5">
-                      <div
-                        onClick={() => toggleRdGroupCollapse(group.id)}
-                        className="flex items-center justify-between px-3.5 py-2 bg-base-100 rounded-xl border border-base-200/90 shadow-2xs cursor-pointer select-none"
-                      >
-                        <div className="flex items-center gap-2 min-w-0">
-                          <div className={`p-1 rounded-lg bg-primary/10 text-primary transition-transform duration-200 shrink-0 ${isGroupCollapsed ? '-rotate-90' : 'rotate-0'}`}>
-                            <ChevronDown size={14} />
+              {/* 3. Content List */}
+              {loadingRd ? (
+                <div className="h-48 flex items-center justify-center">
+                  <span className="loading loading-spinner loading-md text-primary"></span>
+                </div>
+              ) : rdData.length === 0 ? (
+                <div className="bg-base-100 p-8 rounded-2xl border border-base-200 text-center shadow-xs">
+                  <PiggyBank size={32} className="mx-auto text-primary mb-2" />
+                  <h3 className="font-bold text-xs text-base-content">No Recurring Deposits Yet</h3>
+                  <p className="text-[11px] text-base-content/60 mt-0.5">Track your recurring monthly savings.</p>
+                  <button
+                    type="button"
+                    onClick={handleOpenAddRdModal}
+                    className="btn btn-primary btn-xs mt-3 font-bold rounded-xl cursor-pointer"
+                  >
+                    <Plus size={13} />
+                    <span>Add Recurring Deposit</span>
+                  </button>
+                </div>
+              ) : filteredRecurringDeposits.length === 0 ? (
+                <div className="bg-base-100 p-8 rounded-2xl border border-base-200 text-center shadow-xs">
+                  <Search size={28} className="mx-auto text-primary mb-2" />
+                  <h3 className="font-bold text-xs text-base-content">No RDs Found</h3>
+                  <p className="text-[11px] text-base-content/60 mt-0.5">No records matched "{rdSearchTerm}".</p>
+                  <button
+                    type="button"
+                    onClick={() => setRdSearchTerm("")}
+                    className="btn btn-ghost btn-xs text-primary font-bold mt-2 cursor-pointer"
+                  >
+                    Clear Search
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {groupedRecurringDeposits.map((group) => {
+                    const isGroupCollapsed = collapsedRdGroupIds.has(group.id);
+
+                    return (
+                      <div key={group.id} className="space-y-2.5">
+                        <div
+                          onClick={() => toggleRdGroupCollapse(group.id)}
+                          className="flex items-center justify-between px-3.5 py-2.5 bg-base-100 rounded-xl border border-base-200/90 shadow-2xs cursor-pointer select-none"
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            <div className={`p-1 rounded-lg bg-primary/10 text-primary transition-transform duration-200 shrink-0 ${isGroupCollapsed ? '-rotate-90' : 'rotate-0'}`}>
+                              <ChevronDown size={14} />
+                            </div>
+                            <h3 className="font-extrabold text-xs text-base-content truncate">
+                              {group.name}
+                            </h3>
+                            <span className="px-1.5 py-0.2 rounded-full bg-primary/15 text-primary text-[10px] font-bold">
+                              {group.rds.length}
+                            </span>
                           </div>
-                          <h3 className="font-extrabold text-xs text-base-content truncate">
-                            {group.name}
-                          </h3>
-                          <span className="px-1.5 py-0.2 rounded-full bg-primary/15 text-primary text-[10px] font-bold">
-                            {group.rds.length}
-                          </span>
+                          <div className="text-xs font-bold text-base-content font-mono">
+                            {hideRdNumbers ? "••••" : `₹${group.totalInvested.toLocaleString("en-IN")}`}
+                          </div>
                         </div>
-                        <div className="text-xs font-bold text-base-content font-mono">
-                          {hideRdNumbers ? "••••" : `₹${group.totalInvested.toLocaleString("en-IN")}`}
-                        </div>
-                      </div>
 
-                      {!isGroupCollapsed && (
-                        <div className="grid grid-cols-1 gap-3.5">
-                          {group.rds.map((rd, rdIdx) => (
-                            <RecurringDepositCard
-                              key={rd.id}
-                              index={rdIdx + 1}
-                              rd={rd}
-                              hideNumbers={hideRdNumbers}
-                              onOpenWithdraw={setWithdrawingRd}
-                              onRemoveWithdrawal={handleRemoveRdWithdrawal}
-                              onOpenAddDeposit={(targetRd) => handleOpenAddRdDeposit(targetRd)}
-                              onOpenTable={(targetRd) => handleOpenRdTable(targetRd)}
-                              onEdit={() => handleEditRd(rd)}
-                              onDelete={() => handleDeleteRd(rd.id)}
-                            />
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        )}
+                        {!isGroupCollapsed && (
+                          <div className="grid grid-cols-1 gap-3.5">
+                            {group.rds.map((rd, rdIdx) => (
+                              <RecurringDepositCard
+                                key={rd.id}
+                                index={rdIdx + 1}
+                                rd={rd}
+                                hideNumbers={hideRdNumbers}
+                                onOpenWithdraw={setWithdrawingRd}
+                                onRemoveWithdrawal={handleRemoveRdWithdrawal}
+                                onOpenAddDeposit={(targetRd) => handleOpenAddRdDeposit(targetRd)}
+                                onOpenTable={(targetRd) => handleOpenRdTable(targetRd)}
+                                onEdit={() => handleEditRd(rd)}
+                                onDelete={() => handleDeleteRd(rd.id)}
+                              />
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         {/* ================================================================ */}
-        {/* TAB 5: SALARY MOBILE CONTENT                                     */}
+        {/* TAB 5: SALARY MOBILE CONTENT - FINTECH FEED                      */}
         {/* ================================================================ */}
         {activeTab === "salary" && (
-          <div className="space-y-3 px-1 w-full animate-in fade-in duration-200">
-            {/* Stat Cards Grid (4-pack + CTC card) */}
-            <div className="grid grid-cols-2 gap-2">
-              <div className="bg-base-100 p-2.5 rounded-2xl border border-base-200 shadow-2xs space-y-0.5">
-                <span className="text-[10px] font-bold text-base-content/60 uppercase">Experience</span>
-                <div className="text-xs font-black text-secondary truncate">{salarySummary.experienceText}</div>
-                <span className="text-[9.5px] text-base-content/50 block">{salarySummary.totalMonths} months</span>
-              </div>
-              <div className="bg-base-100 p-2.5 rounded-2xl border border-base-200 shadow-2xs space-y-0.5">
-                <span className="text-[10px] font-bold text-base-content/60 uppercase">In Hand Total</span>
-                <div className="text-xs font-black text-success truncate">
-                  ₹{salarySummary.totalInHand.toLocaleString("en-IN")}
+          <div className="space-y-3 px-2.5 w-full max-w-full animate-in fade-in duration-200">
+            {/* 1. Fintech Hero Portfolio Banner */}
+            <div className="bg-gradient-to-br from-base-100 to-base-200/90 rounded-2xl border border-base-200/90 p-3.5 shadow-sm space-y-3">
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <span className="text-[10px] font-black uppercase tracking-wider text-base-content/60 flex items-center gap-1.5">
+                    <Briefcase size={13} className="text-emerald-500" />
+                    Total Gross CTC
+                  </span>
+                  <div className="text-2xl font-black font-mono tracking-tight mt-0.5 text-emerald-600 dark:text-emerald-400">
+                    ₹{salarySummary.totalCtc.toLocaleString("en-IN")}
+                  </div>
                 </div>
-                <span className="text-[9.5px] text-base-content/50 block">{salarySummary.count} entries</span>
-              </div>
-              <div className="bg-base-100 p-2.5 rounded-2xl border border-base-200 shadow-2xs space-y-0.5">
-                <span className="text-[10px] font-bold text-base-content/60 uppercase">Employer PF</span>
-                <div className="text-xs font-black text-primary truncate">
-                  ₹{salarySummary.totalErPf.toLocaleString("en-IN")}
+
+                <div className="flex flex-col items-end gap-1">
+                  <span className="badge font-bold font-mono text-xs px-2.5 py-1 rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                    {salarySummary.experienceText}
+                  </span>
+                  <span className="text-[10px] font-semibold text-base-content/50">
+                    {salarySummary.count} Monthly Payslips
+                  </span>
                 </div>
-                <span className="text-[9.5px] text-base-content/50 block">Provident Fund</span>
               </div>
-              <div className="bg-base-100 p-2.5 rounded-2xl border border-base-200 shadow-2xs space-y-0.5">
-                <span className="text-[10px] font-bold text-base-content/60 uppercase">Taxes & Dues</span>
-                <div className="text-xs font-black text-error truncate">
-                  ₹{salarySummary.totalTaxes.toLocaleString("en-IN")}
+
+              {/* Sub-Metric 4-Pack */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2.5 border-t border-base-content/10">
+                <div className="bg-base-100/70 p-2 rounded-xl border border-base-content/5">
+                  <div className="text-[9.5px] font-bold text-base-content/60 uppercase">Net In-Hand</div>
+                  <div className="text-xs font-black font-mono text-success truncate">
+                    ₹{salarySummary.totalInHand.toLocaleString("en-IN")}
+                  </div>
                 </div>
-                <span className="text-[9.5px] text-base-content/50 block">TDS + Others</span>
+                <div className="bg-base-100/70 p-2 rounded-xl border border-base-content/5">
+                  <div className="text-[9.5px] font-bold text-base-content/60 uppercase">Employer PF</div>
+                  <div className="text-xs font-black font-mono text-primary truncate">
+                    ₹{salarySummary.totalErPf.toLocaleString("en-IN")}
+                  </div>
+                </div>
+                <div className="bg-base-100/70 p-2 rounded-xl border border-base-content/5">
+                  <div className="text-[9.5px] font-bold text-base-content/60 uppercase">Taxes & Dues</div>
+                  <div className="text-xs font-black font-mono text-error truncate">
+                    ₹{salarySummary.totalTaxes.toLocaleString("en-IN")}
+                  </div>
+                </div>
+                <div className="bg-base-100/70 p-2 rounded-xl border border-base-content/5">
+                  <div className="text-[9.5px] font-bold text-base-content/60 uppercase">Experience</div>
+                  <div className="text-xs font-black font-mono text-base-content truncate">
+                    {salarySummary.totalMonths} months
+                  </div>
+                </div>
               </div>
             </div>
 
-            {/* Total CTC Hero Card */}
-            <div className="bg-primary/10 border border-primary/20 p-2.5 rounded-2xl flex items-center justify-between shadow-2xs">
-              <div>
-                <span className="text-[10px] font-black uppercase text-primary tracking-wider block">Total CTC</span>
-                <span className="text-[10px] text-base-content/60">Earnings + Employer PF</span>
+            {/* 2. Inline Search & View Switcher */}
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-base-content/40" />
+                <input
+                  type="text"
+                  placeholder="Search company, month..."
+                  value={salarySearchTerm}
+                  onChange={(e) => setSalarySearchTerm(e.target.value)}
+                  className="input input-xs h-8 pl-8 pr-8 w-full rounded-xl bg-base-100 border border-base-200 text-xs placeholder:text-base-content/40 focus:border-primary"
+                />
+                {salarySearchTerm && (
+                  <button
+                    type="button"
+                    onClick={() => setSalarySearchTerm("")}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-base-content/40 hover:text-base-content"
+                  >
+                    <X size={12} />
+                  </button>
+                )}
               </div>
-              <div className="text-base font-black text-primary font-mono">
-                ₹{salarySummary.totalCtc.toLocaleString("en-IN")}
+
+              {/* View Mode Toggle */}
+              <div className="flex items-center gap-1 bg-base-200 p-1 rounded-xl shrink-0 text-xs font-bold border border-base-300/60">
+                <button
+                  type="button"
+                  onClick={() => handleSalaryViewChange("detailed")}
+                  className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1 text-[11px] ${
+                    salaryTableViewMode === "detailed"
+                      ? "bg-base-100 text-primary shadow-xs font-black"
+                      : "text-base-content/70"
+                  }`}
+                  title="Detailed View"
+                >
+                  <Columns3 size={12} />
+                  <span>Detailed</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSalaryViewChange("split")}
+                  className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1 text-[11px] ${
+                    salaryTableViewMode === "split"
+                      ? "bg-base-100 text-primary shadow-xs font-black"
+                      : "text-base-content/70"
+                  }`}
+                  title="Split View"
+                >
+                  <Columns2 size={12} />
+                  <span>Split</span>
+                </button>
               </div>
             </div>
 
-            {/* Content List */}
+            {/* 3. Content List */}
             {loadingSalary ? (
               <div className="h-48 flex items-center justify-center">
                 <span className="loading loading-spinner loading-md text-primary"></span>
@@ -7326,7 +7888,7 @@ export default function InvTableEntry() {
                 <button
                   type="button"
                   onClick={handleOpenAddSalaryModal}
-                  className="btn btn-primary btn-xs mt-3 font-bold rounded-xl"
+                  className="btn btn-primary btn-xs mt-3 font-bold rounded-xl cursor-pointer"
                 >
                   <Plus size={13} />
                   <span>Add Salary Record</span>
@@ -7344,7 +7906,7 @@ export default function InvTableEntry() {
                     setSalaryCompanyFilter("all");
                     setSalaryYearFilter("all");
                   }}
-                  className="btn btn-ghost btn-xs text-primary font-bold mt-2"
+                  className="btn btn-ghost btn-xs text-primary font-bold mt-2 cursor-pointer"
                 >
                   Clear Filters
                 </button>
@@ -7387,7 +7949,7 @@ export default function InvTableEntry() {
                           <button
                             type="button"
                             onClick={() => handleEditSalary(item)}
-                            className="btn btn-ghost btn-xs btn-square text-primary hover:bg-primary/10"
+                            className="btn btn-ghost btn-xs btn-square text-primary hover:bg-primary/10 cursor-pointer"
                             title="Edit Salary"
                           >
                             <Edit size={13} />
@@ -7395,7 +7957,7 @@ export default function InvTableEntry() {
                           <button
                             type="button"
                             onClick={() => handleDeleteSalary(item.id || item._id)}
-                            className="btn btn-ghost btn-xs btn-square text-error hover:bg-error/10"
+                            className="btn btn-ghost btn-xs btn-square text-error hover:bg-error/10 cursor-pointer"
                             title="Delete Salary"
                           >
                             <Trash2 size={13} />
@@ -7480,70 +8042,97 @@ export default function InvTableEntry() {
         )}
 
         {/* ================================================================ */}
-        {/* TAB 6: PROVIDENT FUND MOBILE CONTENT                             */}
+        {/* TAB 6: PROVIDENT FUND MOBILE CONTENT - FINTECH FEED              */}
         {/* ================================================================ */}
         {activeTab === "pf" && (
-          <div className="space-y-3 px-1 w-full animate-in fade-in duration-200">
-            {/* Hero Available PF Balance Card */}
-            <div className="bg-gradient-to-br from-success/10 to-base-100 p-3.5 rounded-2xl border border-success/30 shadow-2xs space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-extrabold uppercase tracking-wider text-success flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-success animate-pulse"></span>
-                  Available PF Balance
-                </span>
-                <span className="badge badge-xs badge-success badge-soft font-bold">Auto-synced</span>
+          <div className="space-y-3 px-2.5 w-full max-w-full animate-in fade-in duration-200">
+            {/* 1. Fintech Hero Portfolio Banner */}
+            <div className="bg-gradient-to-br from-success/10 to-base-100 p-4 rounded-2xl border border-success/30 shadow-sm space-y-3">
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-success flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-success animate-pulse"></span>
+                    Available PF Balance
+                  </span>
+                  <div className="text-2xl font-black text-success font-mono tracking-tight mt-0.5">
+                    ₹{availablePfBalance.toLocaleString("en-IN")}
+                  </div>
+                </div>
+
+                <div className="flex flex-col items-end gap-1">
+                  <span className="badge badge-success badge-soft font-bold font-mono text-xs px-2.5 py-1 rounded-xl">
+                    Auto-synced
+                  </span>
+                  <span className="text-[10px] font-semibold text-base-content/50">
+                    EPF & PPF Accumulation
+                  </span>
+                </div>
               </div>
-              <div className="text-xl font-black text-success font-mono">
-                ₹{availablePfBalance.toLocaleString("en-IN")}
+
+              {/* Sub-Metric 3-Pack */}
+              <div className="grid grid-cols-3 gap-2 pt-2.5 border-t border-success/20">
+                <div className="bg-base-100/70 p-2 rounded-xl border border-base-content/5">
+                  <span className="text-[9.5px] font-bold text-base-content/60 uppercase block">Employer PF</span>
+                  <div className="text-xs font-black text-primary font-mono truncate">
+                    ₹{pfSummary.totalEmployerShare.toLocaleString("en-IN")}
+                  </div>
+                </div>
+                <div className="bg-base-100/70 p-2 rounded-xl border border-base-content/5">
+                  <span className="text-[9.5px] font-bold text-base-content/60 uppercase block">Employee PF</span>
+                  <div className="text-xs font-black text-info font-mono truncate">
+                    ₹{pfSummary.totalEmployeeShare.toLocaleString("en-IN")}
+                  </div>
+                </div>
+                <div className="bg-base-100/70 p-2 rounded-xl border border-base-content/5">
+                  <span className="text-[9.5px] font-bold text-base-content/60 uppercase block">Withdrawn</span>
+                  <div className="text-xs font-black text-error font-mono truncate">
+                    ₹{totalPfWithdrawn.toLocaleString("en-IN")}
+                  </div>
+                </div>
               </div>
             </div>
 
-            {/* 3-metric sub-grid */}
-            <div className="grid grid-cols-3 gap-2">
-              <div className="bg-base-100 p-2.5 rounded-2xl border border-base-200 shadow-2xs space-y-0.5">
-                <span className="text-[9.5px] font-bold text-base-content/60 uppercase block">Employer PF</span>
-                <div className="text-xs font-black text-primary font-mono truncate">
-                  ₹{pfSummary.totalEmployerShare.toLocaleString("en-IN")}
-                </div>
+            {/* 2. Subtab Switcher & Quick Action */}
+            <div className="flex items-center justify-between gap-2">
+              <div className="grid grid-cols-2 gap-1.5 bg-base-200/80 p-1 rounded-xl flex-1 border border-base-300/50">
+                <button
+                  type="button"
+                  onClick={() => setPfSubTab("deposits")}
+                  className={`py-1.5 px-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    pfSubTab === "deposits"
+                      ? "bg-primary text-primary-content shadow-xs font-black"
+                      : "text-base-content/70 hover:text-base-content"
+                  }`}
+                >
+                  Deposited ({salaryData.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPfSubTab("withdrawals")}
+                  className={`py-1.5 px-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    pfSubTab === "withdrawals"
+                      ? "bg-primary text-primary-content shadow-xs font-black"
+                      : "text-base-content/70 hover:text-base-content"
+                  }`}
+                >
+                  Withdrawals ({pfWithdrawals.length})
+                </button>
               </div>
-              <div className="bg-base-100 p-2.5 rounded-2xl border border-base-200 shadow-2xs space-y-0.5">
-                <span className="text-[9.5px] font-bold text-base-content/60 uppercase block">Employee PF</span>
-                <div className="text-xs font-black text-info font-mono truncate">
-                  ₹{pfSummary.totalEmployeeShare.toLocaleString("en-IN")}
-                </div>
-              </div>
-              <div className="bg-base-100 p-2.5 rounded-2xl border border-base-200 shadow-2xs space-y-0.5">
-                <span className="text-[9.5px] font-bold text-base-content/60 uppercase block">Withdrawn</span>
-                <div className="text-xs font-black text-error font-mono truncate">
-                  ₹{totalPfWithdrawn.toLocaleString("en-IN")}
-                </div>
-              </div>
-            </div>
 
-            {/* Subtab Switcher */}
-            <div className="grid grid-cols-2 gap-1.5 bg-base-200 p-1 rounded-xl">
-              <button
-                type="button"
-                onClick={() => setPfSubTab("deposits")}
-                className={`py-1.5 px-2 rounded-lg text-xs font-bold transition-all ${
-                  pfSubTab === "deposits"
-                    ? "bg-primary text-primary-content shadow-xs"
-                    : "text-base-content/70 hover:text-base-content"
-                }`}
-              >
-                Deposited ({salaryData.length})
-              </button>
-              <button
-                type="button"
-                onClick={() => setPfSubTab("withdrawals")}
-                className={`py-1.5 px-2 rounded-lg text-xs font-bold transition-all ${
-                  pfSubTab === "withdrawals"
-                    ? "bg-primary text-primary-content shadow-xs"
-                    : "text-base-content/70 hover:text-base-content"
-                }`}
-              >
-                Withdrawals ({pfWithdrawals.length})
-              </button>
+              {pfSubTab === "withdrawals" && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingPfWithdrawal(null);
+                    setIsAddPfWithdrawalModalOpen(true);
+                  }}
+                  disabled={availablePfBalance <= 0}
+                  className="btn btn-xs h-8 btn-primary font-bold rounded-xl gap-1 cursor-pointer shrink-0"
+                >
+                  <Plus size={13} />
+                  <span>Add</span>
+                </button>
+              )}
             </div>
 
             {/* Subtab 1: Deposited PF Cards */}
@@ -7564,11 +8153,11 @@ export default function InvTableEntry() {
                     return (
                       <div
                         key={item.id || item._id || idx}
-                        className="bg-base-100 rounded-2xl border border-base-200 p-3 shadow-2xs space-y-2"
+                        className="bg-base-100 rounded-2xl border border-base-200 p-3.5 shadow-2xs space-y-2"
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2 min-w-0">
-                            <CompanyLogo name={item.company} size="w-6 h-6" type="company" />
+                            <CompanyLogo name={item.company} size="w-7 h-7" type="company" />
                             <div className="min-w-0">
                               <span className="font-bold text-xs text-base-content truncate block">{item.company}</span>
                               <span className="text-[10px] text-base-content/60">{dayjs(item.month).format("MMM YYYY")}</span>
@@ -7628,7 +8217,7 @@ export default function InvTableEntry() {
                   filteredPfWithdrawals.map((item, idx) => (
                     <div
                       key={item.id || item._id || idx}
-                      className="bg-base-100 rounded-2xl border border-base-200 p-3 shadow-2xs space-y-2"
+                      className="bg-base-100 rounded-2xl border border-base-200 p-3.5 shadow-2xs space-y-2"
                     >
                       <div className="flex items-center justify-between">
                         <div>
@@ -7649,14 +8238,14 @@ export default function InvTableEntry() {
                               setEditingPfWithdrawal(item);
                               setIsAddPfWithdrawalModalOpen(true);
                             }}
-                            className="btn btn-ghost btn-xs btn-square text-primary"
+                            className="btn btn-ghost btn-xs btn-square text-primary cursor-pointer"
                           >
                             <Edit size={13} />
                           </button>
                           <button
                             type="button"
                             onClick={() => handleDeletePfWithdrawal(item.id || item._id)}
-                            className="btn btn-ghost btn-xs btn-square text-error"
+                            className="btn btn-ghost btn-xs btn-square text-error cursor-pointer"
                           >
                             <Trash2 size={13} />
                           </button>
@@ -7679,17 +8268,19 @@ export default function InvTableEntry() {
         {/* OTHER TABS: EMERGENCY FUND MOBILE CONTENT                        */}
         {/* ================================================================ */}
         {activeTab !== "stocks" && activeTab !== "mf" && activeTab !== "fd" && activeTab !== "rd" && activeTab !== "salary" && activeTab !== "pf" && (
-          <div className="bg-base-100 p-8 rounded-2xl border border-base-200 text-center shadow-xs space-y-3">
-            <div className="p-3 bg-primary/10 text-primary rounded-2xl w-max mx-auto">
-              <ShieldAlert size={32} />
-            </div>
-            <div>
-              <h3 className="font-bold text-sm text-base-content">
-                {categories.find((c) => c.id === activeTab)?.label} Tracking
-              </h3>
-              <p className="text-[11px] text-base-content/60 mt-1">
-                Configure entries, interest calculations, and schedules.
-              </p>
+          <div className="px-2.5 w-full max-w-full">
+            <div className="bg-base-100 p-8 rounded-2xl border border-base-200 text-center shadow-xs space-y-3">
+              <div className="p-3 bg-primary/10 text-primary rounded-2xl w-max mx-auto">
+                <ShieldAlert size={32} />
+              </div>
+              <div>
+                <h3 className="font-bold text-sm text-base-content">
+                  {categories.find((c) => c.id === activeTab)?.label} Tracking
+                </h3>
+                <p className="text-[11px] text-base-content/60 mt-1">
+                  Configure entries, interest calculations, and schedules.
+                </p>
+              </div>
             </div>
           </div>
         )}

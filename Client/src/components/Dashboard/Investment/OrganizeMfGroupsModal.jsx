@@ -190,38 +190,43 @@ const OrganizeMfGroupsModal = ({ isOpen, onClose, funds = [], groups = [], onSav
   };
 
   const modalContent = (
-    <div className="fixed inset-0 w-screen h-screen z-[999999] flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="bg-base-100 rounded-3xl border border-base-300 shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden">
+    <div className="fixed inset-0 w-screen h-screen z-[999999] flex items-center justify-center p-2.5 sm:p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200">
+      <div className="bg-base-100 rounded-2xl sm:rounded-3xl border border-base-300/30 dark:border-base-700/25 shadow-2xl w-full max-w-2xl max-h-[92vh] sm:max-h-[85vh] flex flex-col overflow-hidden">
         {/* Modal Header */}
-        <div className="px-6 py-4 border-b border-base-200 flex items-center justify-between bg-base-100/90 backdrop-blur-md shrink-0">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 bg-secondary/10 text-secondary rounded-2xl">
-              <FolderTree size={20} />
+        <div className="px-4 sm:px-6 py-3.5 sm:py-4 border-b border-base-300/25 dark:border-base-700/20 flex items-center justify-between bg-base-100/90 backdrop-blur-md shrink-0">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="p-2 bg-secondary/10 text-secondary rounded-xl sm:rounded-2xl shrink-0">
+              <FolderTree size={18} className="sm:w-5 sm:h-5" />
             </div>
-            <div>
-              <h2 className="text-base font-bold text-base-content">Organize Mutual Fund Groups & Order</h2>
-              <p className="text-xs text-base-content/60">Create groups, re-order funds, and drag & drop between groups.</p>
+            <div className="min-w-0">
+              <h2 className="text-sm sm:text-base font-bold text-base-content tracking-tight truncate">
+                Organize Mutual Fund Groups & Order
+              </h2>
+              <p className="text-[11px] sm:text-xs text-base-content/60 truncate">
+                Create groups, re-order funds, and organize portfolio.
+              </p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-xl hover:bg-base-200 text-base-content/60 hover:text-base-content transition-colors cursor-pointer"
+            className="p-1.5 rounded-xl hover:bg-base-200 text-base-content/60 hover:text-base-content transition-colors cursor-pointer shrink-0 ml-2"
+            title="Close"
           >
             <X size={18} />
           </button>
         </div>
 
         {/* Modal Body: Custom Groups & Drag Drop Container */}
-        <div className="p-6 overflow-y-auto custom-scrollbar-thin space-y-6 flex-1">
+        <div className="p-3 sm:p-6 overflow-y-auto custom-scrollbar-thin space-y-4 sm:space-y-5 flex-1">
           {/* Create Group Input */}
           <form onSubmit={handleAddGroup} className="flex items-center gap-2">
             <input
               type="text"
               value={newGroupName}
               onChange={(e) => setNewGroupName(e.target.value)}
-              placeholder="Enter new group name (e.g., Core Equity, Debt Funds)..."
-              className="input input-sm flex-1 rounded-xl bg-base-200/60 border-base-200 text-xs focus:border-secondary"
+              placeholder="Enter new group name..."
+              className="input input-sm flex-1 rounded-xl bg-base-200/60 border-base-300/30 text-xs focus:border-secondary"
             />
             <button
               type="submit"
@@ -234,7 +239,7 @@ const OrganizeMfGroupsModal = ({ isOpen, onClose, funds = [], groups = [], onSav
           </form>
 
           {/* Groups List */}
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             {localGroups.map((group, gIdx) => {
               const groupFunds = (group.fundIds || [])
                 .map((id) => fundMap.get(id))
@@ -245,11 +250,11 @@ const OrganizeMfGroupsModal = ({ isOpen, onClose, funds = [], groups = [], onSav
                   key={group.id}
                   onDragOver={handleDragOver}
                   onDrop={(e) => handleDropGroup(e, group.id)}
-                  className="bg-base-200/80 rounded-2xl border border-base-300/80 p-4 space-y-3 shadow-xs transition-all"
+                  className="bg-base-200/50 rounded-2xl border border-base-300/30 dark:border-base-700/25 p-3 sm:p-4 space-y-2.5 sm:space-y-3 shadow-xs transition-all"
                 >
                   {/* Group Header */}
-                  <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-base-300/70">
-                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2 pb-2 sm:pb-2.5 border-b border-base-300/25 dark:border-base-700/20">
+                    <div className="flex items-center gap-1.5 sm:gap-2 flex-1 min-w-0">
                       {editingGroupId === group.id ? (
                         <div className="flex items-center gap-1 flex-1 max-w-xs">
                           <input
@@ -262,17 +267,17 @@ const OrganizeMfGroupsModal = ({ isOpen, onClose, funds = [], groups = [], onSav
                           <button
                             type="button"
                             onClick={() => handleSaveRenameGroup(group.id)}
-                            className="p-1 text-success hover:bg-success/10 rounded"
+                            className="p-1 text-success hover:bg-success/10 rounded cursor-pointer"
                           >
                             <Check size={14} />
                           </button>
                         </div>
                       ) : (
                         <>
-                          <h3 className="font-extrabold text-xs text-base-content tracking-tight truncate">
+                          <h3 className="font-extrabold text-xs sm:text-sm text-base-content tracking-tight truncate">
                             {group.name}
                           </h3>
-                          <span className="px-2 py-0.5 rounded-full bg-secondary/15 text-secondary text-[10px] font-bold border border-secondary/20">
+                          <span className="px-1.5 sm:px-2 py-0.2 rounded-full bg-secondary/15 text-secondary text-[9.5px] sm:text-[10px] font-bold border border-secondary/20 shrink-0">
                             {groupFunds.length} fund{groupFunds.length !== 1 ? "s" : ""}
                           </span>
                         </>
@@ -280,11 +285,11 @@ const OrganizeMfGroupsModal = ({ isOpen, onClose, funds = [], groups = [], onSav
                     </div>
 
                     {/* Group Controls */}
-                    <div className="flex items-center gap-1 shrink-0">
+                    <div className="flex items-center gap-0.5 sm:gap-1 shrink-0">
                       <button
                         type="button"
                         onClick={() => handleStartRenameGroup(group)}
-                        className="p-1 text-base-content/60 hover:text-base-content hover:bg-base-200 rounded cursor-pointer"
+                        className="p-1 text-base-content/60 hover:text-base-content hover:bg-base-100 rounded-lg cursor-pointer"
                         title="Rename Group"
                       >
                         <Edit2 size={13} />
@@ -293,7 +298,7 @@ const OrganizeMfGroupsModal = ({ isOpen, onClose, funds = [], groups = [], onSav
                         type="button"
                         onClick={() => handleMoveGroup(gIdx, -1)}
                         disabled={gIdx === 0}
-                        className="p-1 text-base-content/60 hover:text-base-content hover:bg-base-200 rounded cursor-pointer disabled:opacity-30"
+                        className="p-1 text-base-content/60 hover:text-base-content hover:bg-base-100 rounded-lg cursor-pointer disabled:opacity-30"
                         title="Move Group Up"
                       >
                         <ArrowUp size={13} />
@@ -302,7 +307,7 @@ const OrganizeMfGroupsModal = ({ isOpen, onClose, funds = [], groups = [], onSav
                         type="button"
                         onClick={() => handleMoveGroup(gIdx, 1)}
                         disabled={gIdx === localGroups.length - 1}
-                        className="p-1 text-base-content/60 hover:text-base-content hover:bg-base-200 rounded cursor-pointer disabled:opacity-30"
+                        className="p-1 text-base-content/60 hover:text-base-content hover:bg-base-100 rounded-lg cursor-pointer disabled:opacity-30"
                         title="Move Group Down"
                       >
                         <ArrowDown size={13} />
@@ -311,7 +316,7 @@ const OrganizeMfGroupsModal = ({ isOpen, onClose, funds = [], groups = [], onSav
                         <button
                           type="button"
                           onClick={() => handleDeleteGroup(group.id)}
-                          className="p-1 text-error/80 hover:text-error hover:bg-error/10 rounded cursor-pointer"
+                          className="p-1 text-error/80 hover:text-error hover:bg-error/10 rounded-lg cursor-pointer"
                           title="Delete Group"
                         >
                           <Trash2 size={13} />
@@ -322,7 +327,7 @@ const OrganizeMfGroupsModal = ({ isOpen, onClose, funds = [], groups = [], onSav
 
                   {/* Fund Items inside Group */}
                   {groupFunds.length === 0 ? (
-                    <div className="py-4 text-center border-2 border-dashed border-base-200 rounded-xl text-base-content/40 text-xs font-medium">
+                    <div className="py-3 sm:py-4 text-center border-2 border-dashed border-base-300/30 rounded-xl text-base-content/40 text-xs font-medium">
                       Drag funds here or select a target group
                     </div>
                   ) : (
@@ -332,16 +337,16 @@ const OrganizeMfGroupsModal = ({ isOpen, onClose, funds = [], groups = [], onSav
                           key={fund.id}
                           draggable
                           onDragStart={(e) => handleDragStart(e, fund.id, group.id)}
-                          className="flex items-center justify-between gap-3 px-3 py-2 bg-base-100 rounded-xl border border-base-200/80 shadow-2xs hover:border-secondary/40 cursor-grab active:cursor-grabbing transition-all group"
+                          className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-3 px-2.5 sm:px-3 py-2 bg-base-100 rounded-xl border border-base-300/30 dark:border-base-700/25 shadow-2xs hover:border-secondary/40 cursor-grab active:cursor-grabbing transition-all group"
                         >
-                          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                          <div className="flex items-center gap-2 sm:gap-2.5 min-w-0 flex-1">
                             <GripVertical size={14} className="text-base-content/30 group-hover:text-secondary shrink-0" />
                             <div className="min-w-0 flex-1">
                               <div className="flex items-center gap-1.5 flex-wrap">
                                 <span className="font-bold text-xs text-base-content truncate">{fund.amc}</span>
                                 {fund.folioNumber && (
-                                  <span className="font-mono text-[9.5px] text-secondary font-bold">
-                                    #{fund.folioNumber}
+                                  <span className="font-mono text-[9px] sm:text-[9.5px] text-secondary font-bold shrink-0">
+                                    #{fund.folioNumber.replace(/^#/, "")}
                                   </span>
                                 )}
                               </div>
@@ -352,31 +357,33 @@ const OrganizeMfGroupsModal = ({ isOpen, onClose, funds = [], groups = [], onSav
                           </div>
 
                           {/* Re-order Arrows & Target Group Selector */}
-                          <div className="flex items-center gap-1 shrink-0">
-                            <button
-                              type="button"
-                              onClick={() => handleMoveFundInGroup(group.id, fIdx, -1)}
-                              disabled={fIdx === 0}
-                              className="p-1 text-base-content/50 hover:text-base-content hover:bg-base-200 rounded cursor-pointer disabled:opacity-20"
-                              title="Move Fund Up"
-                            >
-                              <ArrowUp size={12} />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleMoveFundInGroup(group.id, fIdx, 1)}
-                              disabled={fIdx === groupFunds.length - 1}
-                              className="p-1 text-base-content/50 hover:text-base-content hover:bg-base-200 rounded cursor-pointer disabled:opacity-20"
-                              title="Move Fund Down"
-                            >
-                              <ArrowDown size={12} />
-                            </button>
+                          <div className="flex items-center justify-between sm:justify-end gap-1.5 pt-1.5 sm:pt-0 border-t sm:border-t-0 border-base-200/60 shrink-0">
+                            <div className="flex items-center gap-1">
+                              <button
+                                type="button"
+                                onClick={() => handleMoveFundInGroup(group.id, fIdx, -1)}
+                                disabled={fIdx === 0}
+                                className="p-1 text-base-content/50 hover:text-base-content hover:bg-base-200 rounded-md cursor-pointer disabled:opacity-20"
+                                title="Move Fund Up"
+                              >
+                                <ArrowUp size={12} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleMoveFundInGroup(group.id, fIdx, 1)}
+                                disabled={fIdx === groupFunds.length - 1}
+                                className="p-1 text-base-content/50 hover:text-base-content hover:bg-base-200 rounded-md cursor-pointer disabled:opacity-20"
+                                title="Move Fund Down"
+                              >
+                                <ArrowDown size={12} />
+                              </button>
+                            </div>
 
                             {localGroups.length > 1 && (
                               <select
                                 value={group.id}
                                 onChange={(e) => handleMoveFundToGroup(fund.id, group.id, e.target.value)}
-                                className="select select-xs select-bordered text-[10px] font-medium rounded-lg bg-base-200 text-base-content/80 ml-1 cursor-pointer"
+                                className="select select-xs select-bordered text-[10px] font-medium rounded-lg bg-base-200 text-base-content/80 ml-1 cursor-pointer max-w-[180px] sm:max-w-none truncate"
                               >
                                 {localGroups.map((g) => (
                                   <option key={g.id} value={g.id}>
@@ -397,7 +404,7 @@ const OrganizeMfGroupsModal = ({ isOpen, onClose, funds = [], groups = [], onSav
         </div>
 
         {/* Modal Footer */}
-        <div className="px-6 py-4 border-t border-base-200 flex items-center justify-end gap-2 bg-base-100/90 shrink-0">
+        <div className="px-4 sm:px-6 py-3 sm:py-3.5 border-t border-base-300/25 dark:border-base-700/20 flex items-center justify-end gap-2 bg-base-100/90 shrink-0">
           <button
             type="button"
             onClick={onClose}
@@ -408,10 +415,11 @@ const OrganizeMfGroupsModal = ({ isOpen, onClose, funds = [], groups = [], onSav
           <button
             type="button"
             onClick={handleSave}
-            className="btn btn-secondary btn-sm rounded-xl font-bold text-xs gap-1.5 px-5 shadow-sm cursor-pointer"
+            className="btn btn-secondary btn-sm rounded-xl font-bold text-xs gap-1.5 px-4 sm:px-5 shadow-sm cursor-pointer"
           >
-            <Check size={15} />
-            <span>Save Custom Groups & Order</span>
+            <Check size={14} />
+            <span className="sm:hidden">Save Groups</span>
+            <span className="hidden sm:inline">Save Custom Groups & Order</span>
           </button>
         </div>
       </div>

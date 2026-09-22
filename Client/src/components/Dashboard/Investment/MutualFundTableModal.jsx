@@ -145,7 +145,7 @@ export default function MutualFundTableModal({
         onClick={(e) => e.stopPropagation()}
       >
         {/* Floating Top Header Bar */}
-        <div className="bg-base-100/95 backdrop-blur-md rounded-2xl sm:rounded-3xl border border-base-300/60 shadow-xl px-4 sm:px-6 py-3 sm:py-3.5 flex items-center justify-between gap-3 shrink-0">
+        <div className="bg-base-100/95 backdrop-blur-md rounded-2xl sm:rounded-3xl border border-base-content/8 dark:border-base-content/8 shadow-xl px-4 sm:px-6 py-3 sm:py-3.5 flex items-center justify-between gap-3 shrink-0">
           <div className="flex items-center gap-3 min-w-0">
             <CompanyLogo name={fund.amc} size="w-10 h-10" rounded="rounded-2xl" type="mf" />
             <div className="min-w-0">
@@ -168,37 +168,38 @@ export default function MutualFundTableModal({
                   </span>
                 ) : null}
               </div>
-              <p className="text-xs text-base-content/60 font-medium truncate">
-                {fund.category} → {(fund.subCategory || "").replace(/\s*\/\s*Tax[\s-]*Saver/gi, "").trim()} • {fund.plan} • {fund.optionType}
-              </p>
+              <div className="flex items-center gap-1.5 text-xs text-base-content/70 mt-0.5 flex-wrap">
+                <span className="font-semibold text-secondary">
+                  {fund.category} → {(fund.subCategory || "").replace(/\s*\/\s*Tax[\s-]*Saver/gi, "").trim()}
+                </span>
+                <span>•</span>
+                <span>{fund.plan}</span>
+                <span>•</span>
+                <span>{fund.optionType}</span>
+              </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
-            <div className="text-[11px] text-base-content/50 font-medium hidden md:block mr-2">
-              Press <kbd className="kbd kbd-xs font-mono font-bold">ESC</kbd> to close
-            </div>
-            <button
-              type="button"
-              onClick={onClose}
-              className="p-2 rounded-xl text-base-content/50 hover:text-base-content hover:bg-base-200 transition-colors cursor-pointer"
-              title="Close"
-            >
-              <X size={18} />
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-2 rounded-2xl hover:bg-base-200 text-base-content/60 hover:text-base-content transition-colors cursor-pointer"
+            title="Close Table (Esc)"
+          >
+            <X size={20} />
+          </button>
         </div>
 
-        {/* Main Content Layout: Left Table + Right 2 Summary Popups */}
-        <div className="flex flex-col lg:flex-row gap-3.5 flex-1 min-h-0 overflow-hidden">
-          {/* Left Table Panel Card */}
-          <div className="flex-1 bg-base-100/95 backdrop-blur-md rounded-3xl border border-base-300/60 shadow-xl flex flex-col overflow-hidden h-full min-w-0">
+        {/* Content Body: Table Only (Summary hidden on mobile: hidden lg:flex) */}
+        <div className="flex-1 flex gap-3 min-h-0">
+          {/* Main Table Column */}
+          <div className="flex-1 bg-base-100/95 backdrop-blur-md rounded-3xl border border-base-content/8 dark:border-base-content/8 shadow-xl flex flex-col overflow-hidden h-full min-w-0">
 
         {/* Toolbar: Tab Switcher (Deposits vs Withdrawals) + Year Group Collapse + Add Action */}
-        <div className="px-4 sm:px-5 py-2.5 bg-base-100 border-b border-base-200 flex flex-wrap items-center justify-between gap-3 text-xs shrink-0">
+        <div className="px-4 sm:px-5 py-2.5 bg-base-100 border-b border-base-content/8 dark:border-base-content/8 flex flex-wrap items-center justify-between gap-3 text-xs shrink-0">
           <div className="flex items-center gap-3">
             {/* View Switcher Toggle */}
-            <div className="join bg-base-200 p-0.5 rounded-xl border border-base-300/60">
+            <div className="join bg-base-200 p-0.5 rounded-xl border border-base-content/8 dark:border-base-content/8">
               <button
                 type="button"
                 onClick={() => setTableTab("deposit")}
@@ -257,7 +258,7 @@ export default function MutualFundTableModal({
                 <button
                   type="button"
                   onClick={() => toggleAllMfYearsCollapse(fund.id, yearGroups)}
-                  className="btn btn-ghost btn-xs rounded-xl gap-1.5 font-bold text-xs h-7 min-h-0 text-base-content/80 hover:text-base-content hover:bg-base-200 border border-base-300 shadow-2xs cursor-pointer"
+                  className="btn btn-ghost btn-xs rounded-xl gap-1.5 font-bold text-xs h-7 min-h-0 text-base-content/80 hover:text-base-content hover:bg-base-200 border border-base-300/30 dark:border-base-700/25 shadow-2xs cursor-pointer"
                   title={
                     areAllCollapsed
                       ? "Expand All Year Groups"
@@ -353,11 +354,14 @@ export default function MutualFundTableModal({
               </button>
             </div>
           ) : (
-            <table className="table table-xs w-full text-xs table-auto border-collapse">
+            <>
+              {/* DESKTOP TABLE VIEW (UNTOUCHED) */}
+              <div className="hidden md:block w-full">
+                <table className="table table-xs w-full text-xs table-auto border-collapse">
               <thead className="sticky top-0 z-30 shadow-xs">
-                <tr className="border-b border-base-300 text-[10px] font-bold text-base-content/70 uppercase tracking-wider select-none bg-base-200">
+                <tr className="border-b border-base-content/8 dark:border-base-content/8 text-[10px] font-bold text-base-content/70 uppercase tracking-wider select-none bg-base-200">
                   {/* Term Sort Button */}
-                  <th className="sticky top-0 z-30 py-2.5 px-2 text-left font-bold bg-base-200 border-b border-base-300">
+                  <th className="sticky top-0 z-30 py-2.5 px-2 text-left font-bold bg-base-200 border-b border-base-content/8 dark:border-base-content/8">
                     <button
                       type="button"
                       onClick={() => handleSipSort("term")}
@@ -379,7 +383,7 @@ export default function MutualFundTableModal({
                   </th>
 
                   {/* Type Sort Button */}
-                  <th className="sticky top-0 z-30 py-2.5 px-1.5 text-center font-bold bg-base-200 border-b border-base-300">
+                  <th className="sticky top-0 z-30 py-2.5 px-1.5 text-center font-bold bg-base-200 border-b border-base-content/8 dark:border-base-content/8">
                     <button
                       type="button"
                       onClick={() => handleSipSort("type")}
@@ -401,7 +405,7 @@ export default function MutualFundTableModal({
                   </th>
 
                   {/* Date Sort Button */}
-                  <th className="sticky top-0 z-30 py-2.5 px-2 text-center font-bold bg-base-200 border-b border-base-300">
+                  <th className="sticky top-0 z-30 py-2.5 px-2 text-center font-bold bg-base-200 border-b border-base-content/8 dark:border-base-content/8">
                     <button
                       type="button"
                       onClick={() => handleSipSort("date")}
@@ -423,7 +427,7 @@ export default function MutualFundTableModal({
                   </th>
 
                   {/* Deposit / Gross Withdrawn Sort Button */}
-                  <th className="sticky top-0 z-30 py-2.5 px-2 text-right font-bold bg-base-200 border-b border-base-300">
+                  <th className="sticky top-0 z-30 py-2.5 px-2 text-right font-bold bg-base-200 border-b border-base-content/8 dark:border-base-content/8">
                     <button
                       type="button"
                       onClick={() => handleSipSort("amtDeposit")}
@@ -447,7 +451,7 @@ export default function MutualFundTableModal({
                   </th>
 
                   {/* ER / Charges Sort Button */}
-                  <th className="sticky top-0 z-30 py-2.5 px-1.5 text-right font-bold bg-base-200 border-b border-base-300">
+                  <th className="sticky top-0 z-30 py-2.5 px-1.5 text-right font-bold bg-base-200 border-b border-base-content/8 dark:border-base-content/8">
                     <button
                       type="button"
                       onClick={() => handleSipSort("er")}
@@ -471,7 +475,7 @@ export default function MutualFundTableModal({
                   </th>
 
                   {/* NAV Sort Button */}
-                  <th className="sticky top-0 z-30 py-2.5 px-2 text-right font-bold bg-base-200 border-b border-base-300">
+                  <th className="sticky top-0 z-30 py-2.5 px-2 text-right font-bold bg-base-200 border-b border-base-content/8 dark:border-base-content/8">
                     <button
                       type="button"
                       onClick={() => handleSipSort("nav")}
@@ -495,7 +499,7 @@ export default function MutualFundTableModal({
                   </th>
 
                   {/* Units Sort Button */}
-                  <th className="sticky top-0 z-30 py-2.5 px-2 text-right font-bold bg-base-200 border-b border-base-300">
+                  <th className="sticky top-0 z-30 py-2.5 px-2 text-right font-bold bg-base-200 border-b border-base-content/8 dark:border-base-content/8">
                     <button
                       type="button"
                       onClick={() => handleSipSort("units")}
@@ -519,7 +523,7 @@ export default function MutualFundTableModal({
                   </th>
 
                   {/* Actual Amt / Net Received Sort Button */}
-                  <th className="sticky top-0 z-30 py-2.5 px-2 text-right font-bold bg-base-200 border-b border-base-300">
+                  <th className="sticky top-0 z-30 py-2.5 px-2 text-right font-bold bg-base-200 border-b border-base-content/8 dark:border-base-content/8">
                     <button
                       type="button"
                       onClick={() => handleSipSort("actualAmt")}
@@ -543,7 +547,7 @@ export default function MutualFundTableModal({
                   </th>
 
                   {/* Actions Header */}
-                  <th className="sticky top-0 z-30 py-2.5 px-1 text-center font-bold bg-base-200 border-b border-base-300">
+                  <th className="sticky top-0 z-30 py-2.5 px-1 text-center font-bold bg-base-200 border-b border-base-content/8 dark:border-base-content/8">
                     Act
                   </th>
                 </tr>
@@ -561,7 +565,7 @@ export default function MutualFundTableModal({
                             onClick={() => toggleMfYearCollapse(fund.id, yg.year)}
                           >
                             {/* Col 1: Term / Year Title & Count */}
-                            <td className="sticky top-[32px] z-10 py-1.5 px-2 text-left bg-base-200/95 backdrop-blur-md border-b border-base-200/80">
+                            <td className="sticky top-[32px] z-10 py-1.5 px-2 text-left bg-base-200/95 backdrop-blur-md border-b border-base-content/6 dark:border-base-content/6">
                               <div className="flex items-center gap-1.5 min-w-0">
                                 <div
                                   className={`transition-transform duration-200 shrink-0 ${
@@ -587,38 +591,38 @@ export default function MutualFundTableModal({
                             </td>
 
                             {/* Col 2: Type */}
-                            <td className="sticky top-[32px] z-10 py-1.5 px-1.5 text-center bg-base-200/95 backdrop-blur-md text-base-content/30 border-b border-base-200/80">
+                            <td className="sticky top-[32px] z-10 py-1.5 px-1.5 text-center bg-base-200/95 backdrop-blur-md text-base-content/30 border-b border-base-content/6 dark:border-base-content/6">
                               —
                             </td>
 
                             {/* Col 3: Date */}
-                            <td className="sticky top-[32px] z-10 py-1.5 px-2 text-center bg-base-200/95 backdrop-blur-md text-base-content/30 border-b border-base-200/80">
+                            <td className="sticky top-[32px] z-10 py-1.5 px-2 text-center bg-base-200/95 backdrop-blur-md text-base-content/30 border-b border-base-content/6 dark:border-base-content/6">
                               —
                             </td>
 
                             {/* Col 4: Gross / Deposit Subtotal */}
-                            <td className="sticky top-[32px] z-10 py-1.5 px-2 text-right bg-base-200/95 backdrop-blur-md font-bold text-base-content text-xs truncate border-b border-base-200/80">
+                            <td className="sticky top-[32px] z-10 py-1.5 px-2 text-right bg-base-200/95 backdrop-blur-md font-bold text-base-content text-xs truncate border-b border-base-content/6 dark:border-base-content/6">
                               ₹{yg.totalDeposit.toLocaleString("en-IN")}
                             </td>
 
                             {/* Col 5: Charges / ER Subtotal */}
-                            <td className="sticky top-[32px] z-10 py-1.5 px-1.5 text-right bg-base-200/95 backdrop-blur-md font-bold text-error/80 text-xs truncate border-b border-base-200/80">
+                            <td className="sticky top-[32px] z-10 py-1.5 px-1.5 text-right bg-base-200/95 backdrop-blur-md font-bold text-error/80 text-xs truncate border-b border-base-content/6 dark:border-base-content/6">
                               ₹{yg.totalEr.toLocaleString("en-IN")}
                             </td>
 
                             {/* Col 6: NAV Avg */}
-                            <td className="sticky top-[32px] z-10 py-1.5 px-2 text-right bg-base-200/95 backdrop-blur-md font-semibold text-base-content/70 text-xs truncate border-b border-base-200/80">
+                            <td className="sticky top-[32px] z-10 py-1.5 px-2 text-right bg-base-200/95 backdrop-blur-md font-semibold text-base-content/70 text-xs truncate border-b border-base-content/6 dark:border-base-content/6">
                               {yg.avgNav > 0 ? `₹${yg.avgNav.toFixed(2)}` : "—"}
                             </td>
 
                             {/* Col 7: Units Subtotal */}
-                            <td className="sticky top-[32px] z-10 py-1.5 px-2 text-right bg-base-200/95 backdrop-blur-md font-mono font-bold text-base-content/90 text-xs truncate border-b border-base-200/80">
+                            <td className="sticky top-[32px] z-10 py-1.5 px-2 text-right bg-base-200/95 backdrop-blur-md font-mono font-bold text-base-content/90 text-xs truncate border-b border-base-content/6 dark:border-base-content/6">
                               {yg.totalUnits.toFixed(3)}
                             </td>
 
                             {/* Col 8: Net Received / Actual Subtotal */}
                             <td
-                              className={`sticky top-[32px] z-10 py-1.5 px-2 text-right bg-base-200/95 backdrop-blur-md font-extrabold text-xs truncate border-b border-base-200/80 ${
+                              className={`sticky top-[32px] z-10 py-1.5 px-2 text-right bg-base-200/95 backdrop-blur-md font-extrabold text-xs truncate border-b border-base-content/6 dark:border-base-content/6 ${
                                 isWithdrawalView
                                   ? "text-amber-600 dark:text-amber-400"
                                   : "text-emerald-600 dark:text-emerald-400"
@@ -629,7 +633,7 @@ export default function MutualFundTableModal({
                             </td>
 
                             {/* Col 9: Actions */}
-                            <td className="sticky top-[32px] z-10 py-1.5 px-1 bg-base-200/95 backdrop-blur-md border-b border-base-200/80"></td>
+                            <td className="sticky top-[32px] z-10 py-1.5 px-1 bg-base-200/95 backdrop-blur-md border-b border-base-content/6 dark:border-base-content/6"></td>
                           </tr>
 
                           {/* Transaction Rows for this year (rendered if NOT collapsed) */}
@@ -836,7 +840,7 @@ export default function MutualFundTableModal({
                               return (
                                 <tr
                                   key={txn.id}
-                                  className="hover:bg-base-200/50 border-b border-base-200/60 transition-colors"
+                                  className="hover:bg-base-200/50 border-b border-base-content/6 dark:border-base-content/6 transition-colors"
                                 >
                                   <td className="py-2 px-2 text-left font-bold text-xs text-base-content/80">
                                     {txn.term || `#${tIdx + 1}`}
@@ -906,18 +910,169 @@ export default function MutualFundTableModal({
                     })}
                   </tbody>
                 </table>
-              )}
+              </div>
+
+              {/* ========================================================= */}
+              {/* MOBILE LIST OF TRANSACTION BOXES (block md:hidden)        */}
+              {/* ========================================================= */}
+              <div className="block md:hidden p-3 space-y-3">
+                {yearGroups.map((yg) => {
+                  const yearKey = `${fund.id}-${yg.year}`;
+                  const isYearCollapsed = collapsedMfYearKeys.has(yearKey);
+
+                  return (
+                    <div key={yg.year} className="space-y-2">
+                      {/* Collapsible Year Group Header Card */}
+                      <button
+                        type="button"
+                        onClick={() => toggleMfYearCollapse(fund.id, yg.year)}
+                        className="w-full flex items-center justify-between px-3 py-2 bg-base-200/60 rounded-xl border border-base-content/8 dark:border-base-content/8 font-bold text-xs select-none cursor-pointer hover:bg-base-200 transition-colors"
+                      >
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <div className={`transition-transform duration-200 shrink-0 ${!isYearCollapsed ? "rotate-0" : "-rotate-90"}`}>
+                            <ChevronDown size={14} className="text-base-content/60" />
+                          </div>
+                          <Calendar size={12} className="text-primary shrink-0" />
+                          <span className="text-base-content font-bold">{yg.year}</span>
+                          <span className={`px-1.5 py-0.2 rounded-md text-[10px] font-bold border shrink-0 ${
+                            isWithdrawalView
+                              ? "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/20"
+                              : "bg-secondary/15 text-secondary border-secondary/20"
+                          }`}>
+                            {yg.txns.length} txns
+                          </span>
+                        </div>
+                        <div className="text-right text-[11px] font-mono font-bold shrink-0">
+                          <span className={isWithdrawalView ? "text-amber-600 dark:text-amber-400" : "text-emerald-600 dark:text-emerald-400"}>
+                            {isWithdrawalView ? "" : "+"}₹{yg.totalActual.toLocaleString("en-IN")}
+                          </span>
+                        </div>
+                      </button>
+
+                      {/* Transaction Boxes for this Year */}
+                      {!isYearCollapsed && (
+                        <div className="space-y-2">
+                          {yg.txns.map((txn) => {
+                            const parsedAmt = txn.amtDeposit !== undefined && txn.amtDeposit !== null
+                              ? Number(txn.amtDeposit)
+                              : Number(txn.amount || 0);
+                            const parsedEr = Number(txn.er || 0);
+                            const act = txn.actualAmt !== undefined && txn.actualAmt !== null
+                              ? Number(txn.actualAmt)
+                              : Math.max(0, parsedAmt - parsedEr);
+                            const isW = isWithdrawalTxn(txn);
+
+                            return (
+                              <div
+                                key={txn.id}
+                                className="p-3 bg-base-100 rounded-2xl border border-base-content/8 dark:border-base-content/8 shadow-2xs space-y-2"
+                              >
+                                {/* Top Line: Term, Type badge, Date & Actions */}
+                                <div className="flex items-center justify-between gap-2">
+                                  <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
+                                    <span className="font-extrabold text-xs text-base-content">
+                                      {txn.term || "Txn"}
+                                    </span>
+                                    <span className={`px-1.5 py-0.2 rounded-md text-[9.5px] font-black uppercase ${
+                                      isW
+                                        ? "bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/25"
+                                        : "bg-secondary/15 text-secondary border border-secondary/25"
+                                    }`}>
+                                      {txn.type || (isW ? "SWP" : "SIP")}
+                                    </span>
+                                    <span className="text-[10px] text-base-content/50 font-mono">
+                                      {formatDateDDMMMYYYY(txn.date)}
+                                    </span>
+                                  </div>
+
+                                  {/* Action Buttons: Edit & Delete */}
+                                  <div className="flex items-center gap-1 shrink-0">
+                                    <button
+                                      type="button"
+                                      onClick={() => onOpenEditSip && onOpenEditSip(fund, txn)}
+                                      className="p-1 rounded-lg text-info hover:bg-info/10 transition-colors cursor-pointer"
+                                      title="Edit Transaction"
+                                    >
+                                      <Pencil size={13} />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => onDeleteSipTxn && onDeleteSipTxn(fund.id, txn.id)}
+                                      className="p-1 rounded-lg text-error hover:bg-error/10 transition-colors cursor-pointer"
+                                      title="Delete Transaction"
+                                    >
+                                      <Trash2 size={13} />
+                                    </button>
+                                  </div>
+                                </div>
+
+                                {/* Financial Details Grid */}
+                                <div className="grid grid-cols-2 gap-2 text-xs pt-1 border-t border-base-content/6 dark:border-base-content/6 font-mono">
+                                  <div>
+                                    <span className="text-[9.5px] text-base-content/50 uppercase block font-sans">
+                                      {isW ? "Gross Withdrawn" : "Gross Deposited"}
+                                    </span>
+                                    <span className="font-bold text-base-content">
+                                      ₹{parsedAmt.toLocaleString("en-IN")}
+                                    </span>
+                                    {parsedEr > 0 && (
+                                      <span className="text-[9.5px] text-error block">
+                                        ER: -₹{parsedEr.toLocaleString("en-IN")}
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  <div className="text-right">
+                                    <span className="text-[9.5px] text-base-content/50 uppercase block font-sans">
+                                      {isW ? "Net Received" : "Actual Invested"}
+                                    </span>
+                                    <span className={`font-black text-xs ${
+                                      isW
+                                        ? "text-amber-600 dark:text-amber-400"
+                                        : "text-emerald-600 dark:text-emerald-400"
+                                    }`}>
+                                      {isW ? "" : "+"}₹{act.toLocaleString("en-IN")}
+                                    </span>
+                                  </div>
+                                </div>
+
+                                {/* NAV & Units Row */}
+                                <div className="flex items-center justify-between text-[10px] font-mono text-base-content/60 pt-1 border-t border-base-content/6 dark:border-base-content/6">
+                                  <div>
+                                    <span className="text-base-content/40 mr-1">NAV:</span>
+                                    <span className="font-semibold text-base-content/80">
+                                      {txn.nav ? `₹${Number(txn.nav).toFixed(2)}` : "—"}
+                                    </span>
+                                  </div>
+                                  <div>
+                                    <span className="text-base-content/40 mr-1">Units:</span>
+                                    <span className={`font-bold ${isW ? "text-amber-600 dark:text-amber-400" : "text-secondary"}`}>
+                                      {isW ? "-" : "+"}{(parseFloat(txn.units) || 0).toFixed(3)}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
             </div>
 
           {/* Table Bottom Footer Bar */}
-          <div className="p-3 sm:px-5 sm:py-3 border-t border-base-200 bg-base-200/40 flex items-center justify-between text-xs shrink-0">
+          <div className="p-3 sm:px-5 sm:py-3 border-t border-base-content/8 dark:border-base-content/8 bg-base-200/40 flex items-center justify-between text-xs shrink-0">
             <div className="text-base-content/60 font-mono text-xs">
               Showing <strong className="text-base-content font-bold">{filteredTxns.length}</strong> {isWithdrawalView ? "withdrawal events" : "deposit installments"}
             </div>
             <button
               type="button"
               onClick={onClose}
-              className="btn btn-xs sm:btn-sm btn-ghost border border-base-300 rounded-xl px-4 font-bold text-xs shrink-0 cursor-pointer"
+              className="btn btn-xs sm:btn-sm btn-ghost border border-base-content/10 dark:border-base-content/10 rounded-xl px-4 font-bold text-xs shrink-0 cursor-pointer"
             >
               Close
             </button>
@@ -927,10 +1082,10 @@ export default function MutualFundTableModal({
         {/* ================================================================= */}
         {/* RIGHT PANEL: 1 POPUP CARD WITH 2 FACES (DEPOSIT & WITHDRAWAL)     */}
         {/* ================================================================= */}
-        <div className="w-full lg:w-84 xl:w-96 flex flex-col shrink-0 h-full overflow-hidden">
-          <div className="bg-base-100/95 backdrop-blur-md rounded-3xl border border-base-300/60 shadow-xl flex flex-col h-full overflow-hidden justify-between">
+        <div className="hidden lg:flex w-full lg:w-84 xl:w-96 flex-col shrink-0 h-full overflow-hidden">
+          <div className="bg-base-100/95 backdrop-blur-md rounded-3xl border border-base-content/8 dark:border-base-content/8 shadow-xl flex flex-col h-full overflow-hidden justify-between">
             {/* Top Navigation & Face Indicator Header with 2 Arrow Controls */}
-            <div className="p-3.5 sm:p-4 border-b border-base-200/80 bg-base-100 flex items-center justify-between gap-2 shrink-0">
+            <div className="p-3.5 sm:p-4 border-b border-base-content/8 dark:border-base-content/8 bg-base-100 flex items-center justify-between gap-2 shrink-0">
               <div className="flex items-center gap-2 min-w-0">
                 <div
                   className={`w-7 h-7 rounded-xl flex items-center justify-center font-bold shrink-0 transition-colors ${
@@ -952,7 +1107,7 @@ export default function MutualFundTableModal({
               </div>
 
               {/* 2 Navigation Arrows (Left & Right) to switch between faces */}
-              <div className="flex items-center gap-1 bg-base-200/80 p-1 rounded-xl border border-base-300/60 shrink-0">
+              <div className="flex items-center gap-1 bg-base-200/80 p-1 rounded-xl border border-base-content/8 dark:border-base-content/8 shrink-0">
                 <button
                   type="button"
                   onClick={() => setTableTab("deposit")}
@@ -1016,7 +1171,7 @@ export default function MutualFundTableModal({
 
                     {/* 4 Stats Grid */}
                     <div className="grid grid-cols-2 gap-2">
-                      <div className="p-2.5 bg-base-200/50 rounded-xl border border-base-200">
+                      <div className="p-2.5 bg-base-200/50 rounded-xl border border-base-content/6 dark:border-base-content/6">
                         <span className="text-[9px] font-bold text-base-content/50 uppercase block flex items-center gap-1">
                           <Coins size={10} className="text-secondary" /> Units Added
                         </span>
@@ -1024,7 +1179,7 @@ export default function MutualFundTableModal({
                           +{summary.totalUnits.toFixed(3)}
                         </span>
                       </div>
-                      <div className="p-2.5 bg-base-200/50 rounded-xl border border-base-200">
+                      <div className="p-2.5 bg-base-200/50 rounded-xl border border-base-content/6 dark:border-base-content/6">
                         <span className="text-[9px] font-bold text-base-content/50 uppercase block flex items-center gap-1">
                           <TrendingUp size={10} className="text-secondary" /> Avg NAV
                         </span>
@@ -1032,7 +1187,7 @@ export default function MutualFundTableModal({
                           {summary.avgNav > 0 ? `₹${summary.avgNav.toFixed(2)}` : "—"}
                         </span>
                       </div>
-                      <div className="p-2.5 bg-base-200/50 rounded-xl border border-base-200">
+                      <div className="p-2.5 bg-base-200/50 rounded-xl border border-base-content/6 dark:border-base-content/6">
                         <span className="text-[9px] font-bold text-base-content/50 uppercase block flex items-center gap-1">
                           <Layers size={10} className="text-secondary" /> Breakdown
                         </span>
@@ -1040,7 +1195,7 @@ export default function MutualFundTableModal({
                           {summary.sipCount} SIP • {summary.lsCount} LS
                         </span>
                       </div>
-                      <div className="p-2.5 bg-base-200/50 rounded-xl border border-base-200">
+                      <div className="p-2.5 bg-base-200/50 rounded-xl border border-base-content/6 dark:border-base-content/6">
                         <span className="text-[9px] font-bold text-base-content/50 uppercase block flex items-center gap-1">
                           <Clock size={10} className="text-primary" /> Duration
                         </span>
@@ -1051,7 +1206,7 @@ export default function MutualFundTableModal({
                     </div>
 
                     {/* Timeline */}
-                    <div className="p-2.5 bg-base-200/30 rounded-xl border border-base-200/60 text-[10.5px] space-y-1">
+                    <div className="p-2.5 bg-base-200/30 rounded-xl border border-base-content/6 dark:border-base-content/6 text-[10.5px] space-y-1">
                       <div className="flex justify-between">
                         <span className="text-base-content/50">First Deposit:</span>
                         <span className="font-mono font-bold text-base-content">{summary.fromDateStr}</span>
@@ -1066,7 +1221,7 @@ export default function MutualFundTableModal({
                   <button
                     type="button"
                     onClick={() => setTableTab("withdrawal")}
-                    className="w-full py-2 px-3 rounded-xl bg-base-200/80 hover:bg-base-200 text-base-content/80 hover:text-base-content border border-base-300/60 text-xs font-bold flex items-center justify-between transition-colors cursor-pointer"
+                    className="w-full py-2 px-3 rounded-xl bg-base-200/80 hover:bg-base-200 text-base-content/80 hover:text-base-content border border-base-content/8 dark:border-base-content/8 text-xs font-bold flex items-center justify-between transition-colors cursor-pointer"
                   >
                     <span>View Withdrawal Summary</span>
                     <ChevronRight size={14} className="text-primary" />
@@ -1079,7 +1234,7 @@ export default function MutualFundTableModal({
                 <div className="w-1/2 h-full p-4 sm:p-4.5 flex flex-col justify-between gap-3 overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden shrink-0">
                   <div className="space-y-3">
                     {/* Hero Net Withdrawn */}
-                    <div className="p-3 rounded-2xl bg-base-200/60 border border-base-300/60 shadow-2xs">
+                    <div className="p-3 rounded-2xl bg-base-200/60 border border-base-content/8 dark:border-base-content/8 shadow-2xs">
                       <div className="flex items-center justify-between mb-0.5">
                         <span className="text-[9px] uppercase font-black tracking-wider text-base-content/60 block">
                           Total Actually Withdrawn
@@ -1091,7 +1246,7 @@ export default function MutualFundTableModal({
                       <div className="text-2xl font-mono font-black text-base-content tracking-tight">
                         ₹{(summary.totalWithdrawn || 0).toLocaleString("en-IN")}
                       </div>
-                      <div className="flex items-center justify-between text-[10px] font-mono text-base-content/70 mt-1 pt-1 border-t border-base-300/40">
+                      <div className="flex items-center justify-between text-[10px] font-mono text-base-content/70 mt-1 pt-1 border-t border-base-content/6 dark:border-base-content/6">
                         <span>Gross: ₹{(summary.grossWithdrawn || 0).toLocaleString("en-IN")}</span>
                         <span className="text-error font-semibold">Exit Load: ₹{(summary.totalWithdrawalEr || 0).toLocaleString("en-IN")}</span>
                       </div>
@@ -1099,7 +1254,7 @@ export default function MutualFundTableModal({
 
                     {/* 4 Stats Grid */}
                     <div className="grid grid-cols-2 gap-2">
-                      <div className="p-2.5 bg-base-200/50 rounded-xl border border-base-200">
+                      <div className="p-2.5 bg-base-200/50 rounded-xl border border-base-content/6 dark:border-base-content/6">
                         <span className="text-[9px] font-bold text-base-content/50 uppercase block flex items-center gap-1">
                           <Coins size={10} className="text-warning" /> Units Redeemed
                         </span>
@@ -1107,7 +1262,7 @@ export default function MutualFundTableModal({
                           -{(summary.totalUnitsWithdrawn || 0).toFixed(3)}
                         </span>
                       </div>
-                      <div className="p-2.5 bg-base-200/50 rounded-xl border border-base-200">
+                      <div className="p-2.5 bg-base-200/50 rounded-xl border border-base-content/6 dark:border-base-content/6">
                         <span className="text-[9px] font-bold text-base-content/50 uppercase block flex items-center gap-1">
                           <TrendingUp size={10} className="text-info" /> Avg Exit NAV
                         </span>
@@ -1115,7 +1270,7 @@ export default function MutualFundTableModal({
                           {(summary.avgExitNav || 0) > 0 ? `₹${summary.avgExitNav.toFixed(2)}` : "—"}
                         </span>
                       </div>
-                      <div className="p-2.5 bg-base-200/50 rounded-xl border border-base-200">
+                      <div className="p-2.5 bg-base-200/50 rounded-xl border border-base-content/6 dark:border-base-content/6">
                         <span className="text-[9px] font-bold text-base-content/50 uppercase block flex items-center gap-1">
                           <Layers size={10} className="text-primary" /> Breakdown
                         </span>
@@ -1123,7 +1278,7 @@ export default function MutualFundTableModal({
                           {summary.swpCount || 0} SWP • {summary.lsWithdrawalCount || 0} LS
                         </span>
                       </div>
-                      <div className="p-2.5 bg-base-200/50 rounded-xl border border-base-200">
+                      <div className="p-2.5 bg-base-200/50 rounded-xl border border-base-content/6 dark:border-base-content/6">
                         <span className="text-[9px] font-bold text-base-content/50 uppercase block flex items-center gap-1">
                           <Coins size={10} className="text-secondary" /> Units Left
                         </span>
@@ -1134,7 +1289,7 @@ export default function MutualFundTableModal({
                     </div>
 
                     {/* Timeline */}
-                    <div className="p-2.5 bg-base-200/30 rounded-xl border border-base-200/60 text-[10.5px] space-y-1">
+                    <div className="p-2.5 bg-base-200/30 rounded-xl border border-base-content/6 dark:border-base-content/6 text-[10.5px] space-y-1">
                       <div className="flex justify-between">
                         <span className="text-base-content/50">First Withdrawal:</span>
                         <span className="font-mono font-bold text-base-content">{summary.withdrawalFromDateStr || "—"}</span>
@@ -1149,7 +1304,7 @@ export default function MutualFundTableModal({
                   <button
                     type="button"
                     onClick={() => setTableTab("deposit")}
-                    className="w-full py-2 px-3 rounded-xl bg-base-200/80 hover:bg-base-200 text-base-content/80 hover:text-base-content border border-base-300/60 text-xs font-bold flex items-center justify-between transition-colors cursor-pointer"
+                    className="w-full py-2 px-3 rounded-xl bg-base-200/80 hover:bg-base-200 text-base-content/80 hover:text-base-content border border-base-content/8 dark:border-base-content/8 text-xs font-bold flex items-center justify-between transition-colors cursor-pointer"
                   >
                     <ChevronLeft size={14} className="text-secondary" />
                     <span>View Deposited Summary</span>

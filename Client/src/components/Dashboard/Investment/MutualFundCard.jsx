@@ -31,9 +31,13 @@ export default function MutualFundCard({
   const [activeFace, setActiveFace] = useState(0); // 0 = Deposited Details, 1 = Withdrawal Details
 
   return (
-    <div className="bg-base-100 rounded-3xl border border-base-300 dark:border-base-content/20 hover:border-secondary/50 shadow-xs hover:shadow-lg flex flex-col justify-between overflow-hidden transition-all duration-300 group/card">
+    <>
+      {/* =================================================================== */}
+      {/* DESKTOP CARD VIEW                                                   */}
+      {/* =================================================================== */}
+      <div className="hidden md:flex bg-base-100 rounded-3xl border border-base-content/8 dark:border-base-content/8 hover:border-secondary/30 shadow-xs hover:shadow-lg flex-col justify-between overflow-hidden transition-all duration-300 group/card">
       {/* Card Header: AMC Name, # Number, Folio, Category, Plan, Option & Actions */}
-      <div className="p-4 sm:p-5 border-b border-base-300 dark:border-base-content/15 bg-base-100 flex flex-col gap-2.5">
+      <div className="p-4 sm:p-5 border-b border-base-content/8 dark:border-base-content/8 bg-base-100 flex flex-col gap-2.5">
         <div className="flex items-start justify-between gap-3">
           {/* AMC Name with small light opacity # Number */}
           <div className="flex items-center gap-2.5 min-w-0 flex-1">
@@ -160,7 +164,7 @@ export default function MutualFundCard({
           {/* ================================================================= */}
           <div className="w-1/2 p-3.5 sm:p-4 space-y-2.5 flex-1 flex flex-col justify-between shrink-0">
             {/* Hero Stat: Total Invested & Gross Deposited / ER Ribbon with Far-Right Arrow Icons */}
-            <div className="p-3 bg-base-200/40 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5">
+            <div className="p-3 bg-base-200/40 rounded-2xl border border-base-content/6 dark:border-base-content/6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5">
               <div>
                 <span className="text-[10px] uppercase font-bold tracking-wider text-base-content/50 block flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
@@ -183,7 +187,7 @@ export default function MutualFundCard({
                         : `₹${summary.totalDeposited.toLocaleString("en-IN")}`}
                     </span>
                   </div>
-                  <div className="h-5 w-px bg-base-300/60" />
+                  <div className="h-5 w-px bg-base-content/10" />
                   <div>
                     <span className="text-[9px] uppercase text-base-content/40 block font-sans">Total ER</span>
                     <span className="text-error font-bold">
@@ -209,7 +213,7 @@ export default function MutualFundCard({
             {/* Face 1 Body: Structured 2x3 Grid of Deposit Metrics */}
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               {/* 1. Total Terms & Frequency Breakdown */}
-              <div className="p-2.5 bg-base-200/40 rounded-2xl space-y-1">
+              <div className="p-2.5 bg-base-200/40 rounded-2xl border border-base-content/6 dark:border-base-content/6 space-y-1">
                 <span className="text-[10px] font-bold text-base-content/50 uppercase tracking-wider block flex items-center gap-1">
                   <Layers size={11} className="text-secondary" /> Total Terms
                 </span>
@@ -228,7 +232,7 @@ export default function MutualFundCard({
               </div>
 
               {/* 2. Duration */}
-              <div className="p-2.5 bg-base-200/40 rounded-2xl space-y-1">
+              <div className="p-2.5 bg-base-200/40 rounded-2xl border border-base-content/6 dark:border-base-content/6 space-y-1">
                 <span className="text-[10px] font-bold text-base-content/50 uppercase tracking-wider block flex items-center gap-1">
                   <Clock size={11} className="text-primary" /> Duration
                 </span>
@@ -241,7 +245,7 @@ export default function MutualFundCard({
               </div>
 
               {/* 3. Average NAV */}
-              <div className="p-2.5 bg-base-200/40 rounded-2xl space-y-1">
+              <div className="p-2.5 bg-base-200/40 rounded-2xl border border-base-content/6 dark:border-base-content/6 space-y-1">
                 <span className="text-[10px] font-bold text-base-content/50 uppercase tracking-wider block flex items-center gap-1">
                   <TrendingUp size={11} className="text-info" /> Avg NAV
                 </span>
@@ -258,14 +262,14 @@ export default function MutualFundCard({
               </div>
 
               {/* 4. Units Breakdown: Added, Redeemed, Left */}
-              <div className="p-2.5 bg-base-200/40 rounded-2xl space-y-1">
+              <div className="p-2.5 bg-base-200/40 rounded-2xl border border-base-content/6 dark:border-base-content/6 space-y-1">
                 <span className="text-[10px] font-bold text-base-content/50 uppercase tracking-wider block flex items-center gap-1">
                   <Coins size={11} className="text-warning" /> Units Left:{" "}
                   <strong className="font-mono text-base-content font-black">
                     {hideNumbers ? "•••••" : summary.activeUnits.toFixed(3)}
                   </strong>
                 </span>
-                <div className="flex items-center justify-between text-[9.5px] font-mono pt-0.5 border-t border-base-300/40 text-base-content/70">
+                <div className="flex items-center justify-between text-[9.5px] font-mono pt-0.5 border-t border-base-content/8 dark:border-base-content/8 text-base-content/70">
                   <span>
                     Added:{" "}
                     <strong className="text-secondary">
@@ -286,7 +290,7 @@ export default function MutualFundCard({
               </div>
 
               {/* 5. Date Range (From -> To) */}
-              <div className="col-span-2 p-2.5 bg-base-200/40 rounded-2xl space-y-1">
+              <div className="col-span-2 p-2.5 bg-base-200/40 rounded-2xl border border-base-content/6 dark:border-base-content/6 space-y-1">
                 <span className="text-[10px] font-bold text-base-content/50 uppercase tracking-wider block flex items-center gap-1">
                   <Calendar size={11} className="text-secondary" /> Date Range (From → To)
                 </span>
@@ -307,7 +311,7 @@ export default function MutualFundCard({
           {/* ================================================================= */}
           <div className="w-1/2 p-3.5 sm:p-4 space-y-2.5 flex-1 flex flex-col justify-between shrink-0">
             {/* Hero Stat: Total Withdrawn & Gross / ER Ribbon with Far-Right Arrow Icons */}
-            <div className="p-3 bg-base-200/40 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5">
+            <div className="p-3 bg-base-200/40 rounded-2xl border border-base-content/6 dark:border-base-content/6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5">
               <div>
                 <span className="text-[10px] uppercase font-bold tracking-wider text-base-content/50 block flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-base-content/40 inline-block" />
@@ -330,7 +334,7 @@ export default function MutualFundCard({
                         : `₹${(summary.grossWithdrawn || 0).toLocaleString("en-IN")}`}
                     </span>
                   </div>
-                  <div className="h-5 w-px bg-base-300/60" />
+                  <div className="h-5 w-px bg-base-content/10" />
                   <div>
                     <span className="text-[9px] uppercase text-base-content/40 block font-sans">Total ER</span>
                     <span className="text-error font-bold">
@@ -356,7 +360,7 @@ export default function MutualFundCard({
             {/* Face 2 Body: Structured 2x3 Grid of Withdrawal Metrics */}
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               {/* 1. Total Withdrawals Breakdown */}
-              <div className="p-2.5 bg-base-200/40 rounded-2xl space-y-1">
+              <div className="p-2.5 bg-base-200/40 rounded-2xl border border-base-content/6 dark:border-base-content/6 space-y-1">
                 <span className="text-[10px] font-bold text-base-content/50 uppercase tracking-wider block flex items-center gap-1">
                   <Layers size={11} className="text-secondary" /> Total Terms
                 </span>
@@ -375,7 +379,7 @@ export default function MutualFundCard({
               </div>
 
               {/* 2. Duration */}
-              <div className="p-2.5 bg-base-200/40 rounded-2xl space-y-1">
+              <div className="p-2.5 bg-base-200/40 rounded-2xl border border-base-content/6 dark:border-base-content/6 space-y-1">
                 <span className="text-[10px] font-bold text-base-content/50 uppercase tracking-wider block flex items-center gap-1">
                   <Clock size={11} className="text-primary" /> Duration
                 </span>
@@ -388,7 +392,7 @@ export default function MutualFundCard({
               </div>
 
               {/* 3. Average Exit NAV */}
-              <div className="p-2.5 bg-base-200/40 rounded-2xl space-y-1">
+              <div className="p-2.5 bg-base-200/40 rounded-2xl border border-base-content/6 dark:border-base-content/6 space-y-1">
                 <span className="text-[10px] font-bold text-base-content/50 uppercase tracking-wider block flex items-center gap-1">
                   <TrendingUp size={11} className="text-info" /> Avg NAV
                 </span>
@@ -405,7 +409,7 @@ export default function MutualFundCard({
               </div>
 
               {/* 4. Units Breakdown: Redeemed, Added, Left */}
-              <div className="p-2.5 bg-base-200/40 rounded-2xl space-y-1">
+              <div className="p-2.5 bg-base-200/40 rounded-2xl border border-base-content/6 dark:border-base-content/6 space-y-1">
                 <span className="text-[10px] font-bold text-base-content/50 uppercase tracking-wider block flex items-center gap-1">
                   <Coins size={11} className="text-warning" /> Units Redeemed:{" "}
                   <strong className="font-mono text-base-content font-black">
@@ -414,7 +418,7 @@ export default function MutualFundCard({
                       : `-${(summary.totalUnitsWithdrawn || 0).toFixed(3)}`}
                   </strong>
                 </span>
-                <div className="flex items-center justify-between text-[9.5px] font-mono pt-0.5 border-t border-base-300/40 text-base-content/70">
+                <div className="flex items-center justify-between text-[9.5px] font-mono pt-0.5 border-t border-base-content/8 dark:border-base-content/8 text-base-content/70">
                   <span>
                     Added:{" "}
                     <strong className="text-secondary">
@@ -433,7 +437,7 @@ export default function MutualFundCard({
               </div>
 
               {/* 5. Date Range (From -> To) */}
-              <div className="col-span-2 p-2.5 bg-base-200/40 rounded-2xl space-y-1">
+              <div className="col-span-2 p-2.5 bg-base-200/40 rounded-2xl border border-base-content/6 dark:border-base-content/6 space-y-1">
                 <span className="text-[10px] font-bold text-base-content/50 uppercase tracking-wider block flex items-center gap-1">
                   <Calendar size={11} className="text-secondary" /> Date Range (From → To)
                 </span>
@@ -451,5 +455,319 @@ export default function MutualFundCard({
         </div>
       </div>
     </div>
+
+      {/* =================================================================== */}
+      {/* MOBILE COMPRESSED CARD VIEW                                         */}
+      {/* =================================================================== */}
+      <div className="flex md:hidden bg-base-100 rounded-2xl border border-base-content/8 dark:border-base-content/8 shadow-xs hover:shadow-md flex-col justify-between overflow-hidden transition-all duration-200">
+        {/* Card Header: ONLY MF Details (No Action Icons) */}
+        <div className="p-3 border-b border-base-content/8 dark:border-base-content/8 bg-base-200/30 space-y-1.5">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0 flex-1">
+              {index !== undefined && index !== null && (
+                <span className="text-[10px] font-mono font-bold text-base-content/40 bg-base-200 px-1.5 py-0.2 rounded-md shrink-0 select-none">
+                  #{index}
+                </span>
+              )}
+              <CompanyLogo name={fund.amc} size="w-6 h-6" type="mf" />
+              <h3 className="font-extrabold text-xs text-base-content tracking-tight truncate">
+                {fund.amc}
+              </h3>
+            </div>
+            {summary.isFullyRedeemed ? (
+              <span className="px-1.5 py-0.2 rounded-md text-[9px] font-black uppercase tracking-wider bg-base-300 text-base-content/90 border border-base-content/10 shrink-0">
+                Sold
+              </span>
+            ) : (summary.totalUnitsWithdrawn || 0) > 0 ? (
+              <span className="px-1.5 py-0.2 rounded-md text-[9px] font-black uppercase tracking-wider bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/25 shrink-0">
+                Selling
+              </span>
+            ) : null}
+          </div>
+
+          {/* Category Hierarchy, Plan, Option & Folio */}
+          <div className="flex items-center gap-1 text-base-content/60 text-[10px] font-medium flex-nowrap whitespace-nowrap overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+            <span className="text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-500/10 px-1.5 py-0.2 rounded-md border border-emerald-500/20 text-[9px] shrink-0">
+              {fund.category} → {(fund.subCategory || "").replace(/\s*\/\s*Tax[\s-]*Saver/gi, "").trim()}
+            </span>
+            <span className="text-base-content/30">•</span>
+            <span className="shrink-0">{fund.plan}</span>
+            <span className="text-base-content/30">•</span>
+            <span className="shrink-0">{fund.optionType}</span>
+            {fund.folioNumber && (
+              <>
+                <span className="text-base-content/30">•</span>
+                <span className="font-mono text-base-content/70 shrink-0">
+                  #{fund.folioNumber.replace(/^#/, "")}
+                </span>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Invested vs Withdrawn Two Tabs (Replacing arrow mark) */}
+        <div className="px-3 pt-2 pb-1 bg-base-100">
+          <div className="grid grid-cols-2 gap-1 bg-base-200/80 dark:bg-base-800/60 p-0.5 rounded-xl border border-base-content/8 dark:border-base-content/8">
+            <button
+              type="button"
+              onClick={() => setActiveFace(0)}
+              className={`h-7 rounded-lg text-[10.5px] font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                activeFace === 0
+                  ? "bg-base-100 dark:bg-base-900 text-emerald-600 dark:text-emerald-400 shadow-xs font-black border border-base-content/8 dark:border-base-content/8 scale-[1.01]"
+                  : "text-base-content/65 hover:text-base-content"
+              }`}
+            >
+              <span className={`w-1.5 h-1.5 rounded-full ${activeFace === 0 ? "bg-emerald-500" : "bg-base-content/30"}`} />
+              <span>Invested</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveFace(1)}
+              className={`h-7 rounded-lg text-[10.5px] font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                activeFace === 1
+                  ? "bg-base-100 dark:bg-base-900 text-amber-600 dark:text-amber-400 shadow-xs font-black border border-base-content/8 dark:border-base-content/8 scale-[1.01]"
+                  : "text-base-content/65 hover:text-base-content"
+              }`}
+            >
+              <span className={`w-1.5 h-1.5 rounded-full ${activeFace === 1 ? "bg-amber-500" : "bg-base-content/30"}`} />
+              <span>Withdrawn</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Compressed Body: Tab 0 (Invested) or Tab 1 (Withdrawn) */}
+        <div className="p-3 space-y-2">
+          {activeFace === 0 ? (
+            /* FACE 0: INVESTED DETAILS */
+            <div className="space-y-2 animate-in fade-in duration-150">
+              {/* Hero Stat: Total Actually Invested + Gross & ER */}
+              <div className="p-2.5 bg-emerald-500/10 border border-emerald-500/20 rounded-xl flex items-center justify-between gap-2">
+                <div>
+                  <span className="text-[9.5px] uppercase font-bold tracking-wider text-emerald-700 dark:text-emerald-300 block">
+                    Actually Invested
+                  </span>
+                  <span className="text-base font-mono font-black text-emerald-600 dark:text-emerald-400 tracking-tight">
+                    {hideMfNumbers ? "₹ ••••••" : `₹${summary.totalInvested.toLocaleString("en-IN")}`}
+                  </span>
+                </div>
+                <div className="text-right text-[10px] font-mono text-base-content/70 space-y-0.5">
+                  <div>
+                    <span className="text-base-content/50 uppercase text-[9px] mr-1">Gross:</span>
+                    <span className="font-bold text-base-content">
+                      {hideMfNumbers ? "••••" : `₹${summary.totalDeposited.toLocaleString("en-IN")}`}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-base-content/50 uppercase text-[9px] mr-1">ER:</span>
+                    <span className="font-bold text-error">
+                      {hideMfNumbers ? "•••" : `₹${summary.totalEr.toLocaleString("en-IN")}`}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* 4 Compact Metric Cards */}
+              <div className="grid grid-cols-2 gap-1.5 text-xs">
+                {/* 1. Total Terms */}
+                <div className="p-2 bg-base-200/50 border border-base-content/6 dark:border-base-content/6 rounded-xl space-y-0.5">
+                  <span className="text-[9px] font-bold text-base-content/50 uppercase tracking-wider flex items-center gap-1">
+                    <Layers size={10} className="text-secondary" /> Terms
+                  </span>
+                  <div className="font-extrabold text-xs font-mono text-base-content">
+                    {hideMfNumbers ? "••" : summary.totalTerms}{" "}
+                    <span className="text-[9.5px] font-normal text-base-content/60">({summary.sipCount} SIP, {summary.lsCount} LS)</span>
+                  </div>
+                </div>
+
+                {/* 2. Duration */}
+                <div className="p-2 bg-base-200/50 border border-base-content/6 dark:border-base-content/6 rounded-xl space-y-0.5">
+                  <span className="text-[9px] font-bold text-base-content/50 uppercase tracking-wider flex items-center gap-1">
+                    <Clock size={10} className="text-primary" /> Duration
+                  </span>
+                  <div className="font-extrabold text-xs text-base-content truncate">
+                    {summary.durationText}
+                  </div>
+                </div>
+
+                {/* 3. Avg NAV */}
+                <div className="p-2 bg-base-200/50 border border-base-content/6 dark:border-base-content/6 rounded-xl space-y-0.5">
+                  <span className="text-[9px] font-bold text-base-content/50 uppercase tracking-wider flex items-center gap-1">
+                    <TrendingUp size={10} className="text-info" /> Avg NAV
+                  </span>
+                  <div className="font-extrabold text-xs font-mono text-base-content">
+                    {hideMfNumbers ? "₹ ••••" : summary.avgNav > 0 ? `₹${summary.avgNav.toFixed(2)}` : "—"}
+                  </div>
+                </div>
+
+                {/* 4. Units */}
+                <div className="p-2 bg-base-200/50 border border-base-content/6 dark:border-base-content/6 rounded-xl space-y-0.5">
+                  <span className="text-[9px] font-bold text-base-content/50 uppercase tracking-wider flex items-center gap-1">
+                    <Coins size={10} className="text-warning" /> Units Left
+                  </span>
+                  <div className="font-extrabold text-xs font-mono text-base-content">
+                    {hideMfNumbers ? "•••••" : summary.activeUnits.toFixed(3)}
+                  </div>
+                  <div className="text-[9px] font-mono text-base-content/60 flex items-center justify-between">
+                    <span>+{summary.totalUnits.toFixed(3)}</span>
+                    <span className="text-amber-600 dark:text-amber-400">-{(summary.totalUnitsWithdrawn || 0).toFixed(3)}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Date Range */}
+              <div className="px-2 py-1 bg-base-200/30 border border-base-content/6 dark:border-base-content/6 rounded-lg text-[9.5px] font-mono text-base-content/60 flex items-center justify-between">
+                <span className="text-[9px] uppercase font-bold text-base-content/40">Range:</span>
+                <span>{summary.fromDateStr} → {summary.toDateStr}</span>
+              </div>
+            </div>
+          ) : (
+            /* FACE 1: WITHDRAWAL DETAILS */
+            <div className="space-y-2 animate-in fade-in duration-150">
+              {/* Hero Stat: Total Actually Withdrawn + Gross & ER */}
+              <div className="p-2.5 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-center justify-between gap-2">
+                <div>
+                  <span className="text-[9.5px] uppercase font-bold tracking-wider text-amber-700 dark:text-amber-300 block">
+                    Actually Withdrawn
+                  </span>
+                  <span className="text-base font-mono font-black text-amber-600 dark:text-amber-400 tracking-tight">
+                    {hideMfNumbers ? "₹ ••••••" : `₹${(summary.totalWithdrawn || 0).toLocaleString("en-IN")}`}
+                  </span>
+                </div>
+                <div className="text-right text-[10px] font-mono text-base-content/70 space-y-0.5">
+                  <div>
+                    <span className="text-base-content/50 uppercase text-[9px] mr-1">Gross:</span>
+                    <span className="font-bold text-base-content">
+                      {hideMfNumbers ? "••••" : `₹${(summary.grossWithdrawn || 0).toLocaleString("en-IN")}`}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-base-content/50 uppercase text-[9px] mr-1">ER:</span>
+                    <span className="font-bold text-error">
+                      {hideMfNumbers ? "•••" : `₹${(summary.totalWithdrawalEr || 0).toLocaleString("en-IN")}`}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* 4 Compact Metric Cards */}
+              <div className="grid grid-cols-2 gap-1.5 text-xs">
+                {/* 1. Total Terms */}
+                <div className="p-2 bg-base-200/50 border border-base-content/6 dark:border-base-content/6 rounded-xl space-y-0.5">
+                  <span className="text-[9px] font-bold text-base-content/50 uppercase tracking-wider flex items-center gap-1">
+                    <Layers size={10} className="text-secondary" /> Terms
+                  </span>
+                  <div className="font-extrabold text-xs font-mono text-base-content">
+                    {hideMfNumbers ? "••" : summary.totalWithdrawalTerms || 0}{" "}
+                    <span className="text-[9.5px] font-normal text-base-content/60">({summary.swpCount || 0} SWP, {summary.lsWithdrawalCount || 0} LS)</span>
+                  </div>
+                </div>
+
+                {/* 2. Duration */}
+                <div className="p-2 bg-base-200/50 border border-base-content/6 dark:border-base-content/6 rounded-xl space-y-0.5">
+                  <span className="text-[9px] font-bold text-base-content/50 uppercase tracking-wider flex items-center gap-1">
+                    <Clock size={10} className="text-primary" /> Duration
+                  </span>
+                  <div className="font-extrabold text-xs text-base-content truncate">
+                    {summary.withdrawalDurationText || "—"}
+                  </div>
+                </div>
+
+                {/* 3. Avg Exit NAV */}
+                <div className="p-2 bg-base-200/50 border border-base-content/6 dark:border-base-content/6 rounded-xl space-y-0.5">
+                  <span className="text-[9px] font-bold text-base-content/50 uppercase tracking-wider flex items-center gap-1">
+                    <TrendingUp size={10} className="text-info" /> Exit NAV
+                  </span>
+                  <div className="font-extrabold text-xs font-mono text-base-content">
+                    {hideMfNumbers ? "₹ ••••" : (summary.avgExitNav || 0) > 0 ? `₹${summary.avgExitNav.toFixed(2)}` : "—"}
+                  </div>
+                </div>
+
+                {/* 4. Units */}
+                <div className="p-2 bg-base-200/50 border border-base-content/6 dark:border-base-content/6 rounded-xl space-y-0.5">
+                  <span className="text-[9px] font-bold text-base-content/50 uppercase tracking-wider flex items-center gap-1">
+                    <Coins size={10} className="text-warning" /> Redeemed
+                  </span>
+                  <div className="font-extrabold text-xs font-mono text-amber-600 dark:text-amber-400">
+                    {hideMfNumbers ? "-•••••" : `-${(summary.totalUnitsWithdrawn || 0).toFixed(3)}`}
+                  </div>
+                  <div className="text-[9px] font-mono text-base-content/60 flex items-center justify-between">
+                    <span>Left: {summary.activeUnits.toFixed(3)}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Date Range */}
+              <div className="px-2 py-1 bg-base-200/30 border border-base-content/6 dark:border-base-content/6 rounded-lg text-[9.5px] font-mono text-base-content/60 flex items-center justify-between">
+                <span className="text-[9px] uppercase font-bold text-base-content/40">Range:</span>
+                <span>{summary.withdrawalFromDateStr || "—"} → {summary.withdrawalToDateStr || "—"}</span>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Card Footer: ALL Action Icons on the Footer */}
+        <div className="px-3 py-2 border-t border-base-content/8 dark:border-base-content/8 bg-base-200/30 flex items-center justify-end">
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => onOpenInfo && onOpenInfo(fund)}
+              className="p-1.5 text-info bg-info/10 hover:bg-info/20 rounded-xl transition-colors cursor-pointer"
+              title="Fund Detailed Insights"
+            >
+              <Info size={14} />
+            </button>
+            {activeFace === 0 ? (
+              <button
+                type="button"
+                onClick={() => onOpenAddSip && onOpenAddSip(fund, "deposit")}
+                className="p-1.5 text-secondary bg-secondary/10 hover:bg-secondary/20 rounded-xl transition-colors cursor-pointer"
+                title="Add SIP / Lumpsum Deposit"
+              >
+                <Plus size={14} />
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() =>
+                  onOpenAddWithdrawal
+                    ? onOpenAddWithdrawal(fund)
+                    : onOpenAddSip && onOpenAddSip(fund, "withdrawal")
+                }
+                className="p-1.5 text-amber-600 dark:text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 rounded-xl transition-colors cursor-pointer"
+                title="Add Withdrawal"
+              >
+                <Minus size={14} />
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() =>
+                onOpenTable && onOpenTable(fund, activeFace === 1 ? "withdrawal" : "deposit")
+              }
+              className="p-1.5 text-primary bg-primary/10 hover:bg-primary/20 rounded-xl transition-colors cursor-pointer"
+              title="Open Table View"
+            >
+              <Table size={14} />
+            </button>
+            <button
+              type="button"
+              onClick={onEdit}
+              className="p-1.5 text-info bg-info/10 hover:bg-info/20 rounded-xl transition-colors cursor-pointer"
+              title="Edit Fund"
+            >
+              <Pencil size={14} />
+            </button>
+            <button
+              type="button"
+              onClick={onDelete}
+              className="p-1.5 text-error bg-error/10 hover:bg-error/20 rounded-xl transition-colors cursor-pointer"
+              title="Delete Fund"
+            >
+              <Trash2 size={14} />
+            </button>
+          </div>
+        </div>
+      </div>
+    </>
   );
 }

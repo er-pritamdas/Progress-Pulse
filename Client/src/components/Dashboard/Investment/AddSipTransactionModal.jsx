@@ -326,38 +326,38 @@ export default function AddSipTransactionModal({
 
   const modalContent = (
     <div
-      className="fixed inset-0 w-screen h-screen z-[1000005] flex items-center justify-center p-4 bg-black/75 backdrop-blur-md overflow-y-auto animate-in fade-in duration-200"
+      className="fixed inset-0 w-screen h-screen z-[1000005] flex items-center justify-center p-2.5 sm:p-4 bg-black/75 backdrop-blur-md overflow-hidden animate-in fade-in duration-200"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
       <div
-        className="bg-base-100 rounded-3xl border border-base-300 shadow-2xl w-full max-w-lg overflow-hidden my-auto animate-in zoom-in-95 duration-200 relative z-10"
+        className="bg-base-100 rounded-3xl border border-base-300 shadow-2xl w-full max-w-lg max-h-[92vh] flex flex-col overflow-hidden my-auto animate-in zoom-in-95 duration-200 relative z-10"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-base-200 bg-base-200/40">
-          <div className="flex items-center gap-3">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 sm:py-4 border-b border-base-200 bg-base-200/40 shrink-0">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
             <div
-              className={`w-10 h-10 rounded-2xl flex items-center justify-center font-bold ${
+              className={`w-9 h-9 sm:w-10 sm:h-10 rounded-2xl flex items-center justify-center font-bold shrink-0 ${
                 isWithdrawal
                   ? "bg-amber-500/10 text-amber-600 dark:text-amber-400"
                   : "bg-secondary/10 text-secondary"
               }`}
             >
-              {isWithdrawal ? <Minus size={20} /> : <PiggyBank size={20} />}
+              {isWithdrawal ? <Minus size={18} /> : <PiggyBank size={18} />}
             </div>
-            <div>
-              <h3 className="font-extrabold text-base text-base-content leading-tight">
+            <div className="min-w-0">
+              <h3 className="font-extrabold text-sm sm:text-base text-base-content leading-tight truncate">
                 {isEdit
                   ? isWithdrawal
                     ? "Edit Withdrawal Entry"
                     : "Edit Transaction"
                   : isWithdrawal
-                  ? "Add Mutual Fund Withdrawal Entry"
-                  : "Add SIP / Lumpsum Transaction"}
+                  ? "Add MF Withdrawal Entry"
+                  : "Add SIP / Lumpsum Entry"}
               </h3>
-              <p className="text-xs text-base-content/60 font-medium">
+              <p className="text-[11px] sm:text-xs text-base-content/60 font-medium truncate">
                 {fund?.amc || "Mutual Fund"}{" "}
                 {fund?.folioNumber
                   ? `• #${fund.folioNumber.replace(/^#/, "")}`
@@ -368,88 +368,90 @@ export default function AddSipTransactionModal({
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-xl text-base-content/40 hover:text-base-content hover:bg-base-200 transition-colors cursor-pointer"
+            className="p-1.5 rounded-xl text-base-content/40 hover:text-base-content hover:bg-base-200 transition-colors cursor-pointer shrink-0"
           >
             <X size={18} />
           </button>
         </div>
 
-        {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          {errorMsg && (
-            <div className="p-3 rounded-xl bg-error/10 border border-error/20 text-error text-xs font-bold flex items-center gap-2">
-              <span>⚠️</span>
-              <span>{errorMsg}</span>
-            </div>
-          )}
-
-          {/* Type Selector Tags */}
-          <div>
-            <label className="text-[11px] font-bold uppercase tracking-wider text-base-content/60 mb-2 block">
-              {isWithdrawal ? "Withdrawal Type" : "Investment Type"}
-            </label>
-            {isWithdrawal ? (
-              <div className="flex items-center gap-2 flex-wrap">
-                <button
-                  type="button"
-                  onClick={() => setType("SWP")}
-                  className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all duration-200 flex items-center gap-1.5 cursor-pointer border ${
-                    type === "SWP"
-                      ? "bg-primary/15 text-primary border-primary/35 shadow-xs"
-                      : "bg-base-200/70 border-base-200 text-base-content/60 hover:bg-base-200 hover:text-base-content"
-                  }`}
-                >
-                  {type === "SWP" && <Check size={13} strokeWidth={2.5} />}
-                  <TrendingUp size={13} className="shrink-0" />
-                  <span>SWP (Recurring)</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setType("Redemption")}
-                  className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all duration-200 flex items-center gap-1.5 cursor-pointer border ${
-                    type === "Redemption" || type === "Lumpsum"
-                      ? "bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/35 shadow-xs"
-                      : "bg-base-200/70 border-base-200 text-base-content/60 hover:bg-base-200 hover:text-base-content"
-                  }`}
-                >
-                  {(type === "Redemption" || type === "Lumpsum") && (
-                    <Check size={13} strokeWidth={2.5} />
-                  )}
-                  <Minus size={13} className="shrink-0" />
-                  <span>Redemption (One-time)</span>
-                </button>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2 flex-wrap">
-                <button
-                  type="button"
-                  onClick={() => setType("SIP")}
-                  className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all duration-200 flex items-center gap-1.5 cursor-pointer border ${
-                    type === "SIP"
-                      ? "bg-secondary/15 text-secondary border-secondary/35 shadow-xs"
-                      : "bg-base-200/70 border-base-200 text-base-content/60 hover:bg-base-200 hover:text-base-content"
-                  }`}
-                >
-                  {type === "SIP" && <Check size={13} strokeWidth={2.5} />}
-                  <TrendingUp size={13} className="shrink-0" />
-                  <span>SIP (Recurring)</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setType("Lumpsum")}
-                  className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all duration-200 flex items-center gap-1.5 cursor-pointer border ${
-                    type === "Lumpsum"
-                      ? "bg-primary/15 text-primary border-primary/35 shadow-xs"
-                      : "bg-base-200/70 border-base-200 text-base-content/60 hover:bg-base-200 hover:text-base-content"
-                  }`}
-                >
-                  {type === "Lumpsum" && <Check size={13} strokeWidth={2.5} />}
-                  <Coins size={13} className="shrink-0" />
-                  <span>Lumpsum (One-time)</span>
-                </button>
+        {/* Form Container */}
+        <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+          {/* Scrollable Form Body */}
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-3.5">
+            {errorMsg && (
+              <div className="p-3 rounded-xl bg-error/10 border border-error/20 text-error text-xs font-bold flex items-center gap-2">
+                <span>⚠️</span>
+                <span>{errorMsg}</span>
               </div>
             )}
-          </div>
+
+            {/* Type Selector Tags */}
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold uppercase tracking-wider text-base-content/60 block">
+                {isWithdrawal ? "Withdrawal Type" : "Investment Type"}
+              </label>
+              {isWithdrawal ? (
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setType("SWP")}
+                    className={`h-9 px-3 rounded-xl text-xs font-bold transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer border ${
+                      type === "SWP"
+                        ? "bg-primary/15 text-primary border-primary/35 shadow-xs font-black"
+                        : "bg-base-200/70 border-base-200 text-base-content/60 hover:bg-base-200 hover:text-base-content"
+                    }`}
+                  >
+                    {type === "SWP" && <Check size={13} strokeWidth={2.5} />}
+                    <TrendingUp size={13} className="shrink-0" />
+                    <span>SWP (Recurring)</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setType("Redemption")}
+                    className={`h-9 px-3 rounded-xl text-xs font-bold transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer border ${
+                      type === "Redemption" || type === "Lumpsum"
+                        ? "bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/35 shadow-xs font-black"
+                        : "bg-base-200/70 border-base-200 text-base-content/60 hover:bg-base-200 hover:text-base-content"
+                    }`}
+                  >
+                    {(type === "Redemption" || type === "Lumpsum") && (
+                      <Check size={13} strokeWidth={2.5} />
+                    )}
+                    <Minus size={13} className="shrink-0" />
+                    <span>Redemption</span>
+                  </button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setType("SIP")}
+                    className={`h-9 px-3 rounded-xl text-xs font-bold transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer border ${
+                      type === "SIP"
+                        ? "bg-secondary/15 text-secondary border-secondary/35 shadow-xs font-black"
+                        : "bg-base-200/70 border-base-200 text-base-content/60 hover:bg-base-200 hover:text-base-content"
+                    }`}
+                  >
+                    {type === "SIP" && <Check size={13} strokeWidth={2.5} />}
+                    <TrendingUp size={13} className="shrink-0" />
+                    <span>SIP (Recurring)</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setType("Lumpsum")}
+                    className={`h-9 px-3 rounded-xl text-xs font-bold transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer border ${
+                      type === "Lumpsum"
+                        ? "bg-primary/15 text-primary border-primary/35 shadow-xs font-black"
+                        : "bg-base-200/70 border-base-200 text-base-content/60 hover:bg-base-200 hover:text-base-content"
+                    }`}
+                  >
+                    {type === "Lumpsum" && <Check size={13} strokeWidth={2.5} />}
+                    <Coins size={13} className="shrink-0" />
+                    <span>Lumpsum</span>
+                  </button>
+                </div>
+              )}
+            </div>
 
           {/* Row 1: Term & Date */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -691,9 +693,10 @@ export default function AddSipTransactionModal({
               </div>
             </div>
           </div>
+        </div>
 
-          {/* Footer Buttons */}
-          <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-base-200">
+        {/* Sticky Footer Buttons */}
+        <div className="flex items-center justify-end gap-2.5 px-4 sm:px-6 py-3 border-t border-base-200 bg-base-100 shrink-0">
             <button
               type="button"
               onClick={onClose}

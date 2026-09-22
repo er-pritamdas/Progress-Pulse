@@ -151,20 +151,20 @@ export default function WithdrawFdModal({
   if (!isOpen || !fd) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-[99999] bg-black/75 backdrop-blur-md overflow-y-auto overflow-x-hidden flex items-center justify-center p-3 sm:p-5 animate-in fade-in duration-200">
-      <div className="bg-base-100 rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden border-2 border-base-300 my-auto animate-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-[99999] bg-black/75 backdrop-blur-md overflow-y-auto overflow-x-hidden flex items-center justify-center p-2.5 sm:p-5 animate-in fade-in duration-200">
+      <div className="bg-base-100 rounded-2xl sm:rounded-3xl shadow-2xl w-full max-w-lg max-h-[92vh] overflow-hidden border border-base-content/10 dark:border-base-content/10 my-auto flex flex-col animate-in zoom-in-95 duration-200">
         
         {/* Header */}
-        <div className="px-6 py-4.5 border-b-2 border-base-200 flex justify-between items-center bg-amber-500/10">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-2xl bg-amber-500/20 text-amber-600 dark:text-amber-400">
-              <Coins size={20} />
+        <div className="px-4 sm:px-6 py-3.5 sm:py-4.5 border-b border-base-content/8 dark:border-base-content/8 flex justify-between items-center bg-amber-500/10 shrink-0">
+          <div className="flex items-center gap-2.5 sm:gap-3">
+            <div className="p-2 sm:p-2.5 rounded-xl sm:rounded-2xl bg-amber-500/20 text-amber-600 dark:text-amber-400">
+              <Coins size={18} className="sm:w-5 sm:h-5" />
             </div>
             <div>
-              <h3 className="font-black text-base sm:text-lg flex items-center gap-2 leading-tight text-base-content">
-                <span>{fd.isWithdrawn ? "Edit Withdrawal Settlement" : "Withdraw Fixed Deposit"}</span>
+              <h3 className="font-black text-sm sm:text-base flex items-center gap-2 leading-tight text-base-content">
+                <span>{fd.isWithdrawn ? "Edit Settlement" : "Withdraw Fixed Deposit"}</span>
               </h3>
-              <p className="text-[11px] text-base-content/60 font-semibold mt-0.5">
+              <p className="text-[10.5px] sm:text-[11px] text-base-content/60 font-semibold mt-0.5 truncate">
                 {fd.bankName} {fd.fdNumber ? `(#${fd.fdNumber})` : ""} • Deposited: ₹{principal.toLocaleString()}
               </p>
             </div>
@@ -173,123 +173,125 @@ export default function WithdrawFdModal({
           <button
             type="button"
             onClick={onClose}
-            className="btn btn-sm btn-ghost btn-circle rounded-full hover:bg-base-200 text-base-content/60 hover:text-base-content"
+            className="btn btn-sm btn-ghost btn-circle rounded-full hover:bg-base-200 text-base-content/60 hover:text-base-content cursor-pointer"
           >
             <X size={18} />
           </button>
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4 text-xs">
-          {errorMsg && (
-            <div className="alert alert-error text-xs py-2.5 rounded-xl flex items-center gap-2 shadow-xs font-bold">
-              <AlertCircle size={16} />
-              <span>{errorMsg}</span>
-            </div>
-          )}
-
-          {/* 1. Withdrawal Date */}
-          <div>
-            <label className="block font-black text-base-content/85 text-[11px] uppercase tracking-wider mb-1.5 flex items-center justify-between">
-              <span>Withdrawal Date *</span>
-              <span className="text-[9.5px] font-bold text-amber-600 dark:text-amber-400">{daysHeld} Days Held</span>
-            </label>
-            <input
-              type="date"
-              value={withdrawalDate}
-              onChange={(e) => setWithdrawalDate(e.target.value)}
-              className="input h-11 w-full rounded-2xl bg-base-200 dark:bg-base-300/80 border-2 border-base-content/20 hover:border-base-content/40 focus:border-amber-500 focus:bg-base-100 text-xs font-bold px-3.5 transition-all shadow-xs"
-            />
-          </div>
-
-          {/* 2. Side-by-Side: Withdrawal Amount & Penalties Amount */}
-          <div className="grid grid-cols-2 gap-3.5">
-            {/* Withdrawal Amount Received */}
-            <div>
-              <label className="block font-black text-base-content/85 text-[11px] uppercase tracking-wider mb-1.5 flex items-center justify-between">
-                <span>Withdrawal Amt (₹) *</span>
-              </label>
-              <div className="relative">
-                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-mono font-black text-sm text-amber-600 dark:text-amber-400">₹</span>
-                <input
-                  type="text"
-                  placeholder="e.g. 107100"
-                  value={amountGotInput}
-                  onChange={(e) => setAmountGotInput(e.target.value)}
-                  className="input h-11 w-full pl-8 pr-2.5 rounded-2xl bg-base-200 dark:bg-base-300/80 border-2 border-base-content/20 hover:border-base-content/40 focus:border-amber-500 focus:bg-base-100 text-xs font-mono font-bold text-base-content placeholder:text-base-content/40 shadow-xs transition-all"
-                  autoFocus
-                />
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto flex flex-col justify-between">
+          <div className="p-4 sm:p-6 space-y-3.5 sm:space-y-4 text-xs flex-1">
+            {errorMsg && (
+              <div className="alert alert-error text-xs py-2 rounded-xl flex items-center gap-2 shadow-xs font-bold">
+                <AlertCircle size={15} />
+                <span>{errorMsg}</span>
               </div>
-            </div>
+            )}
 
-            {/* Penalties Amount */}
+            {/* 1. Withdrawal Date */}
             <div>
-              <label className="block font-black text-rose-600 dark:text-rose-400 text-[11px] uppercase tracking-wider mb-1.5 flex items-center justify-between">
-                <span>Penalties Amt (₹)</span>
+              <label className="block font-black text-base-content/85 text-[10.5px] uppercase tracking-wider mb-1.5 flex items-center justify-between">
+                <span>Withdrawal Date *</span>
+                <span className="text-[9.5px] font-bold text-amber-600 dark:text-amber-400">{daysHeld} Days Held</span>
               </label>
-              <div className="relative">
-                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-mono font-black text-sm text-rose-600 dark:text-rose-400">₹</span>
-                <input
-                  type="text"
-                  placeholder="0"
-                  value={penaltyInput}
-                  onChange={(e) => setPenaltyInput(e.target.value)}
-                  className="input h-11 w-full pl-8 pr-2.5 rounded-2xl bg-base-200 dark:bg-base-300/80 border-2 border-base-content/20 hover:border-base-content/40 focus:border-rose-500 focus:bg-base-100 text-xs font-mono font-bold text-rose-600 dark:text-rose-400 placeholder:text-base-content/40 shadow-xs transition-all"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* 3. Bottom Calculation Result Card: Profit or Loss */}
-          <div className="p-4 rounded-2xl bg-gradient-to-br from-base-200/90 via-base-200 to-base-300/60 border-2 border-base-300 space-y-2.5 shadow-xs">
-            <div className="flex items-center justify-between text-[11px] font-black uppercase text-base-content/70 pb-2 border-b border-base-content/10">
-              <span>Deposited: ₹{principal.toLocaleString("en-IN")}</span>
-              <span>Net Got: ₹{netPayout.toLocaleString("en-IN")}</span>
+              <input
+                type="date"
+                value={withdrawalDate}
+                onChange={(e) => setWithdrawalDate(e.target.value)}
+                className="input h-10 sm:h-11 w-full rounded-xl sm:rounded-2xl bg-base-200 dark:bg-base-300/80 border border-base-content/12 dark:border-base-content/12 hover:border-base-content/30 focus:border-amber-500 focus:bg-base-100 text-xs font-bold px-3 transition-all shadow-xs"
+              />
             </div>
 
-            <div className="flex items-center justify-between pt-1">
+            {/* 2. Side-by-Side: Withdrawal Amount & Penalties Amount */}
+            <div className="grid grid-cols-2 gap-2.5 sm:gap-3.5">
+              {/* Withdrawal Amount Received */}
               <div>
-                <span className="text-[10px] uppercase tracking-wider font-black text-base-content/60 block">
-                  Profit / Loss Calculation
-                </span>
-                <span className="text-xs font-bold text-base-content/70 mt-0.5 block font-mono">
-                  ₹{netPayout.toLocaleString("en-IN")} - ₹{principal.toLocaleString("en-IN")}
-                </span>
+                <label className="block font-black text-base-content/85 text-[10.5px] uppercase tracking-wider mb-1.5 flex items-center justify-between">
+                  <span>Withdrawal Amt (₹) *</span>
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 font-mono font-black text-sm text-amber-600 dark:text-amber-400">₹</span>
+                  <input
+                    type="text"
+                    placeholder="e.g. 107100"
+                    value={amountGotInput}
+                    onChange={(e) => setAmountGotInput(e.target.value)}
+                    className="input h-10 sm:h-11 w-full pl-7 pr-2.5 rounded-xl sm:rounded-2xl bg-base-200 dark:bg-base-300/80 border border-base-content/12 dark:border-base-content/12 hover:border-base-content/30 focus:border-amber-500 focus:bg-base-100 text-xs font-mono font-bold text-base-content placeholder:text-base-content/40 shadow-xs transition-all"
+                    autoFocus
+                  />
+                </div>
               </div>
 
-              <div className="text-right">
-                <span className={`text-[10.5px] uppercase tracking-wider font-black block ${
-                  isProfit ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600"
-                }`}>
-                  {isProfit ? "Net Profit" : "Net Loss"}
-                </span>
-                <div className={`text-lg font-black font-mono tracking-tight ${
-                  isProfit ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600"
-                }`}>
-                  {isProfit ? `+₹${profitOrLoss.toLocaleString("en-IN")}` : `-₹${Math.abs(profitOrLoss).toLocaleString("en-IN")}`}
+              {/* Penalties Amount */}
+              <div>
+                <label className="block font-black text-rose-600 dark:text-rose-400 text-[10.5px] uppercase tracking-wider mb-1.5 flex items-center justify-between">
+                  <span>Penalties (₹)</span>
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 font-mono font-black text-sm text-rose-600 dark:text-rose-400">₹</span>
+                  <input
+                    type="text"
+                    placeholder="0"
+                    value={penaltyInput}
+                    onChange={(e) => setPenaltyInput(e.target.value)}
+                    className="input h-10 sm:h-11 w-full pl-7 pr-2.5 rounded-xl sm:rounded-2xl bg-base-200 dark:bg-base-300/80 border border-base-content/12 dark:border-base-content/12 hover:border-base-content/30 focus:border-rose-500 focus:bg-base-100 text-xs font-mono font-bold text-rose-600 dark:text-rose-400 placeholder:text-base-content/40 shadow-xs transition-all"
+                  />
                 </div>
-                <span className={`badge badge-sm font-mono font-black border ${
-                  isProfit
-                    ? "bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/30"
-                    : "bg-rose-500/20 text-rose-700 border-rose-500/30"
-                } mt-0.5`}>
-                  {isProfit ? `+${profitOrLossPercent}%` : `${profitOrLossPercent}%`} {isProfit ? "Profit" : "Loss"}
-                </span>
+              </div>
+            </div>
+
+            {/* 3. Bottom Calculation Result Card: Profit or Loss */}
+            <div className="p-3.5 sm:p-4 rounded-2xl bg-gradient-to-br from-base-200/90 via-base-200 to-base-300/60 border border-base-content/8 dark:border-base-content/8 space-y-2 shadow-xs">
+              <div className="flex items-center justify-between text-[10.5px] font-black uppercase text-base-content/70 pb-1.5 border-b border-base-content/8">
+                <span>Deposited: ₹{principal.toLocaleString("en-IN")}</span>
+                <span>Net Got: ₹{netPayout.toLocaleString("en-IN")}</span>
+              </div>
+
+              <div className="flex items-center justify-between pt-1">
+                <div>
+                  <span className="text-[9.5px] uppercase tracking-wider font-black text-base-content/60 block">
+                    Profit / Loss Result
+                  </span>
+                  <span className="text-xs font-bold text-base-content/70 mt-0.5 block font-mono">
+                    ₹{netPayout.toLocaleString("en-IN")} - ₹{principal.toLocaleString("en-IN")}
+                  </span>
+                </div>
+
+                <div className="text-right">
+                  <span className={`text-[10px] uppercase tracking-wider font-black block ${
+                    isProfit ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600"
+                  }`}>
+                    {isProfit ? "Net Profit" : "Net Loss"}
+                  </span>
+                  <div className={`text-base sm:text-lg font-black font-mono tracking-tight ${
+                    isProfit ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600"
+                  }`}>
+                    {isProfit ? `+₹${profitOrLoss.toLocaleString("en-IN")}` : `-₹${Math.abs(profitOrLoss).toLocaleString("en-IN")}`}
+                  </div>
+                  <span className={`badge badge-xs font-mono font-bold border ${
+                    isProfit
+                      ? "bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/30"
+                      : "bg-rose-500/20 text-rose-700 border-rose-500/30"
+                  } mt-0.5`}>
+                    {isProfit ? `+${profitOrLossPercent}%` : `${profitOrLossPercent}%`} {isProfit ? "Profit" : "Loss"}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex items-center justify-between pt-3 border-t-2 border-base-200">
+          {/* Action Buttons Pinned Footer */}
+          <div className="px-4 sm:px-6 py-3 border-t border-base-content/8 dark:border-base-content/8 bg-base-200/40 flex items-center justify-between gap-2 shrink-0">
             {fd.isWithdrawn ? (
               <button
                 type="button"
                 onClick={handleResetToActive}
-                className="btn btn-sm btn-ghost text-rose-600 font-black rounded-xl gap-1.5 hover:bg-rose-500/10"
+                className="btn btn-sm btn-ghost text-rose-600 font-bold rounded-xl gap-1 hover:bg-rose-500/10 text-xs px-2.5 cursor-pointer"
                 disabled={isSubmitting}
               >
-                <Trash2 size={15} />
-                <span>Remove Withdrawal</span>
+                <Trash2 size={13} />
+                <span>Remove</span>
               </button>
             ) : (
               <div></div>
@@ -299,7 +301,7 @@ export default function WithdrawFdModal({
               <button
                 type="button"
                 onClick={onClose}
-                className="btn btn-sm btn-ghost font-black rounded-xl"
+                className="btn btn-sm btn-ghost font-bold rounded-xl cursor-pointer text-xs"
                 disabled={isSubmitting}
               >
                 Cancel
@@ -307,15 +309,15 @@ export default function WithdrawFdModal({
 
               <button
                 type="submit"
-                className="btn btn-sm bg-amber-600 hover:bg-amber-700 text-white font-black rounded-xl gap-2 shadow-lg shadow-amber-600/30 border-0 h-10 px-5 cursor-pointer"
+                className="btn btn-sm bg-amber-600 hover:bg-amber-700 text-white font-black rounded-xl gap-1.5 shadow-md shadow-amber-600/30 border-0 h-9 px-4 cursor-pointer text-xs"
                 disabled={isSubmitting}
               >
                 {isSubmitting ? (
                   <span className="loading loading-spinner loading-xs text-white"></span>
                 ) : (
                   <>
-                    <Save size={16} className="text-white shrink-0" />
-                    <span>{fd.isWithdrawn ? "Update Settlement" : "Confirm Withdrawal"}</span>
+                    <Save size={14} className="text-white shrink-0" />
+                    <span>{fd.isWithdrawn ? "Update Settlement" : "Confirm Settlement"}</span>
                   </>
                 )}
               </button>

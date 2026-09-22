@@ -17,6 +17,8 @@ import {
   CheckCircle2,
   AlertCircle,
   Landmark,
+  ArrowLeft,
+  ArrowRight,
 } from "lucide-react";
 
 /**
@@ -407,9 +409,12 @@ export default function AddMutualFundModal({
 
   // Validation
   const [errorMsg, setErrorMsg] = useState("");
+  const [mobileStep, setMobileStep] = useState(1);
 
   // ─── Pre-fill for Edit Mode ──────────────────────────────────────────────
   useEffect(() => {
+    setMobileStep(1);
+    setErrorMsg("");
     if (initialData) {
       setAmc(initialData.amc || "");
       setFolioNumber(initialData.folioNumber || "");
@@ -510,7 +515,7 @@ export default function AddMutualFundModal({
       <form
         onSubmit={handleSubmit}
         onClick={(e) => e.stopPropagation()}
-        className="flex flex-col lg:flex-row items-stretch gap-0 w-full max-w-[920px] mx-auto my-auto"
+        className="hidden lg:flex flex-row items-stretch gap-0 w-full max-w-[920px] mx-auto my-auto"
         style={{
           animation: "mfModalEnter 0.28s cubic-bezier(0.16, 1, 0.3, 1)",
         }}
@@ -911,6 +916,404 @@ export default function AddMutualFundModal({
               )}
             </button>
           </div>
+        </div>
+      </form>
+
+      {/* =================================================================== */}
+      {/* MOBILE SEQUENTIAL WIZARD (Visible on Mobile/Tablet: flex lg:hidden) */}
+      {/* =================================================================== */}
+      <form
+        onSubmit={handleSubmit}
+        onClick={(e) => e.stopPropagation()}
+        className="flex lg:hidden flex-col bg-base-100 border border-base-300 rounded-3xl shadow-2xl w-full max-w-lg max-h-[92vh] overflow-hidden my-auto animate-in zoom-in-95 duration-200"
+      >
+        {/* Mobile Header */}
+        <div className="px-4 py-3 border-b border-base-200 bg-base-200/40 flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 bg-primary/12 text-primary rounded-xl">
+              <Building2 size={16} />
+            </div>
+            <div>
+              <h2 className="text-xs font-black tracking-tight text-base-content">
+                {initialData ? "Edit Mutual Fund" : "Add Mutual Fund"}
+              </h2>
+              <p className="text-[10px] text-base-content/55">
+                Step {mobileStep} of 3: {mobileStep === 1 ? "Fund House & Group" : mobileStep === 2 ? "Asset Category" : "Plan & Mode"}
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="btn btn-circle btn-xs btn-ghost text-base-content/40 hover:text-base-content hover:bg-base-200 transition-all cursor-pointer"
+          >
+            <X size={15} />
+          </button>
+        </div>
+
+        {/* Top Process Step Tabs (Matching Theme) */}
+        <div className="px-3 pt-2 pb-1 border-b border-base-200/60 bg-base-100 shrink-0">
+          <div className="grid grid-cols-3 gap-1 bg-base-200/80 dark:bg-base-800/60 p-0.5 rounded-2xl border border-base-300/60">
+            {[
+              { num: 1, label: "Fund House" },
+              { num: 2, label: "Category" },
+              { num: 3, label: "Plan & Mode" },
+            ].map((st) => {
+              const isActive = mobileStep === st.num;
+              return (
+                <button
+                  key={st.num}
+                  type="button"
+                  onClick={() => {
+                    if (st.num > 1 && !effectiveAmc) {
+                      setErrorMsg("Please select or enter an AMC / Fund House Name.");
+                      return;
+                    }
+                    setErrorMsg("");
+                    setMobileStep(st.num);
+                  }}
+                  className={`h-8 rounded-xl text-[11px] font-bold transition-all cursor-pointer flex items-center justify-center gap-1 ${
+                    isActive
+                      ? "bg-base-100 dark:bg-base-900 text-primary shadow-xs font-black border border-base-300/50 scale-[1.01]"
+                      : "text-base-content/65 hover:text-base-content"
+                  }`}
+                >
+                  <span className={`w-1.5 h-1.5 rounded-full ${isActive ? "bg-primary" : "bg-base-content/30"}`} />
+                  <span>{st.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Scrollable Step Body */}
+        <div className="p-4 flex-1 overflow-y-auto space-y-4">
+          {errorMsg && (
+            <div className="p-3 bg-error/10 border border-error/30 text-error rounded-xl font-semibold flex items-center gap-2 text-xs">
+              <AlertCircle size={14} className="shrink-0" />
+              <span>{errorMsg}</span>
+            </div>
+          )}
+
+          {/* STEP 1: Fund House & Group */}
+          {mobileStep === 1 && (
+            <div className="space-y-4 animate-in fade-in duration-200">
+              <div className="space-y-1.5">
+                <label className="label-text text-xs font-extrabold text-base-content/90 flex items-center gap-1.5">
+                  <Landmark size={13} className="text-primary" />
+                  AMC (Asset Management Company) <span className="text-error">*</span>
+                </label>
+                <AmcAutocomplete
+                  value={amc}
+                  onChange={setAmc}
+                  placeholder="Search or type AMC name..."
+                />
+                <p className="text-[10px] text-base-content/40 pl-1">
+                  Type to search 27 AMCs or enter a custom fund house
+                </p>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="label-text text-xs font-extrabold text-base-content/90 flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <Layers size={13} className="text-secondary" />
+                    Mutual Fund Group
+                  </span>
+                  <span className="text-[10px] font-semibold text-base-content/40">Default: Others</span>
+                </label>
+                <select
+                  value={targetGroupId}
+                  onChange={(e) => {
+                    setTargetGroupId(e.target.value);
+                    if (e.target.value !== "__new__") setNewGroupName("");
+                  }}
+                  className="select select-sm select-bordered w-full rounded-xl font-bold text-xs bg-base-100 focus:outline-none focus:ring-2 focus:ring-secondary/20 focus:border-secondary/60 cursor-pointer"
+                >
+                  <option value="others">📁 Others / Unassigned</option>
+                  {groups &&
+                    groups.map((g) => (
+                      <option key={g.id} value={g.id}>
+                        📂 {g.name}
+                      </option>
+                    ))}
+                  <option value="__new__">➕ Create New Group...</option>
+                </select>
+
+                {targetGroupId === "__new__" && (
+                  <div className="pt-1">
+                    <input
+                      type="text"
+                      placeholder="Enter new group name..."
+                      value={newGroupName}
+                      onChange={(e) => setNewGroupName(e.target.value)}
+                      className="input input-sm input-bordered w-full rounded-xl font-bold text-xs bg-base-100 focus:outline-none focus:ring-2 focus:ring-secondary/20 focus:border-secondary/60"
+                      autoFocus
+                    />
+                  </div>
+                )}
+                <p className="text-[10px] text-base-content/40 pl-1">
+                  Organize this fund into a group folder
+                </p>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="label-text text-xs font-extrabold text-base-content/90 flex items-center gap-1.5">
+                  <Hash size={13} className="text-base-content/50" />
+                  Folio Number
+                  <span className="text-[10px] font-semibold text-base-content/35 ml-auto">Optional</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. 910283912/12"
+                  className="input input-sm input-bordered w-full rounded-xl font-bold text-xs focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/60 transition-all"
+                  value={folioNumber}
+                  onChange={(e) => setFolioNumber(e.target.value)}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* STEP 2: Category & Classification */}
+          {mobileStep === 2 && (
+            <div className="space-y-4 animate-in fade-in duration-200">
+              <div className="space-y-2">
+                <label className="label-text text-xs font-extrabold text-base-content/90 flex items-center gap-1.5">
+                  <PieChart size={13} className="text-secondary" />
+                  Asset Category <span className="text-error">*</span>
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {Object.keys(CATEGORY_SUBOPTIONS).map((catName) => {
+                    const isSelected = category === catName;
+                    const meta = categoryMeta[catName];
+                    return (
+                      <button
+                        key={catName}
+                        type="button"
+                        onClick={() => handleCategoryChange(catName)}
+                        className={`p-2.5 rounded-xl font-extrabold text-xs transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer border ${
+                          isSelected
+                            ? `${meta.bg} ${meta.color} ${meta.border} shadow-sm font-black`
+                            : "bg-base-200/80 border-transparent hover:bg-base-300/80 text-base-content/55"
+                        }`}
+                      >
+                        {isSelected && <Check size={12} strokeWidth={3} className="shrink-0" />}
+                        <span>{catName}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="label-text text-xs font-extrabold text-base-content/90 flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <Layers size={12} className="text-base-content/50" />
+                    Sub-Category <span className="text-error">*</span>
+                  </span>
+                  <span className="text-[10px] font-semibold text-base-content/35">
+                    {CATEGORY_SUBOPTIONS[category]?.length || 0} options
+                  </span>
+                </label>
+                <select
+                  className="select select-sm select-bordered w-full rounded-xl font-extrabold text-xs focus:outline-none focus:ring-2 focus:ring-secondary/20 focus:border-secondary/60 cursor-pointer"
+                  value={subCategory}
+                  onChange={(e) => setSubCategory(e.target.value)}
+                >
+                  {(CATEGORY_SUBOPTIONS[category] || []).map((subOpt, idx) => (
+                    <option key={idx} value={subOpt}>
+                      {subOpt}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          )}
+
+          {/* STEP 3: Plan, Return Type & Investment Mode */}
+          {mobileStep === 3 && (
+            <div className="space-y-4 animate-in fade-in duration-200">
+              <div className="space-y-1.5">
+                <label className="label-text text-xs font-extrabold text-base-content/90 flex items-center gap-1.5">
+                  <ShieldCheck size={13} className="text-accent" />
+                  Plan <span className="text-error">*</span>
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {["Direct", "Regular"].map((p) => (
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() => setPlan(p)}
+                      className={`p-2.5 rounded-xl font-bold text-xs transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer border ${
+                        plan === p
+                          ? "bg-primary/12 text-primary border-primary/25 shadow-sm font-black"
+                          : "bg-base-200/80 border-transparent text-base-content/55 hover:bg-base-300/80"
+                      }`}
+                    >
+                      {plan === p && <Check size={12} strokeWidth={3} />}
+                      <span>{p} Plan</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="label-text text-xs font-extrabold text-base-content/90 flex items-center gap-1.5">
+                  <TrendingUp size={13} className="text-base-content/50" />
+                  Return Type
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { key: "Growth", label: "Growth" },
+                    { key: "IDCW", label: "IDCW (Dividend)" },
+                  ].map((opt) => (
+                    <button
+                      key={opt.key}
+                      type="button"
+                      onClick={() => setOptionType(opt.key)}
+                      className={`p-2.5 rounded-xl font-bold text-xs transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer border ${
+                        optionType === opt.key
+                          ? "bg-accent/12 text-accent border-accent/25 shadow-sm font-black"
+                          : "bg-base-200/80 border-transparent text-base-content/55 hover:bg-base-300/80"
+                      }`}
+                    >
+                      {optionType === opt.key && <Check size={12} strokeWidth={3} />}
+                      <span>{opt.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="label-text text-xs font-extrabold text-base-content/90 flex items-center gap-1.5">
+                  <Coins size={13} className="text-base-content/50" />
+                  Investment Mode
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { key: "SIP", label: "SIP (Recurring)", icon: TrendingUp },
+                    { key: "Lumpsum", label: "Lumpsum", icon: Coins },
+                  ].map((mode) => (
+                    <button
+                      key={mode.key}
+                      type="button"
+                      onClick={() => setInvestmentType(mode.key)}
+                      className={`p-2.5 rounded-xl font-bold text-xs transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer border ${
+                        investmentType === mode.key
+                          ? "bg-primary/12 text-primary border-primary/25 shadow-sm font-black"
+                          : "bg-base-200/80 border-transparent text-base-content/55 hover:bg-base-300/80"
+                      }`}
+                    >
+                      {investmentType === mode.key && <Check size={12} strokeWidth={3} />}
+                      <mode.icon size={13} className="shrink-0" />
+                      <span>{mode.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {effectiveAmc && (
+                <div className="bg-base-200/50 p-3.5 rounded-2xl border border-base-300/60 space-y-2">
+                  <div className="text-[9px] font-black text-base-content/40 uppercase tracking-widest">
+                    Fund Summary Preview
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-primary/12 text-primary flex items-center justify-center font-black text-xs shrink-0">
+                      {effectiveAmc.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-xs font-extrabold text-base-content truncate">
+                        {effectiveAmc}
+                      </div>
+                      <div className="text-[10px] text-base-content/55 flex items-center gap-1 mt-0.5 flex-wrap">
+                        <span>{plan} Plan</span>
+                        <span>•</span>
+                        <span>{optionType}</span>
+                        <span>•</span>
+                        <span className={categoryMeta[category]?.color}>{category} ({subCategory})</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Mobile Navigation Footer */}
+        <div className="px-4 py-3 border-t border-base-200/90 bg-base-100/90 backdrop-blur-md flex items-center justify-between gap-2.5 shrink-0">
+          {mobileStep === 1 ? (
+            <>
+              <button
+                type="button"
+                onClick={onClose}
+                className="btn btn-sm btn-ghost rounded-2xl text-xs font-semibold px-4 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (!effectiveAmc) {
+                    setErrorMsg("Please select or enter an AMC / Fund House Name.");
+                    return;
+                  }
+                  setErrorMsg("");
+                  setMobileStep(2);
+                }}
+                className="btn btn-sm btn-primary rounded-2xl text-xs font-bold px-5 flex items-center gap-1.5 cursor-pointer shadow-sm hover:scale-[1.02] active:scale-95 transition-all"
+              >
+                <span>Next: Category</span>
+                <ArrowRight size={14} />
+              </button>
+            </>
+          ) : mobileStep === 2 ? (
+            <>
+              <button
+                type="button"
+                onClick={() => {
+                  setErrorMsg("");
+                  setMobileStep(1);
+                }}
+                className="btn btn-sm btn-ghost rounded-2xl text-xs font-semibold px-3 flex items-center gap-1 cursor-pointer"
+              >
+                <ArrowLeft size={14} />
+                <span>Back</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setErrorMsg("");
+                  setMobileStep(3);
+                }}
+                className="btn btn-sm btn-primary rounded-2xl text-xs font-bold px-5 flex items-center gap-1.5 cursor-pointer shadow-sm hover:scale-[1.02] active:scale-95 transition-all"
+              >
+                <span>Next: Plan & Mode</span>
+                <ArrowRight size={14} />
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={() => {
+                  setErrorMsg("");
+                  setMobileStep(2);
+                }}
+                className="btn btn-sm btn-ghost rounded-2xl text-xs font-semibold px-3 flex items-center gap-1 cursor-pointer"
+              >
+                <ArrowLeft size={14} />
+                <span>Back</span>
+              </button>
+              <button
+                type="submit"
+                disabled={!isFormValid}
+                className="btn btn-sm btn-primary rounded-2xl text-xs font-black px-5 flex items-center gap-1.5 cursor-pointer shadow-sm shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all"
+              >
+                <Check size={14} />
+                <span>{initialData ? "Update Fund" : "Save Fund"}</span>
+              </button>
+            </>
+          )}
         </div>
       </form>
 

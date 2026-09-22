@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
 import CallyDatePicker, { formatDateDDMMMYYYY } from "../DatePicker";
+import CompanyLogo from "./CompanyLogo";
 import {
   X,
   TrendingUp,
@@ -40,6 +41,22 @@ export default function AddStockTradeModal({
   // ----------------------------------------------------------------------
   // Wizard Active Step (1: Buy Details, 2: Sell Details)
   const [step, setStep] = useState(1);
+
+  // Mobile Wizard Active Step (1: Basic Stock Info, 2: Buy Details, 3: Sell Details)
+  const [mobileStep, setMobileStep] = useState(1);
+  const mobileTabsScrollRef = React.useRef(null);
+  const activeMobileTabRef = React.useRef(null);
+
+  // Auto-scroll active tab into view on mobile popup
+  useEffect(() => {
+    if (activeMobileTabRef.current) {
+      activeMobileTabRef.current.scrollIntoView({
+        behavior: "smooth",
+        inline: "center",
+        block: "nearest",
+      });
+    }
+  }, [mobileStep]);
 
   // Section 1: Basic Stock Info (Mandatory)
   const [name, setName] = useState("");
@@ -146,6 +163,7 @@ export default function AddStockTradeModal({
         setDp("15.93");
       }
       setStep(1);
+      setMobileStep(1);
     } else {
       setName("");
       setPlatform("Zerodha");
@@ -167,6 +185,7 @@ export default function AddStockTradeModal({
       setSPdc("0");
       setDp("15.93");
       setStep(1);
+      setMobileStep(1);
     }
   }, [initialData, isOpen]);
 
@@ -310,6 +329,44 @@ export default function AddStockTradeModal({
     }).format(val || 0);
   };
 
+  const formatCompactINR = (val, includeRupee = true) => {
+    if (val === undefined || val === null || isNaN(val) || val === "-") return "-";
+    const num = Number(val);
+    const isNegative = num < 0;
+    const abs = Math.abs(num);
+    const prefix = includeRupee ? "₹" : "";
+
+    let formatted = "";
+    if (abs >= 10000000) {
+      const cr = abs / 10000000;
+      formatted = (cr >= 100 ? cr.toFixed(1) : parseFloat(cr.toFixed(2))) + "Cr";
+    } else if (abs >= 100000) {
+      const l = abs / 100000;
+      formatted = (l >= 100 ? l.toFixed(1) : parseFloat(l.toFixed(2))) + "L";
+    } else if (abs >= 10000) {
+      const k = abs / 1000;
+      formatted = parseFloat(k.toFixed(2)) + "K";
+    } else {
+      formatted = abs % 1 === 0
+        ? abs.toLocaleString("en-IN")
+        : abs.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    return `${isNegative ? "-" : ""}${prefix}${formatted}`;
+  };
+
+  const formatCompactPnL = (val) => {
+    if (val === undefined || val === null || isNaN(val) || val === "-") return "-";
+    const num = Number(val);
+    if (num === 0) return "₹0";
+    const isPositive = num > 0;
+    const isNegative = num < 0;
+    const formatted = formatCompactINR(Math.abs(num), true);
+    if (isPositive) return `+${formatted}`;
+    if (isNegative) return `-${formatted}`;
+    return formatted;
+  };
+
   // ----------------------------------------------------------------------
   // Step Navigation Controls
   // ----------------------------------------------------------------------
@@ -407,8 +464,8 @@ export default function AddStockTradeModal({
 
   const modalContent = (
     <div className="fixed inset-0 w-screen h-screen z-[999999] flex items-center justify-center p-3 sm:p-6 bg-black/75 backdrop-blur-md overflow-y-auto overflow-x-hidden animate-in fade-in duration-200">
-      {/* Side-by-Side Dual/Triple Popup Container */}
-      <div className="flex flex-col lg:flex-row items-stretch justify-center gap-4 w-full max-w-[1440px] mx-auto my-auto">
+      {/* Side-by-Side Dual/Triple Popup Container (Desktop View - Untouched) */}
+      <div className="hidden lg:flex flex-row items-stretch justify-center gap-4 w-full max-w-[1440px] mx-auto my-auto">
         
         {/* =================================================================== */}
         {/* LEFT PANEL: Basic Stock Info (Always Visible)                       */}
@@ -697,8 +754,8 @@ export default function AddStockTradeModal({
                       <span className="text-base-content text-lg font-light pb-1 shrink-0">]</span>
                       <span className="text-base-content font-black text-lg pb-1 shrink-0">÷</span>
                       <div className="flex-1 min-w-0">
-                        <label className="text-[9px] font-semibold text-base-content uppercase mb-1 block">Day TT ₹</label>
-                        <input type="number" step="0.01" placeholder={bStock ? bStock.toString() : "TT"} className="input input-sm input-bordered focus:outline-none focus:ring-0 focus:border-primary/40 w-full rounded-xl font-bold text-xs" value={bTt} onChange={(e) => setBTt(e.target.value)} />
+                        <label className="text-[9px] font-semibold text-base-content uppercase mb-1 block">Day TT</label>
+                        <input type="number" step="0.01" placeholder={bQty ? bQty.toString() : "TT"} className="input input-sm input-bordered focus:outline-none focus:ring-0 focus:border-primary/40 w-full rounded-xl font-bold text-xs" value={bTt} onChange={(e) => setBTt(e.target.value)} />
                       </div>
                     </div>
                     <div className="pt-2 border-t border-base-300 flex items-center justify-between">
@@ -872,8 +929,8 @@ export default function AddStockTradeModal({
                           <span className="text-base-content text-lg font-light pb-1 shrink-0">]</span>
                           <span className="text-base-content font-black text-lg pb-1 shrink-0">÷</span>
                           <div className="flex-1 min-w-0">
-                            <label className="text-[9px] font-semibold text-base-content uppercase mb-1 block">Day TT ₹</label>
-                            <input type="number" step="0.01" placeholder={sStock ? sStock.toString() : "TT"} className="input input-sm input-bordered focus:outline-none focus:ring-0 focus:border-secondary/40 w-full rounded-xl font-bold text-xs" value={sTt} onChange={(e) => setSTt(e.target.value)} />
+                            <label className="text-[9px] font-semibold text-base-content uppercase mb-1 block">Day TT</label>
+                            <input type="number" step="0.01" placeholder={sQty ? sQty.toString() : "TT"} className="input input-sm input-bordered focus:outline-none focus:ring-0 focus:border-secondary/40 w-full rounded-xl font-bold text-xs" value={sTt} onChange={(e) => setSTt(e.target.value)} />
                           </div>
                         </div>
                         <div className="pt-2 border-t border-base-300 flex items-center justify-between">
@@ -1190,6 +1247,746 @@ export default function AddStockTradeModal({
 
 
 
+      </div>
+
+      {/* =================================================================== */}
+      {/* MOBILE POPUP VIEW (flex lg:hidden) - 3-STEP SEQUENTIAL PROCESS      */}
+      {/* =================================================================== */}
+      <div className="flex lg:hidden flex-col bg-base-100 border border-base-200/90 rounded-3xl shadow-2xl w-full max-w-md max-h-[92vh] overflow-hidden my-auto animate-in zoom-in-95 duration-200">
+        {/* Mobile Modal Header */}
+        <div className="px-4.5 pt-3.5 pb-3 border-b border-base-200/80 bg-base-100/90 backdrop-blur-md flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="p-2 rounded-2xl bg-primary/10 text-primary shrink-0">
+              <Tag size={18} />
+            </div>
+            <div className="min-w-0">
+              <h3 className="font-black text-sm text-base-content leading-tight truncate">
+                {initialData ? `Edit Trade — ${name || initialData.name}` : "Add Stock Trade"}
+              </h3>
+              <p className="text-[10.5px] text-base-content/60 font-medium truncate mt-0.5">
+                Step {mobileStep} of 3 • {mobileStep === 1 ? "Stock Info" : mobileStep === 2 ? "Buy Leg" : "Sell Leg"}
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="btn btn-sm btn-circle btn-ghost text-base-content/60 hover:text-base-content hover:bg-base-200/80 shrink-0 cursor-pointer"
+          >
+            <X size={17} />
+          </button>
+        </div>
+
+        {/* Dynamic Step Progress Line */}
+        <div className="w-full bg-base-200/60 h-1 shrink-0 overflow-hidden">
+          <div
+            className="h-full bg-primary transition-all duration-300 ease-out"
+            style={{ width: mobileStep === 1 ? "33.3%" : mobileStep === 2 ? "66.6%" : "100%" }}
+          />
+        </div>
+
+        {/* Top 3-Tabs Process Strip (Auto-scrolls active tab into view) */}
+        <div
+          ref={mobileTabsScrollRef}
+          className="flex items-center gap-1.5 px-3 py-2 bg-base-200/60 dark:bg-base-800/50 border-b border-base-200/80 overflow-x-auto no-scrollbar overscroll-x-contain touch-pan-x shrink-0"
+        >
+          {/* Tab 1: Basic Stock Info */}
+          <button
+            ref={mobileStep === 1 ? activeMobileTabRef : null}
+            type="button"
+            onClick={() => setMobileStep(1)}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 cursor-pointer select-none ${
+              mobileStep === 1
+                ? "bg-base-100 dark:bg-base-900 text-primary shadow-xs font-black border border-base-300/60 scale-[1.01]"
+                : "text-base-content/65 hover:text-base-content hover:bg-base-100/40"
+            }`}
+          >
+            <Tag size={12} className={mobileStep === 1 ? "text-primary" : "text-base-content/50"} />
+            <span>1. Stock Info</span>
+            {isStep1Complete && (
+              <span className="w-3.5 h-3.5 rounded-full flex items-center justify-center text-[9px] font-black bg-success/15 text-success">
+                ✓
+              </span>
+            )}
+          </button>
+
+          {/* Tab 2: Buy Details */}
+          <button
+            ref={mobileStep === 2 ? activeMobileTabRef : null}
+            type="button"
+            onClick={() => {
+              if (!isStep1Complete) {
+                setErrorMsg("Please enter Stock Symbol / Name first.");
+                return;
+              }
+              setErrorMsg("");
+              setMobileStep(2);
+            }}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 cursor-pointer select-none ${
+              mobileStep === 2
+                ? "bg-base-100 dark:bg-base-900 text-primary shadow-xs font-black border border-base-300/60 scale-[1.01]"
+                : "text-base-content/65 hover:text-base-content hover:bg-base-100/40"
+            }`}
+          >
+            <ShoppingCart size={12} className={mobileStep === 2 ? "text-primary" : "text-base-content/50"} />
+            <span>2. Buy Details</span>
+            {isStep2Complete && (
+              <span className="w-3.5 h-3.5 rounded-full flex items-center justify-center text-[9px] font-black bg-success/15 text-success">
+                ✓
+              </span>
+            )}
+          </button>
+
+          {/* Tab 3: Sell Details */}
+          <button
+            ref={mobileStep === 3 ? activeMobileTabRef : null}
+            type="button"
+            onClick={() => {
+              if (!isStep1Complete) {
+                setErrorMsg("Please enter Stock Symbol / Name first.");
+                return;
+              }
+              if (!isStep2Complete) {
+                setErrorMsg("Please complete Buy Details first.");
+                return;
+              }
+              setErrorMsg("");
+              setMobileStep(3);
+            }}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 cursor-pointer select-none ${
+              mobileStep === 3
+                ? "bg-base-100 dark:bg-base-900 text-primary shadow-xs font-black border border-base-300/60 scale-[1.01]"
+                : "text-base-content/65 hover:text-base-content hover:bg-base-100/40"
+            }`}
+          >
+            <TrendingUp size={12} className={mobileStep === 3 ? "text-primary" : "text-base-content/50"} />
+            <span>3. Sell Details</span>
+            <span className={`badge badge-xs text-[9px] font-bold ${isSold ? "badge-secondary badge-soft" : "badge-ghost opacity-70"}`}>
+              {isSold ? "Sold" : "Holding"}
+            </span>
+          </button>
+        </div>
+
+        {/* Form Body Content */}
+        <div className="p-4.5 overflow-y-auto space-y-4 flex-1 text-xs">
+          {/* Validation Error Alert Banner */}
+          {errorMsg && (
+            <div className="p-3 bg-error/10 border border-error/30 text-error rounded-2xl text-xs font-semibold flex items-center gap-2.5 animate-in shake duration-200">
+              <AlertCircle size={16} className="shrink-0" />
+              <span>{errorMsg}</span>
+            </div>
+          )}
+
+          {/* =============================================================== */}
+          {/* STEP 1: Basic Stock Info                                        */}
+          {/* =============================================================== */}
+          {mobileStep === 1 && (
+            <div className="space-y-4 animate-in fade-in duration-200">
+              {/* Interactive Live Asset Preview Header */}
+              <div className="p-3.5 rounded-2xl bg-gradient-to-r from-base-200/80 via-base-200/50 to-base-100 border border-base-200/90 flex items-center justify-between gap-3 shadow-2xs">
+                <div className="flex items-center gap-3 min-w-0">
+                  <CompanyLogo name={name || "Stock"} size="w-11 h-11" rounded="rounded-xl" type="stock" />
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <h4 className="font-black text-sm text-base-content uppercase tracking-tight truncate">
+                        {name.trim() || "Stock Symbol"}
+                      </h4>
+                      <span className="badge badge-xs font-bold bg-primary/15 text-primary border border-primary/20">
+                        {exchange}
+                      </span>
+                    </div>
+                    <p className="text-[10.5px] text-base-content/60 truncate mt-0.5">
+                      {platform} • {cap} Cap • {term}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Stock Symbol / Ticker Input */}
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-extrabold uppercase tracking-wider text-base-content/70 block">
+                  Stock Symbol / Ticker <span className="text-error">*</span>
+                </label>
+                <div className="relative">
+                  <Tag size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-primary/70" />
+                  <input
+                    type="text"
+                    placeholder="e.g. RELIANCE, TATAMOTORS, INFY"
+                    className="input h-11 pl-10 pr-10 w-full rounded-2xl bg-base-200/50 focus:bg-base-100 border-base-300/80 focus:border-primary font-bold text-sm uppercase tracking-wide transition-all placeholder:normal-case placeholder:font-normal placeholder:text-xs"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    autoFocus
+                  />
+                  {name && (
+                    <button
+                      type="button"
+                      onClick={() => setName("")}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-base-content/40 hover:text-base-content cursor-pointer p-1"
+                    >
+                      <X size={14} />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Exchange Segmented Toggle (NSE vs BSE) */}
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-extrabold uppercase tracking-wider text-base-content/70 block">
+                  Stock Exchange
+                </label>
+                <div className="grid grid-cols-2 gap-1 bg-base-200/80 dark:bg-base-800/60 p-0.5 rounded-2xl border border-base-300/60">
+                  {["NSE", "BSE"].map((ex) => (
+                    <button
+                      key={ex}
+                      type="button"
+                      onClick={() => setExchange(ex)}
+                      className={`h-8 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                        exchange === ex
+                          ? "bg-base-100 dark:bg-base-900 text-primary shadow-xs font-black border border-base-300/50 scale-[1.01]"
+                          : "text-base-content/65 hover:text-base-content"
+                      }`}
+                    >
+                      <span>{ex}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Trade Term Segmented Toggle (Delivery vs Intraday) */}
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-extrabold uppercase tracking-wider text-base-content/70 block">
+                  Trade Term / Product Type
+                </label>
+                <div className="grid grid-cols-2 gap-1 bg-base-200/80 dark:bg-base-800/60 p-0.5 rounded-2xl border border-base-300/60">
+                  {[
+                    { id: "Delivery", label: "Delivery (CNC)" },
+                    { id: "Intraday", label: "Intraday (MIS)" },
+                  ].map((t) => (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => setTerm(t.id)}
+                      className={`h-8 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center ${
+                        term === t.id
+                          ? "bg-base-100 dark:bg-base-900 text-primary shadow-xs font-black border border-base-300/50 scale-[1.01]"
+                          : "text-base-content/65 hover:text-base-content"
+                      }`}
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Platform / Broker & Market Cap Dropdowns */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-extrabold uppercase tracking-wider text-base-content/70 block">
+                    Platform / Broker
+                  </label>
+                  <select
+                    className="select h-10 min-h-10 select-bordered w-full rounded-2xl text-xs font-semibold bg-base-200/50 focus:bg-base-100 border-base-300/80 focus:border-primary"
+                    value={platform}
+                    onChange={(e) => setPlatform(e.target.value)}
+                  >
+                    <option value="Zerodha">Zerodha</option>
+                    <option value="Groww">Groww</option>
+                    <option value="AngelOne">AngelOne</option>
+                    <option value="Upstox">Upstox</option>
+                    <option value="ICICI Direct">ICICI Direct</option>
+                    <option value="HDFC Securities">HDFC Securities</option>
+                    <option value="Kotak Neo">Kotak Neo</option>
+                    <option value="Dhan">Dhan</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-extrabold uppercase tracking-wider text-base-content/70 block">
+                    Market Cap
+                  </label>
+                  <select
+                    className="select h-10 min-h-10 select-bordered w-full rounded-2xl text-xs font-semibold bg-base-200/50 focus:bg-base-100 border-base-300/80 focus:border-primary"
+                    value={cap}
+                    onChange={(e) => setCap(e.target.value)}
+                  >
+                    <option value="Large">Large Cap</option>
+                    <option value="Mid">Mid Cap</option>
+                    <option value="Small">Small Cap</option>
+                    <option value="Micro">Micro Cap</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* =============================================================== */}
+          {/* STEP 2: Buy Details                                             */}
+          {/* =============================================================== */}
+          {mobileStep === 2 && (
+            <div className="space-y-4 animate-in fade-in duration-200">
+              {/* Active Asset Context Pill */}
+              <div className="flex items-center justify-between px-3.5 py-2.5 rounded-2xl bg-base-200/60 border border-base-200 text-xs">
+                <div className="flex items-center gap-2 min-w-0">
+                  <CompanyLogo name={name} size="w-6 h-6" rounded="rounded-lg" type="stock" />
+                  <span className="font-extrabold text-base-content tracking-tight uppercase truncate">
+                    {name || "Stock"}
+                  </span>
+                </div>
+                <span className="text-[10.5px] font-semibold text-base-content/60 shrink-0">
+                  {exchange} • {platform} • {term}
+                </span>
+              </div>
+
+              {/* Buy Date Picker */}
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-extrabold uppercase tracking-wider text-base-content/70 block">
+                  Buy Execution Date <span className="text-error">*</span>
+                </label>
+                <CallyDatePicker
+                  value={bDate}
+                  onChange={(val) => setBDate(val)}
+                  placeholder="Select Buy Date"
+                  required
+                />
+              </div>
+
+              {/* Spacious Buy Price & Quantity Cards */}
+              <div className="grid grid-cols-2 gap-3">
+                {/* Buy Share Price */}
+                <div className="p-3 rounded-2xl bg-base-200/40 border border-base-200/80 space-y-1">
+                  <label className="text-[10.5px] font-bold text-base-content/70 block">
+                    Buy Price / Share <span className="text-error">*</span>
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 font-bold text-sm text-primary">₹</span>
+                    <input
+                      type="number"
+                      step="any"
+                      placeholder="0.00"
+                      className="input h-10 pl-7 pr-2 w-full rounded-xl bg-base-100 border-base-300 font-mono font-black text-sm focus:border-primary focus:outline-none"
+                      value={bShare}
+                      onChange={(e) => setBShare(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                {/* Buy Quantity */}
+                <div className="p-3 rounded-2xl bg-base-200/40 border border-base-200/80 space-y-1">
+                  <label className="text-[10.5px] font-bold text-base-content/70 block">
+                    Quantity <span className="text-error">*</span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      placeholder="0"
+                      className="input h-10 px-3 pr-11 w-full rounded-xl bg-base-100 border-base-300 font-mono font-black text-sm focus:border-primary focus:outline-none"
+                      value={bQty}
+                      onChange={(e) => setBQty(e.target.value)}
+                    />
+                    <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10.5px] font-bold text-base-content/50">
+                      Qty
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Gross Subtotal Pill (When values exist) */}
+              {numBShare > 0 && numBQty > 0 && (
+                <div className="flex items-center justify-between px-3.5 py-2 rounded-xl bg-base-200/50 border border-base-200/60 text-xs">
+                  <span className="text-base-content/70 font-semibold">Gross Stock Value:</span>
+                  <span className="font-mono font-bold text-base-content">{formatCompactINR(bStock)}</span>
+                </div>
+              )}
+
+              {/* Buy Charges & Taxes Breakdown Card */}
+              <div className="p-3.5 rounded-2xl bg-base-200/40 border border-base-200/80 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10.5px] font-extrabold uppercase text-base-content/70 tracking-wider">
+                    Buy Charges & Day TT
+                  </span>
+                  <span className="text-[10.5px] font-mono font-bold text-warning">
+                    Charges: ₹{((parseFloat(bBkg) || 0) + (parseFloat(bPdc) || 0)).toFixed(2)}
+                  </span>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="space-y-1">
+                    <label className="text-[10px] text-base-content/60 font-semibold">Brokerage (₹)</label>
+                    <input
+                      type="number"
+                      step="any"
+                      placeholder="20"
+                      className="input h-8 input-bordered w-full rounded-xl font-mono text-xs bg-base-100"
+                      value={bBkg}
+                      onChange={(e) => setBBkg(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] text-base-content/60 font-semibold">PDC / Taxes (₹)</label>
+                    <input
+                      type="number"
+                      step="any"
+                      placeholder="0"
+                      className="input h-8 input-bordered w-full rounded-xl font-mono text-xs bg-base-100"
+                      value={bPdc}
+                      onChange={(e) => setBPdc(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] text-base-content/60 font-semibold">Day TT</label>
+                    <input
+                      type="number"
+                      step="any"
+                      placeholder={bQty ? bQty.toString() : "TT"}
+                      className="input h-8 input-bordered w-full rounded-xl font-mono text-xs bg-base-100"
+                      value={bTt}
+                      onChange={(e) => setBTt(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Total Investment Summary Banner */}
+              <div className="p-3.5 rounded-2xl bg-gradient-to-br from-primary/15 via-primary/10 to-transparent border border-primary/25 space-y-2 shadow-2xs">
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <span className="text-[10px] font-extrabold uppercase text-primary/80 tracking-wider block">
+                      Effective Buy / Share
+                    </span>
+                    <span className="font-mono font-black text-primary text-base">
+                      {formatCompactINR(bFShare)}
+                    </span>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-[10px] font-extrabold uppercase text-primary/80 tracking-wider block">
+                      Total Buy Investment
+                    </span>
+                    <span className="font-mono font-black text-primary text-base">
+                      {formatCompactINR(bFStock)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* =============================================================== */}
+          {/* STEP 3: Sell Details                                            */}
+          {/* =============================================================== */}
+          {mobileStep === 3 && (
+            <div className="space-y-4 animate-in fade-in duration-200">
+              {/* Asset Holding Context Pill */}
+              <div className="flex items-center justify-between px-3.5 py-2.5 rounded-2xl bg-base-200/60 border border-base-200 text-xs">
+                <div className="flex items-center gap-2 min-w-0">
+                  <CompanyLogo name={name} size="w-6 h-6" rounded="rounded-lg" type="stock" />
+                  <span className="font-extrabold text-base-content tracking-tight uppercase truncate">
+                    {name || "Stock"}
+                  </span>
+                </div>
+                <span className="text-[10.5px] font-semibold text-base-content/60 shrink-0 font-mono">
+                  {numBQty} Shares @ {formatCompactINR(bFShare)}
+                </span>
+              </div>
+
+              {/* Position Status Segmented Toggle */}
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-extrabold uppercase tracking-wider text-base-content/70 block">
+                  Position Status
+                </label>
+                <div className="grid grid-cols-2 gap-1 bg-base-200/80 dark:bg-base-800/60 p-0.5 rounded-2xl border border-base-300/60">
+                  <button
+                    type="button"
+                    onClick={() => setIsSold(false)}
+                    className={`h-8.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                      !isSold
+                        ? "bg-base-100 dark:bg-base-900 text-success shadow-xs font-black border border-base-300/50 scale-[1.01]"
+                        : "text-base-content/65 hover:text-base-content"
+                    }`}
+                  >
+                    <span className={`w-2 h-2 rounded-full ${!isSold ? "bg-success animate-pulse" : "bg-base-content/30"}`} />
+                    <span>Holding (Open)</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsSold(true)}
+                    className={`h-8.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                      isSold
+                        ? "bg-base-100 dark:bg-base-900 text-secondary shadow-xs font-black border border-base-300/50 scale-[1.01]"
+                        : "text-base-content/65 hover:text-base-content"
+                    }`}
+                  >
+                    <span>Sold Out (Closed)</span>
+                  </button>
+                </div>
+              </div>
+
+              {!isSold ? (
+                /* ------------------------------------------------------------- */
+                /* OPEN HOLDING POSITION CARD                                    */
+                /* ------------------------------------------------------------- */
+                <div className="p-4 rounded-2xl bg-gradient-to-br from-success/15 via-success/5 to-transparent border border-success/25 text-center space-y-3 shadow-2xs">
+                  <div className="w-12 h-12 rounded-2xl bg-success/20 text-success flex items-center justify-center mx-auto">
+                    <Briefcase size={22} />
+                  </div>
+                  <div>
+                    <span className="badge badge-success badge-soft font-black text-[10.5px] uppercase tracking-wider px-2.5 py-1">
+                      Active Portfolio Holding
+                    </span>
+                    <div className="text-2xl font-black font-mono text-success mt-1">
+                      {numBQty} Shares
+                    </div>
+                    <p className="text-xs text-base-content/70 mt-0.5">
+                      Invested Capital: <span className="font-mono font-bold text-base-content">{formatCompactINR(bFStock)}</span>
+                    </p>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-base-100/60 border border-success/20 text-[11px] text-base-content/70 leading-relaxed text-left">
+                    This stock will be tracked in your active holdings. When you decide to exit or book profit, simply edit this trade to record your sell execution.
+                  </div>
+                </div>
+              ) : (
+                /* ------------------------------------------------------------- */
+                /* SOLD OUT POSITION FORM                                        */
+                /* ------------------------------------------------------------- */
+                <div className="space-y-4">
+                  {/* Sell Execution Date */}
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-extrabold uppercase tracking-wider text-base-content/70 block">
+                      Sell Execution Date <span className="text-error">*</span>
+                    </label>
+                    <CallyDatePicker
+                      value={sDate}
+                      onChange={(val) => setSDate(val)}
+                      placeholder="Select Sell Date"
+                      required
+                    />
+                  </div>
+
+                  {/* Spacious Sell Price & Quantity Cards */}
+                  <div className="grid grid-cols-2 gap-3">
+                    {/* Sell Share Price */}
+                    <div className="p-3 rounded-2xl bg-base-200/40 border border-base-200/80 space-y-1">
+                      <label className="text-[10.5px] font-bold text-base-content/70 block">
+                        Sell Price / Share <span className="text-error">*</span>
+                      </label>
+                      <div className="relative">
+                        <span className="absolute left-2.5 top-1/2 -translate-y-1/2 font-bold text-sm text-secondary">₹</span>
+                        <input
+                          type="number"
+                          step="any"
+                          placeholder="0.00"
+                          className="input h-10 pl-7 pr-2 w-full rounded-xl bg-base-100 border-base-300 font-mono font-black text-sm focus:border-secondary focus:outline-none"
+                          value={sShare}
+                          onChange={(e) => setSShare(e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Sell Quantity with Sell All helper */}
+                    <div className="p-3 rounded-2xl bg-base-200/40 border border-base-200/80 space-y-1">
+                      <div className="flex items-center justify-between">
+                        <label className="text-[10.5px] font-bold text-base-content/70">
+                          Sold Qty <span className="text-error">*</span>
+                        </label>
+                        {numBQty > 0 && sQty !== bQty && (
+                          <button
+                            type="button"
+                            onClick={() => setSQty(bQty)}
+                            className="text-[9.5px] text-secondary font-bold hover:underline cursor-pointer"
+                          >
+                            All ({bQty})
+                          </button>
+                        )}
+                      </div>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          placeholder="0"
+                          className="input h-10 px-3 pr-11 w-full rounded-xl bg-base-100 border-base-300 font-mono font-black text-sm focus:border-secondary focus:outline-none"
+                          value={sQty}
+                          onChange={(e) => setSQty(e.target.value)}
+                        />
+                        <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10.5px] font-bold text-base-content/50">
+                          Qty
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Sell Charges & Day TT Breakdown Card */}
+                  <div className="p-3.5 rounded-2xl bg-base-200/40 border border-base-200/80 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10.5px] font-extrabold uppercase text-base-content/70 tracking-wider">
+                        Sell Charges & Day TT
+                      </span>
+                      <span className="text-[10.5px] font-mono font-bold text-warning">
+                        Charges: ₹{((parseFloat(sBkg) || 0) + (parseFloat(sPdc) || 0) + (parseFloat(dp) || 0)).toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2.5">
+                      <div className="space-y-1">
+                        <label className="text-[10px] text-base-content/60 font-semibold">Brokerage (₹)</label>
+                        <input
+                          type="number"
+                          step="any"
+                          placeholder="20"
+                          className="input h-8 input-bordered w-full rounded-xl font-mono text-xs bg-base-100"
+                          value={sBkg}
+                          onChange={(e) => setSBkg(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] text-base-content/60 font-semibold">PDC / STT (₹)</label>
+                        <input
+                          type="number"
+                          step="any"
+                          placeholder="0"
+                          className="input h-8 input-bordered w-full rounded-xl font-mono text-xs bg-base-100"
+                          value={sPdc}
+                          onChange={(e) => setSPdc(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] text-base-content/60 font-semibold">DP Charges (₹)</label>
+                        <input
+                          type="number"
+                          step="any"
+                          placeholder="15.93"
+                          className="input h-8 input-bordered w-full rounded-xl font-mono text-xs bg-base-100"
+                          value={dp}
+                          onChange={(e) => setDp(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] text-base-content/60 font-semibold">Day TT</label>
+                        <input
+                          type="number"
+                          step="any"
+                          placeholder={sQty ? sQty.toString() : "TT"}
+                          className="input h-8 input-bordered w-full rounded-xl font-mono text-xs bg-base-100"
+                          value={sTt}
+                          onChange={(e) => setSTt(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Realized P&L Results Hero Card */}
+                  <div className={`p-4 rounded-2xl border ${gainRs >= 0 ? "bg-gradient-to-br from-success/15 via-success/5 to-transparent border-success/30" : "bg-gradient-to-br from-error/15 via-error/5 to-transparent border-error/30"} space-y-2 shadow-2xs`}>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <span className="text-[10.5px] font-extrabold uppercase tracking-wider text-base-content/70">
+                          Realized Outcome
+                        </span>
+                        <div className={`text-2xl font-black font-mono tracking-tight mt-0.5 ${gainRs >= 0 ? "text-success" : "text-error"}`}>
+                          {formatCompactPnL(gainRs)}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <span className={`badge font-bold font-mono text-xs px-2.5 py-1 rounded-xl ${gainRs >= 0 ? "bg-success/20 text-success border border-success/30" : "bg-error/20 text-error border border-error/30"}`}>
+                          {gainRs >= 0 ? "+" : ""}{gainPct.toFixed(2)}%
+                        </span>
+                        <span className="text-[10px] font-semibold text-base-content/60 block mt-1 font-mono">
+                          {holdingDays}d held
+                        </span>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 pt-2 border-t border-base-content/10 text-xs">
+                      <div>
+                        <span className="text-[10px] text-base-content/60">Net Sell / Share:</span>
+                        <span className="font-mono font-bold text-base-content block">{formatCompactINR(sFShare)}</span>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-[10px] text-base-content/60">Net Realized:</span>
+                        <span className="font-mono font-bold text-base-content block">{formatCompactINR(sFStock)}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Bottom Navigation Action Bar */}
+        <div className="px-4 py-3 border-t border-base-200/90 bg-base-100/90 backdrop-blur-md flex items-center justify-between gap-3 shrink-0">
+          {mobileStep === 1 ? (
+            <>
+              <button
+                type="button"
+                onClick={onClose}
+                className="btn btn-sm btn-ghost rounded-2xl text-xs font-semibold px-4 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (!name.trim()) {
+                    setErrorMsg("Please enter Stock Symbol / Name.");
+                    return;
+                  }
+                  setErrorMsg("");
+                  setMobileStep(2);
+                }}
+                className="btn btn-sm btn-primary rounded-2xl text-xs font-bold px-5 flex items-center gap-1.5 cursor-pointer shadow-sm hover:scale-[1.02] active:scale-95 transition-all"
+              >
+                <span>Continue to Buy</span>
+                <ArrowRight size={14} />
+              </button>
+            </>
+          ) : mobileStep === 2 ? (
+            <>
+              <button
+                type="button"
+                onClick={() => {
+                  setErrorMsg("");
+                  setMobileStep(1);
+                }}
+                className="btn btn-sm btn-ghost rounded-2xl text-xs font-semibold px-3 flex items-center gap-1 cursor-pointer"
+              >
+                <ArrowLeft size={14} />
+                <span>Back</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (numBShare <= 0 || numBQty <= 0) {
+                    setErrorMsg("Please enter valid Buy Share Price and Quantity.");
+                    return;
+                  }
+                  setErrorMsg("");
+                  setMobileStep(3);
+                }}
+                className="btn btn-sm btn-primary rounded-2xl text-xs font-bold px-5 flex items-center gap-1.5 cursor-pointer shadow-sm hover:scale-[1.02] active:scale-95 transition-all"
+              >
+                <span>Continue to Sell</span>
+                <ArrowRight size={14} />
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={() => {
+                  setErrorMsg("");
+                  setMobileStep(2);
+                }}
+                className="btn btn-sm btn-ghost rounded-2xl text-xs font-semibold px-3 flex items-center gap-1 cursor-pointer"
+              >
+                <ArrowLeft size={14} />
+                <span>Back</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleSubmit}
+                className="btn btn-sm btn-primary rounded-2xl text-xs font-black px-5 flex items-center gap-1.5 cursor-pointer shadow-sm shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all"
+              >
+                <Check size={14} />
+                <span>{initialData ? "Save Changes" : (isSold ? "Add Sold Trade" : "Add Holding Trade")}</span>
+              </button>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );

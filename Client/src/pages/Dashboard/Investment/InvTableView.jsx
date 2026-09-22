@@ -1926,7 +1926,7 @@ export default function InvTableView() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {/* 1. BANK BALANCE CARD */}
-                <div className="card bg-base-200 shadow-md p-5 rounded-3xl relative overflow-hidden group hover:shadow-xl">
+                <div className="card bg-base-200 shadow-md p-5 rounded-3xl border border-base-content/8 dark:border-base-content/8 relative overflow-hidden group hover:shadow-xl">
                   {/* Light Background Watermark Icon */}
                   <div className="absolute -right-3 top-0 bottom-0 flex items-center pointer-events-none text-emerald-500/[0.06] dark:text-emerald-400/[0.07]">
                     <Landmark className="h-[115%] w-auto aspect-square" strokeWidth={1.2} />
@@ -1975,7 +1975,7 @@ export default function InvTableView() {
                       />
                     </div>
 
-                    <div className="pt-3 border-t border-base-300 flex items-center justify-between text-xs">
+                    <div className="pt-3 border-t border-base-content/8 dark:border-base-content/8 flex items-center justify-between text-xs">
                       <span className="text-base-content/50 text-[11px]">
                         Liquid Reserves
                       </span>
@@ -1991,7 +1991,7 @@ export default function InvTableView() {
                 </div>
 
                 {/* 2. DEMAT / STOCKS AMOUNT CARD */}
-                <div className="card bg-base-200 shadow-md p-5 rounded-3xl relative overflow-hidden group hover:shadow-xl">
+                <div className="card bg-base-200 shadow-md p-5 rounded-3xl border border-base-content/8 dark:border-base-content/8 relative overflow-hidden group hover:shadow-xl">
                   {/* Light Background Watermark Icon */}
                   <div className="absolute -right-3 top-0 bottom-0 flex items-center pointer-events-none text-blue-500/[0.06] dark:text-blue-400/[0.07]">
                     <TrendingUp className="h-[115%] w-auto aspect-square" strokeWidth={1.2} />
@@ -2042,7 +2042,7 @@ export default function InvTableView() {
                       />
                     </div>
 
-                    <div className="pt-3 border-t border-base-300 flex items-center justify-between text-xs">
+                    <div className="pt-3 border-t border-base-content/8 dark:border-base-content/8 flex items-center justify-between text-xs">
                       <span className="text-base-content/50 text-[11px]">
                         Equity Holdings
                       </span>
@@ -2058,7 +2058,7 @@ export default function InvTableView() {
                 </div>
 
                 {/* 3. CURRENT FD CARD */}
-                <div className="card bg-base-200 shadow-md p-5 rounded-3xl relative overflow-hidden group hover:shadow-xl">
+                <div className="card bg-base-200 shadow-md p-5 rounded-3xl border border-base-content/8 dark:border-base-content/8 relative overflow-hidden group hover:shadow-xl">
                   {/* Light Background Watermark Icon */}
                   <div className="absolute -right-3 top-0 bottom-0 flex items-center pointer-events-none text-amber-500/[0.06] dark:text-amber-400/[0.07]">
                     <ShieldCheck className="h-[115%] w-auto aspect-square" strokeWidth={1.2} />
@@ -2109,7 +2109,7 @@ export default function InvTableView() {
                       />
                     </div>
 
-                    <div className="pt-3 border-t border-base-300 flex items-center justify-between text-xs">
+                    <div className="pt-3 border-t border-base-content/8 dark:border-base-content/8 flex items-center justify-between text-xs">
                       <span className="text-base-content/50 text-[11px]">
                         Bank Term Yield
                       </span>
@@ -2125,7 +2125,7 @@ export default function InvTableView() {
                 </div>
 
                 {/* 4. CURRENT RD CARD */}
-                <div className="card bg-base-200 shadow-md p-5 rounded-3xl relative overflow-hidden group hover:shadow-xl">
+                <div className="card bg-base-200 shadow-md p-5 rounded-3xl border border-base-content/8 dark:border-base-content/8 relative overflow-hidden group hover:shadow-xl">
                   {/* Light Background Watermark Icon */}
                   <div className="absolute -right-3 top-0 bottom-0 flex items-center pointer-events-none text-orange-500/[0.06] dark:text-orange-400/[0.07]">
                     <PiggyBank className="h-[115%] w-auto aspect-square" strokeWidth={1.2} />
@@ -2172,7 +2172,7 @@ export default function InvTableView() {
                       />
                     </div>
 
-                    <div className="pt-3 border-t border-base-300 flex items-center justify-between text-xs">
+                    <div className="pt-3 border-t border-base-content/8 dark:border-base-content/8 flex items-center justify-between text-xs">
                       <span className="text-base-content/50 text-[11px]">
                         Monthly Systematic
                       </span>
@@ -2188,7 +2188,7 @@ export default function InvTableView() {
                 </div>
 
                 {/* 5. CURRENT MF CARD */}
-                <div className="card bg-base-200 shadow-md p-5 rounded-3xl relative overflow-hidden group hover:shadow-xl">
+                <div className="card bg-base-200 shadow-md p-5 rounded-3xl border border-base-content/8 dark:border-base-content/8 relative overflow-hidden group hover:shadow-xl">
                   {/* Light Background Watermark Icon */}
                   <div className="absolute -right-3 top-0 bottom-0 flex items-center pointer-events-none text-purple-500/[0.06] dark:text-purple-400/[0.07]">
                     <PieChart className="h-[115%] w-auto aspect-square" strokeWidth={1.2} />
@@ -2235,7 +2235,7 @@ export default function InvTableView() {
                       />
                     </div>
 
-                    <div className="pt-3 border-t border-base-300 flex items-center justify-between text-xs">
+                    <div className="pt-3 border-t border-base-content/8 dark:border-base-content/8 flex items-center justify-between text-xs">
                       <span className="text-base-content/50 text-[11px]">
                         SIP & Lumpsum Corpus
                       </span>
@@ -2251,7 +2251,7 @@ export default function InvTableView() {
                 </div>
 
                 {/* 6. CURRENT PF CARD */}
-                <div className="card bg-base-200 shadow-md p-5 rounded-3xl relative overflow-hidden group hover:shadow-xl">
+                <div className="card bg-base-200 shadow-md p-5 rounded-3xl border border-base-content/8 dark:border-base-content/8 relative overflow-hidden group hover:shadow-xl">
                   {/* Light Background Watermark Icon */}
                   <div className="absolute -right-3 top-0 bottom-0 flex items-center pointer-events-none text-teal-500/[0.06] dark:text-teal-400/[0.07]">
                     <Percent className="h-[115%] w-auto aspect-square" strokeWidth={1.2} />
@@ -2283,9 +2283,9 @@ export default function InvTableView() {
                       </div>
                       <div className="text-xs text-base-content/60 flex items-center gap-1.5">
                         {projectionMode ? (
-                          <span>Accumulated balance + contributions on {targetMonthFormattedShort}</span>
+                          <span>{pfMetrics.count} accounts • Compound Yield on {targetMonthFormattedShort}</span>
                         ) : (
-                          <span>{pfMetrics.monthsCount} monthly contributions</span>
+                          <span>{pfMetrics.count} PF accounts active</span>
                         )}
                       </div>
                     </div>
@@ -2298,15 +2298,15 @@ export default function InvTableView() {
                       />
                     </div>
 
-                    <div className="pt-3 border-t border-base-300 flex items-center justify-between text-xs">
+                    <div className="pt-3 border-t border-base-content/8 dark:border-base-content/8 flex items-center justify-between text-xs">
                       <span className="text-base-content/50 text-[11px]">
-                        Retirement Safety Corpus
+                        Retirement Corpus
                       </span>
                       <Link
                         to={ASSET_THEMES.pf.link}
                         className="text-primary font-bold hover:underline flex items-center gap-1 text-[11px]"
                       >
-                        <span>Ledger</span>
+                        <span>Accounts</span>
                         <ExternalLink size={11} />
                       </Link>
                     </div>
@@ -2806,8 +2806,8 @@ export default function InvTableView() {
             {/* ============================================================ */}
             {/* 3. CONSOLIDATED PORTFOLIO SUMMARY TABLE (SORTABLE)           */}
             {/* ============================================================ */}
-            <div className="card bg-base-200 shadow-md rounded-3xl overflow-hidden">
-              <div className="p-5 border-b border-base-300 flex items-center justify-between flex-wrap gap-2">
+            <div className="card bg-base-200 shadow-md rounded-3xl border border-base-content/8 dark:border-base-content/8 overflow-hidden">
+              <div className="p-5 border-b border-base-content/8 dark:border-base-content/8 flex items-center justify-between flex-wrap gap-2">
                 <div className="flex items-center gap-2">
                   <TableProperties size={18} className="text-primary" />
                   <div>
@@ -2845,7 +2845,7 @@ export default function InvTableView() {
 
               <div className="overflow-x-auto bg-base-100">
                 <table className="table table-sm w-full text-xs">
-                  <thead className="bg-base-200 text-base-content/70 select-none border-b border-base-300">
+                  <thead className="bg-base-200 text-base-content/70 select-none border-b border-base-content/8 dark:border-base-content/8">
                     <tr>
                       {/* 1. Asset Class */}
                       <th
@@ -2957,7 +2957,7 @@ export default function InvTableView() {
                   </thead>
                   <tbody>
                     {sortedLedgerRows.map((row) => (
-                      <tr key={row.key} className="hover:bg-base-200/40 transition-colors">
+                      <tr key={row.key} className="hover:bg-base-200/40 border-b border-base-content/6 dark:border-base-content/6 transition-colors">
                         <td className="py-3 px-4 font-bold flex items-center gap-2">
                           <span
                             className="w-2.5 h-2.5 rounded-full shrink-0"
@@ -2991,7 +2991,7 @@ export default function InvTableView() {
                   </tbody>
 
                   {/* Totals Footer */}
-                  <tfoot className="bg-base-200/90 font-extrabold text-base-content border-t-2 border-base-300">
+                  <tfoot className="bg-base-200/90 font-extrabold text-base-content border-t border-base-content/8 dark:border-base-content/8">
                     <tr>
                       <th className="py-3 px-4">
                         {projectionMode ? "Consolidated Projected Net Worth" : "Consolidated Net Worth"}
