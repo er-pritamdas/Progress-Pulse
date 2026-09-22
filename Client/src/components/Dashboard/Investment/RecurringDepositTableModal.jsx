@@ -215,7 +215,7 @@ export default function RecurringDepositTableModal({
         onClick={(e) => e.stopPropagation()}
       >
         {/* Floating Top Header Bar */}
-        <div className="bg-base-100/95 backdrop-blur-md rounded-2xl sm:rounded-3xl border border-base-300/60 shadow-xl px-4 sm:px-6 py-3 sm:py-3.5 flex items-center justify-between gap-3 shrink-0">
+        <div className="bg-base-100/95 backdrop-blur-md rounded-2xl sm:rounded-3xl border border-base-content/8 shadow-xl px-4 sm:px-6 py-3 sm:py-3.5 flex items-center justify-between gap-3 shrink-0">
           <div className="flex items-center gap-3 min-w-0">
             <CompanyLogo name={rd.bankName} size="w-10 h-10" rounded="rounded-2xl" type="bank" />
             <div className="min-w-0">
@@ -267,10 +267,10 @@ export default function RecurringDepositTableModal({
         <div className="flex flex-col lg:flex-row gap-3.5 flex-1 min-h-0 overflow-hidden">
           
           {/* Left Table Panel Card */}
-          <div className="flex-1 bg-base-100/95 backdrop-blur-md rounded-3xl border border-base-300/60 shadow-xl flex flex-col overflow-hidden h-full min-w-0">
+          <div className="flex-1 bg-base-100/95 backdrop-blur-md rounded-3xl border border-base-content/8 shadow-xl flex flex-col overflow-hidden h-full min-w-0">
             
             {/* Toolbar: Search + Year Collapse + Add Action */}
-            <div className="px-4 sm:px-5 py-2.5 bg-base-100 border-b border-base-200 flex flex-wrap items-center justify-between gap-3 text-xs shrink-0">
+            <div className="px-4 sm:px-5 py-2.5 bg-base-100 border-b border-base-content/8 flex flex-wrap items-center justify-between gap-3 text-xs shrink-0">
               
               {/* Left Side: Search Bar & Count Badge */}
               <div className="flex items-center gap-2.5 flex-1 min-w-[220px] max-w-md">
@@ -305,7 +305,7 @@ export default function RecurringDepositTableModal({
                   <button
                     type="button"
                     onClick={toggleAllYears}
-                    className="btn btn-ghost btn-xs rounded-xl gap-1.5 font-bold text-xs h-8 min-h-0 text-base-content/80 hover:text-base-content hover:bg-base-200 border border-base-300 shadow-2xs cursor-pointer"
+                    className="btn btn-ghost btn-xs rounded-xl gap-1.5 font-bold text-xs h-8 min-h-0 text-base-content/80 hover:text-base-content hover:bg-base-200 border border-base-content/8 shadow-2xs cursor-pointer"
                     title={collapsedYears.size === yearGroups.length ? "Expand All Year Groups" : "Collapse All Year Groups"}
                   >
                     {collapsedYears.size === yearGroups.length ? (
@@ -337,7 +337,7 @@ export default function RecurringDepositTableModal({
             {/* Scrollable Table Container */}
             <div className="flex-1 overflow-auto [scrollbar-width:thin] bg-base-100 min-h-0">
               {filteredTxns.length === 0 ? (
-                <div className="py-16 text-center bg-base-100 rounded-2xl border border-base-200/80 shadow-sm my-6 max-w-md mx-auto">
+                <div className="py-16 text-center bg-base-100 rounded-2xl border border-base-content/8 shadow-sm my-6 max-w-md mx-auto">
                   <div className="p-3.5 rounded-2xl w-fit mx-auto mb-3 bg-primary/10 text-primary">
                     <PiggyBank size={28} />
                   </div>
@@ -361,10 +361,10 @@ export default function RecurringDepositTableModal({
               ) : (
                 <table className="table table-xs w-full text-xs table-auto border-collapse">
                   <thead className="sticky top-0 z-30 shadow-xs">
-                    <tr className="border-b border-base-300 text-[10px] font-bold text-base-content/70 uppercase tracking-wider select-none bg-base-200">
+                    <tr className="border-b border-base-content/8 text-[10px] font-bold text-base-content/70 uppercase tracking-wider select-none bg-base-200">
                       
                       {/* Installment / Term Header */}
-                      <th className="sticky top-0 z-30 py-2.5 px-3 text-left font-bold bg-base-200 border-b border-base-300 w-36">
+                      <th className="sticky top-0 z-30 py-2.5 px-3 text-left font-bold bg-base-200 border-b border-base-content/8 w-36">
                         <button
                           type="button"
                           onClick={() => handleSort("term")}
@@ -386,7 +386,7 @@ export default function RecurringDepositTableModal({
                       </th>
 
                       {/* Date Header */}
-                      <th className="sticky top-0 z-30 py-2.5 px-3 text-left font-bold bg-base-200 border-b border-base-300 w-36">
+                      <th className="sticky top-0 z-30 py-2.5 px-3 text-left font-bold bg-base-200 border-b border-base-content/8 w-36">
                         <button
                           type="button"
                           onClick={() => handleSort("date")}
@@ -408,7 +408,7 @@ export default function RecurringDepositTableModal({
                       </th>
 
                       {/* Amount Deposited Header */}
-                      <th className="sticky top-0 z-30 py-2.5 px-3 text-right font-bold bg-base-200 border-b border-base-300 w-40">
+                      <th className="sticky top-0 z-30 py-2.5 px-3 text-right font-bold bg-base-200 border-b border-base-content/8 w-40">
                         <button
                           type="button"
                           onClick={() => handleSort("amount")}
@@ -430,7 +430,7 @@ export default function RecurringDepositTableModal({
                       </th>
 
                       {/* Notes Header */}
-                      <th className="sticky top-0 z-30 py-2.5 px-3 text-left font-bold bg-base-200 border-b border-base-300">
+                      <th className="sticky top-0 z-30 py-2.5 px-3 text-left font-bold bg-base-200 border-b border-base-content/8">
                         <div className="flex items-center gap-1 text-base-content/70">
                           <FileText size={11} className="text-base-content/50" />
                           <span>Notes / Remarks</span>
@@ -438,7 +438,7 @@ export default function RecurringDepositTableModal({
                       </th>
 
                       {/* Actions Header */}
-                      <th className="sticky top-0 z-30 py-2.5 px-3 text-center font-bold bg-base-200 border-b border-base-300 w-24">
+                      <th className="sticky top-0 z-30 py-2.5 px-3 text-center font-bold bg-base-200 border-b border-base-content/8 w-24">
                         <span>Actions</span>
                       </th>
                     </tr>
@@ -454,7 +454,7 @@ export default function RecurringDepositTableModal({
                           {/* Year Collapsible Header Ribbon */}
                           <tr
                             onClick={() => toggleYearCollapse(group.year)}
-                            className="bg-base-200/70 hover:bg-base-200 text-base-content font-bold cursor-pointer select-none transition-colors border-y border-base-300/80"
+                            className="bg-base-200/70 hover:bg-base-200 text-base-content font-bold cursor-pointer select-none transition-colors border-y border-base-content/6"
                           >
                             <td colSpan={5} className="py-2 px-3">
                               <div className="flex items-center justify-between">
@@ -553,7 +553,7 @@ export default function RecurringDepositTableModal({
               <button
                 type="button"
                 onClick={onClose}
-                className="btn btn-xs sm:btn-sm btn-ghost border border-base-300 rounded-xl px-4 font-bold text-xs shrink-0 cursor-pointer"
+                className="btn btn-xs sm:btn-sm btn-ghost border border-base-content/8 rounded-xl px-4 font-bold text-xs shrink-0 cursor-pointer"
               >
                 Close
               </button>
@@ -565,10 +565,10 @@ export default function RecurringDepositTableModal({
           {/* RIGHT PANEL: 1 POPUP CARD WITH 2 FACES (DEPOSIT & WITHDRAWAL)     */}
           {/* ================================================================= */}
           <div className="w-full lg:w-84 xl:w-96 flex flex-col shrink-0 h-full overflow-hidden">
-            <div className="bg-base-100/95 backdrop-blur-md rounded-3xl border border-base-300/60 shadow-xl flex flex-col h-full overflow-hidden justify-between">
+            <div className="bg-base-100/95 backdrop-blur-md rounded-3xl border border-base-content/8 shadow-xl flex flex-col h-full overflow-hidden justify-between">
               
               {/* Top Navigation & Face Indicator Header with 2 Arrow Controls */}
-              <div className="p-3.5 sm:p-4 border-b border-base-200/80 bg-base-100 flex items-center justify-between gap-2 shrink-0">
+              <div className="p-3.5 sm:p-4 border-b border-base-content/8/80 bg-base-100 flex items-center justify-between gap-2 shrink-0">
                 <div className="flex items-center gap-2 min-w-0">
                   <div className={`w-7 h-7 rounded-xl flex items-center justify-center font-bold shrink-0 transition-colors ${
                     activeFace === 1 ? "bg-amber-500/15 text-amber-600 dark:text-amber-400" : "bg-primary/15 text-primary"
@@ -586,7 +586,7 @@ export default function RecurringDepositTableModal({
                 </div>
 
                 {/* 2 Navigation Arrows (Left & Right) to switch between faces */}
-                <div className="flex items-center gap-1 bg-base-200/80 p-1 rounded-xl border border-base-300/60 shrink-0">
+                <div className="flex items-center gap-1 bg-base-200/80 p-1 rounded-xl border border-base-content/8 shrink-0">
                   <button
                     type="button"
                     onClick={() => setActiveFace(0)}
@@ -650,7 +650,7 @@ export default function RecurringDepositTableModal({
 
                       {/* 4 Stats Grid */}
                       <div className="grid grid-cols-2 gap-2">
-                        <div className="p-2.5 bg-base-200/50 rounded-xl border border-base-200">
+                        <div className="p-2.5 bg-base-200/50 rounded-xl border border-base-content/6">
                           <span className="text-[9px] font-bold text-base-content/50 uppercase block flex items-center gap-1">
                             <TrendingUp size={10} className="text-primary" /> Interest Rate
                           </span>
@@ -658,7 +658,7 @@ export default function RecurringDepositTableModal({
                             {rd.interestRate}% p.a.
                           </span>
                         </div>
-                        <div className="p-2.5 bg-base-200/50 rounded-xl border border-base-200">
+                        <div className="p-2.5 bg-base-200/50 rounded-xl border border-base-content/6">
                           <span className="text-[9px] font-bold text-base-content/50 uppercase block flex items-center gap-1">
                             <Clock size={10} className="text-primary" /> RD Tenure
                           </span>
@@ -666,7 +666,7 @@ export default function RecurringDepositTableModal({
                             {rd.tenureText || calculations.tenureText}
                           </span>
                         </div>
-                        <div className="p-2.5 bg-base-200/50 rounded-xl border border-base-200">
+                        <div className="p-2.5 bg-base-200/50 rounded-xl border border-base-content/6">
                           <span className="text-[9px] font-bold text-base-content/50 uppercase block flex items-center gap-1">
                             <Coins size={10} className="text-primary" /> Avg Installment
                           </span>
@@ -674,7 +674,7 @@ export default function RecurringDepositTableModal({
                             ₹{Math.round(avgInstallment).toLocaleString("en-IN")}
                           </span>
                         </div>
-                        <div className="p-2.5 bg-base-200/50 rounded-xl border border-base-200">
+                        <div className="p-2.5 bg-base-200/50 rounded-xl border border-base-content/6">
                           <span className="text-[9px] font-bold text-base-content/50 uppercase block flex items-center gap-1">
                             <Layers size={10} className="text-primary" /> Compounding
                           </span>
@@ -685,7 +685,7 @@ export default function RecurringDepositTableModal({
                       </div>
 
                       {/* Timeline */}
-                      <div className="p-2.5 bg-base-200/30 rounded-xl border border-base-200/60 text-[10.5px] space-y-1">
+                      <div className="p-2.5 bg-base-200/30 rounded-xl border border-base-content/6/60 text-[10.5px] space-y-1">
                         <div className="flex justify-between">
                           <span className="text-base-content/50">Start Date:</span>
                           <span className="font-mono font-bold text-base-content">{dayjs(rd.startDate).format("DD MMM YYYY")}</span>
@@ -706,7 +706,7 @@ export default function RecurringDepositTableModal({
                     <button
                       type="button"
                       onClick={() => setActiveFace(1)}
-                      className="w-full py-2 px-3 rounded-xl bg-base-200/80 hover:bg-base-200 text-base-content/80 hover:text-base-content border border-base-300/60 text-xs font-bold flex items-center justify-between transition-colors cursor-pointer"
+                      className="w-full py-2 px-3 rounded-xl bg-base-200/80 hover:bg-base-200 text-base-content/80 hover:text-base-content border border-base-content/8 text-xs font-bold flex items-center justify-between transition-colors cursor-pointer"
                     >
                       <span>View Settlement / Withdrawal Details</span>
                       <ChevronRight size={14} className="text-primary" />
@@ -741,7 +741,7 @@ export default function RecurringDepositTableModal({
 
                       {/* 4 Stats Grid */}
                       <div className="grid grid-cols-2 gap-2">
-                        <div className="p-2.5 bg-base-200/50 rounded-xl border border-base-200">
+                        <div className="p-2.5 bg-base-200/50 rounded-xl border border-base-content/6">
                           <span className="text-[9px] font-bold text-base-content/50 uppercase block flex items-center gap-1">
                             <Coins size={10} className="text-amber-500" /> Withdrawal Amt
                           </span>
@@ -749,7 +749,7 @@ export default function RecurringDepositTableModal({
                             {rd.isWithdrawn ? `₹${Number(rd.totalPayout || 0).toLocaleString("en-IN")}` : "—"}
                           </span>
                         </div>
-                        <div className="p-2.5 bg-base-200/50 rounded-xl border border-base-200">
+                        <div className="p-2.5 bg-base-200/50 rounded-xl border border-base-content/6">
                           <span className="text-[9px] font-bold text-base-content/50 uppercase block flex items-center gap-1">
                             <Percent size={10} className="text-rose-500" /> Penalties
                           </span>
@@ -757,7 +757,7 @@ export default function RecurringDepositTableModal({
                             {rd.isWithdrawn ? `₹${Number(rd.penalty || 0).toLocaleString("en-IN")}` : "₹0"}
                           </span>
                         </div>
-                        <div className="p-2.5 bg-base-200/50 rounded-xl border border-base-200">
+                        <div className="p-2.5 bg-base-200/50 rounded-xl border border-base-content/6">
                           <span className="text-[9px] font-bold text-base-content/50 uppercase block flex items-center gap-1">
                             <TrendingUp size={10} className="text-emerald-500" /> Net Profit/Loss
                           </span>
@@ -767,7 +767,7 @@ export default function RecurringDepositTableModal({
                             {rd.isWithdrawn ? `${Number(rd.realizedGain || 0) >= 0 ? '+' : ''}₹${Number(rd.realizedGain || 0).toLocaleString("en-IN")} (${rd.realizedReturnPercent}%)` : "—"}
                           </span>
                         </div>
-                        <div className="p-2.5 bg-base-200/50 rounded-xl border border-base-200">
+                        <div className="p-2.5 bg-base-200/50 rounded-xl border border-base-content/6">
                           <span className="text-[9px] font-bold text-base-content/50 uppercase block flex items-center gap-1">
                             <Layers size={10} className="text-primary" /> Status
                           </span>
@@ -778,7 +778,7 @@ export default function RecurringDepositTableModal({
                       </div>
 
                       {/* Timeline */}
-                      <div className="p-2.5 bg-base-200/30 rounded-xl border border-base-200/60 text-[10.5px] space-y-1">
+                      <div className="p-2.5 bg-base-200/30 rounded-xl border border-base-content/6/60 text-[10.5px] space-y-1">
                         <div className="flex justify-between">
                           <span className="text-base-content/50">Withdrawal Date:</span>
                           <span className="font-mono font-bold text-base-content">
@@ -797,7 +797,7 @@ export default function RecurringDepositTableModal({
                     <button
                       type="button"
                       onClick={() => setActiveFace(0)}
-                      className="w-full py-2 px-3 rounded-xl bg-base-200/80 hover:bg-base-200 text-base-content/80 hover:text-base-content border border-base-300/60 text-xs font-bold flex items-center justify-between transition-colors cursor-pointer"
+                      className="w-full py-2 px-3 rounded-xl bg-base-200/80 hover:bg-base-200 text-base-content/80 hover:text-base-content border border-base-content/8 text-xs font-bold flex items-center justify-between transition-colors cursor-pointer"
                     >
                       <ChevronLeft size={14} className="text-primary" />
                       <span>View Deposited Summary</span>

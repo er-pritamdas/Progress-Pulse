@@ -175,6 +175,8 @@ export default function InvTableEntry() {
   const [loadingPfWithdrawals, setLoadingPfWithdrawals] = useState(true);
   const [isAddPfWithdrawalModalOpen, setIsAddPfWithdrawalModalOpen] = useState(false);
   const [editingPfWithdrawal, setEditingPfWithdrawal] = useState(null);
+  // PF mobile: company bottom-sheet
+  const [pfBottomSheetCompany, setPfBottomSheetCompany] = useState(null); // company name string or null
 
   // Mobile Phone View Filter Drawer State
   const [isMobileInvFilterOpen, setIsMobileInvFilterOpen] = useState(false);
@@ -7598,7 +7600,7 @@ export default function InvTableEntry() {
           return (
             <div className="space-y-3 px-2.5 w-full max-w-full animate-in fade-in duration-200">
               {/* 1. Fintech Hero Portfolio Banner */}
-              <div className="bg-gradient-to-br from-base-100 to-base-200/90 rounded-2xl border border-base-200/90 p-3.5 shadow-sm space-y-3">
+              <div className="bg-gradient-to-br from-base-100 to-base-200/90 rounded-2xl border border-base-content/8 dark:border-base-content/8 p-3.5 shadow-sm space-y-3">
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <span className="text-[10px] font-black uppercase tracking-wider text-base-content/60 flex items-center gap-1.5">
@@ -7623,20 +7625,20 @@ export default function InvTableEntry() {
                 </div>
 
                 {/* Sub-Metric 3-Pack */}
-                <div className="grid grid-cols-3 gap-2 pt-2.5 border-t border-base-content/10">
-                  <div className="bg-base-100/70 p-2 rounded-xl border border-base-content/5">
+                <div className="grid grid-cols-3 gap-2 pt-2.5 border-t border-base-content/8 dark:border-base-content/8">
+                  <div className="bg-base-100/70 p-2 rounded-xl border border-base-content/6 dark:border-base-content/6">
                     <div className="text-[9.5px] font-bold text-base-content/60 uppercase">Active Plans</div>
                     <div className="text-xs font-black font-mono text-success truncate">
                       {activeCount} <span className="text-[9.5px] font-semibold text-base-content/50">running</span>
                     </div>
                   </div>
-                  <div className="bg-base-100/70 p-2 rounded-xl border border-base-content/5">
+                  <div className="bg-base-100/70 p-2 rounded-xl border border-base-content/6 dark:border-base-content/6">
                     <div className="text-[9.5px] font-bold text-base-content/60 uppercase">Deposited</div>
                     <div className="text-xs font-black font-mono text-primary truncate">
                       {hideRdNumbers ? "••••" : `₹${Math.round(totalInvestedSoFar).toLocaleString("en-IN")}`}
                     </div>
                   </div>
-                  <div className="bg-base-100/70 p-2 rounded-xl border border-base-content/5">
+                  <div className="bg-base-100/70 p-2 rounded-xl border border-base-content/6 dark:border-base-content/6">
                     <div className="text-[9.5px] font-bold text-base-content/60 uppercase">Closed Plans</div>
                     <div className="text-xs font-black font-mono text-base-content truncate">
                       {withdrawnCount} <span className="text-[9.5px] font-semibold text-base-content/50">settled</span>
@@ -7645,8 +7647,11 @@ export default function InvTableEntry() {
                 </div>
               </div>
 
-              {/* 2. Inline Search & Organize Toolbar */}
-              <div className="flex items-center gap-2">
+              {/* 2. Sticky Inline Search & Organize Toolbar */}
+              <div
+                className="sticky z-30 bg-base-100/95 dark:bg-base-900/95 backdrop-blur-md py-2 -mx-2.5 px-2.5 border-b border-base-content/8 dark:border-base-content/8 shadow-xs flex items-center gap-2 transition-all"
+                style={{ top: `${mobileHeaderHeight}px` }}
+              >
                 <div className="relative flex-1">
                   <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-base-content/40" />
                   <input
@@ -7654,13 +7659,13 @@ export default function InvTableEntry() {
                     placeholder="Search bank, RD number, scheme..."
                     value={rdSearchTerm}
                     onChange={(e) => setRdSearchTerm(e.target.value)}
-                    className="input input-xs h-8 pl-8 pr-8 w-full rounded-xl bg-base-100 border border-base-200 text-xs placeholder:text-base-content/40 focus:border-primary"
+                    className="input input-xs h-8 pl-8 pr-8 w-full rounded-xl bg-base-200/60 dark:bg-base-800/60 border border-base-content/8 dark:border-base-content/8 text-xs placeholder:text-base-content/40 focus:border-primary"
                   />
                   {rdSearchTerm && (
                     <button
                       type="button"
                       onClick={() => setRdSearchTerm("")}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-base-content/40 hover:text-base-content"
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-base-content/40 hover:text-base-content p-0.5 cursor-pointer"
                     >
                       <X size={12} />
                     </button>
@@ -7671,7 +7676,7 @@ export default function InvTableEntry() {
                 <button
                   type="button"
                   onClick={() => setIsOrganizeRdModalOpen(true)}
-                  className="btn btn-xs h-8 px-2.5 rounded-xl bg-base-100 hover:bg-base-200 border border-base-200 shadow-2xs flex items-center gap-1.5 font-bold text-xs text-base-content shrink-0 cursor-pointer"
+                  className="btn btn-xs h-8 px-2.5 rounded-xl bg-base-200/80 dark:bg-base-800/80 hover:bg-base-200 border border-base-content/10 dark:border-base-content/10 shadow-2xs flex items-center gap-1.5 font-bold text-xs text-base-content shrink-0 cursor-pointer"
                   title="Organize RD Groups"
                 >
                   <FolderTree size={13} className="text-primary" />
@@ -7685,7 +7690,7 @@ export default function InvTableEntry() {
                   <span className="loading loading-spinner loading-md text-primary"></span>
                 </div>
               ) : rdData.length === 0 ? (
-                <div className="bg-base-100 p-8 rounded-2xl border border-base-200 text-center shadow-xs">
+                <div className="bg-base-100 p-8 rounded-2xl border border-base-content/10 dark:border-base-content/10 text-center shadow-xs">
                   <PiggyBank size={32} className="mx-auto text-primary mb-2" />
                   <h3 className="font-bold text-xs text-base-content">No Recurring Deposits Yet</h3>
                   <p className="text-[11px] text-base-content/60 mt-0.5">Track your recurring monthly savings.</p>
@@ -7699,7 +7704,7 @@ export default function InvTableEntry() {
                   </button>
                 </div>
               ) : filteredRecurringDeposits.length === 0 ? (
-                <div className="bg-base-100 p-8 rounded-2xl border border-base-200 text-center shadow-xs">
+                <div className="bg-base-100 p-8 rounded-2xl border border-base-content/10 dark:border-base-content/10 text-center shadow-xs">
                   <Search size={28} className="mx-auto text-primary mb-2" />
                   <h3 className="font-bold text-xs text-base-content">No RDs Found</h3>
                   <p className="text-[11px] text-base-content/60 mt-0.5">No records matched "{rdSearchTerm}".</p>
@@ -7718,9 +7723,11 @@ export default function InvTableEntry() {
 
                     return (
                       <div key={group.id} className="space-y-2.5">
+                        {/* Sticky Collapsible Group Header */}
                         <div
                           onClick={() => toggleRdGroupCollapse(group.id)}
-                          className="flex items-center justify-between px-3.5 py-2.5 bg-base-100 rounded-xl border border-base-200/90 shadow-2xs cursor-pointer select-none"
+                          className="sticky z-20 bg-base-100/95 dark:bg-base-900/95 backdrop-blur-md flex items-center justify-between px-3.5 py-2.5 rounded-xl border border-base-content/8 dark:border-base-content/8 shadow-2xs cursor-pointer select-none transition-all"
+                          style={{ top: `${mobileHeaderHeight + 48}px` }}
                         >
                           <div className="flex items-center gap-2 min-w-0">
                             <div className={`p-1 rounded-lg bg-primary/10 text-primary transition-transform duration-200 shrink-0 ${isGroupCollapsed ? '-rotate-90' : 'rotate-0'}`}>
@@ -8044,225 +8051,429 @@ export default function InvTableEntry() {
         {/* ================================================================ */}
         {/* TAB 6: PROVIDENT FUND MOBILE CONTENT - FINTECH FEED              */}
         {/* ================================================================ */}
-        {activeTab === "pf" && (
-          <div className="space-y-3 px-2.5 w-full max-w-full animate-in fade-in duration-200">
-            {/* 1. Fintech Hero Portfolio Banner */}
-            <div className="bg-gradient-to-br from-success/10 to-base-100 p-4 rounded-2xl border border-success/30 shadow-sm space-y-3">
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-success flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-success animate-pulse"></span>
-                    Available PF Balance
-                  </span>
-                  <div className="text-2xl font-black text-success font-mono tracking-tight mt-0.5">
-                    ₹{availablePfBalance.toLocaleString("en-IN")}
+        {activeTab === "pf" && (() => {
+          // ── Group salary entries by company ──────────────────────────────
+          const pfByCompany = {};
+          salaryData.forEach((item) => {
+            const co = item.company || "Unknown";
+            if (!pfByCompany[co]) pfByCompany[co] = [];
+            pfByCompany[co].push(item);
+          });
+
+          // All unique years in entire salaryData (for sticky year filter tabs)
+          const pfAllYears = Array.from(
+            new Set(salaryData.map((s) => s.month?.slice(0, 4)).filter(Boolean))
+          ).sort();
+
+          // Build company summaries applying search + year filter
+          const pfCompanyCards = Object.entries(pfByCompany)
+            .map(([company, entries]) => {
+              // Apply search
+              if (pfSearchTerm) {
+                const q = pfSearchTerm.toLowerCase();
+                if (!company.toLowerCase().includes(q)) return null;
+              }
+              // Apply year filter
+              const filteredEntries =
+                pfYearFilter === "all"
+                  ? entries
+                  : entries.filter((e) => e.month?.slice(0, 4) === pfYearFilter);
+
+              if (filteredEntries.length === 0) return null;
+
+              const totalEr = filteredEntries.reduce((s, e) => s + (Number(e.erPf) || 0), 0);
+              const totalEe = filteredEntries.reduce((s, e) => {
+                const ee = e.eePf !== undefined && e.eePf !== null && e.eePf !== "" ? Number(e.eePf) || 0 : Number(e.erPf) || 0;
+                return s + ee;
+              }, 0);
+              const totalPf = totalEr + totalEe;
+              const sortedEntries = [...filteredEntries].sort((a, b) => (a.month || "").localeCompare(b.month || ""));
+              const startDate = sortedEntries[0]?.month;
+              const endDate = sortedEntries[sortedEntries.length - 1]?.month;
+
+              return { company, entries: sortedEntries, totalEr, totalEe, totalPf, startDate, endDate };
+            })
+            .filter(Boolean);
+
+          // Entries for company bottom-sheet
+          const bottomSheetEntries = pfBottomSheetCompany
+            ? (pfByCompany[pfBottomSheetCompany] || []).slice().sort((a, b) => (a.month || "").localeCompare(b.month || ""))
+            : [];
+
+          return (
+            <div className="space-y-3 px-2.5 w-full max-w-full animate-in fade-in duration-200">
+              {/* 1. Hero Banner */}
+              <div className="bg-gradient-to-br from-success/10 to-base-100 p-4 rounded-2xl border border-base-content/8 dark:border-base-content/8 shadow-sm space-y-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-success flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-success animate-pulse"></span>
+                      Available PF Balance
+                    </span>
+                    <div className="text-2xl font-black text-success font-mono tracking-tight mt-0.5">
+                      ₹{availablePfBalance.toLocaleString("en-IN")}
+                    </div>
+                  </div>
+                  <div className="flex flex-col items-end gap-1">
+                    <span className="badge badge-success badge-soft font-bold font-mono text-xs px-2.5 py-1 rounded-xl">
+                      Auto-synced
+                    </span>
+                    <span className="text-[10px] font-semibold text-base-content/50">
+                      {salaryCompanies.length} {salaryCompanies.length === 1 ? "Company" : "Companies"}
+                    </span>
                   </div>
                 </div>
 
-                <div className="flex flex-col items-end gap-1">
-                  <span className="badge badge-success badge-soft font-bold font-mono text-xs px-2.5 py-1 rounded-xl">
-                    Auto-synced
-                  </span>
-                  <span className="text-[10px] font-semibold text-base-content/50">
-                    EPF & PPF Accumulation
-                  </span>
+                {/* Sub-Metric 3-Pack */}
+                <div className="grid grid-cols-3 gap-2 pt-2.5 border-t border-base-content/8 dark:border-base-content/8">
+                  <div className="bg-base-100/70 p-2 rounded-xl border border-base-content/6 dark:border-base-content/6">
+                    <span className="text-[9.5px] font-bold text-base-content/60 uppercase block">Employer PF</span>
+                    <div className="text-xs font-black text-primary font-mono truncate">
+                      ₹{pfSummary.totalEmployerShare.toLocaleString("en-IN")}
+                    </div>
+                  </div>
+                  <div className="bg-base-100/70 p-2 rounded-xl border border-base-content/6 dark:border-base-content/6">
+                    <span className="text-[9.5px] font-bold text-base-content/60 uppercase block">Employee PF</span>
+                    <div className="text-xs font-black text-info font-mono truncate">
+                      ₹{pfSummary.totalEmployeeShare.toLocaleString("en-IN")}
+                    </div>
+                  </div>
+                  <div className="bg-base-100/70 p-2 rounded-xl border border-base-content/6 dark:border-base-content/6">
+                    <span className="text-[9.5px] font-bold text-base-content/60 uppercase block">Withdrawn</span>
+                    <div className="text-xs font-black text-error font-mono truncate">
+                      ₹{totalPfWithdrawn.toLocaleString("en-IN")}
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              {/* Sub-Metric 3-Pack */}
-              <div className="grid grid-cols-3 gap-2 pt-2.5 border-t border-success/20">
-                <div className="bg-base-100/70 p-2 rounded-xl border border-base-content/5">
-                  <span className="text-[9.5px] font-bold text-base-content/60 uppercase block">Employer PF</span>
-                  <div className="text-xs font-black text-primary font-mono truncate">
-                    ₹{pfSummary.totalEmployerShare.toLocaleString("en-IN")}
-                  </div>
-                </div>
-                <div className="bg-base-100/70 p-2 rounded-xl border border-base-content/5">
-                  <span className="text-[9.5px] font-bold text-base-content/60 uppercase block">Employee PF</span>
-                  <div className="text-xs font-black text-info font-mono truncate">
-                    ₹{pfSummary.totalEmployeeShare.toLocaleString("en-IN")}
-                  </div>
-                </div>
-                <div className="bg-base-100/70 p-2 rounded-xl border border-base-content/5">
-                  <span className="text-[9.5px] font-bold text-base-content/60 uppercase block">Withdrawn</span>
-                  <div className="text-xs font-black text-error font-mono truncate">
-                    ₹{totalPfWithdrawn.toLocaleString("en-IN")}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* 2. Subtab Switcher & Quick Action */}
-            <div className="flex items-center justify-between gap-2">
-              <div className="grid grid-cols-2 gap-1.5 bg-base-200/80 p-1 rounded-xl flex-1 border border-base-300/50">
-                <button
-                  type="button"
-                  onClick={() => setPfSubTab("deposits")}
-                  className={`py-1.5 px-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                    pfSubTab === "deposits"
-                      ? "bg-primary text-primary-content shadow-xs font-black"
-                      : "text-base-content/70 hover:text-base-content"
-                  }`}
-                >
-                  Deposited ({salaryData.length})
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPfSubTab("withdrawals")}
-                  className={`py-1.5 px-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                    pfSubTab === "withdrawals"
-                      ? "bg-primary text-primary-content shadow-xs font-black"
-                      : "text-base-content/70 hover:text-base-content"
-                  }`}
-                >
-                  Withdrawals ({pfWithdrawals.length})
-                </button>
-              </div>
-
-              {pfSubTab === "withdrawals" && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEditingPfWithdrawal(null);
-                    setIsAddPfWithdrawalModalOpen(true);
-                  }}
-                  disabled={availablePfBalance <= 0}
-                  className="btn btn-xs h-8 btn-primary font-bold rounded-xl gap-1 cursor-pointer shrink-0"
-                >
-                  <Plus size={13} />
-                  <span>Add</span>
-                </button>
-              )}
-            </div>
-
-            {/* Subtab 1: Deposited PF Cards */}
-            {pfSubTab === "deposits" && (
-              <div className="space-y-2.5">
-                {filteredPf.length === 0 ? (
-                  <div className="bg-base-100 p-8 rounded-2xl border border-base-200 text-center shadow-xs">
-                    <Percent size={28} className="mx-auto text-primary mb-2" />
-                    <h3 className="font-bold text-xs text-base-content">No PF Deposits Recorded</h3>
-                    <p className="text-[11px] text-base-content/60 mt-0.5">Add salary entries to sync PF contributions.</p>
-                  </div>
-                ) : (
-                  filteredPf.map((item, idx) => {
-                    const erPf = Number(item.erPf || 0);
-                    const eePf = Number(item.eePf || item.erPf || 0);
-                    const totalPf = erPf + eePf;
-
-                    return (
-                      <div
-                        key={item.id || item._id || idx}
-                        className="bg-base-100 rounded-2xl border border-base-200 p-3.5 shadow-2xs space-y-2"
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <CompanyLogo name={item.company} size="w-7 h-7" type="company" />
-                            <div className="min-w-0">
-                              <span className="font-bold text-xs text-base-content truncate block">{item.company}</span>
-                              <span className="text-[10px] text-base-content/60">{dayjs(item.month).format("MMM YYYY")}</span>
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <span className="text-[9.5px] uppercase font-bold text-base-content/50 block">Monthly PF</span>
-                            <span className="text-xs font-black text-primary font-mono">₹{totalPf.toLocaleString("en-IN")}</span>
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-2 text-[11px] bg-base-200/50 p-2 rounded-xl border border-base-200">
-                          <div>
-                            <span className="text-base-content/60 block">Employer:</span>
-                            <span className="font-bold font-mono text-primary">₹{erPf.toLocaleString("en-IN")}</span>
-                          </div>
-                          <div>
-                            <span className="text-base-content/60 block">Employee:</span>
-                            <span className="font-bold font-mono text-info">₹{eePf.toLocaleString("en-IN")}</span>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            )}
-
-            {/* Subtab 2: Withdrawals Cards */}
-            {pfSubTab === "withdrawals" && (
-              <div className="space-y-2.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-base-content/70">Withdrawal History</span>
+              {/* 2. Subtab Switcher */}
+              <div className="flex items-center justify-between gap-2">
+                <div className="grid grid-cols-2 gap-1.5 bg-base-200/80 p-1 rounded-xl flex-1 border border-base-content/8 dark:border-base-content/8">
                   <button
                     type="button"
-                    onClick={() => {
-                      setEditingPfWithdrawal(null);
-                      setIsAddPfWithdrawalModalOpen(true);
-                    }}
-                    disabled={availablePfBalance <= 0}
-                    className="btn btn-xs btn-primary font-bold rounded-xl gap-1 cursor-pointer"
+                    onClick={() => setPfSubTab("deposits")}
+                    className={`py-1.5 px-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      pfSubTab === "deposits"
+                        ? "bg-primary text-primary-content shadow-xs font-black"
+                        : "text-base-content/70 hover:text-base-content"
+                    }`}
                   >
-                    <Plus size={12} />
-                    <span>Add Withdrawal</span>
+                    Deposited ({salaryData.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPfSubTab("withdrawals")}
+                    className={`py-1.5 px-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      pfSubTab === "withdrawals"
+                        ? "bg-primary text-primary-content shadow-xs font-black"
+                        : "text-base-content/70 hover:text-base-content"
+                    }`}
+                  >
+                    Withdrawals ({pfWithdrawals.length})
                   </button>
                 </div>
 
-                {filteredPfWithdrawals.length === 0 ? (
-                  <div className="bg-base-100 p-8 rounded-2xl border border-base-200 text-center shadow-xs">
-                    <ArrowUpRight size={28} className="mx-auto text-error mb-2" />
-                    <h3 className="font-bold text-xs text-base-content">No PF Withdrawals</h3>
-                    <p className="text-[11px] text-base-content/60 mt-0.5">
-                      You haven't recorded any PF withdrawals yet.
-                    </p>
-                  </div>
-                ) : (
-                  filteredPfWithdrawals.map((item, idx) => (
-                    <div
-                      key={item.id || item._id || idx}
-                      className="bg-base-100 rounded-2xl border border-base-200 p-3.5 shadow-2xs space-y-2"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <span className="badge badge-xs badge-error badge-soft font-bold text-[10px]">
-                            {item.reason || "PF Withdrawal"}
-                          </span>
-                          <span className="text-[10px] text-base-content/60 block mt-0.5">
-                            {formatDateDDMMMYYYY(item.date)}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <span className="text-sm font-black text-error font-mono mr-1">
-                            -₹{Number(item.amount || 0).toLocaleString("en-IN")}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setEditingPfWithdrawal(item);
-                              setIsAddPfWithdrawalModalOpen(true);
-                            }}
-                            className="btn btn-ghost btn-xs btn-square text-primary cursor-pointer"
-                          >
-                            <Edit size={13} />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDeletePfWithdrawal(item.id || item._id)}
-                            className="btn btn-ghost btn-xs btn-square text-error cursor-pointer"
-                          >
-                            <Trash2 size={13} />
-                          </button>
-                        </div>
-                      </div>
-                      {item.notes && (
-                        <p className="text-[10px] text-base-content/60 italic bg-base-200/50 p-1.5 rounded-lg">
-                          "{item.notes}"
-                        </p>
-                      )}
-                    </div>
-                  ))
+                {pfSubTab === "withdrawals" && (
+                  <button
+                    type="button"
+                    onClick={() => { setEditingPfWithdrawal(null); setIsAddPfWithdrawalModalOpen(true); }}
+                    disabled={availablePfBalance <= 0}
+                    className="btn btn-xs h-8 btn-primary font-bold rounded-xl gap-1 cursor-pointer shrink-0"
+                  >
+                    <Plus size={13} />
+                    <span>Add</span>
+                  </button>
                 )}
               </div>
-            )}
-          </div>
-        )}
+
+              {/* ── DEPOSITS TAB ─────────────────────────────────────────── */}
+              {pfSubTab === "deposits" && (
+                <>
+                  {/* 3. Sticky Search + Year Filter Tabs */}
+                  <div
+                    className="sticky z-30 bg-base-100/95 dark:bg-base-900/95 backdrop-blur-md py-2 -mx-2.5 px-2.5 border-b border-base-content/8 dark:border-base-content/8 shadow-xs space-y-1.5 transition-all"
+                    style={{ top: `${mobileHeaderHeight}px` }}
+                  >
+                    {/* Search bar */}
+                    <div className="relative w-full">
+                      <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-base-content/40" />
+                      <input
+                        type="text"
+                        placeholder="Search company..."
+                        value={pfSearchTerm}
+                        onChange={(e) => setPfSearchTerm(e.target.value)}
+                        className="input input-xs h-8 pl-8 pr-8 w-full rounded-xl bg-base-200/60 dark:bg-base-800/60 border border-base-content/8 dark:border-base-content/8 text-xs placeholder:text-base-content/40 focus:border-success"
+                      />
+                      {pfSearchTerm && (
+                        <button
+                          type="button"
+                          onClick={() => setPfSearchTerm("")}
+                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-base-content/40 hover:text-base-content p-0.5 cursor-pointer"
+                        >
+                          <X size={12} />
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Year filter tabs (scrollable row) */}
+                    {pfAllYears.length > 1 && (
+                      <div className="flex items-center gap-1 overflow-x-auto pb-0.5 no-scrollbar">
+                        <button
+                          type="button"
+                          onClick={() => setPfYearFilter("all")}
+                          className={`shrink-0 px-2.5 py-1 rounded-lg text-[10.5px] font-bold transition-all cursor-pointer ${
+                            pfYearFilter === "all"
+                              ? "bg-success text-white shadow-xs font-black"
+                              : "bg-base-200/70 dark:bg-base-800/70 text-base-content/70 hover:text-base-content border border-base-content/8"
+                          }`}
+                        >
+                          All
+                        </button>
+                        {pfAllYears.map((yr) => (
+                          <button
+                            key={yr}
+                            type="button"
+                            onClick={() => setPfYearFilter(yr)}
+                            className={`shrink-0 px-2.5 py-1 rounded-lg text-[10.5px] font-bold transition-all cursor-pointer ${
+                              pfYearFilter === yr
+                                ? "bg-success text-white shadow-xs font-black"
+                                : "bg-base-200/70 dark:bg-base-800/70 text-base-content/70 hover:text-base-content border border-base-content/8"
+                            }`}
+                          >
+                            {yr}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 4. Company Cards */}
+                  {salaryData.length === 0 ? (
+                    <div className="bg-base-100 p-8 rounded-2xl border border-base-content/8 text-center shadow-xs">
+                      <Percent size={28} className="mx-auto text-primary mb-2" />
+                      <h3 className="font-bold text-xs text-base-content">No PF Deposits Recorded</h3>
+                      <p className="text-[11px] text-base-content/60 mt-0.5">Add salary entries to sync PF contributions.</p>
+                    </div>
+                  ) : pfCompanyCards.length === 0 ? (
+                    <div className="bg-base-100 p-8 rounded-2xl border border-base-content/8 text-center shadow-xs">
+                      <Search size={24} className="mx-auto text-base-content/30 mb-2" />
+                      <h3 className="font-bold text-xs text-base-content">No Results</h3>
+                      <p className="text-[11px] text-base-content/60 mt-0.5">Try changing the search or year filter.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3 pb-4">
+                      {pfCompanyCards.map(({ company, entries: compEntries, totalEr, totalEe, totalPf, startDate, endDate }) => (
+                        <div
+                          key={company}
+                          className="bg-base-100 rounded-2xl border border-base-content/8 dark:border-base-content/8 shadow-2xs overflow-hidden"
+                        >
+                          {/* Card Header Row */}
+                          <div className="p-3.5 space-y-3">
+                            {/* Company identity */}
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                <CompanyLogo name={company} size="w-9 h-9" type="company" />
+                                <div className="min-w-0">
+                                  <span className="font-black text-sm text-base-content truncate block">{company}</span>
+                                  <span className="text-[10px] text-base-content/55 font-medium">
+                                    {dayjs(startDate).format("MMM YYYY")} → {dayjs(endDate).format("MMM YYYY")}
+                                  </span>
+                                </div>
+                              </div>
+
+                              {/* i Button */}
+                              <button
+                                type="button"
+                                onClick={() => setPfBottomSheetCompany(company)}
+                                className="shrink-0 w-8 h-8 rounded-full bg-success/12 text-success border border-success/25 flex items-center justify-center hover:bg-success/20 transition-colors cursor-pointer"
+                                title="View all entries"
+                              >
+                                <Info size={15} />
+                              </button>
+                            </div>
+
+                            {/* 4 metric cards */}
+                            <div className="grid grid-cols-2 gap-2">
+                              <div className="bg-base-200/50 p-2.5 rounded-xl border border-base-content/6 dark:border-base-content/6">
+                                <span className="text-[9.5px] font-bold text-base-content/55 uppercase block mb-0.5">Employer PF</span>
+                                <span className="text-xs font-black text-primary font-mono">₹{totalEr.toLocaleString("en-IN")}</span>
+                              </div>
+                              <div className="bg-base-200/50 p-2.5 rounded-xl border border-base-content/6 dark:border-base-content/6">
+                                <span className="text-[9.5px] font-bold text-base-content/55 uppercase block mb-0.5">Employee PF</span>
+                                <span className="text-xs font-black text-info font-mono">₹{totalEe.toLocaleString("en-IN")}</span>
+                              </div>
+                              <div className="bg-base-200/50 p-2.5 rounded-xl border border-base-content/6 dark:border-base-content/6">
+                                <span className="text-[9.5px] font-bold text-base-content/55 uppercase block mb-0.5">No. of Deposits</span>
+                                <span className="text-xs font-black text-base-content font-mono">{compEntries.length}</span>
+                              </div>
+                              <div className="bg-base-200/50 p-2.5 rounded-xl border border-base-content/6 dark:border-base-content/6">
+                                <span className="text-[9.5px] font-bold text-base-content/55 uppercase block mb-0.5">Total PF</span>
+                                <span className="text-xs font-black text-success font-mono">₹{totalPf.toLocaleString("en-IN")}</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Card Footer */}
+                          <div className="px-3.5 py-2 bg-base-200/30 border-t border-base-content/8 dark:border-base-content/8 flex items-center justify-between">
+                            <span className="text-[10px] text-base-content/55 font-medium">
+                              {dayjs(startDate).format("DD MMM YY")} – {dayjs(endDate).format("DD MMM YY")}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setPfBottomSheetCompany(company)}
+                              className="text-[10.5px] font-bold text-success flex items-center gap-1 cursor-pointer hover:opacity-80"
+                            >
+                              <span>View All Entries</span>
+                              <ChevronDown size={12} className="-rotate-90" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* ── WITHDRAWALS TAB ──────────────────────────────────────── */}
+              {pfSubTab === "withdrawals" && (
+                <div className="space-y-2.5 pb-4">
+                  {filteredPfWithdrawals.length === 0 ? (
+                    <div className="bg-base-100 p-8 rounded-2xl border border-base-content/8 text-center shadow-xs">
+                      <ArrowUpRight size={28} className="mx-auto text-error mb-2" />
+                      <h3 className="font-bold text-xs text-base-content">No PF Withdrawals</h3>
+                      <p className="text-[11px] text-base-content/60 mt-0.5">You haven't recorded any PF withdrawals yet.</p>
+                    </div>
+                  ) : (
+                    filteredPfWithdrawals.map((item, idx) => (
+                      <div
+                        key={item.id || item._id || idx}
+                        className="bg-base-100 rounded-2xl border border-base-content/8 dark:border-base-content/8 p-3.5 shadow-2xs space-y-2"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <span className="badge badge-xs badge-error badge-soft font-bold text-[10px]">
+                              {item.reason || "PF Withdrawal"}
+                            </span>
+                            <span className="text-[10px] text-base-content/60 block mt-0.5">
+                              {formatDateDDMMMYYYY(item.date)}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <span className="text-sm font-black text-error font-mono mr-1">
+                              -₹{Number(item.amount || 0).toLocaleString("en-IN")}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => { setEditingPfWithdrawal(item); setIsAddPfWithdrawalModalOpen(true); }}
+                              className="btn btn-ghost btn-xs btn-square text-primary cursor-pointer"
+                            >
+                              <Edit size={13} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeletePfWithdrawal(item.id || item._id)}
+                              className="btn btn-ghost btn-xs btn-square text-error cursor-pointer"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
+                        </div>
+                        {item.notes && (
+                          <p className="text-[10px] text-base-content/60 italic bg-base-200/50 p-1.5 rounded-lg">
+                            "{item.notes}"
+                          </p>
+                        )}
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+
+              {/* ── COMPANY BOTTOM SHEET ─────────────────────────────────── */}
+              {pfBottomSheetCompany && (
+                <>
+                  {/* Backdrop */}
+                  <div
+                    className="fixed inset-0 z-[99998] bg-black/60 backdrop-blur-sm"
+                    onClick={() => setPfBottomSheetCompany(null)}
+                  />
+                  {/* Sheet */}
+                  <div className="fixed bottom-0 left-0 right-0 z-[99999] bg-base-100 rounded-t-2xl border-t border-base-content/10 dark:border-base-content/10 shadow-2xl animate-in slide-in-from-bottom duration-300 max-h-[85vh] flex flex-col">
+                    {/* Sheet Header */}
+                    <div className="px-4 pt-3 pb-2.5 border-b border-base-content/8 dark:border-base-content/8 bg-base-200/40 shrink-0">
+                      {/* Drag handle */}
+                      <div className="w-10 h-1 bg-base-content/20 rounded-full mx-auto mb-3" />
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <CompanyLogo name={pfBottomSheetCompany} size="w-8 h-8" type="company" />
+                          <div className="min-w-0">
+                            <h3 className="font-black text-sm text-base-content truncate">{pfBottomSheetCompany}</h3>
+                            <p className="text-[10px] text-base-content/55 font-medium">{bottomSheetEntries.length} PF Entries</p>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setPfBottomSheetCompany(null)}
+                          className="btn btn-xs btn-ghost btn-circle rounded-full text-base-content/60 cursor-pointer"
+                        >
+                          <X size={16} />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Sheet Table */}
+                    <div className="flex-1 overflow-y-auto">
+                      {/* Column headers */}
+                      <div className="sticky top-0 grid grid-cols-4 gap-0 bg-base-200/80 px-4 py-2 border-b border-base-content/8 dark:border-base-content/8 z-10">
+                        <span className="text-[9.5px] font-extrabold uppercase tracking-wider text-base-content/55">Month</span>
+                        <span className="text-[9.5px] font-extrabold uppercase tracking-wider text-base-content/55 text-right">Employer</span>
+                        <span className="text-[9.5px] font-extrabold uppercase tracking-wider text-base-content/55 text-right">Employee</span>
+                        <span className="text-[9.5px] font-extrabold uppercase tracking-wider text-base-content/55 text-right">Total</span>
+                      </div>
+
+                      {bottomSheetEntries.map((entry, i) => {
+                        const er = Number(entry.erPf) || 0;
+                        const ee = entry.eePf !== undefined && entry.eePf !== null && entry.eePf !== ""
+                          ? Number(entry.eePf) || 0
+                          : er;
+                        const total = er + ee;
+                        return (
+                          <div
+                            key={entry.id || entry._id || i}
+                            className={`grid grid-cols-4 gap-0 px-4 py-2.5 border-b border-base-content/6 dark:border-base-content/6 ${i % 2 === 0 ? "" : "bg-base-200/20"}`}
+                          >
+                            <span className="text-[11px] font-bold text-base-content">{dayjs(entry.month).format("MMM YYYY")}</span>
+                            <span className="text-[11px] font-mono font-bold text-primary text-right">₹{er.toLocaleString("en-IN")}</span>
+                            <span className="text-[11px] font-mono font-bold text-info text-right">₹{ee.toLocaleString("en-IN")}</span>
+                            <span className="text-[11px] font-mono font-black text-success text-right">₹{total.toLocaleString("en-IN")}</span>
+                          </div>
+                        );
+                      })}
+
+                      {/* Totals row */}
+                      {bottomSheetEntries.length > 0 && (() => {
+                        const totEr = bottomSheetEntries.reduce((s, e) => s + (Number(e.erPf) || 0), 0);
+                        const totEe = bottomSheetEntries.reduce((s, e) => {
+                          const ee = e.eePf !== undefined && e.eePf !== null && e.eePf !== "" ? Number(e.eePf) || 0 : Number(e.erPf) || 0;
+                          return s + ee;
+                        }, 0);
+                        return (
+                          <div className="grid grid-cols-4 gap-0 px-4 py-3 bg-base-200/60 border-t-2 border-base-content/10">
+                            <span className="text-[10.5px] font-extrabold text-base-content uppercase tracking-wide">Total</span>
+                            <span className="text-[11px] font-mono font-black text-primary text-right">₹{totEr.toLocaleString("en-IN")}</span>
+                            <span className="text-[11px] font-mono font-black text-info text-right">₹{totEe.toLocaleString("en-IN")}</span>
+                            <span className="text-[11px] font-mono font-black text-success text-right">₹{(totEr + totEe).toLocaleString("en-IN")}</span>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          );
+        })()}
 
         {/* ================================================================ */}
         {/* OTHER TABS: EMERGENCY FUND MOBILE CONTENT                        */}

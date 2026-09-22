@@ -547,20 +547,20 @@ export default function MutualFundCard({
                     Actually Invested
                   </span>
                   <span className="text-base font-mono font-black text-emerald-600 dark:text-emerald-400 tracking-tight">
-                    {hideMfNumbers ? "₹ ••••••" : `₹${summary.totalInvested.toLocaleString("en-IN")}`}
+                    {hideNumbers ? "₹ ••••••" : `₹${summary.totalInvested.toLocaleString("en-IN")}`}
                   </span>
                 </div>
                 <div className="text-right text-[10px] font-mono text-base-content/70 space-y-0.5">
                   <div>
                     <span className="text-base-content/50 uppercase text-[9px] mr-1">Gross:</span>
                     <span className="font-bold text-base-content">
-                      {hideMfNumbers ? "••••" : `₹${summary.totalDeposited.toLocaleString("en-IN")}`}
+                      {hideNumbers ? "••••" : `₹${summary.totalDeposited.toLocaleString("en-IN")}`}
                     </span>
                   </div>
                   <div>
                     <span className="text-base-content/50 uppercase text-[9px] mr-1">ER:</span>
                     <span className="font-bold text-error">
-                      {hideMfNumbers ? "•••" : `₹${summary.totalEr.toLocaleString("en-IN")}`}
+                      {hideNumbers ? "•••" : `₹${summary.totalEr.toLocaleString("en-IN")}`}
                     </span>
                   </div>
                 </div>
@@ -574,7 +574,7 @@ export default function MutualFundCard({
                     <Layers size={10} className="text-secondary" /> Terms
                   </span>
                   <div className="font-extrabold text-xs font-mono text-base-content">
-                    {hideMfNumbers ? "••" : summary.totalTerms}{" "}
+                    {hideNumbers ? "••" : summary.totalTerms}{" "}
                     <span className="text-[9.5px] font-normal text-base-content/60">({summary.sipCount} SIP, {summary.lsCount} LS)</span>
                   </div>
                 </div>
@@ -595,7 +595,7 @@ export default function MutualFundCard({
                     <TrendingUp size={10} className="text-info" /> Avg NAV
                   </span>
                   <div className="font-extrabold text-xs font-mono text-base-content">
-                    {hideMfNumbers ? "₹ ••••" : summary.avgNav > 0 ? `₹${summary.avgNav.toFixed(2)}` : "—"}
+                    {hideNumbers ? "₹ ••••" : summary.avgNav > 0 ? `₹${summary.avgNav.toFixed(2)}` : "—"}
                   </div>
                 </div>
 
@@ -605,7 +605,7 @@ export default function MutualFundCard({
                     <Coins size={10} className="text-warning" /> Units Left
                   </span>
                   <div className="font-extrabold text-xs font-mono text-base-content">
-                    {hideMfNumbers ? "•••••" : summary.activeUnits.toFixed(3)}
+                    {hideNumbers ? "•••••" : summary.activeUnits.toFixed(3)}
                   </div>
                   <div className="text-[9px] font-mono text-base-content/60 flex items-center justify-between">
                     <span>+{summary.totalUnits.toFixed(3)}</span>
@@ -630,20 +630,20 @@ export default function MutualFundCard({
                     Actually Withdrawn
                   </span>
                   <span className="text-base font-mono font-black text-amber-600 dark:text-amber-400 tracking-tight">
-                    {hideMfNumbers ? "₹ ••••••" : `₹${(summary.totalWithdrawn || 0).toLocaleString("en-IN")}`}
+                    {hideNumbers ? "₹ ••••••" : `₹${(summary.totalWithdrawn || 0).toLocaleString("en-IN")}`}
                   </span>
                 </div>
                 <div className="text-right text-[10px] font-mono text-base-content/70 space-y-0.5">
                   <div>
                     <span className="text-base-content/50 uppercase text-[9px] mr-1">Gross:</span>
                     <span className="font-bold text-base-content">
-                      {hideMfNumbers ? "••••" : `₹${(summary.grossWithdrawn || 0).toLocaleString("en-IN")}`}
+                      {hideNumbers ? "••••" : `₹${(summary.grossWithdrawn || 0).toLocaleString("en-IN")}`}
                     </span>
                   </div>
                   <div>
                     <span className="text-base-content/50 uppercase text-[9px] mr-1">ER:</span>
                     <span className="font-bold text-error">
-                      {hideMfNumbers ? "•••" : `₹${(summary.totalWithdrawalEr || 0).toLocaleString("en-IN")}`}
+                      {hideNumbers ? "•••" : `₹${(summary.totalWithdrawalEr || 0).toLocaleString("en-IN")}`}
                     </span>
                   </div>
                 </div>
@@ -657,7 +657,7 @@ export default function MutualFundCard({
                     <Layers size={10} className="text-secondary" /> Terms
                   </span>
                   <div className="font-extrabold text-xs font-mono text-base-content">
-                    {hideMfNumbers ? "••" : summary.totalWithdrawalTerms || 0}{" "}
+                    {hideNumbers ? "••" : summary.totalWithdrawalTerms || 0}{" "}
                     <span className="text-[9.5px] font-normal text-base-content/60">({summary.swpCount || 0} SWP, {summary.lsWithdrawalCount || 0} LS)</span>
                   </div>
                 </div>
@@ -678,7 +678,7 @@ export default function MutualFundCard({
                     <TrendingUp size={10} className="text-info" /> Exit NAV
                   </span>
                   <div className="font-extrabold text-xs font-mono text-base-content">
-                    {hideMfNumbers ? "₹ ••••" : (summary.avgExitNav || 0) > 0 ? `₹${summary.avgExitNav.toFixed(2)}` : "—"}
+                    {hideNumbers ? "₹ ••••" : (summary.avgExitNav || 0) > 0 ? `₹${summary.avgExitNav.toFixed(2)}` : "—"}
                   </div>
                 </div>
 
@@ -688,7 +688,7 @@ export default function MutualFundCard({
                     <Coins size={10} className="text-warning" /> Redeemed
                   </span>
                   <div className="font-extrabold text-xs font-mono text-amber-600 dark:text-amber-400">
-                    {hideMfNumbers ? "-•••••" : `-${(summary.totalUnitsWithdrawn || 0).toFixed(3)}`}
+                    {hideNumbers ? "-•••••" : `-${(summary.totalUnitsWithdrawn || 0).toFixed(3)}`}
                   </div>
                   <div className="text-[9px] font-mono text-base-content/60 flex items-center justify-between">
                     <span>Left: {summary.activeUnits.toFixed(3)}</span>

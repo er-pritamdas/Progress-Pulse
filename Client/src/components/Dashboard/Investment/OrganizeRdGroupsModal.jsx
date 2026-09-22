@@ -186,60 +186,81 @@ const OrganizeRdGroupsModal = ({ isOpen, onClose, rds = [], groups = [], onSaveG
     onClose();
   };
 
+  // Move RD up/down within a group
+  const handleMoveRdWithinGroup = (groupId, rdIndex, direction) => {
+    setLocalGroups((prev) =>
+      prev.map((g) => {
+        if (g.id !== groupId) return g;
+        const ids = [...(g.rdIds || [])];
+        const targetIdx = rdIndex + direction;
+        if (targetIdx < 0 || targetIdx >= ids.length) return g;
+        const temp = ids[rdIndex];
+        ids[rdIndex] = ids[targetIdx];
+        ids[targetIdx] = temp;
+        return { ...g, rdIds: ids };
+      })
+    );
+  };
+
+  const rdMap = new Map((rds || []).map((r) => [r.id, r]));
+
   return createPortal(
-    <div className="fixed inset-0 z-[99999] bg-black/60 backdrop-blur-sm overflow-y-auto flex items-center justify-center p-4">
-      <div className="bg-base-100 border border-base-300 w-full max-w-4xl rounded-3xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-[99999] bg-black/75 backdrop-blur-md overflow-y-auto overflow-x-hidden flex items-center justify-center p-2.5 sm:p-5 animate-in fade-in duration-200">
+      <div className="bg-base-100 rounded-2xl sm:rounded-3xl shadow-2xl w-full max-w-3xl overflow-hidden border border-base-content/10 dark:border-base-content/10 my-auto flex flex-col max-h-[92vh] animate-in zoom-in-95 duration-200">
         
-        {/* Header */}
-        <div className="p-5 border-b border-base-200 flex items-center justify-between bg-base-200/50">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-primary/10 text-primary rounded-2xl">
-              <FolderTree size={22} />
+        {/* Modal Header */}
+        <div className="px-4 sm:px-6 py-3.5 sm:py-4 border-b border-base-content/8 dark:border-base-content/8 bg-base-200/40 flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <div className="p-2 sm:p-2.5 rounded-xl sm:rounded-2xl bg-primary/15 text-primary shrink-0">
+              <FolderTree size={18} className="sm:w-5 sm:h-5" />
             </div>
-            <div>
-              <h2 className="text-lg font-black text-base-content">
-                Organize Recurring Deposit Folders / Groups
-              </h2>
-              <p className="text-xs text-base-content/60 font-medium">
-                Create custom folders and drag & drop or move RDs between them.
+            <div className="min-w-0">
+              <h3 className="font-extrabold text-sm sm:text-base leading-tight truncate text-base-content">
+                Organize Recurring Deposit Groups
+              </h3>
+              <p className="text-[10.5px] sm:text-xs text-base-content/60 font-medium mt-0.5 truncate">
+                Create custom folders, re-order, and manage groups.
               </p>
             </div>
           </div>
+
           <button
+            type="button"
             onClick={onClose}
-            className="btn btn-sm btn-ghost btn-circle text-base-content/70 hover:text-base-content"
+            className="btn btn-sm btn-ghost btn-circle rounded-full hover:bg-base-200 text-base-content/60 hover:text-base-content cursor-pointer shrink-0 ml-2"
           >
             <X size={18} />
           </button>
         </div>
 
         {/* Modal Body */}
-        <div className="p-5 overflow-y-auto flex-1 space-y-6">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 sm:space-y-5">
           
           {/* Add New Group Bar */}
           <form onSubmit={handleAddGroup} className="flex gap-2">
             <input
               type="text"
-              placeholder="Create a new group (e.g., Short-term RDs, Tax Saver RDs, High-Yield RDs)..."
+              placeholder="Create a new group (e.g., Short-term RDs, Tax Saver RDs)..."
               value={newGroupName}
               onChange={(e) => setNewGroupName(e.target.value)}
-              className="input input-bordered input-sm sm:input-md flex-1 rounded-2xl font-bold text-xs"
+              className="input input-sm flex-1 rounded-xl bg-base-200/60 dark:bg-base-800/60 border border-base-content/10 dark:border-base-content/10 font-bold text-xs"
             />
             <button
               type="submit"
               disabled={!newGroupName.trim()}
-              className="btn btn-sm sm:btn-md btn-primary rounded-2xl gap-1 font-black"
+              className="btn btn-sm btn-primary rounded-xl gap-1 font-black cursor-pointer"
             >
-              <FolderPlus size={16} />
-              <span>Add Group</span>
+              <FolderPlus size={14} />
+              <span className="hidden sm:inline">Add Group</span>
+              <span className="sm:hidden">Add</span>
             </button>
           </form>
 
-          {/* Groups Columns / Cards */}
-          <div className="space-y-4">
+          {/* Groups */}
+          <div className="space-y-3 sm:space-y-4">
             {localGroups.map((group, groupIdx) => {
               const groupRds = (group.rdIds || [])
-                .map((id) => rds.find((f) => f.id === id))
+                .map((id) => rdMap.get(id))
                 .filter(Boolean);
 
               return (
@@ -247,11 +268,11 @@ const OrganizeRdGroupsModal = ({ isOpen, onClose, rds = [], groups = [], onSaveG
                   key={group.id}
                   onDragOver={handleDragOver}
                   onDrop={() => handleDrop(group.id)}
-                  className="p-4 bg-base-200/40 rounded-2xl border border-base-300 transition-all flex flex-col gap-3"
+                  className="p-3 sm:p-4 bg-base-200/40 rounded-2xl border border-base-content/8 dark:border-base-content/8 transition-all flex flex-col gap-2.5"
                 >
                   {/* Group Header Bar */}
-                  <div className="flex items-center justify-between flex-wrap gap-2 pb-2 border-b border-base-200">
-                    <div className="flex items-center gap-2 flex-1 min-w-[200px]">
+                  <div className="flex items-center justify-between flex-wrap gap-2 pb-2 border-b border-base-content/8 dark:border-base-content/8">
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
                       {editingGroupId === group.id ? (
                         <div className="flex items-center gap-1.5 flex-1">
                           <input
@@ -263,17 +284,17 @@ const OrganizeRdGroupsModal = ({ isOpen, onClose, rds = [], groups = [], onSaveG
                           />
                           <button
                             onClick={() => handleSaveRename(group.id)}
-                            className="btn btn-xs btn-success text-white rounded-lg"
+                            className="btn btn-xs btn-success text-white rounded-lg cursor-pointer"
                           >
                             <Check size={12} />
                           </button>
                         </div>
                       ) : (
-                        <div className="flex items-center gap-2">
-                          <span className="font-extrabold text-sm text-base-content">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="font-extrabold text-xs sm:text-sm text-base-content truncate">
                             {group.name}
                           </span>
-                          <span className="badge badge-sm badge-neutral font-mono font-bold text-[10px]">
+                          <span className="badge badge-sm badge-neutral font-mono font-bold text-[10px] shrink-0">
                             {groupRds.length} RDs
                           </span>
                         </div>
@@ -281,13 +302,13 @@ const OrganizeRdGroupsModal = ({ isOpen, onClose, rds = [], groups = [], onSaveG
                     </div>
 
                     {/* Group Management Actions */}
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1 shrink-0">
                       <button
                         type="button"
                         onClick={() => handleMoveGroup(groupIdx, -1)}
                         disabled={groupIdx === 0}
-                        className="btn btn-xs btn-ghost btn-square"
-                        title="Move Up"
+                        className="p-1 text-base-content/60 hover:text-base-content hover:bg-base-100 rounded-lg cursor-pointer disabled:opacity-30"
+                        title="Move Group Up"
                       >
                         <ArrowUp size={13} />
                       </button>
@@ -295,15 +316,15 @@ const OrganizeRdGroupsModal = ({ isOpen, onClose, rds = [], groups = [], onSaveG
                         type="button"
                         onClick={() => handleMoveGroup(groupIdx, 1)}
                         disabled={groupIdx === localGroups.length - 1}
-                        className="btn btn-xs btn-ghost btn-square"
-                        title="Move Down"
+                        className="p-1 text-base-content/60 hover:text-base-content hover:bg-base-100 rounded-lg cursor-pointer disabled:opacity-30"
+                        title="Move Group Down"
                       >
                         <ArrowDown size={13} />
                       </button>
                       <button
                         type="button"
                         onClick={() => handleStartRename(group)}
-                        className="btn btn-xs btn-ghost text-info btn-square"
+                        className="p-1 text-info/70 hover:text-info hover:bg-info/10 rounded-lg cursor-pointer"
                         title="Rename Group"
                       >
                         <Edit2 size={13} />
@@ -312,7 +333,7 @@ const OrganizeRdGroupsModal = ({ isOpen, onClose, rds = [], groups = [], onSaveG
                         <button
                           type="button"
                           onClick={() => handleDeleteGroup(group.id)}
-                          className="btn btn-xs btn-ghost text-error btn-square"
+                          className="p-1 text-error/70 hover:text-error hover:bg-error/10 rounded-lg cursor-pointer"
                           title="Delete Group"
                         >
                           <Trash2 size={13} />
@@ -322,48 +343,75 @@ const OrganizeRdGroupsModal = ({ isOpen, onClose, rds = [], groups = [], onSaveG
                   </div>
 
                   {/* RDs inside this Group */}
-                  <div className="min-h-[50px] p-2 bg-base-100/60 rounded-xl border border-dashed border-base-300/80 flex flex-wrap gap-2 items-center">
+                  <div className="space-y-1.5 min-h-[36px]">
                     {groupRds.length === 0 ? (
-                      <p className="text-[11px] text-base-content/40 italic px-2 py-1 select-none">
-                        Drop Recurring Deposits here or move from other groups.
-                      </p>
+                      <div className="py-2.5 text-center text-base-content/40 italic font-medium text-xs">
+                        No RDs in this group. Move RDs here or drag & drop.
+                      </div>
                     ) : (
-                      groupRds.map((rd) => (
+                      groupRds.map((rd, rdIdx) => (
                         <div
                           key={rd.id}
                           draggable
                           onDragStart={() => handleDragStart(rd.id, group.id)}
-                          className="p-2 bg-base-200 rounded-xl border border-base-300 shadow-2xs flex items-center gap-2 cursor-grab active:cursor-grabbing text-xs hover:border-primary/50 transition-colors"
+                          className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-2.5 sm:px-3 py-2 bg-base-100 rounded-xl border border-base-content/8 dark:border-base-content/8 shadow-2xs hover:border-primary/40 cursor-grab active:cursor-grabbing transition-all"
                         >
-                          <GripVertical size={13} className="text-base-content/40 shrink-0" />
-                          <PiggyBank size={14} className="text-primary shrink-0" />
-                          <div className="min-w-0 flex flex-col">
-                            <span className="font-bold truncate max-w-[140px] text-base-content">
-                              {rd.bankName}
-                            </span>
-                            <span className="text-[10px] font-mono text-base-content/60">
-                              ₹{Number(rd.amount || 0).toLocaleString()} • {rd.interestRate}%
-                            </span>
+                          <div className="flex items-center gap-2 min-w-0 flex-1">
+                            <GripVertical size={14} className="text-base-content/30 shrink-0" />
+                            <PiggyBank size={14} className="text-primary shrink-0" />
+                            <div className="min-w-0 flex-1">
+                              <span className="font-bold text-xs truncate block text-base-content">{rd.bankName}</span>
+                              <span className="text-[10px] opacity-60 font-medium block truncate">
+                                {rd.interestRate}% p.a. • {rd.tenureText || `${rd.tenureValue} ${rd.tenureUnit}`}
+                                {rd.rdNumber ? ` • #${rd.rdNumber}` : ""}
+                              </span>
+                            </div>
                           </div>
 
-                          {/* Quick Group Move Select */}
-                          {localGroups.length > 1 && (
-                            <select
-                              value={group.id}
-                              onChange={(e) => handleMoveRd(rd.id, group.id, e.target.value)}
-                              className="select select-xs rounded-lg bg-base-100 text-[10px] font-bold py-0 h-6 min-h-0 ml-1"
-                            >
-                              {localGroups.map((g) => (
-                                <option key={g.id} value={g.id}>
-                                  {g.name}
-                                </option>
-                              ))}
-                            </select>
-                          )}
+                          {/* Re-order arrows & Target Group dropdown (essential for phone view) */}
+                          <div className="flex items-center justify-between sm:justify-end gap-1.5 pt-1.5 sm:pt-0 border-t sm:border-t-0 border-base-content/8 dark:border-base-content/8 shrink-0">
+                            <div className="flex items-center gap-1">
+                              <button
+                                type="button"
+                                onClick={() => handleMoveRdWithinGroup(group.id, rdIdx, -1)}
+                                disabled={rdIdx === 0}
+                                className="p-1 hover:bg-base-200 rounded text-base-content/60 hover:text-base-content disabled:opacity-20 cursor-pointer"
+                                title="Move RD Up"
+                              >
+                                <ArrowUp size={12} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleMoveRdWithinGroup(group.id, rdIdx, 1)}
+                                disabled={rdIdx === (group.rdIds?.length || 0) - 1}
+                                className="p-1 hover:bg-base-200 rounded text-base-content/60 hover:text-base-content disabled:opacity-20 cursor-pointer"
+                                title="Move RD Down"
+                              >
+                                <ArrowDown size={12} />
+                              </button>
+                            </div>
+
+                            {/* Target Group Move Dropdown (Mobile-friendly alternative to drag-and-drop) */}
+                            {localGroups.length > 1 && (
+                              <select
+                                value={group.id}
+                                onChange={(e) => handleMoveRd(rd.id, group.id, e.target.value)}
+                                className="select select-xs rounded-lg bg-base-200 border border-base-content/10 dark:border-base-content/10 text-[10px] font-bold max-w-[120px] sm:max-w-[130px] cursor-pointer"
+                                title="Move RD to Group"
+                              >
+                                {localGroups.map((tg) => (
+                                  <option key={tg.id} value={tg.id}>
+                                    📁 {tg.name}
+                                  </option>
+                                ))}
+                              </select>
+                            )}
+                          </div>
                         </div>
                       ))
                     )}
                   </div>
+
                 </div>
               );
             })}
@@ -371,12 +419,21 @@ const OrganizeRdGroupsModal = ({ isOpen, onClose, rds = [], groups = [], onSaveG
         </div>
 
         {/* Modal Footer */}
-        <div className="p-4 border-t border-base-200 flex justify-end gap-2 bg-base-200/30">
-          <button onClick={onClose} className="btn btn-sm btn-ghost font-bold rounded-xl">
+        <div className="px-4 sm:px-6 py-3 border-t border-base-content/8 dark:border-base-content/8 bg-base-200/40 flex items-center justify-end gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={onClose}
+            className="btn btn-sm btn-ghost font-bold rounded-xl text-xs cursor-pointer"
+          >
             Cancel
           </button>
-          <button onClick={handleSave} className="btn btn-sm btn-primary font-black rounded-xl px-5">
-            Save Group Changes
+          <button
+            type="button"
+            onClick={handleSave}
+            className="btn btn-sm btn-primary text-white font-black rounded-xl gap-1 shadow-md text-xs cursor-pointer"
+          >
+            <Check size={14} />
+            <span>Save Organization</span>
           </button>
         </div>
 

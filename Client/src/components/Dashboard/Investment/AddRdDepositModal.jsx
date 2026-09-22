@@ -163,20 +163,20 @@ export default function AddRdDepositModal({
   if (!isOpen || !rd) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-[999999] bg-black/70 backdrop-blur-sm overflow-y-auto overflow-x-hidden flex items-center justify-center p-3 sm:p-5">
-      <div className="bg-base-100 rounded-3xl shadow-2xl w-full max-w-md overflow-hidden border-2 border-base-300 my-auto">
+    <div className="fixed inset-0 z-[999999] bg-black/75 backdrop-blur-md overflow-y-auto overflow-x-hidden flex items-center justify-center p-2.5 sm:p-5 animate-in fade-in duration-200">
+      <div className="bg-base-100 rounded-2xl sm:rounded-3xl shadow-2xl w-full max-w-md max-h-[92vh] overflow-hidden border border-base-content/10 dark:border-base-content/10 my-auto flex flex-col animate-in zoom-in-95 duration-200">
         
         {/* Header */}
-        <div className="px-6 py-4.5 border-b-2 border-base-200 flex justify-between items-center bg-primary/10">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-2xl bg-primary/20 text-primary">
-              <PiggyBank size={22} />
+        <div className="px-4 sm:px-6 py-3.5 sm:py-4.5 border-b border-base-content/8 dark:border-base-content/8 flex justify-between items-center bg-base-200/40 shrink-0">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <div className="p-2 sm:p-2.5 rounded-xl sm:rounded-2xl bg-primary/15 text-primary shrink-0">
+              <PiggyBank size={18} className="sm:w-5 sm:h-5" />
             </div>
-            <div>
-              <h3 className="font-black text-base sm:text-lg flex items-center gap-2 leading-tight text-base-content">
+            <div className="min-w-0">
+              <h3 className="font-black text-sm sm:text-base flex items-center gap-2 leading-tight text-base-content truncate">
                 <span>{isEdit ? "Edit RD Deposit" : "Add RD Deposit"}</span>
               </h3>
-              <p className="text-[11px] text-base-content/60 font-semibold mt-0.5">
+              <p className="text-[10.5px] sm:text-[11px] text-base-content/60 font-semibold mt-0.5 truncate">
                 {rd?.bankName} {rd?.rdNumber ? `(#${rd.rdNumber})` : ""} • Rate: {rd?.interestRate}%
               </p>
             </div>
@@ -185,14 +185,14 @@ export default function AddRdDepositModal({
           <button
             type="button"
             onClick={onClose}
-            className="btn btn-sm btn-ghost btn-circle rounded-full hover:bg-base-200 text-base-content/60 hover:text-base-content"
+            className="btn btn-sm btn-ghost btn-circle rounded-full hover:bg-base-200 text-base-content/60 hover:text-base-content cursor-pointer shrink-0 ml-2"
           >
             <X size={18} />
           </button>
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4 text-xs">
+        <form id="add-rd-deposit-form" onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-3.5 sm:space-y-4 text-xs">
           {errorMsg && (
             <div className="alert alert-error text-xs py-2.5 rounded-xl flex items-center gap-2 shadow-xs font-bold">
               <AlertCircle size={16} />
@@ -201,10 +201,10 @@ export default function AddRdDepositModal({
           )}
 
           {/* 1. Installment Number / Term & Date */}
-          <div className="grid grid-cols-2 gap-3.5">
+          <div className="grid grid-cols-2 gap-3 sm:gap-3.5">
             <div>
               <label className="block font-black text-base-content/85 text-[11px] uppercase tracking-wider mb-1.5 flex items-center gap-1">
-                <Hash size={13} className="text-primary" />
+                <Hash size={12} className="text-primary" />
                 <span>Installment # *</span>
               </label>
               <input
@@ -212,22 +212,22 @@ export default function AddRdDepositModal({
                 value={installmentNo}
                 onChange={(e) => setInstallmentNo(e.target.value)}
                 placeholder="e.g. Installment 1"
-                className="input h-11 w-full rounded-2xl bg-base-200 dark:bg-base-300/80 border-2 border-base-content/20 hover:border-base-content/40 focus:border-primary focus:bg-base-100 text-xs font-bold text-base-content px-3.5 shadow-xs"
+                className="input h-10 sm:h-11 w-full rounded-xl sm:rounded-2xl bg-base-200/60 dark:bg-base-800/60 border border-base-content/15 dark:border-base-content/15 hover:border-primary/50 focus:border-primary focus:bg-base-100 text-xs font-bold text-base-content px-3 sm:px-3.5 shadow-2xs"
               />
             </div>
 
             <div>
               <label className="block font-black text-base-content/85 text-[11px] uppercase tracking-wider mb-1.5 flex items-center justify-between">
                 <span className="flex items-center gap-1">
-                  <Calendar size={13} className="text-primary" />
+                  <Calendar size={12} className="text-primary" />
                   <span>Deposit Date *</span>
                 </span>
                 {!isEdit && lastTxn?.date && (
                   <span
-                    className="text-[10px] font-bold text-primary/80 normal-case"
+                    className="text-[9px] font-bold text-primary/80 normal-case truncate max-w-[70px]"
                     title={`Last entry: ${dayjs(lastTxn.date).format("DD MMM YYYY")}`}
                   >
-                    +1 mo from last ({dayjs(lastTxn.date).format("DD MMM")})
+                    +1 mo ({dayjs(lastTxn.date).format("DD MMM")})
                   </span>
                 )}
               </label>
@@ -235,7 +235,7 @@ export default function AddRdDepositModal({
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                className="input h-11 w-full rounded-2xl bg-base-200 dark:bg-base-300/80 border-2 border-base-content/20 hover:border-base-content/40 focus:border-primary focus:bg-base-100 text-xs font-bold text-base-content px-3.5 shadow-xs"
+                className="input h-10 sm:h-11 w-full rounded-xl sm:rounded-2xl bg-base-200/60 dark:bg-base-800/60 border border-base-content/15 dark:border-base-content/15 hover:border-primary/50 focus:border-primary focus:bg-base-100 text-xs font-bold text-base-content px-3 sm:px-3.5 shadow-2xs"
               />
             </div>
           </div>
@@ -244,23 +244,23 @@ export default function AddRdDepositModal({
           <div>
             <label className="block font-black text-base-content/85 text-[11px] uppercase tracking-wider mb-1.5 flex items-center justify-between">
               <span>Amount Deposited (₹) *</span>
-              <span className="text-[10px] lowercase font-bold text-primary/90 bg-primary/10 px-2 py-0.5 rounded-md">supports: + - * /</span>
+              <span className="text-[9.5px] lowercase font-bold text-primary/90 bg-primary/10 px-1.5 py-0.5 rounded-md">supports: + - * /</span>
             </label>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 sm:gap-2">
               <div className="relative flex-1">
-                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-mono font-black text-sm text-primary">₹</span>
+                <span className="absolute left-3 sm:left-3.5 top-1/2 -translate-y-1/2 font-mono font-black text-xs sm:text-sm text-primary">₹</span>
                 <input
                   type="text"
                   placeholder="e.g. 5000 or 2500 * 2"
                   value={amountInput}
                   onChange={(e) => setAmountInput(e.target.value)}
-                  className="input h-11 w-full pl-8 rounded-2xl bg-base-200 dark:bg-base-300/80 border-2 border-base-content/20 hover:border-base-content/40 focus:border-primary focus:bg-base-100 text-xs font-mono font-bold text-base-content placeholder:text-base-content/40 shadow-xs"
+                  className="input h-10 sm:h-11 w-full pl-7 sm:pl-8 rounded-xl sm:rounded-2xl bg-base-200/60 dark:bg-base-800/60 border border-base-content/15 dark:border-base-content/15 hover:border-primary/50 focus:border-primary focus:bg-base-100 text-xs font-mono font-bold text-base-content placeholder:text-base-content/40 shadow-2xs"
                   autoFocus
                 />
               </div>
               <span className="text-sm font-black text-base-content/50 select-none">=</span>
               <div
-                className={`w-32 shrink-0 input h-11 rounded-2xl bg-base-200 dark:bg-base-300 border-2 border-base-content/20 flex items-center justify-end px-3 font-mono font-black text-xs select-none truncate ${
+                className={`w-24 sm:w-32 shrink-0 input h-10 sm:h-11 rounded-xl sm:rounded-2xl bg-base-200/60 dark:bg-base-800/60 border border-base-content/15 dark:border-base-content/15 flex items-center justify-end px-2.5 sm:px-3 font-mono font-black text-xs select-none truncate ${
                   evaluatedAmount > 0 ? "text-primary border-primary/40 bg-primary/10" : "text-base-content/40"
                 }`}
               >
@@ -272,7 +272,7 @@ export default function AddRdDepositModal({
           {/* 3. Notes (Optional) */}
           <div>
             <label className="block font-black text-base-content/85 text-[11px] uppercase tracking-wider mb-1.5 flex items-center gap-1">
-              <FileText size={13} className="text-base-content/60" />
+              <FileText size={12} className="text-base-content/60" />
               <span>Notes / Remarks (Optional)</span>
             </label>
             <input
@@ -280,38 +280,38 @@ export default function AddRdDepositModal({
               placeholder="e.g. Auto-debited from salary account"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              className="input h-11 w-full rounded-2xl bg-base-200 dark:bg-base-300/80 border-2 border-base-content/20 hover:border-base-content/40 focus:border-primary focus:bg-base-100 text-xs font-medium text-base-content px-3.5 shadow-xs"
+              className="input h-10 sm:h-11 w-full rounded-xl sm:rounded-2xl bg-base-200/60 dark:bg-base-800/60 border border-base-content/15 dark:border-base-content/15 hover:border-primary/50 focus:border-primary focus:bg-base-100 text-xs font-medium text-base-content px-3 sm:px-3.5 shadow-2xs"
             />
           </div>
-
-          {/* Action Buttons */}
-          <div className="flex items-center justify-end gap-2.5 pt-3 border-t-2 border-base-200">
-            <button
-              type="button"
-              onClick={onClose}
-              className="btn btn-sm btn-ghost font-black rounded-xl"
-              disabled={isSubmitting}
-            >
-              Cancel
-            </button>
-
-            <button
-              type="submit"
-              className="btn btn-sm btn-primary font-black rounded-xl gap-2 shadow-lg shadow-primary/30 border-0 h-10 px-5 cursor-pointer"
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? (
-                <span className="loading loading-spinner loading-xs"></span>
-              ) : (
-                <>
-                  <Save size={16} />
-                  <span>{isEdit ? "Update Deposit" : "Save Deposit"}</span>
-                </>
-              )}
-            </button>
-          </div>
-
         </form>
+
+        {/* Action Buttons Pinned Footer */}
+        <div className="px-4 sm:px-6 py-3 border-t border-base-content/8 dark:border-base-content/8 bg-base-200/40 flex items-center justify-end gap-2.5 shrink-0">
+          <button
+            type="button"
+            onClick={onClose}
+            className="btn btn-sm btn-ghost font-bold rounded-xl cursor-pointer text-xs"
+            disabled={isSubmitting}
+          >
+            Cancel
+          </button>
+
+          <button
+            type="submit"
+            form="add-rd-deposit-form"
+            className="btn btn-sm btn-primary font-black rounded-xl gap-1.5 shadow-md shadow-primary/30 border-0 h-9 sm:h-10 px-4 sm:px-5 cursor-pointer text-xs"
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? (
+              <span className="loading loading-spinner loading-xs"></span>
+            ) : (
+              <>
+                <Save size={14} />
+                <span>{isEdit ? "Update Deposit" : "Save Deposit"}</span>
+              </>
+            )}
+          </button>
+        </div>
 
       </div>
     </div>,
