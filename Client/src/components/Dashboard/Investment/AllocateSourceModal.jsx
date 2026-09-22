@@ -229,7 +229,8 @@ export default function AllocateSourceModal({
 
     if (planAlloc) {
       const p = planAlloc.percent !== undefined ? Number(planAlloc.percent) : 100;
-      const amt = planAlloc.amount !== undefined ? Number(planAlloc.amount) : (totalVal * p) / 100;
+      // Autocalculated: Total Valuation x Allotment %
+      const amt = (totalVal * p) / 100;
       setAllotPercent(Math.min(stats.maxAllowedPct, Math.max(0, p)));
       setAllotAmount(Math.min(stats.maxAllowedAmt, Math.max(0, amt)));
       if (selectedSource.sourceType === "stock") {
@@ -321,7 +322,8 @@ export default function AllocateSourceModal({
       if (hasAlloc) {
         const alloc = g.allocations[sourceItem.id];
         const pct = Math.max(0, Math.min(100, Math.round((Number(alloc.percent) ?? 0) * 10) / 10));
-        const amt = alloc.amount !== undefined ? Number(alloc.amount) : (totalVal * pct) / 100;
+        // Autocalculated: Total Valuation x Allotment %
+        const amt = (totalVal * pct) / 100;
         const shares = alloc.shares !== undefined ? Number(alloc.shares) : Math.round(totalShares * (pct / 100));
 
         breakdown.push({
@@ -476,8 +478,10 @@ export default function AllocateSourceModal({
       return;
     }
 
+    const totalVal = Number(selectedSource.holdingValue) || 0;
     const finalPercent = Math.max(0, Math.min(maxPct, Number(allotPercent) || 0));
-    const finalAmount = Math.max(0, Math.min(maxAmt, Number(allotAmount) || 0));
+    // Autocalculated: Total Valuation x Allotment %
+    const finalAmount = (totalVal * finalPercent) / 100;
     const finalShares =
       selectedSource.sourceType === "stock"
         ? Math.max(0, Math.min(currentStats.maxAllowedShares, Number(allotShares) || 0))

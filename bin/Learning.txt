@@ -1,3 +1,21 @@
-In the date range When clciked, show a popup only for year and month, Make a Scrollable like animattion Only in phone view
+Can you make the form of Add popup of FD, RD and Stocks Small Input Feild with samll fonts
 
-In Nutrients dashboard, remove the Category Tabs from there, and as there iss only five categoies, show them all on the dashboard Wit heading of the Category
+
+
+
+
+
+In FD the next button doesnt work after the 2nd tab, it exited after clicking next button of 2nd Tab
+    in PF the tabs for years doesnt look good make it theme compatible
+    Second in the popup of View all entries, add some filetrs on top as well to change the order based on date, show the latest one First old one last by default
+  In RD : Add opup , No need for Showing "Selected : ..... "
+
+
+
+   In MF Rename the stat card from Gross Deposited to only Deposited
+  In PF, stat card No need of highlighting with Green, Keep it normal
+  Come to desktop view now, In the Investment planner : Embarkked to Plan should be autocalculated : Total Valuation x Allotment %
+
+
+
+

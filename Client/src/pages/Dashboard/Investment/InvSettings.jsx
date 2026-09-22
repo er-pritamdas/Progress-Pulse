@@ -791,13 +791,18 @@ export default function InvSettings() {
       const matched = sourcesMap[srcId];
       if (matched) {
         const totalVal = Number(matched.holdingValue) || 0;
-        const pct = Number(alloc.percent) || 0;
-        const amt = alloc.amount !== undefined ? Number(alloc.amount) : (totalVal * pct) / 100;
+        const pct = alloc.percent !== undefined
+          ? Number(alloc.percent) || 0
+          : (totalVal > 0 ? Math.round(((Number(alloc.amount) || 0) / totalVal) * 100) : 0);
+        // Autocalculated: Total Valuation x Allotment %
+        const amt = (totalVal * pct) / 100;
         list.push({
           ...matched,
           allocatedPercent: pct,
           allocatedAmount: amt,
-          allocatedShares: alloc.shares,
+          allocatedShares: alloc.shares !== undefined
+            ? Number(alloc.shares)
+            : (matched.sourceType === "stock" ? Math.round((matched.holdingQty || 1) * (pct / 100)) : undefined),
         });
       }
     });
@@ -897,7 +902,11 @@ export default function InvSettings() {
 
     goals.forEach((g) => {
       if (g.allocations && sourceItem.id in g.allocations) {
-        totalAllotted += Number(g.allocations[sourceItem.id].amount) || 0;
+        const alloc = g.allocations[sourceItem.id];
+        const pct = alloc.percent !== undefined
+          ? Number(alloc.percent) || 0
+          : (totalVal > 0 ? Math.round(((Number(alloc.amount) || 0) / totalVal) * 100) : 0);
+        totalAllotted += (totalVal * pct) / 100;
       } else if (
         (!g.allocations || Object.keys(g.allocations).length === 0) &&
         ((sourceItem.sourceType === "bank" && (g.selectedBanks || []).includes(sourceItem.id)) ||
@@ -1238,15 +1247,20 @@ export default function InvSettings() {
     const targetPlan = goals.find((g) => g.id === planId || g._id === planId);
     if (!targetPlan) return;
 
+    const totalVal = Number(selectedSource.holdingValue) || 0;
+    const calcPercent = Number(percent) || 0;
+    // Autocalculated: Total Valuation x Allotment %
+    const calcAmount = (totalVal * calcPercent) / 100;
+
     const newAllocations = {
       ...(targetPlan.allocations || {}),
       [selectedSource.id]: {
         id: selectedSource.id,
         sourceType: selectedSource.sourceType,
         name: selectedSource.displayName || selectedSource.name,
-        percent: Number(percent) || 0,
-        amount: Number(amount) || 0,
-        shares: shares !== undefined ? Number(shares) : undefined,
+        percent: calcPercent,
+        amount: calcAmount,
+        shares: shares !== undefined ? Number(shares) : (selectedSource.sourceType === "stock" ? Math.round((selectedSource.holdingQty || 1) * (calcPercent / 100)) : undefined),
       },
     };
 
@@ -1363,10 +1377,35 @@ export default function InvSettings() {
     const currentPct = item.allocatedPercent !== undefined ? Number(item.allocatedPercent) : 100;
     const totalVal = Number(item.holdingValue) || 0;
     const stats = getSourceUnallocatedStats(item);
-    const otherGoalsAllotted = Math.max(0, stats.totalAllotted - (Number(item.allocatedAmount) || 0));
+    const itemAllocatedAmt = (totalVal * currentPct) / 100;
+    const otherGoalsAllotted = Math.max(0, stats.totalAllotted - itemAllocatedAmt);
     const maxAllowedAmt = Math.max(0, totalVal - otherGoalsAllotted);
     const maxAllowedPct = totalVal > 0 ? Math.round((maxAllowedAmt / totalVal) * 100) : 100;
     const newPct = Math.max(0, Math.min(maxAllowedPct, Math.round((currentPct + delta) / 5) * 5));
+    const newAmt = (totalVal * newPct) / 100;
+    const newShares =
+      item.sourceType === "stock"
+        ? Math.round((item.holdingQty || 1) * (newPct / 100))
+        : undefined;
+
+    handleSaveAllocation(planId, item, {
+      percent: newPct,
+      amount: newAmt,
+      shares: newShares,
+    });
+  };
+
+  // Direct percent input in desktop table
+  const handleQuickSetPercent = (planId, item, rawVal) => {
+    const totalVal = Number(item.holdingValue) || 0;
+    const currentPct = item.allocatedPercent !== undefined ? Number(item.allocatedPercent) : 100;
+    const stats = getSourceUnallocatedStats(item);
+    const itemAllocatedAmt = (totalVal * currentPct) / 100;
+    const otherGoalsAllotted = Math.max(0, stats.totalAllotted - itemAllocatedAmt);
+    const maxAllowedAmt = Math.max(0, totalVal - otherGoalsAllotted);
+    const maxAllowedPct = totalVal > 0 ? Math.round((maxAllowedAmt / totalVal) * 100) : 100;
+    const parsed = rawVal === "" ? 0 : Number(rawVal);
+    const newPct = Math.max(0, Math.min(maxAllowedPct, isNaN(parsed) ? 0 : parsed));
     const newAmt = (totalVal * newPct) / 100;
     const newShares =
       item.sourceType === "stock"
@@ -2339,18 +2378,26 @@ export default function InvSettings() {
                                         >
                                           -
                                         </button>
-                                        <span
-                                          className="join-item px-2.5 py-0.5 text-xs font-mono font-bold bg-base-200/50 cursor-pointer flex items-center gap-1"
-                                          title="Click to edit fine-grained allotment"
-                                          onClick={() => openAllocateModal(goal, item)}
+                                        <div
+                                          className="join-item px-2 py-0.5 text-xs font-mono font-bold bg-base-200/50 flex items-center gap-0.5"
+                                          title="Edit allotment % (Autocalculates Earmarked to Plan: Total Valuation × Allotment %)"
                                         >
-                                          <span>{item.allocatedPercent}%</span>
+                                          <input
+                                            type="number"
+                                            min="0"
+                                            max={Math.min(100, (Number(item.allocatedPercent) || 0) + unallocated.remainingPct)}
+                                            value={item.allocatedPercent}
+                                            onChange={(e) => handleQuickSetPercent(goal.id, item, e.target.value)}
+                                            className="w-10 text-center bg-transparent font-mono font-bold text-xs focus:outline-none focus:bg-base-100 rounded"
+                                            title="Edit allotment %"
+                                          />
+                                          <span className="text-base-content/60 text-[11px]">%</span>
                                           {item.sourceType === "stock" && item.allocatedShares !== undefined && (
-                                            <span className="text-[10px] text-base-content/50">
+                                            <span className="text-[10px] text-base-content/50 ml-0.5">
                                               ({item.allocatedShares} sh)
                                             </span>
                                           )}
-                                        </span>
+                                        </div>
                                         <button
                                           type="button"
                                           className="join-item btn btn-xs btn-ghost px-2 font-bold hover:bg-base-200"
@@ -2362,11 +2409,16 @@ export default function InvSettings() {
                                       </div>
                                     </td>
 
-                                    {/* Earmarked Amount */}
+                                    {/* Earmarked Amount - Autocalculated: Total Valuation x Allotment % */}
                                     <td className="text-right whitespace-nowrap py-2.5">
-                                      <span className="font-bold text-primary font-mono text-sm">
-                                        {formatINR(item.allocatedAmount)}
-                                      </span>
+                                      <div className="flex flex-col items-end">
+                                        <span className="font-bold text-primary font-mono text-sm">
+                                          {formatINR(item.allocatedAmount)}
+                                        </span>
+                                        <span className="text-[10px] text-base-content/50 font-mono">
+                                          {item.allocatedPercent}% × {formatINRCompact(item.holdingValue)}
+                                        </span>
+                                      </div>
                                     </td>
 
                                     {/* Unallocated Remaining Left */}

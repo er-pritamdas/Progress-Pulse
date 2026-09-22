@@ -922,8 +922,7 @@ export default function AddMutualFundModal({
       {/* =================================================================== */}
       {/* MOBILE SEQUENTIAL WIZARD (Visible on Mobile/Tablet: flex lg:hidden) */}
       {/* =================================================================== */}
-      <form
-        onSubmit={handleSubmit}
+      <div
         onClick={(e) => e.stopPropagation()}
         className="flex lg:hidden flex-col bg-base-100 border border-base-300 rounded-3xl shadow-2xl w-full max-w-lg max-h-[92vh] overflow-hidden my-auto animate-in zoom-in-95 duration-200"
       >
@@ -1252,7 +1251,9 @@ export default function AddMutualFundModal({
               </button>
               <button
                 type="button"
-                onClick={() => {
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
                   if (!effectiveAmc) {
                     setErrorMsg("Please select or enter an AMC / Fund House Name.");
                     return;
@@ -1270,7 +1271,9 @@ export default function AddMutualFundModal({
             <>
               <button
                 type="button"
-                onClick={() => {
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
                   setErrorMsg("");
                   setMobileStep(1);
                 }}
@@ -1281,7 +1284,9 @@ export default function AddMutualFundModal({
               </button>
               <button
                 type="button"
-                onClick={() => {
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
                   setErrorMsg("");
                   setMobileStep(3);
                 }}
@@ -1295,7 +1300,9 @@ export default function AddMutualFundModal({
             <>
               <button
                 type="button"
-                onClick={() => {
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
                   setErrorMsg("");
                   setMobileStep(2);
                 }}
@@ -1305,7 +1312,8 @@ export default function AddMutualFundModal({
                 <span>Back</span>
               </button>
               <button
-                type="submit"
+                type="button"
+                onClick={handleSubmit}
                 disabled={!isFormValid}
                 className="btn btn-sm btn-primary rounded-2xl text-xs font-black px-5 flex items-center gap-1.5 cursor-pointer shadow-sm shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all"
               >
@@ -1315,7 +1323,7 @@ export default function AddMutualFundModal({
             </>
           )}
         </div>
-      </form>
+      </div>
 
       {/* Keyframe Animations */}
       <style>{`

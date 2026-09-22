@@ -160,6 +160,9 @@ export default function InvTableEntry() {
     return localStorage.getItem("pulse_salary_table_view_mode") || "detailed";
   });
   const [salaryBreakdownModal, setSalaryBreakdownModal] = useState(null);
+  // Salary mobile: company bottom-sheet & sort order
+  const [salaryBottomSheetCompany, setSalaryBottomSheetCompany] = useState(null); // company name string or null
+  const [salarySortOrder, setSalarySortOrder] = useState("desc"); // "desc" (most recent first) | "asc" (oldest first)
 
   const handleSalaryViewChange = (mode) => {
     setSalaryTableViewMode(mode);
@@ -175,8 +178,9 @@ export default function InvTableEntry() {
   const [loadingPfWithdrawals, setLoadingPfWithdrawals] = useState(true);
   const [isAddPfWithdrawalModalOpen, setIsAddPfWithdrawalModalOpen] = useState(false);
   const [editingPfWithdrawal, setEditingPfWithdrawal] = useState(null);
-  // PF mobile: company bottom-sheet
+  // PF mobile: company bottom-sheet & sort order
   const [pfBottomSheetCompany, setPfBottomSheetCompany] = useState(null); // company name string or null
+  const [pfSortOrder, setPfSortOrder] = useState("desc"); // "desc" (most recent first) | "asc" (oldest first)
 
   // Mobile Phone View Filter Drawer State
   const [isMobileInvFilterOpen, setIsMobileInvFilterOpen] = useState(false);
@@ -6746,56 +6750,90 @@ export default function InvTableEntry() {
         {/* ================================================================ */}
         {/* TAB 1: STOCKS MOBILE CONTENT - FINTECH CARD FEED                 */}
         {/* ================================================================ */}
-        {activeTab === "stocks" && (
-          <div className="space-y-3 px-2.5 w-full max-w-full animate-in fade-in duration-200">
-            {/* 1. Modern Fintech Hero Portfolio Banner */}
-            <div className="bg-gradient-to-br from-base-100 to-base-200/90 rounded-2xl border border-base-200/90 p-3.5 shadow-sm space-y-3">
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <span className="text-[10px] font-black uppercase tracking-wider text-base-content/60">
-                    Realized P&L
-                  </span>
-                  <div className={`text-2xl font-black font-mono tracking-tight mt-0.5 ${tableTotals.gainRs >= 0 ? "text-success" : "text-error"}`}>
-                    {hideStockNumbers ? "••••••••" : formatCompactPnL(tableTotals.gainRs)}
+        {activeTab === "stocks" && (() => {
+          let totalInvestedAll = 0;
+          let totalRealizedGain = 0;
+          let totalCostOfSold = 0;
+          let openHoldingsCount = 0;
+          let closedTradesCount = 0;
+
+          filteredStocks.forEach((s) => {
+            const isSold = Number(s.sQty) > 0 || (s.sDate && s.sDate !== "-");
+            const qLeft = Number(s.qLeft) || 0;
+            const bFStock = Number(s.bFStock) || ((Number(s.bQty) || 0) * (Number(s.bShare) || 0)) || 0;
+            totalInvestedAll += bFStock;
+
+            if (qLeft > 0) openHoldingsCount += 1;
+
+            if (isSold) {
+              closedTradesCount += 1;
+              // Realized gain matching Investment Dashboard (s.gainRs or net sell - buy cost)
+              const gain = s.gainRs !== undefined && s.gainRs !== null && !isNaN(Number(s.gainRs))
+                ? Number(s.gainRs)
+                : (Number(s.sFStock) || 0) - ((Number(s.sQty) || Number(s.bQty) || 0) * (Number(s.bFShare) || Number(s.bShare) || 0));
+              totalRealizedGain += gain;
+
+              // Cost basis of sold quantity (matching StocksDashboard formula: q * bPrice)
+              const soldQty = Number(s.sQty) || Number(s.bQty) || 0;
+              const buyPrice = Number(s.bFShare) || Number(s.bShare) || 0;
+              const soldCost = soldQty * buyPrice;
+              totalCostOfSold += soldCost > 0 ? soldCost : bFStock;
+            }
+          });
+
+          // Realized Return % on Sold capital (matching Investment Dashboard gainPctOverall formula)
+          const gainPct = totalCostOfSold > 0 ? (totalRealizedGain / totalCostOfSold) * 100 : 0;
+
+          return (
+            <div className="space-y-3 px-2.5 w-full max-w-full animate-in fade-in duration-200">
+              {/* 1. Modern Fintech Hero Portfolio Banner */}
+              <div className="bg-gradient-to-br from-base-200 via-base-200 to-base-300/80 dark:from-base-900 dark:via-base-900 dark:to-base-950 rounded-2xl border border-base-300 dark:border-base-700/80 p-3.5 shadow-sm space-y-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <span className="text-[10px] font-black uppercase tracking-wider text-base-content/60">
+                      Realized P&L
+                    </span>
+                    <div className={`text-2xl font-black font-mono tracking-tight mt-0.5 ${totalRealizedGain >= 0 ? "text-success" : "text-error"}`}>
+                      {hideStockNumbers ? "••••••••" : formatCompactPnL(totalRealizedGain)}
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col items-end gap-1">
+                    <span className={`badge font-bold font-mono text-xs px-2.5 py-1 rounded-xl ${
+                      totalRealizedGain >= 0
+                        ? "bg-success/15 text-success border border-success/30"
+                        : "bg-error/15 text-error border border-error/30"
+                    }`}>
+                      {totalRealizedGain >= 0 ? "+" : ""}{gainPct.toFixed(2)}%
+                    </span>
+                    <span className="text-[10px] font-semibold text-base-content/50">
+                      Return on Sold
+                    </span>
                   </div>
                 </div>
 
-                <div className="flex flex-col items-end gap-1">
-                  <span className={`badge font-bold font-mono text-xs px-2.5 py-1 rounded-xl ${
-                    tableTotals.gainRs >= 0
-                      ? "bg-success/15 text-success border border-success/30"
-                      : "bg-error/15 text-error border border-error/30"
-                  }`}>
-                    {tableTotals.gainRs >= 0 ? "+" : ""}{tableTotals.gainPct.toFixed(2)}%
-                  </span>
-                  <span className="text-[10px] font-semibold text-base-content/50">
-                    Return on Sold
-                  </span>
-                </div>
-              </div>
-
-              {/* Sub-Metric 3-Pack */}
-              <div className="grid grid-cols-3 gap-2 pt-2.5 border-t border-base-content/10">
-                <div className="bg-base-100/70 p-2 rounded-xl border border-base-content/5">
-                  <div className="text-[9.5px] font-bold text-base-content/60 uppercase">Holdings</div>
-                  <div className="text-xs font-black font-mono text-success truncate">
-                    {filteredStocks.filter((s) => s.qLeft > 0).length} <span className="text-[9.5px] font-semibold text-base-content/50">open</span>
+                {/* Sub-Metric 3-Pack */}
+                <div className="grid grid-cols-3 gap-2 pt-2.5 border-t border-base-300/80 dark:border-base-700/60">
+                  <div className="bg-base-100/90 dark:bg-base-800/80 p-2 rounded-xl border border-base-300/60 dark:border-base-700/60 shadow-2xs">
+                    <div className="text-[9.5px] font-bold text-base-content/60 uppercase">Holdings</div>
+                    <div className="text-xs font-black font-mono text-success truncate">
+                      {openHoldingsCount} <span className="text-[9.5px] font-semibold text-base-content/50">open</span>
+                    </div>
                   </div>
-                </div>
-                <div className="bg-base-100/70 p-2 rounded-xl border border-base-content/5">
-                  <div className="text-[9.5px] font-bold text-base-content/60 uppercase">Closed</div>
-                  <div className="text-xs font-black font-mono text-base-content truncate">
-                    {filteredStocks.filter((s) => s.sQty > 0 || (s.sDate && s.sDate !== "-")).length} <span className="text-[9.5px] font-semibold text-base-content/50">trades</span>
+                  <div className="bg-base-100/90 dark:bg-base-800/80 p-2 rounded-xl border border-base-300/60 dark:border-base-700/60 shadow-2xs">
+                    <div className="text-[9.5px] font-bold text-base-content/60 uppercase">Closed</div>
+                    <div className="text-xs font-black font-mono text-base-content truncate">
+                      {closedTradesCount} <span className="text-[9.5px] font-semibold text-base-content/50">trades</span>
+                    </div>
                   </div>
-                </div>
-                <div className="bg-base-100/70 p-2 rounded-xl border border-base-content/5">
-                  <div className="text-[9.5px] font-bold text-base-content/60 uppercase">Total Buy</div>
-                  <div className="text-xs font-black font-mono text-primary truncate">
-                    {hideStockNumbers ? "••••" : formatCompactINR(tableTotals.bFStock)}
+                  <div className="bg-base-100/90 dark:bg-base-800/80 p-2 rounded-xl border border-base-300/60 dark:border-base-700/60 shadow-2xs">
+                    <div className="text-[9.5px] font-bold text-base-content/60 uppercase">Total Buy</div>
+                    <div className="text-xs font-black font-mono text-primary truncate">
+                      {hideStockNumbers ? "••••" : formatCompactINR(totalInvestedAll)}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
 
             {/* 2. Sticky Filter Tabs & Inline Search (Row 1: All 6 Filter Tabs in ONE Line, Row 2: Full-Width Search Bar) */}
             <div
@@ -7040,81 +7078,103 @@ export default function InvTableEntry() {
 
                         {/* Expandable Breakdown Drawer */}
                         {isExpanded && (
-                          <div className="p-3 bg-base-200/60 rounded-xl border border-base-200 text-xs space-y-2.5 animate-in fade-in slide-in-from-top-1 duration-200">
-                            <div className="grid grid-cols-2 gap-3 text-[10.5px]">
-                              {/* Buy Detailed Breakdown */}
-                              <div className="space-y-1 pr-2 border-r border-base-300/60">
-                                <span className="text-[9.5px] font-extrabold uppercase text-primary tracking-wider block">
-                                  Buy Leg Breakdown
-                                </span>
-                                <div className="flex justify-between text-base-content/70">
-                                  <span>Date:</span>
-                                  <span className="font-medium text-base-content">{formatDateCell(stock.bDate)}</span>
+                          <div className="p-2.5 bg-base-200/60 rounded-xl border border-base-200 text-xs space-y-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                            <div className="overflow-hidden rounded-lg border border-base-300/80 bg-base-100/80">
+                              {/* Table Header: Entry on left, Buy Leg and Sell Leg columns with clear division */}
+                              <div className="grid grid-cols-12 gap-1 px-2.5 py-1.5 bg-base-200/90 border-b border-base-300 text-[10px] font-black uppercase tracking-wider items-center">
+                                <div className="col-span-4 text-base-content/60">
+                                  Entry
                                 </div>
-                                <div className="flex justify-between text-base-content/70">
-                                  <span>Gross Stock:</span>
-                                  <span className="font-mono text-base-content">{hideStockNumbers ? "••••" : formatCompactINR(stock.bStock)}</span>
+                                <div className="col-span-4 text-right text-primary font-black pr-1">
+                                  Buy Leg
                                 </div>
-                                <div className="flex justify-between text-base-content/70">
-                                  <span>Brokerage:</span>
-                                  <span className="font-mono text-warning font-semibold">{hideStockNumbers ? "••" : formatCompactINR(stock.bBkg)}</span>
-                                </div>
-                                <div className="flex justify-between text-base-content/70">
-                                  <span>PDC / Taxes:</span>
-                                  <span className="font-mono text-warning font-semibold">{hideStockNumbers ? "••" : formatCompactINR(stock.bPdc)}</span>
-                                </div>
-                                <div className="flex justify-between text-base-content/70">
-                                  <span>Total Buy Taxes:</span>
-                                  <span className="font-mono text-warning font-bold">{hideStockNumbers ? "••" : formatCompactINR(stock.bBkgPdc)}</span>
-                                </div>
-                                <div className="flex justify-between pt-1 border-t border-base-300/60 font-bold">
-                                  <span>Final Share Price:</span>
-                                  <span className="font-mono text-primary">{hideStockNumbers ? "••••" : formatCompactINR(stock.bFShare)}</span>
+                                <div className="col-span-4 text-right text-secondary font-black pl-2 border-l border-base-300">
+                                  Sell Leg
                                 </div>
                               </div>
 
-                              {/* Sell Detailed Breakdown */}
-                              <div className="space-y-1 pl-1">
-                                <span className="text-[9.5px] font-extrabold uppercase text-secondary tracking-wider block">
-                                  Sell Leg Breakdown
-                                </span>
-                                {isSold ? (
-                                  <>
-                                    <div className="flex justify-between text-base-content/70">
-                                      <span>Date:</span>
-                                      <span className="font-medium text-base-content">{formatDateCell(stock.sDate)}</span>
-                                    </div>
-                                    <div className="flex justify-between text-base-content/70">
-                                      <span>Gross Stock:</span>
-                                      <span className="font-mono text-base-content">{hideStockNumbers ? "••••" : formatCompactINR(stock.sStock)}</span>
-                                    </div>
-                                    <div className="flex justify-between text-base-content/70">
-                                      <span>Brokerage:</span>
-                                      <span className="font-mono text-warning font-semibold">{hideStockNumbers ? "••" : formatCompactINR(stock.sBkg)}</span>
-                                    </div>
-                                    <div className="flex justify-between text-base-content/70">
-                                      <span>PDC / STT:</span>
-                                      <span className="font-mono text-warning font-semibold">{hideStockNumbers ? "••" : formatCompactINR(stock.sPdc)}</span>
-                                    </div>
-                                    <div className="flex justify-between text-base-content/70">
-                                      <span>DP Charges:</span>
-                                      <span className="font-mono text-warning font-semibold">{hideStockNumbers ? "••" : formatCompactINR(stock.dp)}</span>
-                                    </div>
-                                    <div className="flex justify-between text-base-content/70">
-                                      <span>Total Sell Taxes:</span>
-                                      <span className="font-mono text-warning font-bold">{hideStockNumbers ? "••" : formatCompactINR(stock.sBkgPdc + stock.dp)}</span>
-                                    </div>
-                                    <div className="flex justify-between pt-1 border-t border-base-300/60 font-bold">
-                                      <span>Net Final Share:</span>
-                                      <span className="font-mono text-secondary">{hideStockNumbers ? "••••" : formatCompactINR(stock.sFShare)}</span>
-                                    </div>
-                                  </>
-                                ) : (
-                                  <div className="h-full flex flex-col justify-center items-center text-center py-2 text-base-content/50">
-                                    <span className="text-[10px] italic">Not sold yet</span>
-                                    <span className="text-[9px]">Sell leg charges will appear when position is closed.</span>
+                              {/* Rows: Each row has the key on the left, Buy value in middle, Sell value on right */}
+                              <div className="divide-y divide-base-200/80 text-[10.5px]">
+                                {/* 1. Date */}
+                                <div className="grid grid-cols-12 gap-1 px-2.5 py-1.5 items-center hover:bg-base-200/30">
+                                  <div className="col-span-4 text-base-content/70 font-semibold truncate">Date</div>
+                                  <div className="col-span-4 text-right font-medium text-base-content pr-1 truncate">
+                                    {formatDateCell(stock.bDate)}
                                   </div>
-                                )}
+                                  <div className="col-span-4 text-right font-medium text-base-content pl-2 border-l border-base-300/60 truncate">
+                                    {isSold ? (
+                                      formatDateCell(stock.sDate)
+                                    ) : (
+                                      <span className="badge badge-ghost badge-xs text-[9px] font-semibold">Holding</span>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {/* 2. Gross Stock */}
+                                <div className="grid grid-cols-12 gap-1 px-2.5 py-1.5 items-center hover:bg-base-200/30">
+                                  <div className="col-span-4 text-base-content/70 font-semibold truncate">Gross Stock</div>
+                                  <div className="col-span-4 text-right font-mono text-base-content pr-1">
+                                    {hideStockNumbers ? "••••" : formatCompactINR(stock.bStock)}
+                                  </div>
+                                  <div className="col-span-4 text-right font-mono text-base-content pl-2 border-l border-base-300/60">
+                                    {isSold ? (hideStockNumbers ? "••••" : formatCompactINR(stock.sStock)) : <span className="text-base-content/30">—</span>}
+                                  </div>
+                                </div>
+
+                                {/* 3. Brokerage */}
+                                <div className="grid grid-cols-12 gap-1 px-2.5 py-1.5 items-center hover:bg-base-200/30">
+                                  <div className="col-span-4 text-base-content/70 font-semibold truncate">Brokerage</div>
+                                  <div className="col-span-4 text-right font-mono text-warning font-semibold pr-1">
+                                    {hideStockNumbers ? "••" : formatCompactINR(stock.bBkg)}
+                                  </div>
+                                  <div className="col-span-4 text-right font-mono text-warning font-semibold pl-2 border-l border-base-300/60">
+                                    {isSold ? (hideStockNumbers ? "••" : formatCompactINR(stock.sBkg)) : <span className="text-base-content/30">—</span>}
+                                  </div>
+                                </div>
+
+                                {/* 4. PDC / Taxes */}
+                                <div className="grid grid-cols-12 gap-1 px-2.5 py-1.5 items-center hover:bg-base-200/30">
+                                  <div className="col-span-4 text-base-content/70 font-semibold truncate">PDC / Taxes</div>
+                                  <div className="col-span-4 text-right font-mono text-warning font-semibold pr-1">
+                                    {hideStockNumbers ? "••" : formatCompactINR(stock.bPdc)}
+                                  </div>
+                                  <div className="col-span-4 text-right font-mono text-warning font-semibold pl-2 border-l border-base-300/60">
+                                    {isSold ? (hideStockNumbers ? "••" : formatCompactINR(stock.sPdc)) : <span className="text-base-content/30">—</span>}
+                                  </div>
+                                </div>
+
+                                {/* 5. DP Charges */}
+                                <div className="grid grid-cols-12 gap-1 px-2.5 py-1.5 items-center hover:bg-base-200/30">
+                                  <div className="col-span-4 text-base-content/70 font-semibold truncate">DP Charges</div>
+                                  <div className="col-span-4 text-right font-mono text-base-content/30 pr-1">
+                                    —
+                                  </div>
+                                  <div className="col-span-4 text-right font-mono text-warning font-semibold pl-2 border-l border-base-300/60">
+                                    {isSold ? (hideStockNumbers ? "••" : formatCompactINR(stock.dp)) : <span className="text-base-content/30">—</span>}
+                                  </div>
+                                </div>
+
+                                {/* 6. Total Taxes */}
+                                <div className="grid grid-cols-12 gap-1 px-2.5 py-1.5 items-center bg-base-200/40 font-semibold">
+                                  <div className="col-span-4 text-base-content/80 font-bold truncate">Total Taxes</div>
+                                  <div className="col-span-4 text-right font-mono text-warning font-bold pr-1">
+                                    {hideStockNumbers ? "••" : formatCompactINR(stock.bBkgPdc)}
+                                  </div>
+                                  <div className="col-span-4 text-right font-mono text-warning font-bold pl-2 border-l border-base-300/60">
+                                    {isSold ? (hideStockNumbers ? "••" : formatCompactINR(stock.sBkgPdc + stock.dp)) : <span className="text-base-content/30">—</span>}
+                                  </div>
+                                </div>
+
+                                {/* 7. Final Share Price */}
+                                <div className="grid grid-cols-12 gap-1 px-2.5 py-1.5 items-center bg-base-200/60 border-t border-base-300/80 font-bold">
+                                  <div className="col-span-4 text-base-content font-extrabold truncate">Final Share</div>
+                                  <div className="col-span-4 text-right font-mono text-primary font-black pr-1">
+                                    {hideStockNumbers ? "••••" : formatCompactINR(stock.bFShare)}
+                                  </div>
+                                  <div className="col-span-4 text-right font-mono text-secondary font-black pl-2 border-l border-base-300/60">
+                                    {isSold ? (hideStockNumbers ? "••••" : formatCompactINR(stock.sFShare)) : <span className="text-base-content/30">—</span>}
+                                  </div>
+                                </div>
                               </div>
                             </div>
                           </div>
@@ -7169,8 +7229,9 @@ export default function InvTableEntry() {
                 })}
               </div>
             )}
-          </div>
-        )}
+            </div>
+          );
+        })()}
 
         {/* ================================================================ */}
         {/* TAB 2: MUTUAL FUNDS MOBILE CONTENT - FINTECH FEED                */}
@@ -7196,7 +7257,7 @@ export default function InvTableEntry() {
           return (
             <div className="space-y-3 px-2.5 w-full max-w-full animate-in fade-in duration-200">
               {/* 1. Fintech Hero Portfolio Banner */}
-              <div className="bg-gradient-to-br from-base-100 to-base-200/90 rounded-2xl border border-base-content/8 dark:border-base-content/8 p-3.5 shadow-sm space-y-3">
+              <div className="bg-gradient-to-br from-base-200 via-base-200 to-base-300/80 dark:from-base-900 dark:via-base-900 dark:to-base-950 rounded-2xl border border-base-300 dark:border-base-700/80 p-3.5 shadow-sm space-y-3">
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <span className="text-[10px] font-black uppercase tracking-wider text-base-content/60 flex items-center gap-1.5">
@@ -7221,22 +7282,22 @@ export default function InvTableEntry() {
                 </div>
 
                 {/* Sub-Metric 3-Pack */}
-                <div className="grid grid-cols-3 gap-2 pt-2.5 border-t border-base-content/8 dark:border-base-content/8">
-                  <div className="bg-base-100/70 p-2 rounded-xl border border-base-content/6 dark:border-base-content/6">
-                    <div className="text-[9.5px] font-bold text-base-content/60 uppercase">Gross Deposited</div>
+                <div className="grid grid-cols-3 gap-2 pt-2.5 border-t border-base-300/80 dark:border-base-700/60">
+                  <div className="bg-base-100/90 dark:bg-base-800/80 p-2 rounded-xl border border-base-300/60 dark:border-base-700/60 shadow-2xs">
+                    <div className="text-[9.5px] font-bold text-base-content/60 uppercase">Deposited</div>
                     <div className="text-xs font-black font-mono text-base-content truncate">
                       {hideMfNumbers ? "••••" : `₹${Math.round(totalDepositedAll).toLocaleString("en-IN")}`}
                     </div>
                   </div>
-                  <div className="bg-base-100/70 p-2 rounded-xl border border-base-content/6 dark:border-base-content/6">
+                  <div className="bg-base-100/90 dark:bg-base-800/80 p-2 rounded-xl border border-base-300/60 dark:border-base-700/60 shadow-2xs">
                     <div className="text-[9.5px] font-bold text-base-content/60 uppercase">Total ER</div>
                     <div className="text-xs font-black font-mono text-error truncate">
                       {hideMfNumbers ? "••••" : `₹${Math.round(totalErAll).toLocaleString("en-IN")}`}
                     </div>
                   </div>
-                  <div className="bg-base-100/70 p-2 rounded-xl border border-base-content/6 dark:border-base-content/6">
+                  <div className="bg-base-100/90 dark:bg-base-800/80 p-2 rounded-xl border border-base-300/60 dark:border-base-700/60 shadow-2xs">
                     <div className="text-[9.5px] font-bold text-base-content/60 uppercase">Withdrawn</div>
-                    <div className="text-xs font-black font-mono text-amber-500 truncate">
+                    <div className="text-xs font-black font-mono text-base-content truncate">
                       {hideMfNumbers ? "••••" : `₹${Math.round(totalWithdrawnAll).toLocaleString("en-IN")}`}
                     </div>
                   </div>
@@ -7405,7 +7466,7 @@ export default function InvTableEntry() {
           return (
             <div className="space-y-3 px-2.5 w-full max-w-full animate-in fade-in duration-200">
               {/* 1. Fintech Hero Portfolio Banner */}
-              <div className="bg-gradient-to-br from-base-100 to-base-200/90 rounded-2xl border border-base-content/8 dark:border-base-content/8 p-3.5 shadow-sm space-y-3">
+              <div className="bg-gradient-to-br from-base-200 via-base-200 to-base-300/80 dark:from-base-900 dark:via-base-900 dark:to-base-950 rounded-2xl border border-base-300 dark:border-base-700/80 p-3.5 shadow-sm space-y-3">
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <span className="text-[10px] font-black uppercase tracking-wider text-base-content/60 flex items-center gap-1.5">
@@ -7430,20 +7491,20 @@ export default function InvTableEntry() {
                 </div>
 
                 {/* Sub-Metric 3-Pack */}
-                <div className="grid grid-cols-3 gap-2 pt-2.5 border-t border-base-content/8 dark:border-base-content/8">
-                  <div className="bg-base-100/70 p-2 rounded-xl border border-base-content/6 dark:border-base-content/6">
+                <div className="grid grid-cols-3 gap-2 pt-2.5 border-t border-base-300/80 dark:border-base-700/60">
+                  <div className="bg-base-100/90 dark:bg-base-800/80 p-2 rounded-xl border border-base-300/60 dark:border-base-700/60 shadow-2xs">
                     <div className="text-[9.5px] font-bold text-base-content/60 uppercase">Active FDs</div>
                     <div className="text-xs font-black font-mono text-success truncate">
                       {activeCount} <span className="text-[9.5px] font-semibold text-base-content/50">running</span>
                     </div>
                   </div>
-                  <div className="bg-base-100/70 p-2 rounded-xl border border-base-content/6 dark:border-base-content/6">
+                  <div className="bg-base-100/90 dark:bg-base-800/80 p-2 rounded-xl border border-base-300/60 dark:border-base-700/60 shadow-2xs">
                     <div className="text-[9.5px] font-bold text-base-content/60 uppercase">Settled</div>
                     <div className="text-xs font-black font-mono text-base-content truncate">
                       {withdrawnCount} <span className="text-[9.5px] font-semibold text-base-content/50">closed</span>
                     </div>
                   </div>
-                  <div className="bg-base-100/70 p-2 rounded-xl border border-base-content/6 dark:border-base-content/6">
+                  <div className="bg-base-100/90 dark:bg-base-800/80 p-2 rounded-xl border border-base-300/60 dark:border-base-700/60 shadow-2xs">
                     <div className="text-[9.5px] font-bold text-base-content/60 uppercase">Total Accounts</div>
                     <div className="text-xs font-black font-mono text-primary truncate">
                       {filteredFixedDeposits.length}
@@ -7600,7 +7661,7 @@ export default function InvTableEntry() {
           return (
             <div className="space-y-3 px-2.5 w-full max-w-full animate-in fade-in duration-200">
               {/* 1. Fintech Hero Portfolio Banner */}
-              <div className="bg-gradient-to-br from-base-100 to-base-200/90 rounded-2xl border border-base-content/8 dark:border-base-content/8 p-3.5 shadow-sm space-y-3">
+              <div className="bg-gradient-to-br from-base-200 via-base-200 to-base-300/80 dark:from-base-900 dark:via-base-900 dark:to-base-950 rounded-2xl border border-base-300 dark:border-base-700/80 p-3.5 shadow-sm space-y-3">
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <span className="text-[10px] font-black uppercase tracking-wider text-base-content/60 flex items-center gap-1.5">
@@ -7625,20 +7686,20 @@ export default function InvTableEntry() {
                 </div>
 
                 {/* Sub-Metric 3-Pack */}
-                <div className="grid grid-cols-3 gap-2 pt-2.5 border-t border-base-content/8 dark:border-base-content/8">
-                  <div className="bg-base-100/70 p-2 rounded-xl border border-base-content/6 dark:border-base-content/6">
+                <div className="grid grid-cols-3 gap-2 pt-2.5 border-t border-base-300/80 dark:border-base-700/60">
+                  <div className="bg-base-100/90 dark:bg-base-800/80 p-2 rounded-xl border border-base-300/60 dark:border-base-700/60 shadow-2xs">
                     <div className="text-[9.5px] font-bold text-base-content/60 uppercase">Active Plans</div>
                     <div className="text-xs font-black font-mono text-success truncate">
                       {activeCount} <span className="text-[9.5px] font-semibold text-base-content/50">running</span>
                     </div>
                   </div>
-                  <div className="bg-base-100/70 p-2 rounded-xl border border-base-content/6 dark:border-base-content/6">
+                  <div className="bg-base-100/90 dark:bg-base-800/80 p-2 rounded-xl border border-base-300/60 dark:border-base-700/60 shadow-2xs">
                     <div className="text-[9.5px] font-bold text-base-content/60 uppercase">Deposited</div>
                     <div className="text-xs font-black font-mono text-primary truncate">
                       {hideRdNumbers ? "••••" : `₹${Math.round(totalInvestedSoFar).toLocaleString("en-IN")}`}
                     </div>
                   </div>
-                  <div className="bg-base-100/70 p-2 rounded-xl border border-base-content/6 dark:border-base-content/6">
+                  <div className="bg-base-100/90 dark:bg-base-800/80 p-2 rounded-xl border border-base-300/60 dark:border-base-700/60 shadow-2xs">
                     <div className="text-[9.5px] font-bold text-base-content/60 uppercase">Closed Plans</div>
                     <div className="text-xs font-black font-mono text-base-content truncate">
                       {withdrawnCount} <span className="text-[9.5px] font-semibold text-base-content/50">settled</span>
@@ -7775,278 +7836,515 @@ export default function InvTableEntry() {
         {/* ================================================================ */}
         {/* TAB 5: SALARY MOBILE CONTENT - FINTECH FEED                      */}
         {/* ================================================================ */}
-        {activeTab === "salary" && (
-          <div className="space-y-3 px-2.5 w-full max-w-full animate-in fade-in duration-200">
-            {/* 1. Fintech Hero Portfolio Banner */}
-            <div className="bg-gradient-to-br from-base-100 to-base-200/90 rounded-2xl border border-base-200/90 p-3.5 shadow-sm space-y-3">
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <span className="text-[10px] font-black uppercase tracking-wider text-base-content/60 flex items-center gap-1.5">
-                    <Briefcase size={13} className="text-emerald-500" />
-                    Total Gross CTC
-                  </span>
-                  <div className="text-2xl font-black font-mono tracking-tight mt-0.5 text-emerald-600 dark:text-emerald-400">
-                    ₹{salarySummary.totalCtc.toLocaleString("en-IN")}
+        {activeTab === "salary" && (() => {
+          // Group salary entries by company
+          const salaryByCompany = {};
+          salaryData.forEach((item) => {
+            const co = item.company || "Other Company";
+            if (!salaryByCompany[co]) salaryByCompany[co] = [];
+            salaryByCompany[co].push(item);
+          });
+
+          // All unique years in salary data
+          const salaryAllYears = Array.from(
+            new Set(salaryData.map((s) => s.month?.slice(0, 4)).filter(Boolean))
+          ).sort().reverse();
+
+          // Build company summaries applying search + year filter
+          const salaryCompanyCards = Object.entries(salaryByCompany)
+            .map(([company, entries]) => {
+              if (salarySearchTerm) {
+                const q = salarySearchTerm.toLowerCase();
+                if (!company.toLowerCase().includes(q)) return null;
+              }
+
+              const filteredEntries =
+                salaryYearFilter === "all"
+                  ? entries
+                  : entries.filter((e) => e.month?.slice(0, 4) === salaryYearFilter);
+
+              if (filteredEntries.length === 0) return null;
+
+              const sortedEntries = [...filteredEntries].sort((a, b) => (a.month || "").localeCompare(b.month || ""));
+              const startDate = sortedEntries[0]?.month;
+              const endDate = sortedEntries[sortedEntries.length - 1]?.month;
+
+              const totalInHand = filteredEntries.reduce((s, e) => {
+                const basic = Number(e.basicSalary || 0);
+                const hra = Number(e.hra || 0);
+                const flexi = Number(e.flexi || 0);
+                const bonus = Number(e.bonus || 0);
+                const gross = Number(e.gross || 0) || (basic + hra + flexi + bonus);
+                const erPf = Number(e.erPf || 0);
+                const taxes = Number(e.taxes || 0);
+                return s + (Number(e.inHand || 0) || (gross - (erPf + taxes)));
+              }, 0);
+
+              const totalCtc = filteredEntries.reduce((s, e) => {
+                const basic = Number(e.basicSalary || 0);
+                const hra = Number(e.hra || 0);
+                const flexi = Number(e.flexi || 0);
+                const bonus = Number(e.bonus || 0);
+                const gratuity = Number(e.gratuity || 0);
+                const variablePay = Number(e.variablePay || 0);
+                const gross = Number(e.gross || 0) || (basic + hra + flexi + bonus);
+                const erPf = Number(e.erPf || 0);
+                return s + (Number(e.ctc || 0) || (gross + gratuity + variablePay + erPf));
+              }, 0);
+
+              const totalTaxes = filteredEntries.reduce((s, e) => s + (Number(e.taxes) || 0), 0);
+              const totalErPf = filteredEntries.reduce((s, e) => s + (Number(e.erPf) || 0), 0);
+              const totalDeductions = totalTaxes + totalErPf;
+
+              return {
+                company,
+                entries: sortedEntries,
+                totalInHand,
+                totalCtc,
+                totalTaxes,
+                totalErPf,
+                totalDeductions,
+                startDate,
+                endDate,
+              };
+            })
+            .filter(Boolean);
+
+          // Entries for active company bottom-sheet popup
+          const bottomSheetSalaryEntries = salaryBottomSheetCompany
+            ? (salaryByCompany[salaryBottomSheetCompany] || []).slice().sort((a, b) => {
+                const cmp = (a.month || "").localeCompare(b.month || "");
+                return salarySortOrder === "asc" ? cmp : -cmp;
+              })
+            : [];
+
+          const sheetTotalInHand = bottomSheetSalaryEntries.reduce((s, e) => {
+            const basic = Number(e.basicSalary || 0);
+            const hra = Number(e.hra || 0);
+            const flexi = Number(e.flexi || 0);
+            const bonus = Number(e.bonus || 0);
+            const gross = Number(e.gross || 0) || (basic + hra + flexi + bonus);
+            const erPf = Number(e.erPf || 0);
+            const taxes = Number(e.taxes || 0);
+            return s + (Number(e.inHand || 0) || (gross - (erPf + taxes)));
+          }, 0);
+
+          const sheetTotalCtc = bottomSheetSalaryEntries.reduce((s, e) => {
+            const basic = Number(e.basicSalary || 0);
+            const hra = Number(e.hra || 0);
+            const flexi = Number(e.flexi || 0);
+            const bonus = Number(e.bonus || 0);
+            const gratuity = Number(e.gratuity || 0);
+            const variablePay = Number(e.variablePay || 0);
+            const gross = Number(e.gross || 0) || (basic + hra + flexi + bonus);
+            const erPf = Number(e.erPf || 0);
+            return s + (Number(e.ctc || 0) || (gross + gratuity + variablePay + erPf));
+          }, 0);
+
+          const sheetTotalTaxes = bottomSheetSalaryEntries.reduce((s, e) => s + (Number(e.taxes) || 0), 0);
+          const sheetTotalErPf = bottomSheetSalaryEntries.reduce((s, e) => s + (Number(e.erPf) || 0), 0);
+          const sheetTotalDeductions = sheetTotalTaxes + sheetTotalErPf;
+
+          return (
+            <div className="space-y-3 px-2.5 w-full max-w-full animate-in fade-in duration-200">
+              {/* 1. Fintech Hero Portfolio Banner */}
+              <div className="bg-gradient-to-br from-base-200 via-base-200 to-base-300/80 dark:from-base-900 dark:via-base-900 dark:to-base-950 rounded-2xl border border-base-300 dark:border-base-700/80 p-3.5 shadow-sm space-y-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <span className="text-[10px] font-black uppercase tracking-wider text-base-content/60 flex items-center gap-1.5">
+                      <Briefcase size={13} className="text-emerald-500" />
+                      Total Gross CTC
+                    </span>
+                    <div className="text-2xl font-black font-mono tracking-tight mt-0.5 text-emerald-600 dark:text-emerald-400">
+                      ₹{salarySummary.totalCtc.toLocaleString("en-IN")}
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col items-end gap-1">
+                    <span className="badge font-bold font-mono text-xs px-2.5 py-1 rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                      {salarySummary.experienceText}
+                    </span>
+                    <span className="text-[10px] font-semibold text-base-content/50">
+                      {salarySummary.count} Monthly Payslips
+                    </span>
                   </div>
                 </div>
 
-                <div className="flex flex-col items-end gap-1">
-                  <span className="badge font-bold font-mono text-xs px-2.5 py-1 rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
-                    {salarySummary.experienceText}
-                  </span>
-                  <span className="text-[10px] font-semibold text-base-content/50">
-                    {salarySummary.count} Monthly Payslips
-                  </span>
+                {/* Sub-Metric 4-Pack */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2.5 border-t border-base-300/80 dark:border-base-700/60">
+                  <div className="bg-base-100/90 dark:bg-base-800/80 p-2 rounded-xl border border-base-300/60 dark:border-base-700/60 shadow-2xs">
+                    <div className="text-[9.5px] font-bold text-base-content/60 uppercase">Net In-Hand</div>
+                    <div className="text-xs font-black font-mono text-success truncate">
+                      ₹{salarySummary.totalInHand.toLocaleString("en-IN")}
+                    </div>
+                  </div>
+                  <div className="bg-base-100/90 dark:bg-base-800/80 p-2 rounded-xl border border-base-300/60 dark:border-base-700/60 shadow-2xs">
+                    <div className="text-[9.5px] font-bold text-base-content/60 uppercase">Employer PF</div>
+                    <div className="text-xs font-black font-mono text-primary truncate">
+                      ₹{salarySummary.totalErPf.toLocaleString("en-IN")}
+                    </div>
+                  </div>
+                  <div className="bg-base-100/90 dark:bg-base-800/80 p-2 rounded-xl border border-base-300/60 dark:border-base-700/60 shadow-2xs">
+                    <div className="text-[9.5px] font-bold text-base-content/60 uppercase">Taxes & Dues</div>
+                    <div className="text-xs font-black font-mono text-error truncate">
+                      ₹{salarySummary.totalTaxes.toLocaleString("en-IN")}
+                    </div>
+                  </div>
+                  <div className="bg-base-100/90 dark:bg-base-800/80 p-2 rounded-xl border border-base-300/60 dark:border-base-700/60 shadow-2xs">
+                    <div className="text-[9.5px] font-bold text-base-content/60 uppercase">Experience</div>
+                    <div className="text-xs font-black font-mono text-base-content truncate">
+                      {salarySummary.totalMonths} months
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              {/* Sub-Metric 4-Pack */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2.5 border-t border-base-content/10">
-                <div className="bg-base-100/70 p-2 rounded-xl border border-base-content/5">
-                  <div className="text-[9.5px] font-bold text-base-content/60 uppercase">Net In-Hand</div>
-                  <div className="text-xs font-black font-mono text-success truncate">
-                    ₹{salarySummary.totalInHand.toLocaleString("en-IN")}
-                  </div>
+              {/* 2. Sticky Search Bar + Year Filter Tabs */}
+              <div
+                className="sticky z-30 bg-base-100/95 dark:bg-base-900/95 backdrop-blur-md py-2 -mx-2.5 px-2.5 border-b border-base-content/8 dark:border-base-content/8 shadow-xs space-y-1.5 transition-all"
+                style={{ top: `${mobileHeaderHeight}px` }}
+              >
+                {/* Search input */}
+                <div className="relative w-full">
+                  <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-base-content/40" />
+                  <input
+                    type="text"
+                    placeholder="Search company..."
+                    value={salarySearchTerm}
+                    onChange={(e) => setSalarySearchTerm(e.target.value)}
+                    className="input input-xs h-8 pl-8 pr-8 w-full rounded-xl bg-base-200/60 dark:bg-base-800/60 border border-base-content/8 dark:border-base-content/8 text-xs placeholder:text-base-content/40 focus:border-primary"
+                  />
+                  {salarySearchTerm && (
+                    <button
+                      type="button"
+                      onClick={() => setSalarySearchTerm("")}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-base-content/40 hover:text-base-content p-0.5 cursor-pointer"
+                    >
+                      <X size={12} />
+                    </button>
+                  )}
                 </div>
-                <div className="bg-base-100/70 p-2 rounded-xl border border-base-content/5">
-                  <div className="text-[9.5px] font-bold text-base-content/60 uppercase">Employer PF</div>
-                  <div className="text-xs font-black font-mono text-primary truncate">
-                    ₹{salarySummary.totalErPf.toLocaleString("en-IN")}
-                  </div>
-                </div>
-                <div className="bg-base-100/70 p-2 rounded-xl border border-base-content/5">
-                  <div className="text-[9.5px] font-bold text-base-content/60 uppercase">Taxes & Dues</div>
-                  <div className="text-xs font-black font-mono text-error truncate">
-                    ₹{salarySummary.totalTaxes.toLocaleString("en-IN")}
-                  </div>
-                </div>
-                <div className="bg-base-100/70 p-2 rounded-xl border border-base-content/5">
-                  <div className="text-[9.5px] font-bold text-base-content/60 uppercase">Experience</div>
-                  <div className="text-xs font-black font-mono text-base-content truncate">
-                    {salarySummary.totalMonths} months
-                  </div>
-                </div>
-              </div>
-            </div>
 
-            {/* 2. Inline Search & View Switcher */}
-            <div className="flex items-center gap-2">
-              <div className="relative flex-1">
-                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-base-content/40" />
-                <input
-                  type="text"
-                  placeholder="Search company, month..."
-                  value={salarySearchTerm}
-                  onChange={(e) => setSalarySearchTerm(e.target.value)}
-                  className="input input-xs h-8 pl-8 pr-8 w-full rounded-xl bg-base-100 border border-base-200 text-xs placeholder:text-base-content/40 focus:border-primary"
-                />
-                {salarySearchTerm && (
-                  <button
-                    type="button"
-                    onClick={() => setSalarySearchTerm("")}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-base-content/40 hover:text-base-content"
-                  >
-                    <X size={12} />
-                  </button>
+                {/* Segmented Year Filter Tabs */}
+                {salaryAllYears.length > 1 && (
+                  <div className="flex items-center gap-1 p-0.5 bg-base-200/60 dark:bg-base-800/60 rounded-xl border border-base-content/8 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+                    <button
+                      type="button"
+                      onClick={() => setSalaryYearFilter("all")}
+                      className={`shrink-0 px-2.5 py-1 rounded-lg text-[10.5px] transition-all cursor-pointer ${
+                        salaryYearFilter === "all"
+                          ? "bg-base-100 dark:bg-base-900 text-primary dark:text-primary shadow-xs font-black border border-base-content/8 scale-[1.01]"
+                          : "text-base-content/60 hover:text-base-content font-semibold"
+                      }`}
+                    >
+                      All
+                    </button>
+                    {salaryAllYears.map((yr) => (
+                      <button
+                        key={yr}
+                        type="button"
+                        onClick={() => setSalaryYearFilter(yr)}
+                        className={`shrink-0 px-2.5 py-1 rounded-lg text-[10.5px] font-mono transition-all cursor-pointer ${
+                          salaryYearFilter === yr
+                            ? "bg-base-100 dark:bg-base-900 text-primary dark:text-primary shadow-xs font-black border border-base-content/8 scale-[1.01]"
+                            : "text-base-content/60 hover:text-base-content font-semibold"
+                        }`}
+                      >
+                        {yr}
+                      </button>
+                    ))}
+                  </div>
                 )}
               </div>
 
-              {/* View Mode Toggle */}
-              <div className="flex items-center gap-1 bg-base-200 p-1 rounded-xl shrink-0 text-xs font-bold border border-base-300/60">
-                <button
-                  type="button"
-                  onClick={() => handleSalaryViewChange("detailed")}
-                  className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1 text-[11px] ${
-                    salaryTableViewMode === "detailed"
-                      ? "bg-base-100 text-primary shadow-xs font-black"
-                      : "text-base-content/70"
-                  }`}
-                  title="Detailed View"
-                >
-                  <Columns3 size={12} />
-                  <span>Detailed</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleSalaryViewChange("split")}
-                  className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1 text-[11px] ${
-                    salaryTableViewMode === "split"
-                      ? "bg-base-100 text-primary shadow-xs font-black"
-                      : "text-base-content/70"
-                  }`}
-                  title="Split View"
-                >
-                  <Columns2 size={12} />
-                  <span>Split</span>
-                </button>
-              </div>
-            </div>
-
-            {/* 3. Content List */}
-            {loadingSalary ? (
-              <div className="h-48 flex items-center justify-center">
-                <span className="loading loading-spinner loading-md text-primary"></span>
-              </div>
-            ) : salaryData.length === 0 ? (
-              <div className="bg-base-100 p-8 rounded-2xl border border-base-200 text-center shadow-xs">
-                <Briefcase size={32} className="mx-auto text-primary mb-2" />
-                <h3 className="font-bold text-xs text-base-content">No Salary Records Yet</h3>
-                <p className="text-[11px] text-base-content/60 mt-0.5">Add monthly payslips to track compensation.</p>
-                <button
-                  type="button"
-                  onClick={handleOpenAddSalaryModal}
-                  className="btn btn-primary btn-xs mt-3 font-bold rounded-xl cursor-pointer"
-                >
-                  <Plus size={13} />
-                  <span>Add Salary Record</span>
-                </button>
-              </div>
-            ) : filteredSalaries.length === 0 ? (
-              <div className="bg-base-100 p-8 rounded-2xl border border-base-200 text-center shadow-xs">
-                <Search size={28} className="mx-auto text-primary mb-2" />
-                <h3 className="font-bold text-xs text-base-content">No Records Match</h3>
-                <p className="text-[11px] text-base-content/60 mt-0.5">Try clearing filters or search query.</p>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSalarySearchTerm("");
-                    setSalaryCompanyFilter("all");
-                    setSalaryYearFilter("all");
-                  }}
-                  className="btn btn-ghost btn-xs text-primary font-bold mt-2 cursor-pointer"
-                >
-                  Clear Filters
-                </button>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {filteredSalaries.map((item) => {
-                  const basic = Number(item.basicSalary || 0);
-                  const hra = Number(item.hra || 0);
-                  const flexi = Number(item.flexi || 0);
-                  const bonus = Number(item.bonus || 0);
-                  const gratuity = Number(item.gratuity || 0);
-                  const variablePay = Number(item.variablePay || 0);
-                  const gross = Number(item.gross || 0) || (basic + hra + flexi + bonus);
-                  const rowEarnings = gross + gratuity + variablePay;
-                  const erPf = Number(item.erPf || 0);
-                  const taxes = Number(item.taxes || 0);
-                  const inHand = Number(item.inHand || 0) || (gross - (erPf + taxes));
-                  const ctc = Number(item.ctc || 0) || (rowEarnings + erPf);
-
-                  return (
+              {/* 3. Company Cards List */}
+              {loadingSalary ? (
+                <div className="h-48 flex items-center justify-center">
+                  <span className="loading loading-spinner loading-md text-primary"></span>
+                </div>
+              ) : salaryData.length === 0 ? (
+                <div className="bg-base-100 p-8 rounded-2xl border border-base-200 text-center shadow-xs">
+                  <Briefcase size={32} className="mx-auto text-primary mb-2" />
+                  <h3 className="font-bold text-xs text-base-content">No Salary Records Yet</h3>
+                  <p className="text-[11px] text-base-content/60 mt-0.5">Add monthly payslips to track compensation.</p>
+                  <button
+                    type="button"
+                    onClick={handleOpenAddSalaryModal}
+                    className="btn btn-primary btn-xs mt-3 font-bold rounded-xl cursor-pointer"
+                  >
+                    <Plus size={13} />
+                    <span>Add Salary Record</span>
+                  </button>
+                </div>
+              ) : salaryCompanyCards.length === 0 ? (
+                <div className="bg-base-100 p-8 rounded-2xl border border-base-content/8 text-center shadow-xs">
+                  <Search size={24} className="mx-auto text-base-content/30 mb-2" />
+                  <h3 className="font-bold text-xs text-base-content">No Results</h3>
+                  <p className="text-[11px] text-base-content/60 mt-0.5">Try changing the search or year filter.</p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSalarySearchTerm("");
+                      setSalaryYearFilter("all");
+                    }}
+                    className="btn btn-ghost btn-xs text-primary font-bold mt-2 cursor-pointer"
+                  >
+                    Clear Filters
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-3 pb-4">
+                  {salaryCompanyCards.map(({ company, entries: compEntries, totalInHand, totalCtc, totalDeductions, startDate, endDate }) => (
                     <div
-                      key={item.id || item._id}
-                      className="bg-base-100 rounded-2xl border border-base-200 p-3.5 shadow-2xs space-y-3"
+                      key={company}
+                      className="bg-base-100 rounded-2xl border border-base-content/8 dark:border-base-content/8 shadow-2xs overflow-hidden"
                     >
-                      {/* Card Header: Company, Month, Actions */}
-                      <div className="flex items-center justify-between gap-2 border-b border-base-200 pb-2.5">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <CompanyLogo name={item.company} size="w-7 h-7" type="company" />
-                          <div className="min-w-0">
-                            <h4 className="font-bold text-xs text-base-content truncate">{item.company}</h4>
-                            <div className="flex items-center gap-1 text-[10px] text-base-content/60">
-                              <Calendar size={11} className="text-primary shrink-0" />
-                              <span>{dayjs(item.month).format("MMM YYYY")}</span>
+                      {/* Card Header Row */}
+                      <div className="p-3.5 space-y-3">
+                        {/* Company identity */}
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <CompanyLogo name={company} size="w-9 h-9" type="company" />
+                            <div className="min-w-0">
+                              <span className="font-black text-sm text-base-content truncate block">{company}</span>
+                              <span className="text-[10px] text-base-content/55 font-medium">
+                                {dayjs(startDate).format("MMM YYYY")} → {dayjs(endDate).format("MMM YYYY")}
+                              </span>
                             </div>
                           </div>
+
+                          {/* Info Button */}
+                          <button
+                            type="button"
+                            onClick={() => setSalaryBottomSheetCompany(company)}
+                            className="shrink-0 w-8 h-8 rounded-full bg-primary/10 text-primary border border-primary/20 flex items-center justify-center hover:bg-primary/20 transition-colors cursor-pointer"
+                            title="View all salary entries"
+                          >
+                            <Info size={15} />
+                          </button>
                         </div>
 
-                        <div className="flex items-center gap-1 shrink-0">
-                          <button
-                            type="button"
-                            onClick={() => handleEditSalary(item)}
-                            className="btn btn-ghost btn-xs btn-square text-primary hover:bg-primary/10 cursor-pointer"
-                            title="Edit Salary"
-                          >
-                            <Edit size={13} />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteSalary(item.id || item._id)}
-                            className="btn btn-ghost btn-xs btn-square text-error hover:bg-error/10 cursor-pointer"
-                            title="Delete Salary"
-                          >
-                            <Trash2 size={13} />
-                          </button>
+                        {/* 4 metric cards */}
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="bg-base-200/50 p-2.5 rounded-xl border border-base-content/6 dark:border-base-content/6">
+                            <span className="text-[9.5px] font-bold text-base-content/55 uppercase block mb-0.5">Net In-Hand</span>
+                            <span className="text-xs font-black text-success font-mono">₹{totalInHand.toLocaleString("en-IN")}</span>
+                          </div>
+                          <div className="bg-base-200/50 p-2.5 rounded-xl border border-base-content/6 dark:border-base-content/6">
+                            <span className="text-[9.5px] font-bold text-base-content/55 uppercase block mb-0.5">Gross CTC</span>
+                            <span className="text-xs font-black text-emerald-600 dark:text-emerald-400 font-mono">₹{totalCtc.toLocaleString("en-IN")}</span>
+                          </div>
+                          <div className="bg-base-200/50 p-2.5 rounded-xl border border-base-content/6 dark:border-base-content/6">
+                            <span className="text-[9.5px] font-bold text-base-content/55 uppercase block mb-0.5">No. of Payslips</span>
+                            <span className="text-xs font-black text-base-content font-mono">{compEntries.length} Months</span>
+                          </div>
+                          <div className="bg-base-200/50 p-2.5 rounded-xl border border-base-content/6 dark:border-base-content/6">
+                            <span className="text-[9.5px] font-bold text-base-content/55 uppercase block mb-0.5">Taxes & PF</span>
+                            <span className="text-xs font-black text-error font-mono">₹{totalDeductions.toLocaleString("en-IN")}</span>
+                          </div>
                         </div>
                       </div>
 
-                      {/* 2x2 Metric Grid */}
-                      <div className="grid grid-cols-2 gap-2 text-xs bg-base-200/50 p-2.5 rounded-xl border border-base-200">
-                        <div>
-                          <span className="text-[9.5px] font-extrabold uppercase text-success tracking-wider block">In Hand</span>
-                          <span className="text-sm font-black text-success font-mono">₹{inHand.toLocaleString("en-IN")}</span>
-                        </div>
-                        <div>
-                          <span className="text-[9.5px] font-extrabold uppercase text-info tracking-wider block">CTC</span>
-                          <span className="text-sm font-black text-info font-mono">₹{ctc.toLocaleString("en-IN")}</span>
-                        </div>
-                        <div>
-                          <span className="text-[9.5px] font-bold text-base-content/60 uppercase block">Basic + HRA</span>
-                          <span className="font-mono text-base-content/90">₹{(basic + hra).toLocaleString("en-IN")}</span>
-                        </div>
-                        <div>
-                          <span className="text-[9.5px] font-bold text-error uppercase block">Taxes & PF</span>
-                          <span className="font-mono text-error font-bold">₹{(taxes + erPf).toLocaleString("en-IN")}</span>
-                        </div>
+                      {/* Card Footer */}
+                      <div className="px-3.5 py-2 bg-base-200/30 border-t border-base-content/8 dark:border-base-content/8 flex items-center justify-between">
+                        <span className="text-[10px] text-base-content/55 font-medium">
+                          {dayjs(startDate).format("MMM YY")} – {dayjs(endDate).format("MMM YY")} ({compEntries.length} payslips)
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setSalaryBottomSheetCompany(company)}
+                          className="text-[10.5px] font-bold text-primary flex items-center gap-1 cursor-pointer hover:opacity-80"
+                        >
+                          <span>View All Entries</span>
+                          <ChevronDown size={12} className="-rotate-90" />
+                        </button>
                       </div>
-
-                      {/* Optional Bonus or Allowance badge row */}
-                      {(bonus > 0 || flexi > 0 || variablePay > 0) && (
-                        <div className="flex items-center gap-1.5 flex-wrap text-[10px]">
-                          {bonus > 0 && (
-                            <span className="badge badge-xs badge-success badge-soft font-bold">
-                              Bonus: ₹{bonus.toLocaleString("en-IN")}
-                            </span>
-                          )}
-                          {flexi > 0 && (
-                            <span className="badge badge-xs badge-info badge-soft font-bold">
-                              Flexi: ₹{flexi.toLocaleString("en-IN")}
-                            </span>
-                          )}
-                          {variablePay > 0 && (
-                            <span className="badge badge-xs badge-warning badge-soft font-bold">
-                              Var: ₹{variablePay.toLocaleString("en-IN")}
-                            </span>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Breakdown Modal Button */}
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setSalaryBreakdownModal({
-                            title: "Salary Earnings Breakdown",
-                            company: item.company,
-                            month: dayjs(item.month).format("MMMM YYYY"),
-                            type: "earnings",
-                            totalValue: rowEarnings,
-                            totalLabel: "Total Gross Earnings",
-                            bottomNote: "Includes basic pay, allowances, bonuses, and variable pay.",
-                            items: [
-                              { label: "Basic Salary", value: basic },
-                              { label: "House Rent Allowance (HRA)", value: hra },
-                              { label: "Flexi / Special Allowance", value: flexi },
-                              ...(bonus > 0 ? [{ label: "Performance Bonus", value: bonus, highlight: true }] : []),
-                              ...(gratuity > 0 ? [{ label: "Gratuity", value: gratuity }] : []),
-                              ...(variablePay > 0 ? [{ label: "Variable Pay", value: variablePay }] : []),
-                            ],
-                          })
-                        }
-                        className="btn btn-xs btn-outline btn-primary w-full rounded-xl font-bold cursor-pointer"
-                      >
-                        <Info size={13} />
-                        <span>View Detailed Breakdown</span>
-                      </button>
                     </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        )}
+                  ))}
+                </div>
+              )}
+
+              {/* ── SALARY COMPANY BOTTOM SHEET ─────────────────────────────────── */}
+              {salaryBottomSheetCompany && (
+                <>
+                  {/* Backdrop */}
+                  <div
+                    className="fixed inset-0 z-[99998] bg-black/60 backdrop-blur-sm"
+                    onClick={() => setSalaryBottomSheetCompany(null)}
+                  />
+                  {/* Sheet */}
+                  <div className="fixed bottom-0 left-0 right-0 z-[99999] bg-base-100 rounded-t-3xl border-t border-base-content/10 dark:border-base-content/10 shadow-2xl animate-in slide-in-from-bottom duration-300 max-h-[88vh] flex flex-col">
+                    {/* Sheet Header */}
+                    <div className="px-4 pt-3 pb-2.5 border-b border-base-content/8 dark:border-base-content/8 bg-base-200/40 shrink-0">
+                      {/* Drag handle */}
+                      <div className="w-10 h-1 bg-base-content/20 rounded-full mx-auto mb-3" />
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <CompanyLogo name={salaryBottomSheetCompany} size="w-8 h-8" type="company" />
+                          <div className="min-w-0">
+                            <h3 className="font-black text-sm text-base-content truncate">{salaryBottomSheetCompany}</h3>
+                            <p className="text-[10px] text-base-content/55 font-medium">{bottomSheetSalaryEntries.length} Payslips</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {/* Order Change Button */}
+                          <button
+                            type="button"
+                            onClick={() => setSalarySortOrder((prev) => (prev === "desc" ? "asc" : "desc"))}
+                            className="btn btn-xs rounded-xl px-2.5 text-[10px] font-bold border border-base-content/12 bg-base-100 hover:bg-base-200 text-base-content flex items-center gap-1.5 shadow-2xs cursor-pointer transition-all"
+                            title={`Current order: ${salarySortOrder === "desc" ? "Most Recent on Top" : "Oldest on Top"}. Click to flip.`}
+                          >
+                            <ArrowUpDown size={11} className="text-primary shrink-0" />
+                            <span>{salarySortOrder === "desc" ? "Recent First" : "Oldest First"}</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setSalaryBottomSheetCompany(null)}
+                            className="btn btn-xs btn-ghost btn-circle rounded-full text-base-content/60 cursor-pointer"
+                          >
+                            <X size={16} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Sheet Body: Scrollable Multi-Line Entries with Split Details */}
+                    <div className="flex-1 overflow-y-auto min-h-0 p-3 space-y-2.5">
+                      {bottomSheetSalaryEntries.map((item, i) => {
+                        const basic = Number(item.basicSalary || 0);
+                        const hra = Number(item.hra || 0);
+                        const flexi = Number(item.flexi || 0);
+                        const bonus = Number(item.bonus || 0);
+                        const gratuity = Number(item.gratuity || 0);
+                        const variablePay = Number(item.variablePay || 0);
+                        const gross = Number(item.gross || 0) || (basic + hra + flexi + bonus);
+                        const rowEarnings = gross + gratuity + variablePay;
+                        const erPf = Number(item.erPf || 0);
+                        const taxes = Number(item.taxes || 0);
+                        const inHand = Number(item.inHand || 0) || (gross - (erPf + taxes));
+                        const ctc = Number(item.ctc || 0) || (rowEarnings + erPf);
+
+                        return (
+                          <div
+                            key={item.id || item._id || i}
+                            className="bg-base-200/40 dark:bg-base-800/40 rounded-2xl border border-base-content/8 p-3 space-y-2 shadow-2xs"
+                          >
+                            {/* Line 1: Month, Badges, In-Hand, Actions */}
+                            <div className="flex items-center justify-between gap-2 border-b border-base-content/6 pb-2">
+                              <div className="flex items-center gap-2 flex-wrap min-w-0">
+                                <div className="flex items-center gap-1 font-bold text-xs text-base-content font-mono">
+                                  <Calendar size={12} className="text-primary shrink-0" />
+                                  <span>{dayjs(item.month).format("MMM YYYY")}</span>
+                                </div>
+                                {bonus > 0 && (
+                                  <span className="badge badge-xs badge-success badge-soft font-bold font-mono text-[9.5px]">
+                                    +₹{bonus.toLocaleString("en-IN")} Bonus
+                                  </span>
+                                )}
+                                {variablePay > 0 && (
+                                  <span className="badge badge-xs badge-warning badge-soft font-bold font-mono text-[9.5px]">
+                                    +₹{variablePay.toLocaleString("en-IN")} Var
+                                  </span>
+                                )}
+                              </div>
+
+                              <div className="flex items-center gap-2 shrink-0">
+                                <div className="text-right">
+                                  <span className="text-[9px] uppercase font-bold text-base-content/40 block leading-tight">In Hand</span>
+                                  <span className="text-xs font-black text-success font-mono">
+                                    ₹{inHand.toLocaleString("en-IN")}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-0.5 border-l border-base-content/10 pl-1.5 ml-0.5">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleEditSalary(item)}
+                                    className="p-1 text-primary hover:bg-primary/10 rounded-lg cursor-pointer transition-colors"
+                                    title="Edit Payslip"
+                                  >
+                                    <Edit size={13} />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteSalary(item.id || item._id)}
+                                    className="p-1 text-error hover:bg-error/10 rounded-lg cursor-pointer transition-colors"
+                                    title="Delete Payslip"
+                                  >
+                                    <Trash2 size={13} />
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Line 2: The Split Summary Strip */}
+                            <div className="grid grid-cols-3 gap-1.5 p-2 bg-base-100 dark:bg-base-900/70 rounded-xl border border-base-content/6 text-[10.5px]">
+                              <div>
+                                <span className="text-[8.5px] uppercase font-bold text-base-content/45 block">Gross CTC</span>
+                                <span className="font-mono font-bold text-base-content text-[11px]">₹{ctc.toLocaleString("en-IN")}</span>
+                              </div>
+                              <div>
+                                <span className="text-[8.5px] uppercase font-bold text-base-content/45 block">Basic + HRA</span>
+                                <span className="font-mono font-semibold text-base-content/90 text-[11px]">₹{(basic + hra).toLocaleString("en-IN")}</span>
+                              </div>
+                              <div className="text-right">
+                                <span className="text-[8.5px] uppercase font-bold text-error/70 block">Deductions</span>
+                                <span className="font-mono font-bold text-error text-[11px]">-₹{(taxes + erPf).toLocaleString("en-IN")}</span>
+                              </div>
+                            </div>
+
+                            {/* Line 3: Itemized Details Split Pills */}
+                            <div className="flex items-center gap-1.5 flex-wrap text-[10px] font-mono text-base-content/70">
+                              <span className="bg-base-100 dark:bg-base-900/60 px-2 py-0.5 rounded-md border border-base-content/6">
+                                <span className="text-base-content/40 mr-1 uppercase text-[8.5px]">Basic:</span>
+                                ₹{basic.toLocaleString("en-IN")}
+                              </span>
+                              <span className="bg-base-100 dark:bg-base-900/60 px-2 py-0.5 rounded-md border border-base-content/6">
+                                <span className="text-base-content/40 mr-1 uppercase text-[8.5px]">HRA:</span>
+                                ₹{hra.toLocaleString("en-IN")}
+                              </span>
+                              {flexi > 0 && (
+                                <span className="bg-base-100 dark:bg-base-900/60 px-2 py-0.5 rounded-md border border-base-content/6">
+                                  <span className="text-base-content/40 mr-1 uppercase text-[8.5px]">Flexi:</span>
+                                  ₹{flexi.toLocaleString("en-IN")}
+                                </span>
+                              )}
+                              <span className="bg-base-100 dark:bg-base-900/60 px-2 py-0.5 rounded-md border border-base-content/6 text-primary">
+                                <span className="text-base-content/40 mr-1 uppercase text-[8.5px]">PF:</span>
+                                ₹{erPf.toLocaleString("en-IN")}
+                              </span>
+                              <span className="bg-base-100 dark:bg-base-900/60 px-2 py-0.5 rounded-md border border-base-content/6 text-error">
+                                <span className="text-base-content/40 mr-1 uppercase text-[8.5px]">Tax:</span>
+                                ₹{taxes.toLocaleString("en-IN")}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Fixed Total Footer Pinned on the Bottom */}
+                    {bottomSheetSalaryEntries.length > 0 && (
+                      <div className="shrink-0 grid grid-cols-3 gap-2 px-4 py-3 bg-base-200/95 dark:bg-base-900/95 backdrop-blur-md border-t-2 border-base-content/10 shadow-lg text-xs">
+                        <div>
+                          <span className="text-[9px] uppercase font-extrabold text-base-content/50 block">Total CTC</span>
+                          <span className="font-mono font-black text-base-content text-xs">₹{sheetTotalCtc.toLocaleString("en-IN")}</span>
+                        </div>
+                        <div>
+                          <span className="text-[9px] uppercase font-extrabold text-error/70 block">Total Deductions</span>
+                          <span className="font-mono font-black text-error text-xs">-₹{sheetTotalDeductions.toLocaleString("en-IN")}</span>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-[9px] uppercase font-extrabold text-success block">Total In Hand</span>
+                          <span className="font-mono font-black text-success text-sm">₹{sheetTotalInHand.toLocaleString("en-IN")}</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+          );
+        })()}
 
         {/* ================================================================ */}
         {/* TAB 6: PROVIDENT FUND MOBILE CONTENT - FINTECH FEED              */}
@@ -8095,15 +8393,18 @@ export default function InvTableEntry() {
             })
             .filter(Boolean);
 
-          // Entries for company bottom-sheet
+          // Entries for company bottom-sheet (sorted by pfSortOrder, default "desc" = most recent first)
           const bottomSheetEntries = pfBottomSheetCompany
-            ? (pfByCompany[pfBottomSheetCompany] || []).slice().sort((a, b) => (a.month || "").localeCompare(b.month || ""))
+            ? (pfByCompany[pfBottomSheetCompany] || []).slice().sort((a, b) => {
+                const cmp = (a.month || "").localeCompare(b.month || "");
+                return pfSortOrder === "asc" ? cmp : -cmp;
+              })
             : [];
 
           return (
             <div className="space-y-3 px-2.5 w-full max-w-full animate-in fade-in duration-200">
               {/* 1. Hero Banner */}
-              <div className="bg-gradient-to-br from-success/10 to-base-100 p-4 rounded-2xl border border-base-content/8 dark:border-base-content/8 shadow-sm space-y-3">
+              <div className="bg-gradient-to-br from-base-200 via-base-200 to-base-300/80 dark:from-base-900 dark:via-base-900 dark:to-base-950 p-4 rounded-2xl border border-base-300 dark:border-base-700/80 shadow-sm space-y-3">
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <span className="text-[10px] font-extrabold uppercase tracking-wider text-success flex items-center gap-1.5">
@@ -8125,20 +8426,20 @@ export default function InvTableEntry() {
                 </div>
 
                 {/* Sub-Metric 3-Pack */}
-                <div className="grid grid-cols-3 gap-2 pt-2.5 border-t border-base-content/8 dark:border-base-content/8">
-                  <div className="bg-base-100/70 p-2 rounded-xl border border-base-content/6 dark:border-base-content/6">
+                <div className="grid grid-cols-3 gap-2 pt-2.5 border-t border-base-300/80 dark:border-base-700/60">
+                  <div className="bg-base-100/90 dark:bg-base-800/80 p-2 rounded-xl border border-base-300/60 dark:border-base-700/60 shadow-2xs">
                     <span className="text-[9.5px] font-bold text-base-content/60 uppercase block">Employer PF</span>
                     <div className="text-xs font-black text-primary font-mono truncate">
                       ₹{pfSummary.totalEmployerShare.toLocaleString("en-IN")}
                     </div>
                   </div>
-                  <div className="bg-base-100/70 p-2 rounded-xl border border-base-content/6 dark:border-base-content/6">
+                  <div className="bg-base-100/90 dark:bg-base-800/80 p-2 rounded-xl border border-base-300/60 dark:border-base-700/60 shadow-2xs">
                     <span className="text-[9.5px] font-bold text-base-content/60 uppercase block">Employee PF</span>
                     <div className="text-xs font-black text-info font-mono truncate">
                       ₹{pfSummary.totalEmployeeShare.toLocaleString("en-IN")}
                     </div>
                   </div>
-                  <div className="bg-base-100/70 p-2 rounded-xl border border-base-content/6 dark:border-base-content/6">
+                  <div className="bg-base-100/90 dark:bg-base-800/80 p-2 rounded-xl border border-base-300/60 dark:border-base-700/60 shadow-2xs">
                     <span className="text-[9.5px] font-bold text-base-content/60 uppercase block">Withdrawn</span>
                     <div className="text-xs font-black text-error font-mono truncate">
                       ₹{totalPfWithdrawn.toLocaleString("en-IN")}
@@ -8218,14 +8519,14 @@ export default function InvTableEntry() {
 
                     {/* Year filter tabs (scrollable row) */}
                     {pfAllYears.length > 1 && (
-                      <div className="flex items-center gap-1 overflow-x-auto pb-0.5 no-scrollbar">
+                      <div className="flex items-center gap-1 p-0.5 bg-base-200/60 dark:bg-base-800/60 rounded-xl border border-base-content/8 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
                         <button
                           type="button"
                           onClick={() => setPfYearFilter("all")}
-                          className={`shrink-0 px-2.5 py-1 rounded-lg text-[10.5px] font-bold transition-all cursor-pointer ${
+                          className={`shrink-0 px-2.5 py-1 rounded-lg text-[10.5px] transition-all cursor-pointer ${
                             pfYearFilter === "all"
-                              ? "bg-success text-white shadow-xs font-black"
-                              : "bg-base-200/70 dark:bg-base-800/70 text-base-content/70 hover:text-base-content border border-base-content/8"
+                              ? "bg-base-100 dark:bg-base-900 text-primary dark:text-primary shadow-xs font-black border border-base-content/8 scale-[1.01]"
+                              : "text-base-content/60 hover:text-base-content font-semibold"
                           }`}
                         >
                           All
@@ -8235,10 +8536,10 @@ export default function InvTableEntry() {
                             key={yr}
                             type="button"
                             onClick={() => setPfYearFilter(yr)}
-                            className={`shrink-0 px-2.5 py-1 rounded-lg text-[10.5px] font-bold transition-all cursor-pointer ${
+                            className={`shrink-0 px-2.5 py-1 rounded-lg text-[10.5px] font-mono transition-all cursor-pointer ${
                               pfYearFilter === yr
-                                ? "bg-success text-white shadow-xs font-black"
-                                : "bg-base-200/70 dark:bg-base-800/70 text-base-content/70 hover:text-base-content border border-base-content/8"
+                                ? "bg-base-100 dark:bg-base-900 text-primary dark:text-primary shadow-xs font-black border border-base-content/8 scale-[1.01]"
+                                : "text-base-content/60 hover:text-base-content font-semibold"
                             }`}
                           >
                             {yr}
@@ -8412,21 +8713,40 @@ export default function InvTableEntry() {
                             <p className="text-[10px] text-base-content/55 font-medium">{bottomSheetEntries.length} PF Entries</p>
                           </div>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => setPfBottomSheetCompany(null)}
-                          className="btn btn-xs btn-ghost btn-circle rounded-full text-base-content/60 cursor-pointer"
-                        >
-                          <X size={16} />
-                        </button>
+                        <div className="flex items-center gap-2">
+                          {/* Order Change Button */}
+                          <button
+                            type="button"
+                            onClick={() => setPfSortOrder((prev) => (prev === "desc" ? "asc" : "desc"))}
+                            className="btn btn-xs rounded-xl px-2.5 text-[10px] font-bold border border-base-content/12 bg-base-100 hover:bg-base-200 text-base-content flex items-center gap-1.5 shadow-2xs cursor-pointer transition-all"
+                            title={`Current order: ${pfSortOrder === "desc" ? "Most Recent on Top" : "Oldest on Top"}. Click to flip.`}
+                          >
+                            <ArrowUpDown size={11} className="text-primary shrink-0" />
+                            <span>{pfSortOrder === "desc" ? "Recent First" : "Oldest First"}</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setPfBottomSheetCompany(null)}
+                            className="btn btn-xs btn-ghost btn-circle rounded-full text-base-content/60 cursor-pointer"
+                          >
+                            <X size={16} />
+                          </button>
+                        </div>
                       </div>
                     </div>
 
-                    {/* Sheet Table */}
-                    <div className="flex-1 overflow-y-auto">
+                    {/* Sheet Table (Scrollable Entries Only) */}
+                    <div className="flex-1 overflow-y-auto min-h-0">
                       {/* Column headers */}
-                      <div className="sticky top-0 grid grid-cols-4 gap-0 bg-base-200/80 px-4 py-2 border-b border-base-content/8 dark:border-base-content/8 z-10">
-                        <span className="text-[9.5px] font-extrabold uppercase tracking-wider text-base-content/55">Month</span>
+                      <div className="sticky top-0 grid grid-cols-4 gap-0 bg-base-200/90 backdrop-blur-xs px-4 py-2 border-b border-base-content/8 dark:border-base-content/8 z-10">
+                        <button
+                          type="button"
+                          onClick={() => setPfSortOrder((prev) => (prev === "desc" ? "asc" : "desc"))}
+                          className="flex items-center gap-1 text-[9.5px] font-extrabold uppercase tracking-wider text-base-content/70 hover:text-primary transition-colors cursor-pointer text-left"
+                        >
+                          <span>Month</span>
+                          <ArrowUpDown size={10} className="text-primary shrink-0" />
+                        </button>
                         <span className="text-[9.5px] font-extrabold uppercase tracking-wider text-base-content/55 text-right">Employer</span>
                         <span className="text-[9.5px] font-extrabold uppercase tracking-wider text-base-content/55 text-right">Employee</span>
                         <span className="text-[9.5px] font-extrabold uppercase tracking-wider text-base-content/55 text-right">Total</span>
@@ -8450,24 +8770,24 @@ export default function InvTableEntry() {
                           </div>
                         );
                       })}
-
-                      {/* Totals row */}
-                      {bottomSheetEntries.length > 0 && (() => {
-                        const totEr = bottomSheetEntries.reduce((s, e) => s + (Number(e.erPf) || 0), 0);
-                        const totEe = bottomSheetEntries.reduce((s, e) => {
-                          const ee = e.eePf !== undefined && e.eePf !== null && e.eePf !== "" ? Number(e.eePf) || 0 : Number(e.erPf) || 0;
-                          return s + ee;
-                        }, 0);
-                        return (
-                          <div className="grid grid-cols-4 gap-0 px-4 py-3 bg-base-200/60 border-t-2 border-base-content/10">
-                            <span className="text-[10.5px] font-extrabold text-base-content uppercase tracking-wide">Total</span>
-                            <span className="text-[11px] font-mono font-black text-primary text-right">₹{totEr.toLocaleString("en-IN")}</span>
-                            <span className="text-[11px] font-mono font-black text-info text-right">₹{totEe.toLocaleString("en-IN")}</span>
-                            <span className="text-[11px] font-mono font-black text-success text-right">₹{(totEr + totEe).toLocaleString("en-IN")}</span>
-                          </div>
-                        );
-                      })()}
                     </div>
+
+                    {/* Fixed Total Footer on the Bottom */}
+                    {bottomSheetEntries.length > 0 && (() => {
+                      const totEr = bottomSheetEntries.reduce((s, e) => s + (Number(e.erPf) || 0), 0);
+                      const totEe = bottomSheetEntries.reduce((s, e) => {
+                        const ee = e.eePf !== undefined && e.eePf !== null && e.eePf !== "" ? Number(e.eePf) || 0 : Number(e.erPf) || 0;
+                        return s + ee;
+                      }, 0);
+                      return (
+                        <div className="shrink-0 grid grid-cols-4 gap-0 px-4 py-3 bg-base-200/95 backdrop-blur-xs border-t-2 border-base-content/10 shadow-lg">
+                          <span className="text-[10.5px] font-extrabold text-base-content uppercase tracking-wide">Total</span>
+                          <span className="text-[11px] font-mono font-black text-primary text-right">₹{totEr.toLocaleString("en-IN")}</span>
+                          <span className="text-[11px] font-mono font-black text-info text-right">₹{totEe.toLocaleString("en-IN")}</span>
+                          <span className="text-[11px] font-mono font-black text-success text-right">₹{(totEr + totEe).toLocaleString("en-IN")}</span>
+                        </div>
+                      );
+                    })()}
                   </div>
                 </>
               )}

@@ -140,7 +140,7 @@ function BankAutocomplete({ value, onChange, placeholder }) {
           }}
           onFocus={() => setIsOpen(true)}
           placeholder={placeholder || "Select or type bank name..."}
-          className="input h-10 sm:h-11 w-full pl-10 pr-9 rounded-xl sm:rounded-2xl bg-base-200 dark:bg-base-300/80 border border-base-content/12 dark:border-base-content/12 hover:border-base-content/30 focus:border-primary focus:bg-base-100 text-xs font-bold text-base-content placeholder:text-base-content/40 shadow-xs transition-all"
+          className="input h-8 w-full pl-10 pr-9 rounded-xl bg-base-200 dark:bg-base-300/80 border border-base-content/12 dark:border-base-content/12 hover:border-base-content/30 focus:border-primary focus:bg-base-100 text-xs font-bold text-base-content placeholder:text-base-content/40 shadow-xs transition-all"
         />
         <button
           type="button"
@@ -305,16 +305,19 @@ export default function AddFixedDepositModal({
 
   return createPortal(
     <div className="fixed inset-0 z-[99999] bg-black/75 backdrop-blur-md overflow-y-auto overflow-x-hidden flex items-center justify-center p-2.5 sm:p-5 animate-in fade-in duration-200">
-      <div className="bg-base-100 rounded-2xl sm:rounded-3xl shadow-2xl border border-base-content/10 dark:border-base-content/10 w-full max-w-lg max-h-[92vh] overflow-hidden my-auto animate-in zoom-in-95 duration-200 flex flex-col">
+      {/* =================================================================== */}
+      {/* DESKTOP MODAL (Visible on Tablet/Desktop: hidden sm:flex)          */}
+      {/* =================================================================== */}
+      <div className="hidden sm:flex bg-base-100 rounded-2xl sm:rounded-3xl shadow-2xl border border-base-content/10 dark:border-base-content/10 w-full max-w-lg max-h-[92vh] overflow-hidden my-auto animate-in zoom-in-95 duration-200 flex-col">
         
         {/* Modal Header */}
         <div className="px-4 sm:px-6 py-3.5 sm:py-4.5 border-b border-base-content/8 dark:border-base-content/8 flex justify-between items-center bg-base-200/40 shrink-0">
           <div className="flex items-center gap-2.5 sm:gap-3">
-            <div className="p-2 sm:p-2.5 rounded-xl sm:rounded-2xl bg-primary/15 text-primary">
+            <div className="p-2 sm:p-2.5 rounded-xl bg-primary/15 text-primary">
               <Landmark size={18} className="sm:w-5 sm:h-5" />
             </div>
             <div>
-              <h3 className="font-black text-sm sm:text-base flex items-center gap-2 leading-tight text-base-content">
+              <h3 className="font-black text-sm flex items-center gap-2 leading-tight text-base-content">
                 <span>{isEdit ? "Edit Fixed Deposit" : "Add Fixed Deposit"}</span>
               </h3>
               <p className="text-[10.5px] sm:text-[11px] text-base-content/60 font-semibold mt-0.5">
@@ -369,13 +372,13 @@ export default function AddFixedDepositModal({
                     placeholder="e.g. 100000 or 50000*2"
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
-                    className="input h-10 sm:h-11 w-full pl-7 rounded-xl sm:rounded-2xl bg-base-200 dark:bg-base-300/80 border border-base-content/12 dark:border-base-content/12 hover:border-base-content/30 focus:border-primary focus:bg-base-100 text-xs font-mono font-bold text-base-content placeholder:text-base-content/40 shadow-xs transition-all"
+                    className="input h-8 w-full pl-7 rounded-xl bg-base-200 dark:bg-base-300/80 border border-base-content/12 dark:border-base-content/12 hover:border-base-content/30 focus:border-primary focus:bg-base-100 text-xs font-mono font-bold text-base-content placeholder:text-base-content/40 shadow-xs transition-all"
                     autoFocus
                   />
                 </div>
                 <span className="text-sm font-black text-base-content/50 select-none">=</span>
                 <div
-                  className={`w-28 sm:w-36 shrink-0 input h-10 sm:h-11 rounded-xl sm:rounded-2xl bg-base-200 dark:bg-base-300 border border-base-content/12 flex items-center justify-end px-2.5 sm:px-3 font-mono font-black text-xs select-none truncate ${
+                  className={`w-28 sm:w-36 shrink-0 input h-8 rounded-xl bg-base-200 dark:bg-base-300 border border-base-content/12 flex items-center justify-end px-2.5 font-mono font-black text-xs select-none truncate ${
                     evaluatedPrincipal > 0 ? "text-primary border-primary/40 bg-primary/10" : "text-base-content/40"
                   }`}
                   title={`Principal: ₹${evaluatedPrincipal.toLocaleString()}`}
@@ -396,7 +399,7 @@ export default function AddFixedDepositModal({
                     type="date"
                     value={startDate}
                     onChange={(e) => setStartDate(e.target.value)}
-                    className="input h-10 sm:h-11 w-full rounded-xl sm:rounded-2xl bg-base-200 dark:bg-base-300/80 border border-base-content/12 dark:border-base-content/12 hover:border-base-content/30 focus:border-primary focus:bg-base-100 text-xs font-bold text-base-content shadow-xs transition-all px-2.5 sm:px-3"
+                    className="input h-8 w-full rounded-xl bg-base-200 dark:bg-base-300/80 border border-base-content/12 dark:border-base-content/12 hover:border-base-content/30 focus:border-primary focus:bg-base-100 text-xs font-bold text-base-content shadow-xs transition-all px-2.5"
                   />
                 </div>
 
@@ -408,14 +411,14 @@ export default function AddFixedDepositModal({
                     type="date"
                     value={maturityDate}
                     onChange={(e) => setMaturityDate(e.target.value)}
-                    className="input h-10 sm:h-11 w-full rounded-xl sm:rounded-2xl bg-base-200 dark:bg-base-300/80 border border-base-content/12 dark:border-base-content/12 hover:border-base-content/30 focus:border-primary focus:bg-base-100 text-xs font-bold text-base-content shadow-xs transition-all px-2.5 sm:px-3"
+                    className="input h-8 w-full rounded-xl bg-base-200 dark:bg-base-300/80 border border-base-content/12 dark:border-base-content/12 hover:border-base-content/30 focus:border-primary focus:bg-base-100 text-xs font-bold text-base-content shadow-xs transition-all px-2.5"
                   />
                 </div>
               </div>
 
               {/* Calculated Tenure Ribbon */}
               {startDate && maturityDate && !dayjs(maturityDate).isBefore(dayjs(startDate)) && (
-                <div className="px-3 py-2 rounded-xl sm:rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-between gap-2 shadow-2xs">
+                <div className="px-3 py-2 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-between gap-2 shadow-2xs">
                   <div className="flex items-center gap-1.5 min-w-0">
                     <span className="text-[9.5px] uppercase font-black text-primary shrink-0">
                       Tenure:
@@ -444,7 +447,7 @@ export default function AddFixedDepositModal({
                     placeholder="e.g. 7.10"
                     value={interestRate}
                     onChange={(e) => setInterestRate(e.target.value)}
-                    className="input h-10 sm:h-11 w-full pl-3 pr-10 rounded-xl sm:rounded-2xl bg-base-200 dark:bg-base-300/80 border border-base-content/12 dark:border-base-content/12 hover:border-base-content/30 focus:border-primary focus:bg-base-100 text-xs font-mono font-bold text-base-content placeholder:text-base-content/40 shadow-xs transition-all"
+                    className="input h-8 w-full pl-3 pr-10 rounded-xl bg-base-200 dark:bg-base-300/80 border border-base-content/12 dark:border-base-content/12 hover:border-base-content/30 focus:border-primary focus:bg-base-100 text-xs font-mono font-bold text-base-content placeholder:text-base-content/40 shadow-xs transition-all"
                   />
                   <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-black text-primary">%</span>
                 </div>
@@ -461,7 +464,7 @@ export default function AddFixedDepositModal({
                     placeholder="e.g. FD98234"
                     value={fdNumber}
                     onChange={(e) => setFdNumber(e.target.value)}
-                    className="input h-10 sm:h-11 w-full pl-7 rounded-xl sm:rounded-2xl bg-base-200 dark:bg-base-300/80 border border-base-content/12 dark:border-base-content/12 hover:border-base-content/30 focus:border-primary focus:bg-base-100 text-xs font-mono font-bold text-base-content placeholder:text-base-content/40 shadow-xs transition-all"
+                    className="input h-8 w-full pl-7 rounded-xl bg-base-200 dark:bg-base-300/80 border border-base-content/12 dark:border-base-content/12 hover:border-base-content/30 focus:border-primary focus:bg-base-100 text-xs font-mono font-bold text-base-content placeholder:text-base-content/40 shadow-xs transition-all"
                   />
                 </div>
               </div>
@@ -495,7 +498,208 @@ export default function AddFixedDepositModal({
             </button>
           </div>
         </form>
+      </div>
 
+      {/* =================================================================== */}
+      {/* MOBILE COMPACT MODAL (Visible on Phone: flex sm:hidden)            */}
+      {/* =================================================================== */}
+      <div className="flex sm:hidden bg-base-100 rounded-2xl shadow-2xl border border-base-content/12 dark:border-base-content/12 w-full max-w-[390px] max-h-[90vh] overflow-hidden my-auto animate-in zoom-in-95 duration-200 flex-col">
+        {/* Compact Header */}
+        <div className="px-3.5 py-2.5 border-b border-base-content/8 dark:border-base-content/8 flex justify-between items-center bg-base-200/40 shrink-0">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="p-1.5 rounded-lg bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 shrink-0">
+              <Landmark size={15} />
+            </div>
+            <div className="min-w-0">
+              <h3 className="font-extrabold text-xs flex items-center gap-1.5 leading-tight text-base-content truncate">
+                <span>{isEdit ? "Edit Fixed Deposit" : "Add Fixed Deposit"}</span>
+              </h3>
+              <p className="text-[10px] text-base-content/55 font-medium leading-tight truncate">
+                FD investment details
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="btn btn-xs btn-ghost btn-circle rounded-full hover:bg-base-200 text-base-content/60 hover:text-base-content cursor-pointer"
+            title="Close"
+          >
+            <X size={15} />
+          </button>
+        </div>
+
+        {/* Compact Form Body */}
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto flex flex-col justify-between">
+          <div className="p-3 space-y-2.5 text-xs flex-1">
+            {errorMsg && (
+              <div className="alert alert-error text-xs py-1.5 px-2.5 rounded-lg flex items-center gap-2 shadow-xs font-bold">
+                <AlertCircle size={14} className="shrink-0" />
+                <span className="truncate">{errorMsg}</span>
+              </div>
+            )}
+
+            {/* 1. Bank Name */}
+            <div>
+              <label className="block font-black text-base-content/80 text-[10px] uppercase tracking-wider mb-1">
+                Bank / Institution *
+              </label>
+              <BankAutocomplete
+                value={bankName}
+                onChange={setBankName}
+                placeholder="e.g. State Bank of India, HDFC..."
+              />
+            </div>
+
+            {/* 2. Amount Deposited */}
+            <div>
+              <label className="block font-black text-base-content/80 text-[10px] uppercase tracking-wider mb-1 flex items-center justify-between">
+                <span>Deposit Amount (₹) *</span>
+                <span className="text-[8.5px] lowercase font-bold text-primary/90 bg-primary/10 px-1.5 py-0.2 rounded">supports: + - * /</span>
+              </label>
+              <div className="flex items-center gap-1.5">
+                <div className="relative flex-1">
+                  <span className="absolute left-2.5 top-1/2 -translate-y-1/2 font-mono font-black text-xs text-primary">₹</span>
+                  <input
+                    type="text"
+                    placeholder="e.g. 100000"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    className="input h-8 w-full pl-6 rounded-lg bg-base-200 dark:bg-base-300/80 border border-base-content/12 hover:border-base-content/30 focus:border-primary focus:bg-base-100 text-xs font-mono font-bold text-base-content placeholder:text-base-content/40 shadow-xs transition-all"
+                  />
+                </div>
+                <span className="text-xs font-black text-base-content/40 select-none">=</span>
+                <div
+                  className={`w-24 shrink-0 input h-8 rounded-lg bg-base-200 dark:bg-base-300 border border-base-content/12 flex items-center justify-end px-2 font-mono font-black text-[11px] select-none truncate ${
+                    evaluatedPrincipal > 0 ? "text-primary border-primary/40 bg-primary/10" : "text-base-content/40"
+                  }`}
+                  title={`Principal: ₹${evaluatedPrincipal.toLocaleString()}`}
+                >
+                  ₹{evaluatedPrincipal.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+                </div>
+              </div>
+            </div>
+
+            {/* 3. Start Date & End Date */}
+            <div className="space-y-1.5">
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block font-black text-base-content/80 text-[10px] uppercase tracking-wider mb-1">
+                    Start Date *
+                  </label>
+                  <input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    className="input h-8 w-full rounded-lg bg-base-200 dark:bg-base-300/80 border border-base-content/12 hover:border-base-content/30 focus:border-primary focus:bg-base-100 text-xs font-bold text-base-content shadow-xs transition-all px-2"
+                  />
+                </div>
+                <div>
+                  <label className="block font-black text-base-content/80 text-[10px] uppercase tracking-wider mb-1">
+                    End Date *
+                  </label>
+                  <input
+                    type="date"
+                    value={maturityDate}
+                    onChange={(e) => setMaturityDate(e.target.value)}
+                    className="input h-8 w-full rounded-lg bg-base-200 dark:bg-base-300/80 border border-base-content/12 hover:border-base-content/30 focus:border-primary focus:bg-base-100 text-xs font-bold text-base-content shadow-xs transition-all px-2"
+                  />
+                </div>
+              </div>
+
+              {/* Calculated Tenure Inline Ribbon */}
+              {startDate && maturityDate && !dayjs(maturityDate).isBefore(dayjs(startDate)) && (
+                <div className="px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-between gap-1 text-[10.5px]">
+                  <div className="flex items-center gap-1 min-w-0">
+                    <span className="text-[8.5px] uppercase font-black text-emerald-600 dark:text-emerald-400 shrink-0">Tenure:</span>
+                    <span className="font-bold text-base-content font-mono truncate text-[10.5px]">
+                      {calculations.tenureYears}y, {calculations.tenureMonths}m, {calculations.tenureDays}d
+                    </span>
+                  </div>
+                  <span className="badge badge-xs font-mono font-bold bg-emerald-600 text-white border-0 shrink-0 text-[9px] px-1.5 py-0.5">
+                    {calculations.totalDays} Days
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* 4. Rate of Interest & FD Account Number */}
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="block font-black text-base-content/80 text-[10px] uppercase tracking-wider mb-1">
+                  Interest Rate (% p.a.) *
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    step="0.01"
+                    placeholder="e.g. 7.10"
+                    value={interestRate}
+                    onChange={(e) => setInterestRate(e.target.value)}
+                    className="input h-8 w-full pl-2.5 pr-6 rounded-lg bg-base-200 dark:bg-base-300/80 border border-base-content/12 hover:border-base-content/30 focus:border-primary focus:bg-base-100 text-xs font-mono font-bold text-base-content placeholder:text-base-content/40 shadow-xs transition-all"
+                  />
+                  <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9.5px] font-black text-primary">%</span>
+                </div>
+              </div>
+              <div>
+                <label className="block font-black text-base-content/80 text-[10px] uppercase tracking-wider mb-1">
+                  FD # (Optional)
+                </label>
+                <div className="relative">
+                  <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-primary font-mono font-black text-[11px]">#</span>
+                  <input
+                    type="text"
+                    placeholder="e.g. FD98234"
+                    value={fdNumber}
+                    onChange={(e) => setFdNumber(e.target.value)}
+                    className="input h-8 w-full pl-6 rounded-lg bg-base-200 dark:bg-base-300/80 border border-base-content/12 hover:border-base-content/30 focus:border-primary focus:bg-base-100 text-xs font-mono font-bold text-base-content placeholder:text-base-content/40 shadow-xs transition-all"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* 5. Live Estimated Maturity Summary */}
+            {evaluatedPrincipal > 0 && Number(interestRate) > 0 && (
+              <div className="px-2.5 py-1.5 rounded-lg bg-base-200/60 border border-base-content/8 flex items-center justify-between text-[10.5px] font-mono">
+                <span className="text-[8.5px] uppercase font-bold text-base-content/50">Est. Maturity:</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="font-black text-emerald-600 dark:text-emerald-400">
+                    ₹{calculations.maturityAmount.toLocaleString("en-IN")}
+                  </span>
+                  <span className="text-[9.5px] text-base-content/50">
+                    (+₹{calculations.totalInterest.toLocaleString("en-IN")})
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Compact Footer */}
+          <div className="px-3.5 py-2.5 border-t border-base-content/8 dark:border-base-content/8 bg-base-200/40 flex items-center justify-end gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={onClose}
+              className="btn btn-xs btn-ghost font-bold rounded-lg cursor-pointer text-xs"
+              disabled={isSubmitting}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="btn btn-xs bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-black rounded-lg gap-1 shadow-xs border-0 h-8 px-3.5 cursor-pointer text-xs"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <span className="loading loading-spinner loading-xs text-white"></span>
+              ) : (
+                <>
+                  <Save size={13} className="text-white shrink-0" />
+                  <span>{isEdit ? "Update FD" : "Save FD"}</span>
+                </>
+              )}
+            </button>
+          </div>
+        </form>
       </div>
     </div>,
     document.body

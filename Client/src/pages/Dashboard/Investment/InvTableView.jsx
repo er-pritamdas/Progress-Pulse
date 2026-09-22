@@ -619,7 +619,7 @@ export default function InvTableView() {
         if (activePlanner.allocations && activePlanner.allocations[sId]) {
           const alloc = activePlanner.allocations[sId];
           allocatedPercent = Number(alloc.percent) || 0;
-          allocatedAmount = alloc.amount !== undefined ? Number(alloc.amount) : (rawBal * allocatedPercent) / 100;
+          allocatedAmount = (rawBal * allocatedPercent) / 100;
         } else if (activePlanner.selectedBanks || activePlanner.allocatedBanks) {
           allocatedAmount = rawBal;
           allocatedPercent = 100;
@@ -688,9 +688,7 @@ export default function InvTableView() {
           const alloc = activePlanner.allocations[sId];
           allocatedPercent = Number(alloc.percent) || 0;
           allocatedShares = alloc.shares !== undefined ? Number(alloc.shares) : Math.round((q * allocatedPercent) / 100);
-          allocatedAmount = alloc.amount !== undefined
-            ? Number(alloc.amount)
-            : (alloc.shares !== undefined ? Number(alloc.shares) * p : (fullVal * allocatedPercent) / 100);
+          allocatedAmount = (fullVal * allocatedPercent) / 100;
         } else if (activePlanner.selectedStocks || activePlanner.allocatedStocks) {
           allocatedAmount = fullVal;
           allocatedShares = q;
@@ -757,7 +755,7 @@ export default function InvTableView() {
         if (activePlanner.allocations && activePlanner.allocations[fdId]) {
           const alloc = activePlanner.allocations[fdId];
           allocatedPercent = Number(alloc.percent) || 0;
-          allocatedAmount = alloc.amount !== undefined ? Number(alloc.amount) : (principal * allocatedPercent) / 100;
+          allocatedAmount = (principal * allocatedPercent) / 100;
         } else if (activePlanner.selectedFds || activePlanner.allocatedFds) {
           allocatedAmount = principal;
           allocatedPercent = 100;
@@ -821,7 +819,7 @@ export default function InvTableView() {
         if (activePlanner.allocations && activePlanner.allocations[rdId]) {
           const alloc = activePlanner.allocations[rdId];
           allocatedPercent = Number(alloc.percent) || 0;
-          allocatedAmount = alloc.amount !== undefined ? Number(alloc.amount) : (currentDeposited * allocatedPercent) / 100;
+          allocatedAmount = (currentDeposited * allocatedPercent) / 100;
         } else if (activePlanner.selectedRds || activePlanner.allocatedRds) {
           allocatedAmount = currentDeposited;
           allocatedPercent = 100;
@@ -877,7 +875,7 @@ export default function InvTableView() {
         if (activePlanner.allocations && activePlanner.allocations[fundId]) {
           const alloc = activePlanner.allocations[fundId];
           allocatedPercent = Number(alloc.percent) || 0;
-          allocatedAmount = alloc.amount !== undefined ? Number(alloc.amount) : (holdingVal * allocatedPercent) / 100;
+          allocatedAmount = (holdingVal * allocatedPercent) / 100;
         } else if (activePlanner.selectedMfs || activePlanner.allocatedMfs) {
           allocatedAmount = holdingVal;
           allocatedPercent = 100;
@@ -926,8 +924,8 @@ export default function InvTableView() {
       if (activePlanner.allocations && activePlanner.allocations["source-pf-balance"]) {
         const alloc = activePlanner.allocations["source-pf-balance"];
         pfPct = Number(alloc.percent) || 0;
-        isIncluded = pfPct > 0 || (alloc.amount !== undefined && Number(alloc.amount) > 0);
-        allocatedBal = alloc.amount !== undefined ? Number(alloc.amount) : (fullBalance * pfPct) / 100;
+        isIncluded = pfPct > 0;
+        allocatedBal = (fullBalance * pfPct) / 100;
       } else {
         isIncluded = activePlanner.includePf !== undefined ? activePlanner.includePf : (activePlanner.pfAllocation?.enabled ?? false);
         pfPct = isIncluded ? (Number(activePlanner.pfAllocatedPercent) || Number(activePlanner.pfAllocation?.percentage) || 50) : 0;

@@ -171,12 +171,15 @@ export default function AddRecurringDepositModal({
 
   return createPortal(
     <div className="fixed inset-0 z-[99999] bg-black/75 backdrop-blur-md overflow-y-auto overflow-x-hidden flex items-center justify-center p-2.5 sm:p-5 animate-in fade-in duration-200">
-      <div className="bg-base-100 rounded-2xl sm:rounded-3xl shadow-2xl border border-base-content/10 dark:border-base-content/10 w-full max-w-lg max-h-[92vh] overflow-hidden my-auto animate-in zoom-in-95 duration-200 flex flex-col">
+      {/* =================================================================== */}
+      {/* DESKTOP MODAL (Visible on Tablet/Desktop: hidden sm:flex)          */}
+      {/* =================================================================== */}
+      <div className="hidden sm:flex bg-base-100 rounded-2xl sm:rounded-3xl shadow-2xl border border-base-content/10 dark:border-base-content/10 w-full max-w-lg max-h-[92vh] overflow-hidden my-auto animate-in zoom-in-95 duration-200 flex-col">
         
         {/* Modal Header */}
         <div className="px-4 sm:px-6 py-3.5 sm:py-4.5 border-b border-base-content/8 dark:border-base-content/8 flex justify-between items-center bg-base-200/40 shrink-0">
           <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-            <div className="p-2 sm:p-2.5 rounded-xl sm:rounded-2xl bg-primary/15 text-primary shrink-0">
+            <div className="p-2 sm:p-2.5 rounded-xl bg-primary/15 text-primary shrink-0">
               <PiggyBank size={18} className="sm:w-5 sm:h-5" />
             </div>
             <div className="min-w-0">
@@ -231,7 +234,7 @@ export default function AddRecurringDepositModal({
                   setBankName(e.target.value);
                   setIsBankDropdownOpen(true);
                 }}
-                className="input h-10 sm:h-11 w-full pl-9 sm:pl-10 pr-9 rounded-xl sm:rounded-2xl bg-base-200/60 dark:bg-base-800/60 border border-base-content/15 dark:border-base-content/15 hover:border-primary/50 focus:border-primary focus:bg-base-100 text-xs font-bold text-base-content placeholder:text-base-content/40 shadow-2xs transition-all"
+                className="input h-8 w-full pl-9 pr-9 rounded-xl bg-base-200/60 dark:bg-base-800/60 border border-base-content/15 dark:border-base-content/15 hover:border-primary/50 focus:border-primary focus:bg-base-100 text-xs font-bold text-base-content placeholder:text-base-content/40 shadow-2xs transition-all"
                 autoFocus
               />
               <button
@@ -281,7 +284,7 @@ export default function AddRecurringDepositModal({
                     type="date"
                     value={startDate}
                     onChange={(e) => setStartDate(e.target.value)}
-                    className="input h-10 sm:h-11 w-full rounded-xl sm:rounded-2xl bg-base-200/60 dark:bg-base-800/60 border border-base-content/15 dark:border-base-content/15 hover:border-primary/50 focus:border-primary focus:bg-base-100 text-xs font-bold text-base-content px-3 sm:px-3.5 shadow-2xs transition-all"
+                    className="input h-8 w-full rounded-xl bg-base-200/60 dark:bg-base-800/60 border border-base-content/15 dark:border-base-content/15 hover:border-primary/50 focus:border-primary focus:bg-base-100 text-xs font-bold text-base-content px-3 shadow-2xs transition-all"
                   />
                 </div>
               </div>
@@ -295,14 +298,14 @@ export default function AddRecurringDepositModal({
                     type="date"
                     value={maturityDate}
                     onChange={(e) => setMaturityDate(e.target.value)}
-                    className="input h-10 sm:h-11 w-full rounded-xl sm:rounded-2xl bg-base-200/60 dark:bg-base-800/60 border border-base-content/15 dark:border-base-content/15 hover:border-primary/50 focus:border-primary focus:bg-base-100 text-xs font-bold text-base-content px-3 sm:px-3.5 shadow-2xs transition-all"
+                    className="input h-8 w-full rounded-xl bg-base-200/60 dark:bg-base-800/60 border border-base-content/15 dark:border-base-content/15 hover:border-primary/50 focus:border-primary focus:bg-base-100 text-xs font-bold text-base-content px-3 shadow-2xs transition-all"
                   />
                 </div>
               </div>
             </div>
 
             {/* Calculated Tenure Ribbon */}
-            <div className="px-3 sm:px-3.5 py-2 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-between text-[10.5px] sm:text-[11px] font-bold">
+            <div className="px-3 py-2 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-between text-[10.5px] sm:text-[11px] font-bold">
               <span className="text-base-content/70">Calculated Tenure:</span>
               <span className="font-mono text-primary font-black">
                 {calculations.tenureText} ({calculations.totalDays} Total Days)
@@ -323,7 +326,7 @@ export default function AddRecurringDepositModal({
                   placeholder="e.g. 7.10"
                   value={interestRate}
                   onChange={(e) => setInterestRate(e.target.value)}
-                  className="input h-10 sm:h-11 w-full pl-3 sm:pl-3.5 pr-12 rounded-xl sm:rounded-2xl bg-base-200/60 dark:bg-base-800/60 border border-base-content/15 dark:border-base-content/15 hover:border-primary/50 focus:border-primary focus:bg-base-100 text-xs font-mono font-bold text-base-content placeholder:text-base-content/40 shadow-2xs transition-all"
+                  className="input h-8 w-full pl-3 sm:pl-3 pr-12 rounded-xl bg-base-200/60 dark:bg-base-800/60 border border-base-content/15 dark:border-base-content/15 hover:border-primary/50 focus:border-primary focus:bg-base-100 text-xs font-mono font-bold text-base-content placeholder:text-base-content/40 shadow-2xs transition-all"
                 />
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-black text-primary">% p.a.</span>
               </div>
@@ -339,8 +342,8 @@ export default function AddRecurringDepositModal({
                   type="text"
                   placeholder="e.g. RD98234"
                   value={rdNumber}
-                  onChange={(e) => setRdNumber(e.target.value)}
-                  className="input h-10 sm:h-11 w-full pl-7 sm:pl-8 rounded-xl sm:rounded-2xl bg-base-200/60 dark:bg-base-800/60 border border-base-content/15 dark:border-base-content/15 hover:border-primary/50 focus:border-primary focus:bg-base-100 text-xs font-mono font-bold text-base-content placeholder:text-base-content/40 shadow-2xs transition-all"
+                  onChange={(e) => setFdNumber ? setFdNumber(e.target.value) : setRdNumber(e.target.value)}
+                  className="input h-8 w-full pl-7 sm:pl-8 rounded-xl bg-base-200/60 dark:bg-base-800/60 border border-base-content/15 dark:border-base-content/15 hover:border-primary/50 focus:border-primary focus:bg-base-100 text-xs font-mono font-bold text-base-content placeholder:text-base-content/40 shadow-2xs transition-all"
                 />
               </div>
             </div>
@@ -361,7 +364,7 @@ export default function AddRecurringDepositModal({
           <button
             type="submit"
             form="add-rd-form"
-            className="btn btn-sm btn-primary font-black rounded-xl gap-2 shadow-md shadow-primary/30 border-0 h-9 sm:h-10 px-4 sm:px-5 cursor-pointer text-xs"
+            className="btn btn-sm btn-primary font-black rounded-xl gap-2 shadow-md shadow-primary/30 border-0 h-8 px-4 sm:px-5 cursor-pointer text-xs"
             disabled={isSubmitting}
           >
             {isSubmitting ? (
@@ -375,6 +378,214 @@ export default function AddRecurringDepositModal({
           </button>
         </div>
 
+      </div>
+
+      {/* =================================================================== */}
+      {/* MOBILE COMPACT MODAL (Visible on Phone: flex sm:hidden)            */}
+      {/* =================================================================== */}
+      <div className="flex sm:hidden bg-base-100 rounded-2xl shadow-2xl border border-base-content/12 dark:border-base-content/12 w-full max-w-[390px] max-h-[90vh] overflow-hidden my-auto animate-in zoom-in-95 duration-200 flex-col">
+        {/* Compact Header */}
+        <div className="px-3.5 py-2.5 border-b border-base-content/8 dark:border-base-content/8 flex justify-between items-center bg-base-200/40 shrink-0">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="p-1.5 rounded-lg bg-primary/15 text-primary shrink-0">
+              <PiggyBank size={15} />
+            </div>
+            <div className="min-w-0">
+              <h3 className="font-extrabold text-xs flex items-center gap-1.5 leading-tight text-base-content truncate">
+                <span>{editingRd ? "Edit Recurring Deposit" : "Add Recurring Deposit"}</span>
+              </h3>
+              <p className="text-[10px] text-base-content/55 font-medium leading-tight truncate">
+                RD investment details
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="btn btn-xs btn-ghost btn-circle rounded-full hover:bg-base-200 text-base-content/60 hover:text-base-content cursor-pointer shrink-0"
+            title="Close"
+          >
+            <X size={15} />
+          </button>
+        </div>
+
+        {/* Compact Form */}
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto flex flex-col justify-between">
+          <div className="p-3 space-y-2.5 text-xs flex-1">
+            {errorMsg && (
+              <div className="alert alert-error text-xs py-1.5 px-2.5 rounded-lg flex items-center gap-2 shadow-xs font-bold">
+                <AlertCircle size={14} className="shrink-0" />
+                <span className="truncate">{errorMsg}</span>
+              </div>
+            )}
+
+            {/* 1. Bank / Institution Name */}
+            <div className="relative">
+              <label className="block font-black text-base-content/80 text-[10px] uppercase tracking-wider mb-1 flex items-center justify-between">
+                <span>Bank / Institution *</span>
+                {bankName && (
+                  <span className="text-[9.5px] text-primary font-bold lowercase truncate max-w-[140px]">
+                    {bankName}
+                  </span>
+                )}
+              </label>
+              <div className="relative">
+                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-primary">
+                  <Building2 size={14} />
+                </span>
+                <input
+                  type="text"
+                  placeholder="Search Bank (e.g. SBI, HDFC)..."
+                  value={bankSearch}
+                  onFocus={() => setIsBankDropdownOpen(true)}
+                  onChange={(e) => {
+                    setBankSearch(e.target.value);
+                    setBankName(e.target.value);
+                    setIsBankDropdownOpen(true);
+                  }}
+                  className="input h-8 w-full pl-8 pr-7 rounded-lg bg-base-200/70 dark:bg-base-800/70 border border-base-content/12 hover:border-primary/50 focus:border-primary focus:bg-base-100 text-xs font-bold text-base-content placeholder:text-base-content/40 shadow-xs transition-all"
+                />
+                <button
+                  type="button"
+                  onClick={() => setIsBankDropdownOpen((prev) => !prev)}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-base-content/40 hover:text-base-content cursor-pointer"
+                >
+                  <ChevronDown size={14} />
+                </button>
+              </div>
+
+              {/* Bank Autocomplete Suggestions Dropdown */}
+              {isBankDropdownOpen && filteredBanks.length > 0 && (
+                <div className="absolute top-full left-0 right-0 mt-1 max-h-40 overflow-y-auto bg-base-100 rounded-xl border border-base-content/10 shadow-2xl z-[100] p-1 space-y-0.5 animate-in fade-in zoom-in-95 duration-100">
+                  {filteredBanks.map((bank) => (
+                    <button
+                      key={bank}
+                      type="button"
+                      onClick={() => {
+                        setBankName(bank);
+                        setBankSearch(bank);
+                        setIsBankDropdownOpen(false);
+                      }}
+                      className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-bold flex items-center justify-between transition-colors cursor-pointer ${
+                        bankName === bank
+                          ? "bg-primary text-primary-content font-black"
+                          : "hover:bg-base-200 text-base-content"
+                      }`}
+                    >
+                      <span className="truncate">{bank}</span>
+                      {bankName === bank && <span className="text-[10px] shrink-0">✓</span>}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* 2. Start Date & End Date (Maturity Date) */}
+            <div className="space-y-1.5">
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block font-black text-base-content/80 text-[10px] uppercase tracking-wider mb-1">
+                    Start Date *
+                  </label>
+                  <input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    className="input h-8 w-full rounded-lg bg-base-200/70 dark:bg-base-800/70 border border-base-content/12 hover:border-primary/50 focus:border-primary focus:bg-base-100 text-xs font-bold text-base-content px-2 shadow-xs transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="block font-black text-base-content/80 text-[10px] uppercase tracking-wider mb-1">
+                    End Date *
+                  </label>
+                  <input
+                    type="date"
+                    value={maturityDate}
+                    onChange={(e) => setMaturityDate(e.target.value)}
+                    className="input h-8 w-full rounded-lg bg-base-200/70 dark:bg-base-800/70 border border-base-content/12 hover:border-primary/50 focus:border-primary focus:bg-base-100 text-xs font-bold text-base-content px-2 shadow-xs transition-all"
+                  />
+                </div>
+              </div>
+
+              {/* Calculated Tenure Inline Ribbon */}
+              {startDate && maturityDate && !dayjs(maturityDate).isBefore(dayjs(startDate)) && (
+                <div className="px-2.5 py-1 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-between gap-1 text-[10.5px]">
+                  <div className="flex items-center gap-1 min-w-0">
+                    <span className="text-[8.5px] uppercase font-black text-primary shrink-0">Tenure:</span>
+                    <span className="font-bold text-base-content font-mono truncate text-[10.5px]">
+                      {calculations.tenureYears}y, {calculations.tenureMonths}m, {calculations.tenureDays}d
+                    </span>
+                  </div>
+                  <span className="badge badge-xs font-mono font-bold bg-primary text-primary-content border-0 shrink-0 text-[9px] px-1.5 py-0.5">
+                    {calculations.totalDays} Days
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* 3. Rate of Interest & RD Account Number */}
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="block font-black text-base-content/80 text-[10px] uppercase tracking-wider mb-1">
+                  Rate (% p.a.) *
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    step="0.01"
+                    placeholder="e.g. 7.10"
+                    value={interestRate}
+                    onChange={(e) => setInterestRate(e.target.value)}
+                    className="input h-8 w-full pl-2.5 pr-8 rounded-lg bg-base-200/70 dark:bg-base-800/70 border border-base-content/12 hover:border-primary/50 focus:border-primary focus:bg-base-100 text-xs font-mono font-bold text-base-content placeholder:text-base-content/40 shadow-xs transition-all"
+                  />
+                  <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9.5px] font-black text-primary">%</span>
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-black text-base-content/80 text-[10px] uppercase tracking-wider mb-1">
+                  RD # (Optional)
+                </label>
+                <div className="relative">
+                  <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-primary font-mono font-black text-[11px]">#</span>
+                  <input
+                    type="text"
+                    placeholder="e.g. RD98234"
+                    value={rdNumber}
+                    onChange={(e) => setRdNumber(e.target.value)}
+                    className="input h-8 w-full pl-6 rounded-lg bg-base-200/70 dark:bg-base-800/70 border border-base-content/12 hover:border-primary/50 focus:border-primary focus:bg-base-100 text-xs font-mono font-bold text-base-content placeholder:text-base-content/40 shadow-xs transition-all"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Compact Footer */}
+          <div className="px-3.5 py-2.5 border-t border-base-content/8 dark:border-base-content/8 bg-base-200/40 flex items-center justify-end gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={onClose}
+              className="btn btn-xs btn-ghost font-bold rounded-lg cursor-pointer text-xs"
+              disabled={isSubmitting}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="btn btn-xs btn-primary font-black rounded-lg gap-1 shadow-xs border-0 h-8 px-3.5 cursor-pointer text-xs"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <span className="loading loading-spinner loading-xs"></span>
+              ) : (
+                <>
+                  <Save size={13} />
+                  <span>{editingRd ? "Update RD" : "Save RD"}</span>
+                </>
+              )}
+            </button>
+          </div>
+        </form>
       </div>
     </div>,
     document.body

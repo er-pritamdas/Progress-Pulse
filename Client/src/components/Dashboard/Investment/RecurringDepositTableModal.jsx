@@ -359,189 +359,301 @@ export default function RecurringDepositTableModal({
                   </button>
                 </div>
               ) : (
-                <table className="table table-xs w-full text-xs table-auto border-collapse">
-                  <thead className="sticky top-0 z-30 shadow-xs">
-                    <tr className="border-b border-base-content/8 text-[10px] font-bold text-base-content/70 uppercase tracking-wider select-none bg-base-200">
-                      
-                      {/* Installment / Term Header */}
-                      <th className="sticky top-0 z-30 py-2.5 px-3 text-left font-bold bg-base-200 border-b border-base-content/8 w-36">
-                        <button
-                          type="button"
-                          onClick={() => handleSort("term")}
-                          className="flex items-center gap-1 hover:text-primary transition-colors cursor-pointer group"
-                          title="Sort by Installment / Term"
-                        >
-                          <Hash size={11} className="text-primary/70 shrink-0" />
-                          <span className="truncate">Installment #</span>
-                          {sortBy === "term" ? (
-                            sortOrder === "asc" ? (
-                              <ArrowUp size={11} className="text-primary font-bold shrink-0" />
-                            ) : (
-                              <ArrowDown size={11} className="text-primary font-bold shrink-0" />
-                            )
-                          ) : (
-                            <ArrowUpDown size={10} className="opacity-30 group-hover:opacity-100 transition-opacity shrink-0" />
-                          )}
-                        </button>
-                      </th>
+                <>
+                  {/* ============================================================ */}
+                  {/* DESKTOP TABLE VIEW (hidden on mobile)                        */}
+                  {/* ============================================================ */}
+                  <div className="hidden md:block w-full">
+                    <table className="table table-xs w-full text-xs table-auto border-collapse">
+                      <thead className="sticky top-0 z-30 shadow-xs">
+                        <tr className="border-b border-base-content/8 text-[10px] font-bold text-base-content/70 uppercase tracking-wider select-none bg-base-200">
+                          
+                          {/* Installment / Term Header */}
+                          <th className="sticky top-0 z-30 py-2.5 px-3 text-left font-bold bg-base-200 border-b border-base-content/8 w-36">
+                            <button
+                              type="button"
+                              onClick={() => handleSort("term")}
+                              className="flex items-center gap-1 hover:text-primary transition-colors cursor-pointer group"
+                              title="Sort by Installment / Term"
+                            >
+                              <Hash size={11} className="text-primary/70 shrink-0" />
+                              <span className="truncate">Installment #</span>
+                              {sortBy === "term" ? (
+                                sortOrder === "asc" ? (
+                                  <ArrowUp size={11} className="text-primary font-bold shrink-0" />
+                                ) : (
+                                  <ArrowDown size={11} className="text-primary font-bold shrink-0" />
+                                )
+                              ) : (
+                                <ArrowUpDown size={10} className="opacity-30 group-hover:opacity-100 transition-opacity shrink-0" />
+                              )}
+                            </button>
+                          </th>
 
-                      {/* Date Header */}
-                      <th className="sticky top-0 z-30 py-2.5 px-3 text-left font-bold bg-base-200 border-b border-base-content/8 w-36">
-                        <button
-                          type="button"
-                          onClick={() => handleSort("date")}
-                          className="flex items-center gap-1 hover:text-primary transition-colors cursor-pointer group"
-                          title="Sort by Deposit Date"
-                        >
-                          <Calendar size={11} className="text-primary/70 shrink-0" />
-                          <span className="truncate">Deposit Date</span>
-                          {sortBy === "date" ? (
-                            sortOrder === "asc" ? (
-                              <ArrowUp size={11} className="text-primary font-bold shrink-0" />
-                            ) : (
-                              <ArrowDown size={11} className="text-primary font-bold shrink-0" />
-                            )
-                          ) : (
-                            <ArrowUpDown size={10} className="opacity-30 group-hover:opacity-100 transition-opacity shrink-0" />
-                          )}
-                        </button>
-                      </th>
+                          {/* Date Header */}
+                          <th className="sticky top-0 z-30 py-2.5 px-3 text-left font-bold bg-base-200 border-b border-base-content/8 w-36">
+                            <button
+                              type="button"
+                              onClick={() => handleSort("date")}
+                              className="flex items-center gap-1 hover:text-primary transition-colors cursor-pointer group"
+                              title="Sort by Deposit Date"
+                            >
+                              <Calendar size={11} className="text-primary/70 shrink-0" />
+                              <span className="truncate">Deposit Date</span>
+                              {sortBy === "date" ? (
+                                sortOrder === "asc" ? (
+                                  <ArrowUp size={11} className="text-primary font-bold shrink-0" />
+                                ) : (
+                                  <ArrowDown size={11} className="text-primary font-bold shrink-0" />
+                                )
+                              ) : (
+                                <ArrowUpDown size={10} className="opacity-30 group-hover:opacity-100 transition-opacity shrink-0" />
+                              )}
+                            </button>
+                          </th>
 
-                      {/* Amount Deposited Header */}
-                      <th className="sticky top-0 z-30 py-2.5 px-3 text-right font-bold bg-base-200 border-b border-base-content/8 w-40">
-                        <button
-                          type="button"
-                          onClick={() => handleSort("amount")}
-                          className="flex items-center justify-end gap-1 ml-auto hover:text-primary transition-colors cursor-pointer group"
-                          title="Sort by Amount Deposited"
-                        >
-                          <Coins size={11} className="text-primary/70 shrink-0" />
-                          <span className="truncate">Amount (₹)</span>
-                          {sortBy === "amount" ? (
-                            sortOrder === "asc" ? (
-                              <ArrowUp size={11} className="text-primary font-bold shrink-0" />
-                            ) : (
-                              <ArrowDown size={11} className="text-primary font-bold shrink-0" />
-                            )
-                          ) : (
-                            <ArrowUpDown size={10} className="opacity-30 group-hover:opacity-100 transition-opacity shrink-0" />
-                          )}
-                        </button>
-                      </th>
+                          {/* Amount Deposited Header */}
+                          <th className="sticky top-0 z-30 py-2.5 px-3 text-right font-bold bg-base-200 border-b border-base-content/8 w-40">
+                            <button
+                              type="button"
+                              onClick={() => handleSort("amount")}
+                              className="flex items-center justify-end gap-1 ml-auto hover:text-primary transition-colors cursor-pointer group"
+                              title="Sort by Amount Deposited"
+                            >
+                              <Coins size={11} className="text-primary/70 shrink-0" />
+                              <span className="truncate">Amount (₹)</span>
+                              {sortBy === "amount" ? (
+                                sortOrder === "asc" ? (
+                                  <ArrowUp size={11} className="text-primary font-bold shrink-0" />
+                                ) : (
+                                  <ArrowDown size={11} className="text-primary font-bold shrink-0" />
+                                )
+                              ) : (
+                                <ArrowUpDown size={10} className="opacity-30 group-hover:opacity-100 transition-opacity shrink-0" />
+                              )}
+                            </button>
+                          </th>
 
-                      {/* Notes Header */}
-                      <th className="sticky top-0 z-30 py-2.5 px-3 text-left font-bold bg-base-200 border-b border-base-content/8">
-                        <div className="flex items-center gap-1 text-base-content/70">
-                          <FileText size={11} className="text-base-content/50" />
-                          <span>Notes / Remarks</span>
-                        </div>
-                      </th>
+                          {/* Notes Header */}
+                          <th className="sticky top-0 z-30 py-2.5 px-3 text-left font-bold bg-base-200 border-b border-base-content/8">
+                            <div className="flex items-center gap-1 text-base-content/70">
+                              <FileText size={11} className="text-base-content/50" />
+                              <span>Notes / Remarks</span>
+                            </div>
+                          </th>
 
-                      {/* Actions Header */}
-                      <th className="sticky top-0 z-30 py-2.5 px-3 text-center font-bold bg-base-200 border-b border-base-content/8 w-24">
-                        <span>Actions</span>
-                      </th>
-                    </tr>
-                  </thead>
+                          {/* Actions Header */}
+                          <th className="sticky top-0 z-30 py-2.5 px-3 text-center font-bold bg-base-200 border-b border-base-content/8 w-24">
+                            <span>Actions</span>
+                          </th>
+                        </tr>
+                      </thead>
 
-                  <tbody className="divide-y divide-base-200/70 font-medium">
-                    {/* Year Grouped Rows */}
-                    {yearGroups.map((group) => {
-                      const isCollapsed = collapsedYears.has(group.year);
+                      <tbody className="divide-y divide-base-200/70 font-medium">
+                        {/* Year Grouped Rows */}
+                        {yearGroups.map((group) => {
+                          const isCollapsed = collapsedYears.has(group.year);
+
+                          return (
+                            <React.Fragment key={group.year}>
+                              {/* Year Collapsible Header Ribbon */}
+                              <tr
+                                onClick={() => toggleYearCollapse(group.year)}
+                                className="bg-base-200/70 hover:bg-base-200 text-base-content font-bold cursor-pointer select-none transition-colors border-y border-base-content/6"
+                              >
+                                <td colSpan={5} className="py-2 px-3">
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                      <div className={`p-0.5 rounded-md bg-base-300 text-base-content/70 transition-transform duration-200 ${isCollapsed ? '-rotate-90' : 'rotate-0'}`}>
+                                        <ChevronDown size={14} />
+                                      </div>
+                                      <span className="font-black text-xs text-base-content tracking-tight">
+                                        {group.year}
+                                      </span>
+                                      <span className="badge badge-xs badge-neutral font-mono font-bold">
+                                        {group.count} {group.count === 1 ? "deposit" : "deposits"}
+                                      </span>
+                                    </div>
+
+                                    <div className="text-[11px] font-mono text-base-content/80 font-bold">
+                                      Year Subtotal:{" "}
+                                      <strong className="text-primary font-black">
+                                        {hideNumbers ? "₹ ••••••" : `₹${group.subtotal.toLocaleString("en-IN")}`}
+                                      </strong>
+                                    </div>
+                                  </div>
+                                </td>
+                              </tr>
+
+                              {/* Year Transaction Rows */}
+                              {!isCollapsed &&
+                                group.txns.map((txn, idx) => {
+                                  const txnId = txn.id || txn._id;
+                                  const amt = Number(txn.amount ?? txn.amtDeposit ?? 0);
+
+                                  return (
+                                    <tr key={txnId || idx} className="hover:bg-base-200/40 transition-colors">
+                                      {/* 1. Installment Label */}
+                                      <td className="py-2.5 px-3 font-mono font-bold text-base-content/80">
+                                        <span className="badge badge-sm badge-neutral font-mono font-bold text-[10.5px]">
+                                          {txn.installmentNo || txn.term || `#${idx + 1}`}
+                                        </span>
+                                      </td>
+
+                                      {/* 2. Deposit Date */}
+                                      <td className="py-2.5 px-3 whitespace-nowrap font-mono text-base-content/80">
+                                        <div className="flex items-center gap-1.5">
+                                          <Calendar size={12} className="text-primary shrink-0" />
+                                          <span>{txn.date ? dayjs(txn.date).format("DD MMM YYYY") : "-"}</span>
+                                        </div>
+                                      </td>
+
+                                      {/* 3. Amount */}
+                                      <td className="py-2.5 px-3 text-right font-mono font-black text-sm text-primary whitespace-nowrap">
+                                        {hideNumbers ? "₹ ••••••" : `₹${amt.toLocaleString("en-IN")}`}
+                                      </td>
+
+                                      {/* 4. Notes */}
+                                      <td className="py-2.5 px-3 text-base-content/70 max-w-xs truncate">
+                                        {txn.notes || <span className="text-base-content/30 italic">No notes</span>}
+                                      </td>
+
+                                      {/* 5. Actions (Edit Opens Modal & Delete) */}
+                                      <td className="py-2.5 px-3 text-center">
+                                        <div className="flex items-center justify-center gap-1">
+                                          <button
+                                            type="button"
+                                            onClick={() => onOpenEditDeposit && onOpenEditDeposit(rd, txn)}
+                                            className="p-1 text-base-content/60 hover:text-secondary hover:bg-secondary/10 rounded-lg transition-colors cursor-pointer"
+                                            title="Edit Deposit Installment"
+                                          >
+                                            <Pencil size={13} />
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={() => onDeleteDeposit(rd, txnId)}
+                                            className="p-1 text-base-content/60 hover:text-error hover:bg-error/10 rounded-lg transition-colors cursor-pointer"
+                                            title="Delete Deposit"
+                                          >
+                                            <Trash2 size={13} />
+                                          </button>
+                                        </div>
+                                      </td>
+                                    </tr>
+                                  );
+                                })}
+                            </React.Fragment>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* ============================================================ */}
+                  {/* MOBILE CARD LIST (block md:hidden) — matches MF table style  */}
+                  {/* ============================================================ */}
+                  <div className="block md:hidden p-3 space-y-3">
+                    {yearGroups.map((yg) => {
+                      const isYearCollapsed = collapsedYears.has(yg.year);
 
                       return (
-                        <React.Fragment key={group.year}>
-                          {/* Year Collapsible Header Ribbon */}
-                          <tr
-                            onClick={() => toggleYearCollapse(group.year)}
-                            className="bg-base-200/70 hover:bg-base-200 text-base-content font-bold cursor-pointer select-none transition-colors border-y border-base-content/6"
+                        <div key={yg.year} className="space-y-2">
+                          {/* Collapsible Year Group Header */}
+                          <button
+                            type="button"
+                            onClick={() => toggleYearCollapse(yg.year)}
+                            className="w-full flex items-center justify-between px-3 py-2 bg-base-200/60 rounded-xl border border-base-content/8 dark:border-base-content/8 font-bold text-xs select-none cursor-pointer hover:bg-base-200 transition-colors"
                           >
-                            <td colSpan={5} className="py-2 px-3">
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                  <div className={`p-0.5 rounded-md bg-base-300 text-base-content/70 transition-transform duration-200 ${isCollapsed ? '-rotate-90' : 'rotate-0'}`}>
-                                    <ChevronDown size={14} />
-                                  </div>
-                                  <span className="font-black text-xs text-base-content tracking-tight">
-                                    {group.year}
-                                  </span>
-                                  <span className="badge badge-xs badge-neutral font-mono font-bold">
-                                    {group.count} {group.count === 1 ? "deposit" : "deposits"}
-                                  </span>
-                                </div>
-
-                                <div className="text-[11px] font-mono text-base-content/80 font-bold">
-                                  Year Subtotal:{" "}
-                                  <strong className="text-primary font-black">
-                                    {hideNumbers ? "₹ ••••••" : `₹${group.subtotal.toLocaleString("en-IN")}`}
-                                  </strong>
-                                </div>
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <div className={`transition-transform duration-200 shrink-0 ${!isYearCollapsed ? "rotate-0" : "-rotate-90"}`}>
+                                <ChevronDown size={14} className="text-base-content/60" />
                               </div>
-                            </td>
-                          </tr>
+                              <Calendar size={12} className="text-primary shrink-0" />
+                              <span className="text-base-content font-bold">{yg.year}</span>
+                              <span className="px-1.5 py-0.2 rounded-md text-[10px] font-bold border shrink-0 bg-primary/15 text-primary border-primary/20">
+                                {yg.count} {yg.count === 1 ? "deposit" : "deposits"}
+                              </span>
+                            </div>
+                            <div className="text-right text-[11px] font-mono font-bold shrink-0">
+                              <span className="text-primary">
+                                +{hideNumbers ? "₹ ••••" : `₹${yg.subtotal.toLocaleString("en-IN")}`}
+                              </span>
+                            </div>
+                          </button>
 
-                          {/* Year Transaction Rows */}
-                          {!isCollapsed &&
-                            group.txns.map((txn, idx) => {
-                              const txnId = txn.id || txn._id;
-                              const amt = Number(txn.amount ?? txn.amtDeposit ?? 0);
+                          {/* Transaction Cards for this Year */}
+                          {!isYearCollapsed && (
+                            <div className="space-y-2">
+                              {yg.txns.map((txn, idx) => {
+                                const txnId = txn.id || txn._id;
+                                const amt = Number(txn.amount ?? txn.amtDeposit ?? 0);
 
-                              return (
-                                <tr key={txnId || idx} className="hover:bg-base-200/40 transition-colors">
-                                  {/* 1. Installment Label */}
-                                  <td className="py-2.5 px-3 font-mono font-bold text-base-content/80">
-                                    <span className="badge badge-sm badge-neutral font-mono font-bold text-[10.5px]">
-                                      {txn.installmentNo || txn.term || `#${idx + 1}`}
-                                    </span>
-                                  </td>
+                                return (
+                                  <div
+                                    key={txnId || idx}
+                                    className="p-3 bg-base-100 rounded-2xl border border-base-content/8 dark:border-base-content/8 shadow-2xs space-y-2"
+                                  >
+                                    {/* Top Line: Installment #, Date & Actions */}
+                                    <div className="flex items-center justify-between gap-2">
+                                      <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
+                                        <span className="badge badge-sm badge-neutral font-mono font-bold text-[10.5px] shrink-0">
+                                          {txn.installmentNo || txn.term || `#${idx + 1}`}
+                                        </span>
+                                        <span className="text-[10px] text-base-content/50 font-mono">
+                                          {txn.date ? dayjs(txn.date).format("DD MMM YYYY") : "—"}
+                                        </span>
+                                      </div>
 
-                                  {/* 2. Deposit Date */}
-                                  <td className="py-2.5 px-3 whitespace-nowrap font-mono text-base-content/80">
-                                    <div className="flex items-center gap-1.5">
-                                      <Calendar size={12} className="text-primary shrink-0" />
-                                      <span>{txn.date ? dayjs(txn.date).format("DD MMM YYYY") : "-"}</span>
+                                      {/* Action Buttons: Edit & Delete */}
+                                      <div className="flex items-center gap-1 shrink-0">
+                                        <button
+                                          type="button"
+                                          onClick={() => onOpenEditDeposit && onOpenEditDeposit(rd, txn)}
+                                          className="p-1 rounded-lg text-info hover:bg-info/10 transition-colors cursor-pointer"
+                                          title="Edit Deposit"
+                                        >
+                                          <Pencil size={13} />
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => onDeleteDeposit(rd, txnId)}
+                                          className="p-1 rounded-lg text-error hover:bg-error/10 transition-colors cursor-pointer"
+                                          title="Delete Deposit"
+                                        >
+                                          <Trash2 size={13} />
+                                        </button>
+                                      </div>
                                     </div>
-                                  </td>
 
-                                  {/* 3. Amount */}
-                                  <td className="py-2.5 px-3 text-right font-mono font-black text-sm text-primary whitespace-nowrap">
-                                    {hideNumbers ? "₹ ••••••" : `₹${amt.toLocaleString("en-IN")}`}
-                                  </td>
-
-                                  {/* 4. Notes */}
-                                  <td className="py-2.5 px-3 text-base-content/70 max-w-xs truncate">
-                                    {txn.notes || <span className="text-base-content/30 italic">No notes</span>}
-                                  </td>
-
-                                  {/* 5. Actions (Edit Opens Modal & Delete) */}
-                                  <td className="py-2.5 px-3 text-center">
-                                    <div className="flex items-center justify-center gap-1">
-                                      <button
-                                        type="button"
-                                        onClick={() => onOpenEditDeposit && onOpenEditDeposit(rd, txn)}
-                                        className="p-1 text-base-content/60 hover:text-secondary hover:bg-secondary/10 rounded-lg transition-colors cursor-pointer"
-                                        title="Edit Deposit Installment"
-                                      >
-                                        <Pencil size={13} />
-                                      </button>
-                                      <button
-                                        type="button"
-                                        onClick={() => onDeleteDeposit(rd, txnId)}
-                                        className="p-1 text-base-content/60 hover:text-error hover:bg-error/10 rounded-lg transition-colors cursor-pointer"
-                                        title="Delete Deposit"
-                                      >
-                                        <Trash2 size={13} />
-                                      </button>
+                                    {/* Amount Row */}
+                                    <div className="grid grid-cols-2 gap-2 text-xs pt-1 border-t border-base-content/6 dark:border-base-content/6 font-mono">
+                                      <div>
+                                        <span className="text-[9.5px] text-base-content/50 uppercase block font-sans">Amount Deposited</span>
+                                        <span className="font-black text-primary text-sm">
+                                          {hideNumbers ? "₹ ••••••" : `₹${amt.toLocaleString("en-IN")}`}
+                                        </span>
+                                      </div>
+                                      {txn.notes ? (
+                                        <div className="text-right">
+                                          <span className="text-[9.5px] text-base-content/50 uppercase block font-sans">Notes</span>
+                                          <span className="text-[10.5px] text-base-content/70 truncate block">{txn.notes}</span>
+                                        </div>
+                                      ) : (
+                                        <div className="text-right flex flex-col justify-center">
+                                          <span className="text-[10px] italic text-base-content/30">No notes</span>
+                                        </div>
+                                      )}
                                     </div>
-                                  </td>
-                                </tr>
-                              );
-                            })}
-                        </React.Fragment>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
                       );
                     })}
-                  </tbody>
-                </table>
+                  </div>
+                </>
               )}
             </div>
 
@@ -564,7 +676,7 @@ export default function RecurringDepositTableModal({
           {/* ================================================================= */}
           {/* RIGHT PANEL: 1 POPUP CARD WITH 2 FACES (DEPOSIT & WITHDRAWAL)     */}
           {/* ================================================================= */}
-          <div className="w-full lg:w-84 xl:w-96 flex flex-col shrink-0 h-full overflow-hidden">
+          <div className="hidden lg:flex w-full lg:w-84 xl:w-96 flex-col shrink-0 h-full overflow-hidden">
             <div className="bg-base-100/95 backdrop-blur-md rounded-3xl border border-base-content/8 shadow-xl flex flex-col h-full overflow-hidden justify-between">
               
               {/* Top Navigation & Face Indicator Header with 2 Arrow Controls */}

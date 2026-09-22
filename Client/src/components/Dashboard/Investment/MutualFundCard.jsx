@@ -566,58 +566,60 @@ export default function MutualFundCard({
                 </div>
               </div>
 
-              {/* 4 Compact Metric Cards */}
-              <div className="grid grid-cols-2 gap-1.5 text-xs">
-                {/* 1. Total Terms */}
-                <div className="p-2 bg-base-200/50 border border-base-content/6 dark:border-base-content/6 rounded-xl space-y-0.5">
-                  <span className="text-[9px] font-bold text-base-content/50 uppercase tracking-wider flex items-center gap-1">
-                    <Layers size={10} className="text-secondary" /> Terms
+              {/* Row 1: Terms, Duration and Avg NAV in a single line (3 columns) */}
+              <div className="grid grid-cols-3 gap-1.5 text-xs">
+                {/* 1. Terms */}
+                <div className="p-2 bg-base-200/50 border border-base-content/6 dark:border-base-content/6 rounded-xl space-y-0.5 min-w-0">
+                  <span className="text-[9px] font-bold text-base-content/50 uppercase tracking-wider flex items-center gap-1 truncate">
+                    <Layers size={10} className="text-secondary shrink-0" /> Terms
                   </span>
-                  <div className="font-extrabold text-xs font-mono text-base-content">
+                  <div className="font-extrabold text-xs font-mono text-base-content truncate">
                     {hideNumbers ? "••" : summary.totalTerms}{" "}
-                    <span className="text-[9.5px] font-normal text-base-content/60">({summary.sipCount} SIP, {summary.lsCount} LS)</span>
+                    <span className="text-[8.5px] font-normal text-base-content/60">({summary.sipCount}S, {summary.lsCount}L)</span>
                   </div>
                 </div>
 
                 {/* 2. Duration */}
-                <div className="p-2 bg-base-200/50 border border-base-content/6 dark:border-base-content/6 rounded-xl space-y-0.5">
-                  <span className="text-[9px] font-bold text-base-content/50 uppercase tracking-wider flex items-center gap-1">
-                    <Clock size={10} className="text-primary" /> Duration
+                <div className="p-2 bg-base-200/50 border border-base-content/6 dark:border-base-content/6 rounded-xl space-y-0.5 min-w-0">
+                  <span className="text-[9px] font-bold text-base-content/50 uppercase tracking-wider flex items-center gap-1 truncate">
+                    <Clock size={10} className="text-primary shrink-0" /> Duration
                   </span>
-                  <div className="font-extrabold text-xs text-base-content truncate">
+                  <div className="font-extrabold text-xs text-base-content truncate" title={summary.durationText}>
                     {summary.durationText}
                   </div>
                 </div>
 
                 {/* 3. Avg NAV */}
-                <div className="p-2 bg-base-200/50 border border-base-content/6 dark:border-base-content/6 rounded-xl space-y-0.5">
-                  <span className="text-[9px] font-bold text-base-content/50 uppercase tracking-wider flex items-center gap-1">
-                    <TrendingUp size={10} className="text-info" /> Avg NAV
+                <div className="p-2 bg-base-200/50 border border-base-content/6 dark:border-base-content/6 rounded-xl space-y-0.5 min-w-0">
+                  <span className="text-[9px] font-bold text-base-content/50 uppercase tracking-wider flex items-center gap-1 truncate">
+                    <TrendingUp size={10} className="text-info shrink-0" /> Avg NAV
                   </span>
-                  <div className="font-extrabold text-xs font-mono text-base-content">
+                  <div className="font-extrabold text-xs font-mono text-base-content truncate">
                     {hideNumbers ? "₹ ••••" : summary.avgNav > 0 ? `₹${summary.avgNav.toFixed(2)}` : "—"}
-                  </div>
-                </div>
-
-                {/* 4. Units */}
-                <div className="p-2 bg-base-200/50 border border-base-content/6 dark:border-base-content/6 rounded-xl space-y-0.5">
-                  <span className="text-[9px] font-bold text-base-content/50 uppercase tracking-wider flex items-center gap-1">
-                    <Coins size={10} className="text-warning" /> Units Left
-                  </span>
-                  <div className="font-extrabold text-xs font-mono text-base-content">
-                    {hideNumbers ? "•••••" : summary.activeUnits.toFixed(3)}
-                  </div>
-                  <div className="text-[9px] font-mono text-base-content/60 flex items-center justify-between">
-                    <span>+{summary.totalUnits.toFixed(3)}</span>
-                    <span className="text-amber-600 dark:text-amber-400">-{(summary.totalUnitsWithdrawn || 0).toFixed(3)}</span>
                   </div>
                 </div>
               </div>
 
-              {/* Date Range */}
-              <div className="px-2 py-1 bg-base-200/30 border border-base-content/6 dark:border-base-content/6 rounded-lg text-[9.5px] font-mono text-base-content/60 flex items-center justify-between">
-                <span className="text-[9px] uppercase font-bold text-base-content/40">Range:</span>
-                <span>{summary.fromDateStr} → {summary.toDateStr}</span>
+              {/* Row 2: Units Left */}
+              <div className="p-2 bg-base-200/50 border border-base-content/6 dark:border-base-content/6 rounded-xl flex items-center justify-between gap-2">
+                <div className="space-y-0.5">
+                  <span className="text-[9px] font-bold text-base-content/50 uppercase tracking-wider flex items-center gap-1">
+                    <Coins size={10} className="text-warning shrink-0" /> Units Left
+                  </span>
+                  <div className="font-extrabold text-sm font-mono text-base-content">
+                    {hideNumbers ? "•••••" : summary.activeUnits.toFixed(3)}
+                  </div>
+                </div>
+                <div className="text-right text-[9.5px] font-mono text-base-content/65 space-y-0.5">
+                  <div className="flex items-center justify-end gap-1.5">
+                    <span className="text-[8.5px] uppercase font-bold text-base-content/40">Total:</span>
+                    <span className="font-semibold text-emerald-600 dark:text-emerald-400 font-mono">+{summary.totalUnits.toFixed(3)}</span>
+                  </div>
+                  <div className="flex items-center justify-end gap-1.5">
+                    <span className="text-[8.5px] uppercase font-bold text-base-content/40">Sold:</span>
+                    <span className="font-semibold text-amber-600 dark:text-amber-400 font-mono">-{(summary.totalUnitsWithdrawn || 0).toFixed(3)}</span>
+                  </div>
+                </div>
               </div>
             </div>
           ) : (
@@ -649,65 +651,77 @@ export default function MutualFundCard({
                 </div>
               </div>
 
-              {/* 4 Compact Metric Cards */}
-              <div className="grid grid-cols-2 gap-1.5 text-xs">
-                {/* 1. Total Terms */}
-                <div className="p-2 bg-base-200/50 border border-base-content/6 dark:border-base-content/6 rounded-xl space-y-0.5">
-                  <span className="text-[9px] font-bold text-base-content/50 uppercase tracking-wider flex items-center gap-1">
-                    <Layers size={10} className="text-secondary" /> Terms
+              {/* Row 1: Terms, Duration and Exit NAV in a single line (3 columns) */}
+              <div className="grid grid-cols-3 gap-1.5 text-xs">
+                {/* 1. Terms */}
+                <div className="p-2 bg-base-200/50 border border-base-content/6 dark:border-base-content/6 rounded-xl space-y-0.5 min-w-0">
+                  <span className="text-[9px] font-bold text-base-content/50 uppercase tracking-wider flex items-center gap-1 truncate">
+                    <Layers size={10} className="text-secondary shrink-0" /> Terms
                   </span>
-                  <div className="font-extrabold text-xs font-mono text-base-content">
+                  <div className="font-extrabold text-xs font-mono text-base-content truncate">
                     {hideNumbers ? "••" : summary.totalWithdrawalTerms || 0}{" "}
-                    <span className="text-[9.5px] font-normal text-base-content/60">({summary.swpCount || 0} SWP, {summary.lsWithdrawalCount || 0} LS)</span>
+                    <span className="text-[8.5px] font-normal text-base-content/60">({summary.swpCount || 0}S, {summary.lsWithdrawalCount || 0}L)</span>
                   </div>
                 </div>
 
                 {/* 2. Duration */}
-                <div className="p-2 bg-base-200/50 border border-base-content/6 dark:border-base-content/6 rounded-xl space-y-0.5">
-                  <span className="text-[9px] font-bold text-base-content/50 uppercase tracking-wider flex items-center gap-1">
-                    <Clock size={10} className="text-primary" /> Duration
+                <div className="p-2 bg-base-200/50 border border-base-content/6 dark:border-base-content/6 rounded-xl space-y-0.5 min-w-0">
+                  <span className="text-[9px] font-bold text-base-content/50 uppercase tracking-wider flex items-center gap-1 truncate">
+                    <Clock size={10} className="text-primary shrink-0" /> Duration
                   </span>
-                  <div className="font-extrabold text-xs text-base-content truncate">
+                  <div className="font-extrabold text-xs text-base-content truncate" title={summary.withdrawalDurationText || "—"}>
                     {summary.withdrawalDurationText || "—"}
                   </div>
                 </div>
 
-                {/* 3. Avg Exit NAV */}
-                <div className="p-2 bg-base-200/50 border border-base-content/6 dark:border-base-content/6 rounded-xl space-y-0.5">
-                  <span className="text-[9px] font-bold text-base-content/50 uppercase tracking-wider flex items-center gap-1">
-                    <TrendingUp size={10} className="text-info" /> Exit NAV
+                {/* 3. Exit NAV */}
+                <div className="p-2 bg-base-200/50 border border-base-content/6 dark:border-base-content/6 rounded-xl space-y-0.5 min-w-0">
+                  <span className="text-[9px] font-bold text-base-content/50 uppercase tracking-wider flex items-center gap-1 truncate">
+                    <TrendingUp size={10} className="text-info shrink-0" /> Exit NAV
                   </span>
-                  <div className="font-extrabold text-xs font-mono text-base-content">
+                  <div className="font-extrabold text-xs font-mono text-base-content truncate">
                     {hideNumbers ? "₹ ••••" : (summary.avgExitNav || 0) > 0 ? `₹${summary.avgExitNav.toFixed(2)}` : "—"}
-                  </div>
-                </div>
-
-                {/* 4. Units */}
-                <div className="p-2 bg-base-200/50 border border-base-content/6 dark:border-base-content/6 rounded-xl space-y-0.5">
-                  <span className="text-[9px] font-bold text-base-content/50 uppercase tracking-wider flex items-center gap-1">
-                    <Coins size={10} className="text-warning" /> Redeemed
-                  </span>
-                  <div className="font-extrabold text-xs font-mono text-amber-600 dark:text-amber-400">
-                    {hideNumbers ? "-•••••" : `-${(summary.totalUnitsWithdrawn || 0).toFixed(3)}`}
-                  </div>
-                  <div className="text-[9px] font-mono text-base-content/60 flex items-center justify-between">
-                    <span>Left: {summary.activeUnits.toFixed(3)}</span>
                   </div>
                 </div>
               </div>
 
-              {/* Date Range */}
-              <div className="px-2 py-1 bg-base-200/30 border border-base-content/6 dark:border-base-content/6 rounded-lg text-[9.5px] font-mono text-base-content/60 flex items-center justify-between">
-                <span className="text-[9px] uppercase font-bold text-base-content/40">Range:</span>
-                <span>{summary.withdrawalFromDateStr || "—"} → {summary.withdrawalToDateStr || "—"}</span>
+              {/* Row 2: Units Redeemed */}
+              <div className="p-2 bg-base-200/50 border border-base-content/6 dark:border-base-content/6 rounded-xl flex items-center justify-between gap-2">
+                <div className="space-y-0.5">
+                  <span className="text-[9px] font-bold text-base-content/50 uppercase tracking-wider flex items-center gap-1">
+                    <Coins size={10} className="text-warning shrink-0" /> Redeemed
+                  </span>
+                  <div className="font-extrabold text-sm font-mono text-amber-600 dark:text-amber-400">
+                    {hideNumbers ? "-•••••" : `-${(summary.totalUnitsWithdrawn || 0).toFixed(3)}`}
+                  </div>
+                </div>
+                <div className="text-right text-[9.5px] font-mono text-base-content/65 space-y-0.5">
+                  <div className="flex items-center justify-end gap-1.5">
+                    <span className="text-[8.5px] uppercase font-bold text-base-content/40">Units Left:</span>
+                    <span className="font-semibold text-base-content font-mono">{summary.activeUnits.toFixed(3)}</span>
+                  </div>
+                </div>
               </div>
             </div>
           )}
         </div>
 
-        {/* Card Footer: ALL Action Icons on the Footer */}
-        <div className="px-3 py-2 border-t border-base-content/8 dark:border-base-content/8 bg-base-200/30 flex items-center justify-end">
-          <div className="flex items-center gap-1.5">
+        {/* Card Footer: Stacked Date Range on Left + Action Icons on Right */}
+        <div className="px-3 py-2 border-t border-base-content/8 dark:border-base-content/8 bg-base-200/30 flex items-center justify-between gap-2">
+          {/* Left: Stacked From Date & To Date aligned in a single margin */}
+          <div className="grid grid-cols-[auto_1fr] items-center gap-x-2 text-[10px] font-mono leading-tight shrink-0">
+            <span className="text-[8.5px] uppercase font-bold text-base-content/40 tracking-wider">From:</span>
+            <span className="font-semibold text-base-content/80">
+              {activeFace === 0 ? (summary.fromDateStr || "—") : (summary.withdrawalFromDateStr || "—")}
+            </span>
+            <span className="text-[8.5px] uppercase font-bold text-base-content/40 tracking-wider">To:</span>
+            <span className="font-semibold text-base-content/80">
+              {activeFace === 0 ? (summary.toDateStr || "—") : (summary.withdrawalToDateStr || "—")}
+            </span>
+          </div>
+
+          {/* Right: Action Buttons */}
+          <div className="flex items-center gap-1 shrink-0">
             <button
               type="button"
               onClick={() => onOpenInfo && onOpenInfo(fund)}

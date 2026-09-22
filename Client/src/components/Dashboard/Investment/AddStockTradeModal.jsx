@@ -1250,20 +1250,20 @@ export default function AddStockTradeModal({
       </div>
 
       {/* =================================================================== */}
-      {/* MOBILE POPUP VIEW (flex lg:hidden) - 3-STEP SEQUENTIAL PROCESS      */}
+      {/* MOBILE POPUP VIEW (flex lg:hidden) - COMPACT 3-STEP PROCESS         */}
       {/* =================================================================== */}
-      <div className="flex lg:hidden flex-col bg-base-100 border border-base-200/90 rounded-3xl shadow-2xl w-full max-w-md max-h-[92vh] overflow-hidden my-auto animate-in zoom-in-95 duration-200">
+      <div className="flex lg:hidden flex-col bg-base-100 dark:bg-base-900 border border-base-300 dark:border-base-700/80 rounded-2xl shadow-2xl w-full max-w-[420px] max-h-[88vh] overflow-hidden my-auto animate-in zoom-in-95 duration-200">
         {/* Mobile Modal Header */}
-        <div className="px-4.5 pt-3.5 pb-3 border-b border-base-200/80 bg-base-100/90 backdrop-blur-md flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="p-2 rounded-2xl bg-primary/10 text-primary shrink-0">
-              <Tag size={18} />
+        <div className="px-3.5 py-2.5 border-b border-base-300/70 dark:border-base-700/70 bg-base-100/95 dark:bg-base-900/95 backdrop-blur-md flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="w-7 h-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+              <Tag size={14} />
             </div>
             <div className="min-w-0">
-              <h3 className="font-black text-sm text-base-content leading-tight truncate">
+              <h3 className="font-extrabold text-xs text-base-content leading-tight truncate">
                 {initialData ? `Edit Trade — ${name || initialData.name}` : "Add Stock Trade"}
               </h3>
-              <p className="text-[10.5px] text-base-content/60 font-medium truncate mt-0.5">
+              <p className="text-[10px] text-base-content/60 font-medium truncate">
                 Step {mobileStep} of 3 • {mobileStep === 1 ? "Stock Info" : mobileStep === 2 ? "Buy Leg" : "Sell Leg"}
               </p>
             </div>
@@ -1271,40 +1271,36 @@ export default function AddStockTradeModal({
           <button
             type="button"
             onClick={onClose}
-            className="btn btn-sm btn-circle btn-ghost text-base-content/60 hover:text-base-content hover:bg-base-200/80 shrink-0 cursor-pointer"
+            className="btn btn-xs btn-circle btn-ghost text-base-content/60 hover:text-base-content hover:bg-base-200 dark:hover:bg-base-800 shrink-0 cursor-pointer h-7 w-7"
           >
-            <X size={17} />
+            <X size={15} />
           </button>
         </div>
 
         {/* Dynamic Step Progress Line */}
-        <div className="w-full bg-base-200/60 h-1 shrink-0 overflow-hidden">
+        <div className="w-full bg-base-300/40 dark:bg-base-800 h-0.5 shrink-0 overflow-hidden">
           <div
             className="h-full bg-primary transition-all duration-300 ease-out"
             style={{ width: mobileStep === 1 ? "33.3%" : mobileStep === 2 ? "66.6%" : "100%" }}
           />
         </div>
 
-        {/* Top 3-Tabs Process Strip (Auto-scrolls active tab into view) */}
-        <div
-          ref={mobileTabsScrollRef}
-          className="flex items-center gap-1.5 px-3 py-2 bg-base-200/60 dark:bg-base-800/50 border-b border-base-200/80 overflow-x-auto no-scrollbar overscroll-x-contain touch-pan-x shrink-0"
-        >
-          {/* Tab 1: Basic Stock Info */}
+        {/* Top 3-Tabs Process Strip (3-Column Grid for Native Compact Layout) */}
+        <div className="grid grid-cols-3 gap-1 p-1 bg-base-200/70 dark:bg-base-800/60 border-b border-base-300/60 dark:border-base-700/60 shrink-0">
+          {/* Tab 1: Stock Info */}
           <button
-            ref={mobileStep === 1 ? activeMobileTabRef : null}
             type="button"
             onClick={() => setMobileStep(1)}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 cursor-pointer select-none ${
+            className={`py-1.5 px-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1 cursor-pointer select-none ${
               mobileStep === 1
-                ? "bg-base-100 dark:bg-base-900 text-primary shadow-xs font-black border border-base-300/60 scale-[1.01]"
-                : "text-base-content/65 hover:text-base-content hover:bg-base-100/40"
+                ? "bg-base-100 dark:bg-base-900 text-primary shadow-xs font-black border border-base-300/60 dark:border-base-700/80"
+                : "text-base-content/60 hover:text-base-content"
             }`}
           >
-            <Tag size={12} className={mobileStep === 1 ? "text-primary" : "text-base-content/50"} />
-            <span>1. Stock Info</span>
+            <Tag size={11} className={mobileStep === 1 ? "text-primary shrink-0" : "text-base-content/40 shrink-0"} />
+            <span className="truncate text-[11px]">1. Info</span>
             {isStep1Complete && (
-              <span className="w-3.5 h-3.5 rounded-full flex items-center justify-center text-[9px] font-black bg-success/15 text-success">
+              <span className="w-3.5 h-3.5 rounded-full flex items-center justify-center text-[8.5px] font-black bg-success/20 text-success shrink-0">
                 ✓
               </span>
             )}
@@ -1312,7 +1308,6 @@ export default function AddStockTradeModal({
 
           {/* Tab 2: Buy Details */}
           <button
-            ref={mobileStep === 2 ? activeMobileTabRef : null}
             type="button"
             onClick={() => {
               if (!isStep1Complete) {
@@ -1322,16 +1317,16 @@ export default function AddStockTradeModal({
               setErrorMsg("");
               setMobileStep(2);
             }}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 cursor-pointer select-none ${
+            className={`py-1.5 px-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1 cursor-pointer select-none ${
               mobileStep === 2
-                ? "bg-base-100 dark:bg-base-900 text-primary shadow-xs font-black border border-base-300/60 scale-[1.01]"
-                : "text-base-content/65 hover:text-base-content hover:bg-base-100/40"
+                ? "bg-base-100 dark:bg-base-900 text-primary shadow-xs font-black border border-base-300/60 dark:border-base-700/80"
+                : "text-base-content/60 hover:text-base-content"
             }`}
           >
-            <ShoppingCart size={12} className={mobileStep === 2 ? "text-primary" : "text-base-content/50"} />
-            <span>2. Buy Details</span>
+            <ShoppingCart size={11} className={mobileStep === 2 ? "text-primary shrink-0" : "text-base-content/40 shrink-0"} />
+            <span className="truncate text-[11px]">2. Buy</span>
             {isStep2Complete && (
-              <span className="w-3.5 h-3.5 rounded-full flex items-center justify-center text-[9px] font-black bg-success/15 text-success">
+              <span className="w-3.5 h-3.5 rounded-full flex items-center justify-center text-[8.5px] font-black bg-success/20 text-success shrink-0">
                 ✓
               </span>
             )}
@@ -1339,7 +1334,6 @@ export default function AddStockTradeModal({
 
           {/* Tab 3: Sell Details */}
           <button
-            ref={mobileStep === 3 ? activeMobileTabRef : null}
             type="button"
             onClick={() => {
               if (!isStep1Complete) {
@@ -1353,26 +1347,26 @@ export default function AddStockTradeModal({
               setErrorMsg("");
               setMobileStep(3);
             }}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 cursor-pointer select-none ${
+            className={`py-1.5 px-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1 cursor-pointer select-none ${
               mobileStep === 3
-                ? "bg-base-100 dark:bg-base-900 text-primary shadow-xs font-black border border-base-300/60 scale-[1.01]"
-                : "text-base-content/65 hover:text-base-content hover:bg-base-100/40"
+                ? "bg-base-100 dark:bg-base-900 text-primary shadow-xs font-black border border-base-300/60 dark:border-base-700/80"
+                : "text-base-content/60 hover:text-base-content"
             }`}
           >
-            <TrendingUp size={12} className={mobileStep === 3 ? "text-primary" : "text-base-content/50"} />
-            <span>3. Sell Details</span>
-            <span className={`badge badge-xs text-[9px] font-bold ${isSold ? "badge-secondary badge-soft" : "badge-ghost opacity-70"}`}>
-              {isSold ? "Sold" : "Holding"}
+            <TrendingUp size={11} className={mobileStep === 3 ? "text-primary shrink-0" : "text-base-content/40 shrink-0"} />
+            <span className="truncate text-[11px]">3. Sell</span>
+            <span className={`text-[8.5px] font-bold px-1 py-0.5 rounded leading-none shrink-0 ${isSold ? "bg-secondary/15 text-secondary" : "bg-base-content/10 text-base-content/50"}`}>
+              {isSold ? "Sold" : "Hold"}
             </span>
           </button>
         </div>
 
         {/* Form Body Content */}
-        <div className="p-4.5 overflow-y-auto space-y-4 flex-1 text-xs">
+        <div className="p-3 overflow-y-auto space-y-3 flex-1 text-xs">
           {/* Validation Error Alert Banner */}
           {errorMsg && (
-            <div className="p-3 bg-error/10 border border-error/30 text-error rounded-2xl text-xs font-semibold flex items-center gap-2.5 animate-in shake duration-200">
-              <AlertCircle size={16} className="shrink-0" />
+            <div className="p-2.5 bg-error/10 border border-error/30 text-error rounded-xl text-xs font-semibold flex items-center gap-2 animate-in shake duration-200">
+              <AlertCircle size={14} className="shrink-0" />
               <span>{errorMsg}</span>
             </div>
           )}
@@ -1381,21 +1375,21 @@ export default function AddStockTradeModal({
           {/* STEP 1: Basic Stock Info                                        */}
           {/* =============================================================== */}
           {mobileStep === 1 && (
-            <div className="space-y-4 animate-in fade-in duration-200">
+            <div className="space-y-3 animate-in fade-in duration-200">
               {/* Interactive Live Asset Preview Header */}
-              <div className="p-3.5 rounded-2xl bg-gradient-to-r from-base-200/80 via-base-200/50 to-base-100 border border-base-200/90 flex items-center justify-between gap-3 shadow-2xs">
-                <div className="flex items-center gap-3 min-w-0">
-                  <CompanyLogo name={name || "Stock"} size="w-11 h-11" rounded="rounded-xl" type="stock" />
+              <div className="p-2.5 rounded-xl bg-gradient-to-r from-base-200/80 via-base-200/40 to-base-100 dark:from-base-800/80 dark:via-base-800/40 dark:to-base-900 border border-base-300/60 dark:border-base-700/60 flex items-center justify-between gap-2.5 shadow-2xs">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <CompanyLogo name={name || "Stock"} size="w-8 h-8" rounded="rounded-lg" type="stock" />
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5">
-                      <h4 className="font-black text-sm text-base-content uppercase tracking-tight truncate">
+                      <h4 className="font-extrabold text-xs text-base-content uppercase tracking-tight truncate">
                         {name.trim() || "Stock Symbol"}
                       </h4>
-                      <span className="badge badge-xs font-bold bg-primary/15 text-primary border border-primary/20">
+                      <span className="badge badge-xs font-bold bg-primary/15 text-primary border border-primary/20 text-[9px]">
                         {exchange}
                       </span>
                     </div>
-                    <p className="text-[10.5px] text-base-content/60 truncate mt-0.5">
+                    <p className="text-[10px] text-base-content/60 truncate mt-0.5">
                       {platform} • {cap} Cap • {term}
                     </p>
                   </div>
@@ -1403,16 +1397,16 @@ export default function AddStockTradeModal({
               </div>
 
               {/* Stock Symbol / Ticker Input */}
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-extrabold uppercase tracking-wider text-base-content/70 block">
+              <div className="space-y-1">
+                <label className="text-[10px] font-extrabold uppercase tracking-wider text-base-content/70 block">
                   Stock Symbol / Ticker <span className="text-error">*</span>
                 </label>
                 <div className="relative">
-                  <Tag size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-primary/70" />
+                  <Tag size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-primary/70" />
                   <input
                     type="text"
                     placeholder="e.g. RELIANCE, TATAMOTORS, INFY"
-                    className="input h-11 pl-10 pr-10 w-full rounded-2xl bg-base-200/50 focus:bg-base-100 border-base-300/80 focus:border-primary font-bold text-sm uppercase tracking-wide transition-all placeholder:normal-case placeholder:font-normal placeholder:text-xs"
+                    className="input input-xs h-8 pl-8 pr-8 w-full rounded-xl bg-base-200/50 dark:bg-base-800/50 focus:bg-base-100 dark:focus:bg-base-900 border-base-300/80 dark:border-base-700/60 focus:border-primary font-bold text-xs uppercase tracking-wide transition-all placeholder:normal-case placeholder:font-normal placeholder:text-[11px]"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     autoFocus
@@ -1421,71 +1415,72 @@ export default function AddStockTradeModal({
                     <button
                       type="button"
                       onClick={() => setName("")}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-base-content/40 hover:text-base-content cursor-pointer p-1"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-base-content/40 hover:text-base-content cursor-pointer p-0.5"
                     >
-                      <X size={14} />
+                      <X size={12} />
                     </button>
                   )}
                 </div>
               </div>
 
-              {/* Exchange Segmented Toggle (NSE vs BSE) */}
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-extrabold uppercase tracking-wider text-base-content/70 block">
-                  Stock Exchange
-                </label>
-                <div className="grid grid-cols-2 gap-1 bg-base-200/80 dark:bg-base-800/60 p-0.5 rounded-2xl border border-base-300/60">
-                  {["NSE", "BSE"].map((ex) => (
-                    <button
-                      key={ex}
-                      type="button"
-                      onClick={() => setExchange(ex)}
-                      className={`h-8 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                        exchange === ex
-                          ? "bg-base-100 dark:bg-base-900 text-primary shadow-xs font-black border border-base-300/50 scale-[1.01]"
-                          : "text-base-content/65 hover:text-base-content"
-                      }`}
-                    >
-                      <span>{ex}</span>
-                    </button>
-                  ))}
+              {/* Exchange & Product Term Row */}
+              <div className="grid grid-cols-2 gap-2.5">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-extrabold uppercase tracking-wider text-base-content/70 block">
+                    Exchange
+                  </label>
+                  <div className="grid grid-cols-2 gap-1 bg-base-200/80 dark:bg-base-800/60 p-0.5 rounded-xl border border-base-300/60 dark:border-base-700/60">
+                    {["NSE", "BSE"].map((ex) => (
+                      <button
+                        key={ex}
+                        type="button"
+                        onClick={() => setExchange(ex)}
+                        className={`h-7 rounded-lg text-[11px] font-bold transition-all cursor-pointer flex items-center justify-center ${
+                          exchange === ex
+                            ? "bg-base-100 dark:bg-base-900 text-primary shadow-xs font-black border border-base-300/50"
+                            : "text-base-content/65 hover:text-base-content"
+                        }`}
+                      >
+                        {ex}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
 
-              {/* Trade Term Segmented Toggle (Delivery vs Intraday) */}
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-extrabold uppercase tracking-wider text-base-content/70 block">
-                  Trade Term / Product Type
-                </label>
-                <div className="grid grid-cols-2 gap-1 bg-base-200/80 dark:bg-base-800/60 p-0.5 rounded-2xl border border-base-300/60">
-                  {[
-                    { id: "Delivery", label: "Delivery (CNC)" },
-                    { id: "Intraday", label: "Intraday (MIS)" },
-                  ].map((t) => (
-                    <button
-                      key={t.id}
-                      type="button"
-                      onClick={() => setTerm(t.id)}
-                      className={`h-8 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center ${
-                        term === t.id
-                          ? "bg-base-100 dark:bg-base-900 text-primary shadow-xs font-black border border-base-300/50 scale-[1.01]"
-                          : "text-base-content/65 hover:text-base-content"
-                      }`}
-                    >
-                      {t.label}
-                    </button>
-                  ))}
+                <div className="space-y-1">
+                  <label className="text-[10px] font-extrabold uppercase tracking-wider text-base-content/70 block">
+                    Product / Term
+                  </label>
+                  <div className="grid grid-cols-2 gap-1 bg-base-200/80 dark:bg-base-800/60 p-0.5 rounded-xl border border-base-300/60 dark:border-base-700/60">
+                    {[
+                      { id: "Delivery", label: "Delivery" },
+                      { id: "Intraday", label: "Intraday" },
+                    ].map((t) => (
+                      <button
+                        key={t.id}
+                        type="button"
+                        onClick={() => setTerm(t.id)}
+                        className={`h-7 rounded-lg text-[11px] font-bold transition-all cursor-pointer flex items-center justify-center ${
+                          term === t.id
+                            ? "bg-base-100 dark:bg-base-900 text-primary shadow-xs font-black border border-base-300/50"
+                            : "text-base-content/65 hover:text-base-content"
+                        }`}
+                      >
+                        {t.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
 
               {/* Platform / Broker & Market Cap Dropdowns */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <label className="text-[11px] font-extrabold uppercase tracking-wider text-base-content/70 block">
+              <div className="grid grid-cols-2 gap-2.5">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-extrabold uppercase tracking-wider text-base-content/70 block">
                     Platform / Broker
                   </label>
                   <select
-                    className="select h-10 min-h-10 select-bordered w-full rounded-2xl text-xs font-semibold bg-base-200/50 focus:bg-base-100 border-base-300/80 focus:border-primary"
+                    className="select select-xs h-7.5 min-h-7.5 select-bordered w-full rounded-xl text-xs font-semibold bg-base-200/50 dark:bg-base-800/50 focus:bg-base-100 dark:focus:bg-base-900 border-base-300/80 dark:border-base-700/60 focus:border-primary"
                     value={platform}
                     onChange={(e) => setPlatform(e.target.value)}
                   >
@@ -1501,12 +1496,12 @@ export default function AddStockTradeModal({
                   </select>
                 </div>
 
-                <div className="space-y-1.5">
-                  <label className="text-[11px] font-extrabold uppercase tracking-wider text-base-content/70 block">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-extrabold uppercase tracking-wider text-base-content/70 block">
                     Market Cap
                   </label>
                   <select
-                    className="select h-10 min-h-10 select-bordered w-full rounded-2xl text-xs font-semibold bg-base-200/50 focus:bg-base-100 border-base-300/80 focus:border-primary"
+                    className="select select-xs h-7.5 min-h-7.5 select-bordered w-full rounded-xl text-xs font-semibold bg-base-200/50 dark:bg-base-800/50 focus:bg-base-100 dark:focus:bg-base-900 border-base-300/80 dark:border-base-700/60 focus:border-primary"
                     value={cap}
                     onChange={(e) => setCap(e.target.value)}
                   >
@@ -1524,23 +1519,23 @@ export default function AddStockTradeModal({
           {/* STEP 2: Buy Details                                             */}
           {/* =============================================================== */}
           {mobileStep === 2 && (
-            <div className="space-y-4 animate-in fade-in duration-200">
+            <div className="space-y-3 animate-in fade-in duration-200">
               {/* Active Asset Context Pill */}
-              <div className="flex items-center justify-between px-3.5 py-2.5 rounded-2xl bg-base-200/60 border border-base-200 text-xs">
+              <div className="flex items-center justify-between px-3 py-1.5 rounded-xl bg-base-200/60 dark:bg-base-800/50 border border-base-300/60 dark:border-base-700/60 text-xs">
                 <div className="flex items-center gap-2 min-w-0">
-                  <CompanyLogo name={name} size="w-6 h-6" rounded="rounded-lg" type="stock" />
-                  <span className="font-extrabold text-base-content tracking-tight uppercase truncate">
+                  <CompanyLogo name={name} size="w-5 h-5" rounded="rounded-md" type="stock" />
+                  <span className="font-extrabold text-base-content tracking-tight uppercase truncate text-xs">
                     {name || "Stock"}
                   </span>
                 </div>
-                <span className="text-[10.5px] font-semibold text-base-content/60 shrink-0">
+                <span className="text-[10px] font-semibold text-base-content/60 shrink-0">
                   {exchange} • {platform} • {term}
                 </span>
               </div>
 
               {/* Buy Date Picker */}
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-extrabold uppercase tracking-wider text-base-content/70 block">
+              <div className="space-y-1">
+                <label className="text-[10px] font-extrabold uppercase tracking-wider text-base-content/70 block">
                   Buy Execution Date <span className="text-error">*</span>
                 </label>
                 <CallyDatePicker
@@ -1551,20 +1546,20 @@ export default function AddStockTradeModal({
                 />
               </div>
 
-              {/* Spacious Buy Price & Quantity Cards */}
-              <div className="grid grid-cols-2 gap-3">
+              {/* Buy Price & Quantity Cards */}
+              <div className="grid grid-cols-2 gap-2.5">
                 {/* Buy Share Price */}
-                <div className="p-3 rounded-2xl bg-base-200/40 border border-base-200/80 space-y-1">
-                  <label className="text-[10.5px] font-bold text-base-content/70 block">
+                <div className="p-2.5 rounded-xl bg-base-200/40 dark:bg-base-800/40 border border-base-300/60 dark:border-base-700/60 space-y-1">
+                  <label className="text-[10px] font-bold text-base-content/70 block">
                     Buy Price / Share <span className="text-error">*</span>
                   </label>
                   <div className="relative">
-                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 font-bold text-sm text-primary">₹</span>
+                    <span className="absolute left-2 top-1/2 -translate-y-1/2 font-bold text-xs text-primary">₹</span>
                     <input
                       type="number"
                       step="any"
                       placeholder="0.00"
-                      className="input h-10 pl-7 pr-2 w-full rounded-xl bg-base-100 border-base-300 font-mono font-black text-sm focus:border-primary focus:outline-none"
+                      className="input input-xs h-7.5 pl-5 pr-1.5 w-full rounded-lg bg-base-100 dark:bg-base-900 border-base-300/80 dark:border-base-700/60 font-mono font-bold text-xs focus:border-primary focus:outline-none"
                       value={bShare}
                       onChange={(e) => setBShare(e.target.value)}
                     />
@@ -1572,19 +1567,19 @@ export default function AddStockTradeModal({
                 </div>
 
                 {/* Buy Quantity */}
-                <div className="p-3 rounded-2xl bg-base-200/40 border border-base-200/80 space-y-1">
-                  <label className="text-[10.5px] font-bold text-base-content/70 block">
+                <div className="p-2.5 rounded-xl bg-base-200/40 dark:bg-base-800/40 border border-base-300/60 dark:border-base-700/60 space-y-1">
+                  <label className="text-[10px] font-bold text-base-content/70 block">
                     Quantity <span className="text-error">*</span>
                   </label>
                   <div className="relative">
                     <input
                       type="number"
                       placeholder="0"
-                      className="input h-10 px-3 pr-11 w-full rounded-xl bg-base-100 border-base-300 font-mono font-black text-sm focus:border-primary focus:outline-none"
+                      className="input input-xs h-7.5 px-2 pr-8 w-full rounded-lg bg-base-100 dark:bg-base-900 border-base-300/80 dark:border-base-700/60 font-mono font-bold text-xs focus:border-primary focus:outline-none"
                       value={bQty}
                       onChange={(e) => setBQty(e.target.value)}
                     />
-                    <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10.5px] font-bold text-base-content/50">
+                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-base-content/50">
                       Qty
                     </span>
                   </div>
@@ -1593,52 +1588,52 @@ export default function AddStockTradeModal({
 
               {/* Gross Subtotal Pill (When values exist) */}
               {numBShare > 0 && numBQty > 0 && (
-                <div className="flex items-center justify-between px-3.5 py-2 rounded-xl bg-base-200/50 border border-base-200/60 text-xs">
-                  <span className="text-base-content/70 font-semibold">Gross Stock Value:</span>
+                <div className="flex items-center justify-between px-2.5 py-1 rounded-lg bg-base-200/50 dark:bg-base-800/40 border border-base-300/40 text-[11px]">
+                  <span className="text-base-content/60 font-medium">Gross Stock Value:</span>
                   <span className="font-mono font-bold text-base-content">{formatCompactINR(bStock)}</span>
                 </div>
               )}
 
               {/* Buy Charges & Taxes Breakdown Card */}
-              <div className="p-3.5 rounded-2xl bg-base-200/40 border border-base-200/80 space-y-2.5">
+              <div className="p-2.5 rounded-xl bg-base-200/40 dark:bg-base-800/40 border border-base-300/60 dark:border-base-700/60 space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10.5px] font-extrabold uppercase text-base-content/70 tracking-wider">
+                  <span className="text-[10px] font-extrabold uppercase text-base-content/70 tracking-wider">
                     Buy Charges & Day TT
                   </span>
-                  <span className="text-[10.5px] font-mono font-bold text-warning">
+                  <span className="text-[10px] font-mono font-bold text-warning">
                     Charges: ₹{((parseFloat(bBkg) || 0) + (parseFloat(bPdc) || 0)).toFixed(2)}
                   </span>
                 </div>
                 <div className="grid grid-cols-3 gap-2">
-                  <div className="space-y-1">
-                    <label className="text-[10px] text-base-content/60 font-semibold">Brokerage (₹)</label>
+                  <div className="space-y-0.5">
+                    <label className="text-[9.5px] text-base-content/60 font-semibold block">Brokerage (₹)</label>
                     <input
                       type="number"
                       step="any"
                       placeholder="20"
-                      className="input h-8 input-bordered w-full rounded-xl font-mono text-xs bg-base-100"
+                      className="input input-xs h-7 input-bordered w-full rounded-lg font-mono text-xs bg-base-100 dark:bg-base-900 border-base-300/80 dark:border-base-700/60"
                       value={bBkg}
                       onChange={(e) => setBBkg(e.target.value)}
                     />
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] text-base-content/60 font-semibold">PDC / Taxes (₹)</label>
+                  <div className="space-y-0.5">
+                    <label className="text-[9.5px] text-base-content/60 font-semibold block">PDC / Tax (₹)</label>
                     <input
                       type="number"
                       step="any"
                       placeholder="0"
-                      className="input h-8 input-bordered w-full rounded-xl font-mono text-xs bg-base-100"
+                      className="input input-xs h-7 input-bordered w-full rounded-lg font-mono text-xs bg-base-100 dark:bg-base-900 border-base-300/80 dark:border-base-700/60"
                       value={bPdc}
                       onChange={(e) => setBPdc(e.target.value)}
                     />
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] text-base-content/60 font-semibold">Day TT</label>
+                  <div className="space-y-0.5">
+                    <label className="text-[9.5px] text-base-content/60 font-semibold block">Day TT</label>
                     <input
                       type="number"
                       step="any"
                       placeholder={bQty ? bQty.toString() : "TT"}
-                      className="input h-8 input-bordered w-full rounded-xl font-mono text-xs bg-base-100"
+                      className="input input-xs h-7 input-bordered w-full rounded-lg font-mono text-xs bg-base-100 dark:bg-base-900 border-base-300/80 dark:border-base-700/60"
                       value={bTt}
                       onChange={(e) => setBTt(e.target.value)}
                     />
@@ -1647,21 +1642,21 @@ export default function AddStockTradeModal({
               </div>
 
               {/* Total Investment Summary Banner */}
-              <div className="p-3.5 rounded-2xl bg-gradient-to-br from-primary/15 via-primary/10 to-transparent border border-primary/25 space-y-2 shadow-2xs">
-                <div className="grid grid-cols-2 gap-2">
+              <div className="p-2.5 rounded-xl bg-gradient-to-br from-primary/15 via-primary/5 to-transparent border border-primary/25 space-y-1 shadow-2xs">
+                <div className="grid grid-cols-2 gap-2 items-center">
                   <div>
-                    <span className="text-[10px] font-extrabold uppercase text-primary/80 tracking-wider block">
+                    <span className="text-[9.5px] font-extrabold uppercase text-primary/80 tracking-wider block">
                       Effective Buy / Share
                     </span>
-                    <span className="font-mono font-black text-primary text-base">
+                    <span className="font-mono font-black text-primary text-sm">
                       {formatCompactINR(bFShare)}
                     </span>
                   </div>
                   <div className="text-right">
-                    <span className="text-[10px] font-extrabold uppercase text-primary/80 tracking-wider block">
+                    <span className="text-[9.5px] font-extrabold uppercase text-primary/80 tracking-wider block">
                       Total Buy Investment
                     </span>
-                    <span className="font-mono font-black text-primary text-base">
+                    <span className="font-mono font-black text-primary text-sm">
                       {formatCompactINR(bFStock)}
                     </span>
                   </div>
@@ -1674,44 +1669,44 @@ export default function AddStockTradeModal({
           {/* STEP 3: Sell Details                                            */}
           {/* =============================================================== */}
           {mobileStep === 3 && (
-            <div className="space-y-4 animate-in fade-in duration-200">
+            <div className="space-y-3 animate-in fade-in duration-200">
               {/* Asset Holding Context Pill */}
-              <div className="flex items-center justify-between px-3.5 py-2.5 rounded-2xl bg-base-200/60 border border-base-200 text-xs">
+              <div className="flex items-center justify-between px-3 py-1.5 rounded-xl bg-base-200/60 dark:bg-base-800/50 border border-base-300/60 dark:border-base-700/60 text-xs">
                 <div className="flex items-center gap-2 min-w-0">
-                  <CompanyLogo name={name} size="w-6 h-6" rounded="rounded-lg" type="stock" />
-                  <span className="font-extrabold text-base-content tracking-tight uppercase truncate">
+                  <CompanyLogo name={name} size="w-5 h-5" rounded="rounded-md" type="stock" />
+                  <span className="font-extrabold text-base-content tracking-tight uppercase truncate text-xs">
                     {name || "Stock"}
                   </span>
                 </div>
-                <span className="text-[10.5px] font-semibold text-base-content/60 shrink-0 font-mono">
-                  {numBQty} Shares @ {formatCompactINR(bFShare)}
+                <span className="text-[10px] font-semibold text-base-content/60 shrink-0 font-mono">
+                  {numBQty} Qty @ {formatCompactINR(bFShare)}
                 </span>
               </div>
 
               {/* Position Status Segmented Toggle */}
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-extrabold uppercase tracking-wider text-base-content/70 block">
+              <div className="space-y-1">
+                <label className="text-[10px] font-extrabold uppercase tracking-wider text-base-content/70 block">
                   Position Status
                 </label>
-                <div className="grid grid-cols-2 gap-1 bg-base-200/80 dark:bg-base-800/60 p-0.5 rounded-2xl border border-base-300/60">
+                <div className="grid grid-cols-2 gap-1 bg-base-200/80 dark:bg-base-800/60 p-0.5 rounded-xl border border-base-300/60 dark:border-base-700/60">
                   <button
                     type="button"
                     onClick={() => setIsSold(false)}
-                    className={`h-8.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                    className={`h-7.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                       !isSold
-                        ? "bg-base-100 dark:bg-base-900 text-success shadow-xs font-black border border-base-300/50 scale-[1.01]"
+                        ? "bg-base-100 dark:bg-base-900 text-success shadow-xs font-black border border-base-300/50"
                         : "text-base-content/65 hover:text-base-content"
                     }`}
                   >
-                    <span className={`w-2 h-2 rounded-full ${!isSold ? "bg-success animate-pulse" : "bg-base-content/30"}`} />
+                    <span className={`w-1.5 h-1.5 rounded-full ${!isSold ? "bg-success animate-pulse" : "bg-base-content/30"}`} />
                     <span>Holding (Open)</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => setIsSold(true)}
-                    className={`h-8.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                    className={`h-7.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                       isSold
-                        ? "bg-base-100 dark:bg-base-900 text-secondary shadow-xs font-black border border-base-300/50 scale-[1.01]"
+                        ? "bg-base-100 dark:bg-base-900 text-secondary shadow-xs font-black border border-base-300/50"
                         : "text-base-content/65 hover:text-base-content"
                     }`}
                   >
@@ -1724,33 +1719,33 @@ export default function AddStockTradeModal({
                 /* ------------------------------------------------------------- */
                 /* OPEN HOLDING POSITION CARD                                    */
                 /* ------------------------------------------------------------- */
-                <div className="p-4 rounded-2xl bg-gradient-to-br from-success/15 via-success/5 to-transparent border border-success/25 text-center space-y-3 shadow-2xs">
-                  <div className="w-12 h-12 rounded-2xl bg-success/20 text-success flex items-center justify-center mx-auto">
-                    <Briefcase size={22} />
+                <div className="p-3.5 rounded-xl bg-gradient-to-br from-success/15 via-success/5 to-transparent border border-success/25 text-center space-y-2 shadow-2xs">
+                  <div className="w-9 h-9 rounded-xl bg-success/20 text-success flex items-center justify-center mx-auto">
+                    <Briefcase size={18} />
                   </div>
                   <div>
-                    <span className="badge badge-success badge-soft font-black text-[10.5px] uppercase tracking-wider px-2.5 py-1">
+                    <span className="badge badge-success badge-soft font-black text-[9.5px] uppercase tracking-wider px-2 py-0.5">
                       Active Portfolio Holding
                     </span>
-                    <div className="text-2xl font-black font-mono text-success mt-1">
+                    <div className="text-xl font-black font-mono text-success mt-0.5">
                       {numBQty} Shares
                     </div>
-                    <p className="text-xs text-base-content/70 mt-0.5">
+                    <p className="text-[11px] text-base-content/70">
                       Invested Capital: <span className="font-mono font-bold text-base-content">{formatCompactINR(bFStock)}</span>
                     </p>
                   </div>
-                  <div className="p-2.5 rounded-xl bg-base-100/60 border border-success/20 text-[11px] text-base-content/70 leading-relaxed text-left">
-                    This stock will be tracked in your active holdings. When you decide to exit or book profit, simply edit this trade to record your sell execution.
+                  <div className="p-2 rounded-lg bg-base-100/70 dark:bg-base-900/60 border border-success/20 text-[10.5px] text-base-content/70 leading-normal text-center">
+                    This trade is kept as an open holding. You can record sell legs later anytime.
                   </div>
                 </div>
               ) : (
                 /* ------------------------------------------------------------- */
                 /* SOLD OUT POSITION FORM                                        */
                 /* ------------------------------------------------------------- */
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {/* Sell Execution Date */}
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-extrabold uppercase tracking-wider text-base-content/70 block">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-extrabold uppercase tracking-wider text-base-content/70 block">
                       Sell Execution Date <span className="text-error">*</span>
                     </label>
                     <CallyDatePicker
@@ -1761,20 +1756,20 @@ export default function AddStockTradeModal({
                     />
                   </div>
 
-                  {/* Spacious Sell Price & Quantity Cards */}
-                  <div className="grid grid-cols-2 gap-3">
+                  {/* Sell Price & Quantity Cards */}
+                  <div className="grid grid-cols-2 gap-2.5">
                     {/* Sell Share Price */}
-                    <div className="p-3 rounded-2xl bg-base-200/40 border border-base-200/80 space-y-1">
-                      <label className="text-[10.5px] font-bold text-base-content/70 block">
+                    <div className="p-2.5 rounded-xl bg-base-200/40 dark:bg-base-800/40 border border-base-300/60 dark:border-base-700/60 space-y-1">
+                      <label className="text-[10px] font-bold text-base-content/70 block">
                         Sell Price / Share <span className="text-error">*</span>
                       </label>
                       <div className="relative">
-                        <span className="absolute left-2.5 top-1/2 -translate-y-1/2 font-bold text-sm text-secondary">₹</span>
+                        <span className="absolute left-2 top-1/2 -translate-y-1/2 font-bold text-xs text-secondary">₹</span>
                         <input
                           type="number"
                           step="any"
                           placeholder="0.00"
-                          className="input h-10 pl-7 pr-2 w-full rounded-xl bg-base-100 border-base-300 font-mono font-black text-sm focus:border-secondary focus:outline-none"
+                          className="input input-xs h-7.5 pl-5 pr-1.5 w-full rounded-lg bg-base-100 dark:bg-base-900 border-base-300/80 dark:border-base-700/60 font-mono font-bold text-xs focus:border-secondary focus:outline-none"
                           value={sShare}
                           onChange={(e) => setSShare(e.target.value)}
                         />
@@ -1782,16 +1777,16 @@ export default function AddStockTradeModal({
                     </div>
 
                     {/* Sell Quantity with Sell All helper */}
-                    <div className="p-3 rounded-2xl bg-base-200/40 border border-base-200/80 space-y-1">
+                    <div className="p-2.5 rounded-xl bg-base-200/40 dark:bg-base-800/40 border border-base-300/60 dark:border-base-700/60 space-y-1">
                       <div className="flex items-center justify-between">
-                        <label className="text-[10.5px] font-bold text-base-content/70">
+                        <label className="text-[10px] font-bold text-base-content/70">
                           Sold Qty <span className="text-error">*</span>
                         </label>
                         {numBQty > 0 && sQty !== bQty && (
                           <button
                             type="button"
                             onClick={() => setSQty(bQty)}
-                            className="text-[9.5px] text-secondary font-bold hover:underline cursor-pointer"
+                            className="text-[9px] text-secondary font-bold hover:underline cursor-pointer"
                           >
                             All ({bQty})
                           </button>
@@ -1801,11 +1796,11 @@ export default function AddStockTradeModal({
                         <input
                           type="number"
                           placeholder="0"
-                          className="input h-10 px-3 pr-11 w-full rounded-xl bg-base-100 border-base-300 font-mono font-black text-sm focus:border-secondary focus:outline-none"
+                          className="input input-xs h-7.5 px-2 pr-8 w-full rounded-lg bg-base-100 dark:bg-base-900 border-base-300/80 dark:border-base-700/60 font-mono font-bold text-xs focus:border-secondary focus:outline-none"
                           value={sQty}
                           onChange={(e) => setSQty(e.target.value)}
                         />
-                        <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10.5px] font-bold text-base-content/50">
+                        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-base-content/50">
                           Qty
                         </span>
                       </div>
@@ -1813,56 +1808,56 @@ export default function AddStockTradeModal({
                   </div>
 
                   {/* Sell Charges & Day TT Breakdown Card */}
-                  <div className="p-3.5 rounded-2xl bg-base-200/40 border border-base-200/80 space-y-2.5">
+                  <div className="p-2.5 rounded-xl bg-base-200/40 dark:bg-base-800/40 border border-base-300/60 dark:border-base-700/60 space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-[10.5px] font-extrabold uppercase text-base-content/70 tracking-wider">
+                      <span className="text-[10px] font-extrabold uppercase text-base-content/70 tracking-wider">
                         Sell Charges & Day TT
                       </span>
-                      <span className="text-[10.5px] font-mono font-bold text-warning">
+                      <span className="text-[10px] font-mono font-bold text-warning">
                         Charges: ₹{((parseFloat(sBkg) || 0) + (parseFloat(sPdc) || 0) + (parseFloat(dp) || 0)).toFixed(2)}
                       </span>
                     </div>
-                    <div className="grid grid-cols-2 gap-2.5">
-                      <div className="space-y-1">
-                        <label className="text-[10px] text-base-content/60 font-semibold">Brokerage (₹)</label>
+                    <div className="grid grid-cols-4 gap-1.5">
+                      <div className="space-y-0.5">
+                        <label className="text-[9px] text-base-content/60 font-semibold block truncate">Brokerage</label>
                         <input
                           type="number"
                           step="any"
                           placeholder="20"
-                          className="input h-8 input-bordered w-full rounded-xl font-mono text-xs bg-base-100"
+                          className="input input-xs h-7 input-bordered w-full rounded-lg font-mono text-[11px] bg-base-100 dark:bg-base-900 border-base-300/80 px-1"
                           value={sBkg}
                           onChange={(e) => setSBkg(e.target.value)}
                         />
                       </div>
-                      <div className="space-y-1">
-                        <label className="text-[10px] text-base-content/60 font-semibold">PDC / STT (₹)</label>
+                      <div className="space-y-0.5">
+                        <label className="text-[9px] text-base-content/60 font-semibold block truncate">PDC / STT</label>
                         <input
                           type="number"
                           step="any"
                           placeholder="0"
-                          className="input h-8 input-bordered w-full rounded-xl font-mono text-xs bg-base-100"
+                          className="input input-xs h-7 input-bordered w-full rounded-lg font-mono text-[11px] bg-base-100 dark:bg-base-900 border-base-300/80 px-1"
                           value={sPdc}
                           onChange={(e) => setSPdc(e.target.value)}
                         />
                       </div>
-                      <div className="space-y-1">
-                        <label className="text-[10px] text-base-content/60 font-semibold">DP Charges (₹)</label>
+                      <div className="space-y-0.5">
+                        <label className="text-[9px] text-base-content/60 font-semibold block truncate">DP Charges</label>
                         <input
                           type="number"
                           step="any"
                           placeholder="15.93"
-                          className="input h-8 input-bordered w-full rounded-xl font-mono text-xs bg-base-100"
+                          className="input input-xs h-7 input-bordered w-full rounded-lg font-mono text-[11px] bg-base-100 dark:bg-base-900 border-base-300/80 px-1"
                           value={dp}
                           onChange={(e) => setDp(e.target.value)}
                         />
                       </div>
-                      <div className="space-y-1">
-                        <label className="text-[10px] text-base-content/60 font-semibold">Day TT</label>
+                      <div className="space-y-0.5">
+                        <label className="text-[9px] text-base-content/60 font-semibold block truncate">Day TT</label>
                         <input
                           type="number"
                           step="any"
                           placeholder={sQty ? sQty.toString() : "TT"}
-                          className="input h-8 input-bordered w-full rounded-xl font-mono text-xs bg-base-100"
+                          className="input input-xs h-7 input-bordered w-full rounded-lg font-mono text-[11px] bg-base-100 dark:bg-base-900 border-base-300/80 px-1"
                           value={sTt}
                           onChange={(e) => setSTt(e.target.value)}
                         />
@@ -1871,33 +1866,33 @@ export default function AddStockTradeModal({
                   </div>
 
                   {/* Realized P&L Results Hero Card */}
-                  <div className={`p-4 rounded-2xl border ${gainRs >= 0 ? "bg-gradient-to-br from-success/15 via-success/5 to-transparent border-success/30" : "bg-gradient-to-br from-error/15 via-error/5 to-transparent border-error/30"} space-y-2 shadow-2xs`}>
+                  <div className={`p-2.5 rounded-xl border ${gainRs >= 0 ? "bg-gradient-to-br from-success/15 via-success/5 to-transparent border-success/30" : "bg-gradient-to-br from-error/15 via-error/5 to-transparent border-error/30"} space-y-1.5 shadow-2xs`}>
                     <div className="flex items-center justify-between">
                       <div>
-                        <span className="text-[10.5px] font-extrabold uppercase tracking-wider text-base-content/70">
+                        <span className="text-[9.5px] font-extrabold uppercase tracking-wider text-base-content/70">
                           Realized Outcome
                         </span>
-                        <div className={`text-2xl font-black font-mono tracking-tight mt-0.5 ${gainRs >= 0 ? "text-success" : "text-error"}`}>
+                        <div className={`text-lg font-black font-mono tracking-tight ${gainRs >= 0 ? "text-success" : "text-error"}`}>
                           {formatCompactPnL(gainRs)}
                         </div>
                       </div>
                       <div className="text-right">
-                        <span className={`badge font-bold font-mono text-xs px-2.5 py-1 rounded-xl ${gainRs >= 0 ? "bg-success/20 text-success border border-success/30" : "bg-error/20 text-error border border-error/30"}`}>
+                        <span className={`badge font-bold font-mono text-xs px-2 py-0.5 rounded-lg ${gainRs >= 0 ? "bg-success/20 text-success border border-success/30" : "bg-error/20 text-error border border-error/30"}`}>
                           {gainRs >= 0 ? "+" : ""}{gainPct.toFixed(2)}%
                         </span>
-                        <span className="text-[10px] font-semibold text-base-content/60 block mt-1 font-mono">
+                        <span className="text-[9.5px] font-semibold text-base-content/60 block mt-0.5 font-mono">
                           {holdingDays}d held
                         </span>
                       </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-2 pt-2 border-t border-base-content/10 text-xs">
+                    <div className="grid grid-cols-2 gap-2 pt-1.5 border-t border-base-content/10 text-xs">
                       <div>
-                        <span className="text-[10px] text-base-content/60">Net Sell / Share:</span>
-                        <span className="font-mono font-bold text-base-content block">{formatCompactINR(sFShare)}</span>
+                        <span className="text-[9.5px] text-base-content/60">Net Sell / Share:</span>
+                        <span className="font-mono font-bold text-base-content block text-[11px]">{formatCompactINR(sFShare)}</span>
                       </div>
                       <div className="text-right">
-                        <span className="text-[10px] text-base-content/60">Net Realized:</span>
-                        <span className="font-mono font-bold text-base-content block">{formatCompactINR(sFStock)}</span>
+                        <span className="text-[9.5px] text-base-content/60">Net Realized:</span>
+                        <span className="font-mono font-bold text-base-content block text-[11px]">{formatCompactINR(sFStock)}</span>
                       </div>
                     </div>
                   </div>
@@ -1908,13 +1903,13 @@ export default function AddStockTradeModal({
         </div>
 
         {/* Bottom Navigation Action Bar */}
-        <div className="px-4 py-3 border-t border-base-200/90 bg-base-100/90 backdrop-blur-md flex items-center justify-between gap-3 shrink-0">
+        <div className="px-3 py-2 border-t border-base-300/70 dark:border-base-700/70 bg-base-100/95 dark:bg-base-900/95 backdrop-blur-md flex items-center justify-between gap-2 shrink-0">
           {mobileStep === 1 ? (
             <>
               <button
                 type="button"
                 onClick={onClose}
-                className="btn btn-sm btn-ghost rounded-2xl text-xs font-semibold px-4 cursor-pointer"
+                className="btn btn-xs h-7.5 px-3 rounded-xl btn-ghost text-xs font-semibold cursor-pointer"
               >
                 Cancel
               </button>
@@ -1928,10 +1923,10 @@ export default function AddStockTradeModal({
                   setErrorMsg("");
                   setMobileStep(2);
                 }}
-                className="btn btn-sm btn-primary rounded-2xl text-xs font-bold px-5 flex items-center gap-1.5 cursor-pointer shadow-sm hover:scale-[1.02] active:scale-95 transition-all"
+                className="btn btn-xs h-7.5 px-4 btn-primary rounded-xl text-xs font-bold flex items-center gap-1 cursor-pointer shadow-xs hover:scale-[1.01] active:scale-95 transition-all"
               >
-                <span>Continue to Buy</span>
-                <ArrowRight size={14} />
+                <span>Continue</span>
+                <ArrowRight size={13} />
               </button>
             </>
           ) : mobileStep === 2 ? (
@@ -1942,9 +1937,9 @@ export default function AddStockTradeModal({
                   setErrorMsg("");
                   setMobileStep(1);
                 }}
-                className="btn btn-sm btn-ghost rounded-2xl text-xs font-semibold px-3 flex items-center gap-1 cursor-pointer"
+                className="btn btn-xs h-7.5 px-2.5 btn-ghost rounded-xl text-xs font-semibold flex items-center gap-1 cursor-pointer"
               >
-                <ArrowLeft size={14} />
+                <ArrowLeft size={13} />
                 <span>Back</span>
               </button>
               <button
@@ -1957,10 +1952,10 @@ export default function AddStockTradeModal({
                   setErrorMsg("");
                   setMobileStep(3);
                 }}
-                className="btn btn-sm btn-primary rounded-2xl text-xs font-bold px-5 flex items-center gap-1.5 cursor-pointer shadow-sm hover:scale-[1.02] active:scale-95 transition-all"
+                className="btn btn-xs h-7.5 px-4 btn-primary rounded-xl text-xs font-bold flex items-center gap-1 cursor-pointer shadow-xs hover:scale-[1.01] active:scale-95 transition-all"
               >
-                <span>Continue to Sell</span>
-                <ArrowRight size={14} />
+                <span>Continue</span>
+                <ArrowRight size={13} />
               </button>
             </>
           ) : (
@@ -1971,17 +1966,17 @@ export default function AddStockTradeModal({
                   setErrorMsg("");
                   setMobileStep(2);
                 }}
-                className="btn btn-sm btn-ghost rounded-2xl text-xs font-semibold px-3 flex items-center gap-1 cursor-pointer"
+                className="btn btn-xs h-7.5 px-2.5 btn-ghost rounded-xl text-xs font-semibold flex items-center gap-1 cursor-pointer"
               >
-                <ArrowLeft size={14} />
+                <ArrowLeft size={13} />
                 <span>Back</span>
               </button>
               <button
                 type="button"
                 onClick={handleSubmit}
-                className="btn btn-sm btn-primary rounded-2xl text-xs font-black px-5 flex items-center gap-1.5 cursor-pointer shadow-sm shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all"
+                className="btn btn-xs h-7.5 px-4 btn-primary rounded-xl text-xs font-black flex items-center gap-1 cursor-pointer shadow-xs shadow-primary/20 hover:scale-[1.01] active:scale-95 transition-all"
               >
-                <Check size={14} />
+                <Check size={13} />
                 <span>{initialData ? "Save Changes" : (isSold ? "Add Sold Trade" : "Add Holding Trade")}</span>
               </button>
             </>
