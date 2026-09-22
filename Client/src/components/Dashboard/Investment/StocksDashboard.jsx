@@ -477,11 +477,6 @@ export default function StocksDashboard({
           },
         },
       },
-      stroke: {
-        show: true,
-        colors: ["transparent"],
-        width: 2,
-      },
       dataLabels: {
         enabled: true,
         formatter: (val) => (val >= 3 ? `${val.toFixed(1)}%` : ""),
@@ -537,29 +532,29 @@ export default function StocksDashboard({
       {/* -------------------------------------------------------------------- */}
       {/* 1. KPI Summary Cards Row */}
       {/* -------------------------------------------------------------------- */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-2.5 sm:gap-4">
         {/* Card 1: Total Capital / Investment */}
-        <div className="card bg-base-200 shadow-md p-5 rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
+        <div className="col-span-2 lg:col-span-1 card bg-base-200 shadow-md p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
           {/* Light Background Watermark Icon */}
           <div className="absolute -right-3 -bottom-3 text-blue-500/10 dark:text-blue-400/10 pointer-events-none group-hover:scale-110 group-hover:-rotate-6 transition-transform duration-500">
-            <Wallet size={88} strokeWidth={1.5} />
+            <Wallet className="w-14 h-14 sm:w-20 sm:h-20" strokeWidth={1.5} />
           </div>
           <div className="relative z-10">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-base-content/60">
+              <span className="text-[10.5px] sm:text-xs font-bold uppercase tracking-wider text-base-content/60">
                 {subView === "demat" ? "Total Demat Capital" : "Capital Deployed"}
               </span>
             </div>
-            <div className="mt-3">
-              <div className="text-2xl lg:text-3xl font-black font-mono text-blue-600 dark:text-blue-400">
+            <div className="mt-2 sm:mt-3">
+              <div className="text-xl sm:text-2xl lg:text-3xl font-black font-mono text-blue-600 dark:text-blue-400 truncate">
                 ₹{formatCurrency2Dec(kpiData.totalInvestedCapital)}
               </div>
-              <div className="flex items-center gap-2 mt-1.5 text-xs text-base-content/60 font-medium">
-                <span className="badge badge-xs badge-info font-bold text-[10px]">
+              <div className="flex items-center gap-1.5 sm:gap-2 mt-1 sm:mt-1.5 text-[11px] sm:text-xs text-base-content/60 font-medium truncate">
+                <span className="badge badge-xs badge-info font-bold text-[9px] sm:text-[10px]">
                   {kpiData.count} {kpiData.count === 1 ? "Stock" : "Stocks"}
                 </span>
                 <span>
-                  {subView === "demat" ? "Holding In Demat" : "Total Traded Volume"}
+                  {subView === "demat" ? "Holding In Demat" : "Total Traded"}
                 </span>
               </div>
             </div>
@@ -567,24 +562,24 @@ export default function StocksDashboard({
         </div>
 
         {/* Card 2: Total Quantity Left / Traded */}
-        <div className="card bg-base-200 shadow-md p-5 rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
+        <div className="card bg-base-200 shadow-md p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
           {/* Light Background Watermark Icon */}
           <div className="absolute -right-3 -bottom-3 text-indigo-500/10 dark:text-indigo-400/10 pointer-events-none group-hover:scale-110 group-hover:-rotate-6 transition-transform duration-500">
-            <Layers size={88} strokeWidth={1.5} />
+            <Layers className="w-14 h-14 sm:w-20 sm:h-20" strokeWidth={1.5} />
           </div>
           <div className="relative z-10">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-base-content/60">
-                {subView === "demat" ? "Quantity Left (Holding)" : "Total Quantity Traded"}
+              <span className="text-[10.5px] sm:text-xs font-bold uppercase tracking-wider text-base-content/60">
+                {subView === "demat" ? "Quantity Left" : "Quantity Traded"}
               </span>
             </div>
-            <div className="mt-3">
-              <div className="text-2xl lg:text-3xl font-black font-mono text-indigo-600 dark:text-indigo-400">
+            <div className="mt-2 sm:mt-3">
+              <div className="text-xl sm:text-2xl lg:text-3xl font-black font-mono text-indigo-600 dark:text-indigo-400 truncate">
                 {kpiData.totalQuantity.toLocaleString()}
               </div>
-              <div className="flex items-center gap-2 mt-1.5 text-xs text-base-content/60 font-medium">
-                <span className="badge badge-xs badge-primary font-bold text-[10px]">
-                  {subView === "demat" ? "Remaining Shares" : "Total Shares Sold"}
+              <div className="flex items-center gap-1.5 sm:gap-2 mt-1 sm:mt-1.5 text-[11px] sm:text-xs text-base-content/60 font-medium truncate">
+                <span className="badge badge-xs badge-primary font-bold text-[9px] sm:text-[10px]">
+                  {subView === "demat" ? "Remaining" : "Sold"}
                 </span>
                 <span>Across {kpiData.count} items</span>
               </div>
@@ -593,26 +588,26 @@ export default function StocksDashboard({
         </div>
 
         {/* Card 3: Period / Duration Metric */}
-        <div className="card bg-base-200 shadow-md p-5 rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
+        <div className="card bg-base-200 shadow-md p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
           {/* Light Background Watermark Icon */}
           <div className="absolute -right-3 -bottom-3 text-amber-500/10 dark:text-amber-400/10 pointer-events-none group-hover:scale-110 group-hover:-rotate-6 transition-transform duration-500">
-            <Clock size={88} strokeWidth={1.5} />
+            <Clock className="w-14 h-14 sm:w-20 sm:h-20" strokeWidth={1.5} />
           </div>
           <div className="relative z-10">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-base-content/60">
-                {subView === "demat" ? "Avg Period From Today" : "Avg Holding Period"}
+              <span className="text-[10.5px] sm:text-xs font-bold uppercase tracking-wider text-base-content/60">
+                {subView === "demat" ? "Avg Holding Period" : "Holding Period"}
               </span>
             </div>
-            <div className="mt-3">
-              <div className="text-2xl lg:text-3xl font-black font-mono text-amber-600 dark:text-amber-400">
-                {kpiData.avgHoldingDays} <span className="text-sm font-bold opacity-80">Days</span>
+            <div className="mt-2 sm:mt-3">
+              <div className="text-xl sm:text-2xl lg:text-3xl font-black font-mono text-amber-600 dark:text-amber-400 truncate">
+                {kpiData.avgHoldingDays} <span className="text-xs sm:text-sm font-bold opacity-80">Days</span>
               </div>
-              <div className="flex items-center gap-2 mt-1.5 text-xs text-base-content/60 font-medium">
-                <span className="badge badge-xs badge-warning font-bold text-[10px]">
-                  {subView === "demat" ? "Days Since Buy" : "Holding Duration"}
+              <div className="flex items-center gap-1.5 sm:gap-2 mt-1 sm:mt-1.5 text-[11px] sm:text-xs text-base-content/60 font-medium truncate">
+                <span className="badge badge-xs badge-warning font-bold text-[9px] sm:text-[10px]">
+                  {subView === "demat" ? "Days Since Buy" : "Duration"}
                 </span>
-                <span>{subView === "demat" ? "Holdings Tenure" : "> 1 Day Delivery"}</span>
+                <span>Tenure</span>
               </div>
             </div>
           </div>
@@ -620,51 +615,51 @@ export default function StocksDashboard({
 
         {/* Card 4: Realized Gain or Cap Split */}
         {subView === "demat" ? (
-          <div className="card bg-base-200 shadow-md p-5 rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
+          <div className="card bg-base-200 shadow-md p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
             {/* Light Background Watermark Icon */}
             <div className="absolute -right-3 -bottom-3 text-emerald-500/10 dark:text-emerald-400/10 pointer-events-none group-hover:scale-110 group-hover:-rotate-6 transition-transform duration-500">
-              <PieChart size={88} strokeWidth={1.5} />
+              <PieChart className="w-14 h-14 sm:w-20 sm:h-20" strokeWidth={1.5} />
             </div>
             <div className="relative z-10">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-wider text-base-content/60">
-                  Market Cap Allocation
+                <span className="text-[10.5px] sm:text-xs font-bold uppercase tracking-wider text-base-content/60">
+                  Cap Allocation
                 </span>
               </div>
-              <div className="mt-3">
-                <div className="text-xl lg:text-2xl font-black font-mono text-emerald-600 dark:text-emerald-400 flex items-center gap-2">
+              <div className="mt-2 sm:mt-3">
+                <div className="text-lg sm:text-xl lg:text-2xl font-black font-mono text-emerald-600 dark:text-emerald-400 flex items-center gap-1 sm:gap-2 truncate">
                   <span>{kpiData.capDistribution.Large}L</span>
                   <span className="text-base-content/30">•</span>
                   <span className="text-indigo-500">{kpiData.capDistribution.Mid}M</span>
                   <span className="text-base-content/30">•</span>
                   <span className="text-amber-500">{kpiData.capDistribution.Small}S</span>
                 </div>
-                <div className="flex items-center gap-2 mt-1.5 text-xs text-base-content/60 font-medium">
-                  <span className="badge badge-xs badge-success font-bold text-[10px]">
-                    Large / Mid / Small
+                <div className="flex items-center gap-1.5 sm:gap-2 mt-1 sm:mt-1.5 text-[11px] sm:text-xs text-base-content/60 font-medium truncate">
+                  <span className="badge badge-xs badge-success font-bold text-[9px] sm:text-[10px]">
+                    L / M / S
                   </span>
-                  <span>Diversification</span>
+                  <span>Cap Split</span>
                 </div>
               </div>
             </div>
           </div>
         ) : (
-          <div className="card bg-base-200 shadow-md p-5 rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
+          <div className="card bg-base-200 shadow-md p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
             {/* Light Background Watermark Icon */}
             <div className={`absolute -right-3 -bottom-3 pointer-events-none group-hover:scale-110 group-hover:-rotate-6 transition-transform duration-500 ${
               kpiData.totalRealizedGain >= 0 ? "text-emerald-500/10 dark:text-emerald-400/10" : "text-rose-500/10 dark:text-rose-400/10"
             }`}>
-              {kpiData.totalRealizedGain >= 0 ? <TrendingUp size={88} strokeWidth={1.5} /> : <TrendingDown size={88} strokeWidth={1.5} />}
+              {kpiData.totalRealizedGain >= 0 ? <TrendingUp className="w-14 h-14 sm:w-20 sm:h-20" strokeWidth={1.5} /> : <TrendingDown className="w-14 h-14 sm:w-20 sm:h-20" strokeWidth={1.5} />}
             </div>
             <div className="relative z-10">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-wider text-base-content/60">
+                <span className="text-[10.5px] sm:text-xs font-bold uppercase tracking-wider text-base-content/60">
                   Net Realized P&L
                 </span>
               </div>
-              <div className="mt-3">
+              <div className="mt-2 sm:mt-3">
                 <div
-                  className={`text-2xl lg:text-3xl font-black font-mono ${
+                  className={`text-xl sm:text-2xl lg:text-3xl font-black font-mono truncate ${
                     kpiData.totalRealizedGain >= 0
                       ? "text-emerald-600 dark:text-emerald-400"
                       : "text-rose-600 dark:text-rose-400"
@@ -672,15 +667,15 @@ export default function StocksDashboard({
                 >
                   {kpiData.totalRealizedGain >= 0 ? "+" : ""}₹{formatCurrency2Dec(kpiData.totalRealizedGain)}
                 </div>
-                <div className="flex items-center gap-2 mt-1.5 text-xs text-base-content/60 font-medium">
+                <div className="flex items-center gap-1.5 sm:gap-2 mt-1 sm:mt-1.5 text-[11px] sm:text-xs text-base-content/60 font-medium truncate">
                   <span
-                    className={`badge badge-xs font-bold text-[10px] ${
+                    className={`badge badge-xs font-bold text-[9px] sm:text-[10px] ${
                       kpiData.totalRealizedGain >= 0 ? "badge-success" : "badge-error"
                     }`}
                   >
                     {kpiData.totalRealizedGain >= 0 ? "+" : ""}{kpiData.gainPctOverall}%
                   </span>
-                  <span>Realized Return</span>
+                  <span>Return</span>
                 </div>
               </div>
             </div>
@@ -688,26 +683,26 @@ export default function StocksDashboard({
         )}
 
         {/* Card 5: Trade Win Rate / Demat Status */}
-        <div className="card bg-base-200 shadow-md p-5 rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
+        <div className="card bg-base-200 shadow-md p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
           {/* Light Background Watermark Icon */}
           <div className="absolute -right-3 -bottom-3 text-teal-500/10 dark:text-teal-400/10 pointer-events-none group-hover:scale-110 group-hover:-rotate-6 transition-transform duration-500">
-            <Sparkles size={88} strokeWidth={1.5} />
+            <Sparkles className="w-14 h-14 sm:w-20 sm:h-20" strokeWidth={1.5} />
           </div>
           <div className="relative z-10">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-base-content/60">
-                {subView === "demat" ? "Demat Portfolio Status" : "Trade Win Ratio"}
+              <span className="text-[10.5px] sm:text-xs font-bold uppercase tracking-wider text-base-content/60">
+                {subView === "demat" ? "Demat Status" : "Win Ratio"}
               </span>
             </div>
-            <div className="mt-3">
-              <div className="text-2xl lg:text-3xl font-black font-mono text-teal-600 dark:text-teal-400">
+            <div className="mt-2 sm:mt-3">
+              <div className="text-xl sm:text-2xl lg:text-3xl font-black font-mono text-teal-600 dark:text-teal-400 truncate">
                 {subView === "demat" ? "100% Active" : `${kpiData.winRate}%`}
               </div>
-              <div className="flex items-center gap-2 mt-1.5 text-xs text-base-content/60 font-medium">
-                <span className="badge badge-xs badge-secondary font-bold text-[10px]">
-                  {subView === "demat" ? "In Demat Hold" : `${kpiData.profitableCount}W / ${kpiData.lossCount}L`}
+              <div className="flex items-center gap-1.5 sm:gap-2 mt-1 sm:mt-1.5 text-[11px] sm:text-xs text-base-content/60 font-medium truncate">
+                <span className="badge badge-xs badge-secondary font-bold text-[9px] sm:text-[10px]">
+                  {subView === "demat" ? "In Demat" : `${kpiData.profitableCount}W / ${kpiData.lossCount}L`}
                 </span>
-                <span>{subView === "demat" ? "Ready to Trade" : "Profitable Trades"}</span>
+                <span>Active</span>
               </div>
             </div>
           </div>

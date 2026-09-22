@@ -60,7 +60,7 @@ const DashboardLayout = () => {
       <Navbar />
       
       {/* Sidebar and Outlet */}
-      <div className="flex h-[calc(100vh-4rem)] relative overflow-hidden">
+      <div className="flex h-[calc(100dvh-4rem)] sm:h-[calc(100vh-4rem)] relative overflow-hidden">
         {/* Desktop Sidebar (hidden on mobile, visible on md+) */}
         <div className="hidden md:block h-full shrink-0">
           <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} />

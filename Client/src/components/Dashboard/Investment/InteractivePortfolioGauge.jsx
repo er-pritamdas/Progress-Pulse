@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useId } from "react";
 import {
   Target,
   SlidersHorizontal,
@@ -39,6 +39,12 @@ export default function InteractivePortfolioGauge({
   hideNumbers = false,
   onOpenSettings,
 }) {
+  const reactId = useId();
+  const safeId = reactId.replace(/[^a-zA-Z0-9_-]/g, "_");
+  const gradientId = `gaugeTrackGradient_${safeId}`;
+  const glowFilterId = `gaugeGlowFilter_${safeId}`;
+  const pinGlowId = `pinGlow_${safeId}`;
+
   const [hoveredMilestone, setHoveredMilestone] = useState(null);
   const [isPointerHovered, setIsPointerHovered] = useState(false);
 
@@ -47,8 +53,8 @@ export default function InteractivePortfolioGauge({
   const svgHeight = 270;
   const cx = 240;
   const cy = 220;
-  const r = 165;
-  const strokeWidth = 24;
+  const r = 170;
+  const strokeWidth = 32;
 
   // Total Arc Length for semi-circle: π * r
   const arcTotalLength = Math.PI * r;
@@ -220,19 +226,19 @@ export default function InteractivePortfolioGauge({
         >
           <defs>
             {/* Progress Gradient */}
-            <linearGradient id="gaugeTrackGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+            <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="0%">
               <stop offset="0%" stopColor="#10b981" />
               <stop offset="50%" stopColor="#3b82f6" />
               <stop offset="100%" stopColor="#8b5cf6" />
             </linearGradient>
 
             {/* Glowing Drop Shadow Filter */}
-            <filter id="gaugeGlowFilter" x="-20%" y="-20%" width="140%" height="140%">
+            <filter id={glowFilterId} x="-20%" y="-20%" width="140%" height="140%">
               <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="#3b82f6" floodOpacity="0.25" />
             </filter>
 
             {/* Pin Glow Filter */}
-            <filter id="pinGlow" x="-50%" y="-50%" width="200%" height="200%">
+            <filter id={pinGlowId} x="-50%" y="-50%" width="200%" height="200%">
               <feDropShadow dx="0" dy="1" stdDeviation="1.5" floodColor="#10b981" floodOpacity="0.5" />
             </filter>
           </defs>
@@ -242,7 +248,7 @@ export default function InteractivePortfolioGauge({
             d={`M ${cx - r} ${cy} A ${r} ${r} 0 0 1 ${cx + r} ${cy}`}
             fill="none"
             stroke="currentColor"
-            className="text-base-300/40 dark:text-base-300/25"
+            className="text-black/25 dark:text-black/50"
             strokeWidth={strokeWidth}
             strokeLinecap="round"
           />
@@ -252,12 +258,12 @@ export default function InteractivePortfolioGauge({
             <path
               d={`M ${cx - r} ${cy} A ${r} ${r} 0 0 1 ${cx + r} ${cy}`}
               fill="none"
-              stroke="url(#gaugeTrackGradient)"
+              stroke={`url(#${gradientId})`}
               strokeWidth={strokeWidth}
               strokeLinecap="round"
-              strokeDasharray={`${arcTotalLength}`}
+              strokeDasharray={`${arcTotalLength} ${arcTotalLength}`}
               strokeDashoffset={`${arcTotalLength * (1 - clampedFraction)}`}
-              filter="url(#gaugeGlowFilter)"
+              filter={`url(#${glowFilterId})`}
             />
           )}
 
@@ -314,7 +320,7 @@ export default function InteractivePortfolioGauge({
                   }
                   stroke="#ffffff"
                   strokeWidth={isHovered ? 2.5 : 1.8}
-                  filter={m.isAchieved ? "url(#pinGlow)" : undefined}
+                  filter={m.isAchieved ? `url(#${pinGlowId})` : undefined}
                   className="pointer-events-none"
                 />
 
@@ -390,11 +396,11 @@ export default function InteractivePortfolioGauge({
             <circle
               cx={pointerX}
               cy={pointerY}
-              r={isPointerHovered ? 9.5 : 8}
+              r={isPointerHovered ? 10 : 8.5}
               fill="#2563eb"
               stroke="#ffffff"
               strokeWidth="2.5"
-              filter="url(#gaugeGlowFilter)"
+              filter={`url(#${glowFilterId})`}
               className="pointer-events-none"
             />
             <circle
@@ -420,17 +426,17 @@ export default function InteractivePortfolioGauge({
           {/* 5. Range Baseline End Labels */}
           <text
             x={cx - r}
-            y={cy + 22}
+            y={cy + 25}
             textAnchor="middle"
-            className="font-mono font-extrabold text-[11px] fill-base-content/60 select-none pointer-events-none"
+            className="font-mono font-extrabold text-[10px] sm:text-[11px] fill-base-content/60 select-none pointer-events-none"
           >
             ₹0
           </text>
           <text
             x={cx + r}
-            y={cy + 22}
+            y={cy + 25}
             textAnchor="middle"
-            className="font-mono font-extrabold text-[11px] fill-emerald-600 dark:fill-emerald-400 select-none pointer-events-none"
+            className="font-mono font-extrabold text-[10px] sm:text-[11px] fill-emerald-600 dark:fill-emerald-400 select-none pointer-events-none"
           >
             {formatCurrencyCompact(upperLimit)}
           </text>
@@ -445,7 +451,7 @@ export default function InteractivePortfolioGauge({
                 height="38"
                 rx="10"
                 className="fill-neutral/95 stroke-neutral-content/25"
-                filter="url(#gaugeGlowFilter)"
+                filter={`url(#${glowFilterId})`}
               />
               <text
                 x={Math.max(12, Math.min(svgWidth - 172, hoveredMilestone.pinX - 80)) + 80}
@@ -480,7 +486,7 @@ export default function InteractivePortfolioGauge({
                 height="38"
                 rx="10"
                 className="fill-neutral/95 stroke-neutral-content/25"
-                filter="url(#gaugeGlowFilter)"
+                filter={`url(#${glowFilterId})`}
               />
               <text
                 x={Math.max(12, Math.min(svgWidth - 172, pointerX - 80)) + 80}
@@ -503,62 +509,28 @@ export default function InteractivePortfolioGauge({
         </svg>
 
         {/* Base Display: Compact Net Worth Number positioned right on the base of the gauge */}
-        <div className="absolute top-[72%] left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center justify-center text-center pointer-events-none w-[60%] max-w-[240px]">
-          <span className="text-[9px] sm:text-[10px] uppercase font-bold tracking-wider text-base-content/50 leading-tight">
+        <div className="absolute top-[73%] left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center justify-center text-center pointer-events-none w-[65%] max-w-[220px]">
+          <span className="text-[8px] sm:text-[9px] uppercase font-bold tracking-wider text-base-content/50 leading-tight">
             Consolidated Net Worth
           </span>
-          <div className="text-base sm:text-lg md:text-xl font-black font-mono tracking-tight text-primary my-0.5 truncate max-w-full">
+          <div className="text-sm sm:text-base md:text-lg font-black font-mono tracking-tight text-primary my-0.5 truncate max-w-full">
             {hideNumbers ? "••••••••" : `₹${formatCurrency2Dec(totalWorth)}`}
           </div>
 
           <div className="flex items-center gap-1.5 justify-center flex-wrap">
-            <span className="badge badge-xs font-bold bg-primary/10 text-primary border-primary/20 font-mono text-[9px] h-4 py-0">
+            <span className="badge badge-xs font-bold bg-primary/10 text-primary border-primary/20 font-mono text-[8px] sm:text-[8.5px] h-3.5 py-0 px-1.5">
               {achievementPercent}% of Goal
             </span>
-            <span className="text-[9px] sm:text-[10px] text-base-content/60 font-semibold font-mono">
+            <span className="text-[8.5px] sm:text-[9.5px] text-base-content/60 font-semibold font-mono">
               {remainingToGoal <= 0 ? (
                 <span className="text-emerald-500 font-bold flex items-center gap-0.5">
-                  <CheckCircle2 size={10} /> Surpassed!
+                  <CheckCircle2 size={9} /> Surpassed!
                 </span>
               ) : (
                 <span>{hideNumbers ? "••••" : formatCurrencyCompact(remainingToGoal)} left</span>
               )}
             </span>
           </div>
-        </div>
-      </div>
-
-      {/* Target KPI Summary Footer */}
-      <div className="pt-3 border-t border-base-300 grid grid-cols-3 gap-2 text-center text-xs">
-        <div className="bg-base-100 p-2.5 rounded-2xl border border-base-300">
-          <span className="text-[10px] uppercase font-bold text-base-content/50 block">
-            Current Worth
-          </span>
-          <span className="font-mono font-extrabold text-xs sm:text-sm text-primary">
-            {hideNumbers ? "••••••" : formatCurrencyCompact(totalWorth)}
-          </span>
-        </div>
-
-        <div className="bg-base-100 p-2.5 rounded-2xl border border-base-300">
-          <span className="text-[10px] uppercase font-bold text-base-content/50 block">
-            Target Goal
-          </span>
-          <span className="font-mono font-extrabold text-xs sm:text-sm text-base-content">
-            {formatCurrencyCompact(upperLimit)}
-          </span>
-        </div>
-
-        <div className="bg-base-100 p-2.5 rounded-2xl border border-base-300">
-          <span className="text-[10px] uppercase font-bold text-base-content/50 block">
-            Remaining
-          </span>
-          <span className="font-mono font-extrabold text-xs sm:text-sm text-amber-500">
-            {hideNumbers
-              ? "••••••"
-              : remainingToGoal <= 0
-              ? "Goal Surpassed!"
-              : formatCurrencyCompact(remainingToGoal)}
-          </span>
         </div>
       </div>
     </div>

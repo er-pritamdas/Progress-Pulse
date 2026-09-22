@@ -47,7 +47,12 @@ import {
   Zap,
   PackageCheck,
   Eye,
-  EyeOff
+  EyeOff,
+  Award,
+  ArrowDownLeft,
+  AlertTriangle,
+  ShieldAlert,
+  User
 } from "lucide-react";
 
 const monthNamesList = [
@@ -278,7 +283,9 @@ export default function InvDashboard() {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) return parsed;
       }
-    } catch (e) {}
+    } catch {
+      // Ignore JSON parse errors
+    }
     return [];
   });
   const [collapsedMfDropdownGroups, setCollapsedMfDropdownGroups] = useState(new Set());
@@ -365,6 +372,103 @@ export default function InvDashboard() {
   const [toMonth, setToMonth] = useState(() => {
     return localStorage.getItem("pulse_inv_dash_to_month") || "12";
   });
+
+  // Mobile Date Filter Bottom Sheet state
+  const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
+  const [tempFromYear, setTempFromYear] = useState(fromYear);
+  const [tempFromMonth, setTempFromMonth] = useState(fromMonth);
+  const [tempToYear, setTempToYear] = useState(toYear);
+  const [tempToMonth, setTempToMonth] = useState(toMonth);
+
+  // Global Privacy Mode (Hide/Show Numbers) for Investment Dashboard
+  const [hideNumbers, setHideNumbers] = useState(() => {
+    return localStorage.getItem("pulse_inv_dash_hide_numbers") === "true";
+  });
+  const toggleHideNumbers = () => {
+    setHideNumbers((prev) => {
+      const next = !prev;
+      localStorage.setItem("pulse_inv_dash_hide_numbers", String(next));
+      setFdHideNumbers(next);
+      localStorage.setItem("pulse_fd_hide_numbers", String(next));
+      return next;
+    });
+  };
+
+  // Mobile Scrubber selected months
+  const [mobileSalarySelectedMonth, setMobileSalarySelectedMonth] = useState("all");
+  const [mobilePfSelectedMonth, setMobilePfSelectedMonth] = useState("all");
+  const [mobileMfSelectedMonth, setMobileMfSelectedMonth] = useState("all");
+
+  const openMobileFilter = () => {
+    setTempFromYear(fromYear);
+    setTempFromMonth(fromMonth);
+    setTempToYear(toYear);
+    setTempToMonth(toMonth);
+    setIsMobileFilterOpen(true);
+  };
+
+  const applyMobilePreset = (startY, startM, endY, endM) => {
+    setTempFromYear(String(startY));
+    setTempFromMonth(String(startM).padStart(2, "0"));
+    setTempToYear(String(endY));
+    setTempToMonth(String(endM).padStart(2, "0"));
+  };
+
+  const applyMobileFilter = () => {
+    setFromYear(tempFromYear);
+    setFromMonth(tempFromMonth);
+    setToYear(tempToYear);
+    setToMonth(tempToMonth);
+    setActivePreset("custom");
+    setIsMobileFilterOpen(false);
+  };
+
+  const resetMobileFilter = () => {
+    handleQuickRange("all");
+    setIsMobileFilterOpen(false);
+  };
+
+  const datePresets = useMemo(() => {
+    const now = dayjs();
+    const curY = now.format("YYYY");
+    const curM = now.format("MM");
+
+    const last12Date = now.subtract(11, "month");
+    const last6Date = now.subtract(5, "month");
+    const last3Date = now.subtract(2, "month");
+
+    const currentMonthNum = parseInt(curM, 10);
+    const currentYearNum = parseInt(curY, 10);
+    const isAfterMarch = currentMonthNum >= 4;
+    const currentFyStartYear = isAfterMarch ? currentYearNum : currentYearNum - 1;
+    const currentFyEndYear = currentFyStartYear + 1;
+    const prevFyStartYear = currentFyStartYear - 1;
+    const prevFyEndYear = currentFyStartYear;
+
+    return [
+      { label: "All Time", type: "all", startY: "2015", startM: "01", endY: curY, endM: curM },
+      { label: "This Year", type: "this_year", startY: curY, startM: "01", endY: curY, endM: "12" },
+      { label: "Last 12 Mos", type: "last_12", startY: last12Date.format("YYYY"), startM: last12Date.format("MM"), endY: curY, endM: curM },
+      { label: "Last 6 Mos", type: "last_6", startY: last6Date.format("YYYY"), startM: last6Date.format("MM"), endY: curY, endM: curM },
+      { label: "Last 3 Mos", type: "last_3", startY: last3Date.format("YYYY"), startM: last3Date.format("MM"), endY: curY, endM: curM },
+      {
+        label: `FY ${String(currentFyStartYear).slice(2)}-${String(currentFyEndYear).slice(2)}`,
+        type: "fy_current",
+        startY: String(currentFyStartYear),
+        startM: "04",
+        endY: String(currentFyEndYear),
+        endM: "03",
+      },
+      {
+        label: `FY ${String(prevFyStartYear).slice(2)}-${String(prevFyEndYear).slice(2)}`,
+        type: "fy_prev",
+        startY: String(prevFyStartYear),
+        startM: "04",
+        endY: String(prevFyEndYear),
+        endM: "03",
+      },
+    ];
+  }, []);
 
   // Persist user preferences to localStorage
   useEffect(() => {
@@ -592,6 +696,7 @@ export default function InvDashboard() {
       if (!monthMap.has(monthKey)) {
         monthMap.set(monthKey, {
           rawMonth: monthKey,
+          month: monthKey,
           monthLabel: dayjs(monthKey).format("MMM YYYY"),
           companies: [s.company].filter(Boolean),
           inHand: 0,
@@ -634,6 +739,9 @@ export default function InvDashboard() {
     // Chronological order (earliest to latest)
     return Array.from(monthMap.values()).sort((a, b) => a.rawMonth.localeCompare(b.rawMonth));
   }, [filteredSalaries]);
+
+  // Alias for chronological salary records
+  const sortedSalaryRecords = monthlyPlotData;
 
   // KPI Overall Totals
   const kpiSummary = useMemo(() => {
@@ -694,6 +802,155 @@ export default function InvDashboard() {
   const currentThemeObj = useMemo(() => {
     return SALARY_COLOR_THEMES.find((t) => t.id === selectedTheme) || SALARY_COLOR_THEMES[0];
   }, [selectedTheme]);
+
+  // Salary Month-over-Month (MoM) delta for mobile velocity scrubber
+  const salaryMonthlyDataWithMoM = useMemo(() => {
+    return sortedSalaryRecords.map((d, index) => {
+      let momDeltaPct = null;
+      let momDeltaType = "neutral";
+      if (index > 0) {
+        const prevInHand = sortedSalaryRecords[index - 1].inHand || 0;
+        const currInHand = d.inHand || 0;
+        if (prevInHand > 0) {
+          const delta = ((currInHand - prevInHand) / prevInHand) * 100;
+          momDeltaPct = Number(delta.toFixed(1));
+          if (momDeltaPct > 0) momDeltaType = "increase";
+          else if (momDeltaPct < 0) momDeltaType = "decrease";
+        }
+      }
+      return {
+        ...d,
+        rawMonth: d.rawMonth || d.month,
+        month: d.month || d.rawMonth,
+        momDeltaPct,
+        momDeltaType,
+      };
+    });
+  }, [sortedSalaryRecords]);
+
+  // Mobile Phone Donut Visualization Data (Salary)
+  const salaryMobileDonutData = useMemo(() => {
+    let inHand = 0;
+    let tax = 0;
+    let pf = 0;
+    let other = 0;
+    let periodLabel = "All Range";
+
+    if (mobileSalarySelectedMonth === "all") {
+      inHand = kpiSummary.totalInHand || 0;
+      tax = kpiSummary.totalTaxes || 0;
+      pf = kpiSummary.totalErPf || 0;
+      other = Math.max(0, (kpiSummary.totalDeductions || 0) - tax - pf);
+      periodLabel = `All (${sortedSalaryRecords.length} Mos)`;
+    } else {
+      const rec = sortedSalaryRecords.find(
+        (r) => r.month === mobileSalarySelectedMonth || r.rawMonth === mobileSalarySelectedMonth
+      );
+      if (rec) {
+        inHand = Number(rec.inHand || 0);
+        tax = Number(rec.taxes ?? rec.tax ?? 0);
+        pf = Number(rec.erPf ?? (Number(rec.employeePf || 0) + Number(rec.employerPf || 0)));
+        other = Math.max(0, Number(rec.deductions || 0) - tax - pf);
+        periodLabel = dayjs(rec.rawMonth || rec.month).format("MMM YYYY");
+      }
+    }
+
+    const items = [
+      { name: "In-Hand Salary", amount: inHand, color: "#10b981", subtitle: "Take-Home Pay" },
+      { name: "Income Tax (TDS)", amount: tax, color: "#f43f5e", subtitle: "Direct Tax Deduction" },
+      { name: "PF Deductions", amount: pf, color: "#14b8a6", subtitle: "EE + ER PF Contribution" },
+      { name: "Other Deductions", amount: other, color: "#f59e0b", subtitle: "Benefits, Flexi, Canteen" },
+    ];
+
+    const totalEffective = inHand + tax + pf + other;
+    const series = [];
+    const labels = [];
+    const colors = [];
+    const rankedItems = [];
+
+    items.forEach((item) => {
+      if (item.amount > 0) {
+        series.push(Math.round(item.amount));
+        labels.push(item.name);
+        colors.push(item.color);
+        const percentage = totalEffective > 0 ? Number(((item.amount / totalEffective) * 100).toFixed(1)) : 0;
+        rankedItems.push({ ...item, percentage });
+      }
+    });
+
+    rankedItems.sort((a, b) => b.amount - a.amount);
+
+    return {
+      labels,
+      series,
+      colors,
+      inHand,
+      deductions: tax + pf + other,
+      total: totalEffective,
+      periodLabel,
+      hasData: series.length > 0 && totalEffective > 0,
+      rankedItems,
+    };
+  }, [mobileSalarySelectedMonth, kpiSummary, sortedSalaryRecords]);
+
+  // Alias for mobile salary donut data
+  const mobileSalaryDonutData = salaryMobileDonutData;
+
+  const salaryMobileDonutOptions = useMemo(() => {
+    return {
+      chart: {
+        type: "donut",
+        background: "transparent",
+        fontFamily: "inherit",
+        toolbar: { show: false },
+        animations: { enabled: true, speed: 400 },
+      },
+      labels: salaryMobileDonutData.labels,
+      colors: salaryMobileDonutData.colors,
+      stroke: { show: true, width: 2, colors: ["#1e293b"] },
+      plotOptions: {
+        pie: {
+          donut: {
+            size: "72%",
+            labels: {
+              show: true,
+              name: { show: true, fontSize: "11px", fontWeight: 700, color: "#94a3b8", offsetY: -6 },
+              value: {
+                show: true,
+                fontSize: "17px",
+                fontWeight: 900,
+                fontFamily: "monospace",
+                color: "currentColor",
+                offsetY: 6,
+                formatter: () => (hideNumbers ? "••••" : `₹${formatCurrencyCompact(salaryMobileDonutData.total)}`),
+              },
+              total: {
+                show: true,
+                label: "TOTAL GROSS",
+                fontSize: "10px",
+                fontWeight: 800,
+                color: "#64748b",
+                formatter: () => (hideNumbers ? "••••" : `₹${formatCurrencyCompact(salaryMobileDonutData.total)}`),
+              },
+            },
+          },
+        },
+      },
+      dataLabels: {
+        enabled: true,
+        formatter: (val) => (val >= 6 ? `${val.toFixed(0)}%` : ""),
+        style: { fontSize: "11px", fontWeight: 700, colors: ["#ffffff"] },
+        dropShadow: { enabled: true, top: 1, left: 1, blur: 2, opacity: 0.7 },
+      },
+      legend: { show: false },
+      tooltip: {
+        theme: "dark",
+        y: {
+          formatter: (val) => (hideNumbers ? "••••••" : `₹${formatCurrency2Dec(val)}`),
+        },
+      },
+    };
+  }, [salaryMobileDonutData, hideNumbers]);
 
   // Dynamic Chart Colors based on Salary Component View
   const chartColors = useMemo(() => {
@@ -1143,7 +1400,7 @@ export default function InvDashboard() {
   }, [salaryData, pfWithdrawals]);
 
   // Monthly breakdown and cumulative balance map across entire history
-  const { monthlyCumulativeBalanceMap, depositsByMonthMap, withdrawalsByMonthMap } = useMemo(() => {
+  const { monthlyCumulativeBalanceMap, withdrawalsByMonthMap } = useMemo(() => {
     const depMap = new Map();
     const withMap = new Map();
 
@@ -1212,6 +1469,7 @@ export default function InvDashboard() {
       if (!monthMap.has(monthKey)) {
         monthMap.set(monthKey, {
           rawMonth: monthKey,
+          month: monthKey,
           monthLabel: dayjs(monthKey).format("MMM YYYY"),
           companies: [s.company].filter(Boolean),
           erPf: 0,
@@ -1243,6 +1501,7 @@ export default function InvDashboard() {
       if (wit > 0 && !monthMap.has(m)) {
         monthMap.set(m, {
           rawMonth: m,
+          month: m,
           monthLabel: dayjs(m).format("MMM YYYY"),
           companies: [],
           erPf: 0,
@@ -1265,6 +1524,9 @@ export default function InvDashboard() {
     fromMonthStr,
     toMonthStr,
   ]);
+
+  // Alias for chronological PF months
+  const filteredPfMonths = pfMonthlyPlotData;
 
   // PF KPI Summary
   const pfKpiSummary = useMemo(() => {
@@ -1514,6 +1776,151 @@ export default function InvDashboard() {
     };
   }, [currentThemeObj, pfMonthlyPlotData]);
 
+  // PF Month-over-Month (MoM) delta for mobile velocity scrubber
+  const pfMonthlyDataWithMoM = useMemo(() => {
+    return (filteredPfMonths || []).map((d, index) => {
+      let momDeltaPct = null;
+      let momDeltaType = "neutral";
+      const currDep = (d.eePf || 0) + (d.erPf || 0);
+      if (index > 0) {
+        const prevDep = (filteredPfMonths[index - 1].eePf || 0) + (filteredPfMonths[index - 1].erPf || 0);
+        if (prevDep > 0) {
+          const delta = ((currDep - prevDep) / prevDep) * 100;
+          momDeltaPct = Number(delta.toFixed(1));
+          if (momDeltaPct > 0) momDeltaType = "increase";
+          else if (momDeltaPct < 0) momDeltaType = "decrease";
+        }
+      }
+      return {
+        ...d,
+        rawMonth: d.rawMonth || d.month,
+        month: d.month || d.rawMonth,
+        totalDeposit: currDep,
+        momDeltaPct,
+        momDeltaType,
+      };
+    });
+  }, [filteredPfMonths]);
+
+  // Mobile Phone Donut Visualization Data (PF)
+  const pfMobileDonutData = useMemo(() => {
+    let ee = 0;
+    let er = 0;
+    let withdrawn = 0;
+    let periodLabel = "All Range";
+
+    if (mobilePfSelectedMonth === "all") {
+      ee = pfKpiSummary.periodEePf || 0;
+      er = pfKpiSummary.periodErPf || 0;
+      withdrawn = pfKpiSummary.periodWithdrawn || pfKpiSummary.allTimePfWithdrawn || 0;
+      periodLabel = `All (${filteredPfMonths.length} Mos)`;
+    } else {
+      const rec = filteredPfMonths.find(
+        (r) => r.month === mobilePfSelectedMonth || r.rawMonth === mobilePfSelectedMonth
+      );
+      if (rec) {
+        ee = Number(rec.eePf || 0);
+        er = Number(rec.erPf || 0);
+        withdrawn = Number(rec.withdrawn || 0);
+        periodLabel = dayjs(rec.rawMonth || rec.month).format("MMM YYYY");
+      }
+    }
+
+    const items = [
+      { name: "Employee Share (EE)", amount: ee, color: "#3b82f6", subtitle: "Your 12% Deposit" },
+      { name: "Employer Share (ER)", amount: er, color: "#10b981", subtitle: "Company Share (3.67%)" },
+      ...(withdrawn > 0 ? [{ name: "Withdrawn Claims", amount: withdrawn, color: "#f59e0b", subtitle: "Total Settled" }] : []),
+    ];
+
+    const totalSum = items.reduce((s, i) => s + i.amount, 0);
+    const series = [];
+    const labels = [];
+    const colors = [];
+    const rankedItems = [];
+
+    items.forEach((item) => {
+      if (item.amount > 0) {
+        series.push(Math.round(item.amount));
+        labels.push(item.name);
+        colors.push(item.color);
+        const percentage = totalSum > 0 ? Number(((item.amount / totalSum) * 100).toFixed(1)) : 0;
+        rankedItems.push({ ...item, percentage });
+      }
+    });
+
+    rankedItems.sort((a, b) => b.amount - a.amount);
+
+    return {
+      labels,
+      series,
+      colors,
+      total: totalSum,
+      ee,
+      er,
+      withdrawn,
+      netBalance: pfKpiSummary.allTimeAvailablePfBalance,
+      periodLabel,
+      hasData: series.length > 0,
+      rankedItems,
+    };
+  }, [mobilePfSelectedMonth, pfKpiSummary, filteredPfMonths]);
+
+  const pfMobileDonutOptions = useMemo(() => {
+    return {
+      chart: {
+        type: "donut",
+        background: "transparent",
+        fontFamily: "inherit",
+        toolbar: { show: false },
+        animations: { enabled: true, speed: 400 },
+      },
+      labels: pfMobileDonutData.labels,
+      colors: pfMobileDonutData.colors,
+      stroke: { show: true, width: 2, colors: ["#1e293b"] },
+      plotOptions: {
+        pie: {
+          donut: {
+            size: "72%",
+            labels: {
+              show: true,
+              name: { show: true, fontSize: "11px", fontWeight: 700, color: "#94a3b8", offsetY: -6 },
+              value: {
+                show: true,
+                fontSize: "17px",
+                fontWeight: 900,
+                fontFamily: "monospace",
+                color: "currentColor",
+                offsetY: 6,
+                formatter: () => (hideNumbers ? "••••" : `₹${formatCurrencyCompact(pfKpiSummary.allTimeAvailablePfBalance)}`),
+              },
+              total: {
+                show: true,
+                label: "AVAILABLE EPF",
+                fontSize: "10px",
+                fontWeight: 800,
+                color: "#64748b",
+                formatter: () => (hideNumbers ? "••••" : `₹${formatCurrencyCompact(pfKpiSummary.allTimeAvailablePfBalance)}`),
+              },
+            },
+          },
+        },
+      },
+      dataLabels: {
+        enabled: true,
+        formatter: (val) => (val >= 6 ? `${val.toFixed(0)}%` : ""),
+        style: { fontSize: "11px", fontWeight: 700, colors: ["#ffffff"] },
+        dropShadow: { enabled: true, top: 1, left: 1, blur: 2, opacity: 0.7 },
+      },
+      legend: { show: false },
+      tooltip: {
+        theme: "dark",
+        y: {
+          formatter: (val) => (hideNumbers ? "••••••" : `₹${formatCurrency2Dec(val)}`),
+        },
+      },
+    };
+  }, [pfMobileDonutData, pfKpiSummary.allTimeAvailablePfBalance, hideNumbers]);
+
   // PF Expand / Collapse Table Months
   const toggleExpandPfMonth = (rawMonth) => {
     setExpandedPfMonths((prev) => {
@@ -1626,6 +2033,9 @@ export default function InvDashboard() {
     }
     return activeFunds.filter((f) => String(f.id || f._id) === selectedMfFund);
   }, [mfData, selectedMfFund, selectedGroupObj]);
+
+  // Alias for active mutual fund schemes
+  const filteredMfData = activeMfFunds;
 
   // Selected Fund Object (if specific fund is selected)
   const selectedFundObj = useMemo(() => {
@@ -2251,10 +2661,229 @@ export default function InvDashboard() {
     return generateMfApexOptions(mfMetricMode === "all" ? "cashflow" : mfMetricMode);
   }, [currentThemeObj, mfMonthlyPlotData, mfMetricMode, selectedFundObj, selectedGroupObj]);
 
+  // MF Month-over-Month (MoM) delta for mobile velocity scrubber
+  const mfMonthlyDataWithMoM = useMemo(() => {
+    return (mfMonthlyPlotData || []).map((d, index) => {
+      let momDeltaPct = null;
+      let momDeltaType = "neutral";
+      const currDep = d.deposited || d.invested || 0;
+      if (index > 0) {
+        const prevDep = mfMonthlyPlotData[index - 1].deposited || mfMonthlyPlotData[index - 1].invested || 0;
+        if (prevDep > 0) {
+          const delta = ((currDep - prevDep) / prevDep) * 100;
+          momDeltaPct = Number(delta.toFixed(1));
+          if (momDeltaPct > 0) momDeltaType = "increase";
+          else if (momDeltaPct < 0) momDeltaType = "decrease";
+        }
+      }
+      return {
+        ...d,
+        rawMonth: d.month || d.rawMonth,
+        totalDeposit: currDep,
+        momDeltaPct,
+        momDeltaType,
+      };
+    });
+  }, [mfMonthlyPlotData]);
+
+  // Mobile Phone Donut Visualization Data (Mutual Funds)
+  const mfMobileDonutData = useMemo(() => {
+    if (activeMfFunds.length > 1) {
+      const fundTotals = activeMfFunds
+        .map((fund) => {
+          let dep = 0;
+          let w = 0;
+          (fund.transactions || []).forEach((t) => {
+            const typeLower = (t?.type || "").toLowerCase();
+            const isW =
+              typeLower.includes("withdr") ||
+              typeLower.includes("redemp") ||
+              typeLower.includes("swp");
+            const amt = Number(t.amtDeposit ?? t.amount ?? 0);
+            const er = Number(t.er ?? 0);
+            const act =
+              t.actualAmt !== undefined && t.actualAmt !== null
+                ? Number(t.actualAmt)
+                : Math.max(0, Math.abs(amt) - er);
+            if (isW) {
+              w += act > 0 ? act : Math.abs(amt);
+            } else {
+              dep += act > 0 ? act : amt;
+            }
+          });
+          const net = Math.max(0, dep - w);
+          return {
+            name: fund.schemeName || fund.amc || "Fund",
+            category: fund.category || "Equity",
+            net,
+            dep,
+            w,
+            units: fund.units || 0,
+            nav: fund.nav || 0,
+          };
+        })
+        .filter((f) => f.net > 0);
+
+      fundTotals.sort((a, b) => b.net - a.net);
+
+      const topFunds = fundTotals.slice(0, 5);
+      const otherFunds = fundTotals.slice(5);
+      const otherNet = otherFunds.reduce((sum, f) => sum + f.net, 0);
+
+      const labels = topFunds.map((f) => (f.name.length > 20 ? f.name.slice(0, 18) + "..." : f.name));
+      const series = topFunds.map((f) => Math.round(f.net));
+      const palette = ["#8b5cf6", "#3b82f6", "#10b981", "#f59e0b", "#ec4899", "#06b6d4"];
+      const colors = palette.slice(0, labels.length);
+
+      const total = series.reduce((a, b) => a + b, 0) + (otherNet > 0 ? Math.round(otherNet) : 0);
+
+      const rankedItems = topFunds.map((f, i) => {
+        const pct = total > 0 ? Number(((f.net / total) * 100).toFixed(1)) : 0;
+        return {
+          name: f.name,
+          category: f.category,
+          amount: f.net,
+          color: colors[i],
+          percentage: pct,
+          subtitle: `${f.category} • ${f.units ? `${Number(f.units).toFixed(2)} units` : ""}`,
+        };
+      });
+
+      if (otherNet > 0) {
+        labels.push(`Others (${otherFunds.length})`);
+        series.push(Math.round(otherNet));
+        colors.push("#64748b");
+        const pct = total > 0 ? Number(((otherNet / total) * 100).toFixed(1)) : 0;
+        rankedItems.push({
+          name: `Other Funds (${otherFunds.length})`,
+          category: "Diversified",
+          amount: otherNet,
+          color: "#64748b",
+          percentage: pct,
+          subtitle: "Remaining active portfolio schemes",
+        });
+      }
+
+      return {
+        isSchemeBreakdown: true,
+        labels,
+        series,
+        colors,
+        total: total || mfKpiSummary.allTimeNetInvested,
+        items: fundTotals,
+        rankedItems,
+        periodLabel: `All (${activeMfFunds.length} Funds)`,
+        hasData: series.length > 0,
+      };
+    }
+
+    // Single fund or fallback: Flow breakdown
+    const dep = mfKpiSummary.periodDeposited || mfKpiSummary.allTimeDeposited || 0;
+    const w = mfKpiSummary.periodWithdrawn || mfKpiSummary.allTimeWithdrawn || 0;
+    const er = mfKpiSummary.periodEr || mfKpiSummary.allTimeEr || 0;
+
+    const labels = [];
+    const series = [];
+    const colors = [];
+    const rankedItems = [];
+
+    if (dep > 0) {
+      labels.push("Deposits");
+      series.push(Math.round(dep));
+      colors.push("#10b981");
+      rankedItems.push({ name: "Deposits / Inflows", amount: dep, color: "#10b981", subtitle: "Purchases & SIPs", percentage: 0 });
+    }
+    if (w > 0) {
+      labels.push("Redemptions");
+      series.push(Math.round(w));
+      colors.push("#f59e0b");
+      rankedItems.push({ name: "Redemptions / Outflows", amount: w, color: "#f59e0b", subtitle: "Sales & SWPs", percentage: 0 });
+    }
+    if (er > 0) {
+      labels.push("Expense Ratio");
+      series.push(Math.round(er));
+      colors.push("#f43f5e");
+      rankedItems.push({ name: "Expense Ratio (ER)", amount: er, color: "#f43f5e", subtitle: "Fund Management Fee", percentage: 0 });
+    }
+
+    const total = series.reduce((a, b) => a + b, 0);
+    rankedItems.forEach((item) => {
+      item.percentage = total > 0 ? Number(((item.amount / total) * 100).toFixed(1)) : 0;
+    });
+
+    return {
+      isSchemeBreakdown: false,
+      labels,
+      series,
+      colors,
+      total: total || mfKpiSummary.allTimeNetInvested,
+      items: [],
+      rankedItems,
+      periodLabel: selectedFundObj?.schemeName || "Fund Flow",
+      hasData: series.length > 0,
+    };
+  }, [activeMfFunds, mfKpiSummary, selectedFundObj]);
+
+  const mfMobileDonutOptions = useMemo(() => {
+    return {
+      chart: {
+        type: "donut",
+        background: "transparent",
+        fontFamily: "inherit",
+        toolbar: { show: false },
+        animations: { enabled: true, speed: 400 },
+      },
+      labels: mfMobileDonutData.labels,
+      colors: mfMobileDonutData.colors,
+      stroke: { show: true, width: 2, colors: ["#1e293b"] },
+      plotOptions: {
+        pie: {
+          donut: {
+            size: "72%",
+            labels: {
+              show: true,
+              name: { show: true, fontSize: "11px", fontWeight: 700, color: "#94a3b8", offsetY: -6 },
+              value: {
+                show: true,
+                fontSize: "17px",
+                fontWeight: 900,
+                fontFamily: "monospace",
+                color: "currentColor",
+                offsetY: 6,
+                formatter: () => (hideNumbers ? "••••" : `₹${formatCurrencyCompact(mfKpiSummary.allTimeNetInvested)}`),
+              },
+              total: {
+                show: true,
+                label: "NET INVESTED",
+                fontSize: "10px",
+                fontWeight: 800,
+                color: "#64748b",
+                formatter: () => (hideNumbers ? "••••" : `₹${formatCurrencyCompact(mfKpiSummary.allTimeNetInvested)}`),
+              },
+            },
+          },
+        },
+      },
+      dataLabels: {
+        enabled: true,
+        formatter: (val) => (val >= 6 ? `${val.toFixed(0)}%` : ""),
+        style: { fontSize: "11px", fontWeight: 700, colors: ["#ffffff"] },
+        dropShadow: { enabled: true, top: 1, left: 1, blur: 2, opacity: 0.7 },
+      },
+      legend: { show: false },
+      tooltip: {
+        theme: "dark",
+        y: {
+          formatter: (val) => (hideNumbers ? "••••••" : `₹${formatCurrency2Dec(val)}`),
+        },
+      },
+    };
+  }, [mfMobileDonutData, mfKpiSummary.allTimeNetInvested, hideNumbers]);
+
   return (
     <div className="w-full space-y-6 pb-20">
-      {/* 1. Sticky Glassmorphism Header */}
-      <div className="sticky top-[-17px] z-40 bg-base-100/95 backdrop-blur-md shadow-md border-b border-base-300/40 -mx-4 px-4 py-2 mt-[-16px]">
+      {/* 1. Sticky Glassmorphism Header - Desktop View (Hidden on Phone) */}
+      <div className="hidden md:block sticky top-[-17px] z-40 bg-base-100/95 backdrop-blur-md shadow-md border-b border-base-300/40 -mx-4 px-4 py-2 mt-[-16px]">
         <div className="flex items-center justify-between p-3 flex-wrap gap-3 max-w-[1600px] mx-auto px-4 md:px-6">
           {/* Left: Investment Category Selector Dropdown */}
           <div className="flex items-center gap-2 flex-wrap">
@@ -2788,7 +3417,11 @@ export default function InvDashboard() {
                 </div>
 
                 {/* FROM */}
-                <div className="flex items-center gap-1.5 bg-base-200/70 p-1.5 rounded-xl text-xs font-medium">
+                <div
+                  className={`items-center gap-1.5 bg-base-200/70 p-1.5 rounded-xl text-xs font-medium ${
+                    activePreset === "custom" ? "flex" : "hidden sm:flex"
+                  }`}
+                >
                   <span className="text-[11px] font-bold uppercase opacity-60 px-1">From:</span>
                   <select
                     className="select select-bordered select-xs font-bold font-mono bg-base-100 min-w-[76px] px-2 text-xs"
@@ -2821,7 +3454,11 @@ export default function InvDashboard() {
                 </div>
 
                 {/* TO */}
-                <div className="flex items-center gap-1.5 bg-base-200/70 p-1.5 rounded-xl text-xs font-medium">
+                <div
+                  className={`items-center gap-1.5 bg-base-200/70 p-1.5 rounded-xl text-xs font-medium ${
+                    activePreset === "custom" ? "flex" : "hidden sm:flex"
+                  }`}
+                >
                   <span className="text-[11px] font-bold uppercase opacity-60 px-1">To:</span>
                   <select
                     className="select select-bordered select-xs font-bold font-mono bg-base-100 min-w-[76px] px-2 text-xs"
@@ -2944,10 +3581,318 @@ export default function InvDashboard() {
         </div>
       </div>
 
-      <div className="px-4 md:px-6 w-full max-w-[1600px] mx-auto space-y-6">
+      {/* 2. Sticky Header - Mobile Phone View (Hidden on Desktop) */}
+      <div className="block md:hidden sticky top-[-17px] z-40 bg-base-100/95 dark:bg-base-900/95 backdrop-blur-md border-b border-base-300 px-3 py-2 shadow-xs space-y-2 -mx-4 mt-[-16px]">
+        {/* Row 1: Active Dashboard Badge + Privacy Eye + Date Filter Button + Quick Entry Link */}
+        <div className="flex items-center justify-between gap-2">
+          {/* Active Dashboard Badge */}
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-base-200 border border-base-300/60 shadow-xs min-w-0">
+            <div className={`w-5 h-5 rounded-lg flex items-center justify-center font-black ${currentDashboardMeta.colorClass}`}>
+              {React.createElement(currentDashboardMeta.icon, { className: "w-3.5 h-3.5 shrink-0" })}
+            </div>
+            <span className="font-bold text-xs tracking-tight text-base-content truncate">
+              {currentDashboardMeta.title}
+            </span>
+          </div>
+
+          {/* Right-aligned Header Actions */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            {/* Privacy Eye Toggle */}
+            <button
+              type="button"
+              onClick={toggleHideNumbers}
+              className="btn btn-xs btn-ghost btn-square rounded-xl text-base-content/60 hover:text-primary cursor-pointer h-7 w-7"
+              title={hideNumbers ? "Show numbers" : "Hide numbers (Privacy Mode)"}
+            >
+              {hideNumbers ? <EyeOff size={15} className="text-primary font-bold" /> : <Eye size={15} />}
+            </button>
+
+            {/* Date Filter Button (Opens Bottom Sheet) */}
+            {["SALARY", "PF", "MF"].includes(activeDashboard) && (
+              <button
+                type="button"
+                onClick={openMobileFilter}
+                className="btn btn-xs h-7 px-2 rounded-xl font-medium bg-base-200 hover:bg-base-300 border border-base-300/80 shadow-xs flex items-center gap-1.5 text-xs text-base-content cursor-pointer"
+                title="Filter Date Range"
+              >
+                <Calendar className="w-3.5 h-3.5 text-primary shrink-0" />
+                <span className="truncate max-w-[120px] font-semibold text-[11px]">
+                  {dayjs(`${fromYear}-${fromMonth}-01`).format("MMM 'YY")} - {dayjs(`${toYear}-${toMonth}-01`).format("MMM 'YY")}
+                </span>
+                <Filter className="w-3 h-3 opacity-60 shrink-0" />
+              </button>
+            )}
+
+            {/* Table Entry Direct Link */}
+            <Link
+              to={
+                activeDashboard === "PF"
+                  ? "/dashboard/investment/table-entry?tab=pf"
+                  : activeDashboard === "MF"
+                  ? "/dashboard/investment/table-entry?tab=mf"
+                  : activeDashboard === "STOCKS"
+                  ? "/dashboard/investment/table-entry?tab=stocks"
+                  : activeDashboard === "FD"
+                  ? "/dashboard/investment/table-entry?tab=fd"
+                  : activeDashboard === "RD"
+                  ? "/dashboard/investment/table-entry?tab=rd"
+                  : "/dashboard/investment/table-entry?tab=salary"
+              }
+              className="btn btn-xs btn-ghost btn-square rounded-xl text-base-content/60 hover:text-primary h-7 w-7"
+              title="Go to Table Entry"
+            >
+              <TableProperties size={15} />
+            </Link>
+
+            {/* Refresh Data Button */}
+            <button
+              onClick={() => {
+                apiCache.invalidate("/investment");
+                fetchData();
+              }}
+              disabled={loading}
+              className="btn btn-xs btn-ghost btn-square rounded-xl text-base-content/60 hover:text-primary h-7 w-7"
+              title="Refresh Data"
+            >
+              <RefreshCw size={13} className={loading ? "animate-spin text-primary" : "opacity-70"} />
+            </button>
+          </div>
+        </div>
+
+        {/* Row 2: Horizontal Scrollable Category Boxes with Watermark Background Icon */}
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 -mx-1 px-1">
+          {DASHBOARDS_LIST.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeDashboard === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => handleSelectDashboard(tab.id)}
+                className={`group relative shrink-0 min-w-[105px] max-w-[130px] h-14 rounded-2xl transition-all duration-200 cursor-pointer flex flex-col justify-between p-2.5 text-left select-none overflow-hidden ${
+                  isActive
+                    ? `border ${tab.activeRing || "border-primary"} bg-base-200/90 shadow-2xs scale-[1.01]`
+                    : "border border-base-content/8 hover:border-base-content/15 bg-base-100/50 dark:bg-base-200/25 hover:bg-base-200/50 shadow-2xs"
+                }`}
+              >
+                {/* Enlarged Watermark Background Icon */}
+                <div className="absolute -right-2 -bottom-2.5 pointer-events-none select-none transition-transform duration-300 group-hover:scale-110 group-active:scale-95">
+                  <Icon
+                    size={52}
+                    strokeWidth={1.5}
+                    className={`transition-all duration-200 ${
+                      isActive
+                        ? `${tab.colorClass || "text-primary"} opacity-20 dark:opacity-25`
+                        : "text-base-content opacity-10 dark:opacity-12 group-hover:opacity-16"
+                    }`}
+                  />
+                </div>
+
+                {/* Top: Status indicator & Active Badge */}
+                <div className="flex items-center justify-between z-10">
+                  <span
+                    className={`w-1.5 h-1.5 rounded-full transition-all ${
+                      isActive
+                        ? "bg-primary ring-2 ring-current/20 scale-110"
+                        : "bg-base-content/30"
+                    }`}
+                  />
+                  {isActive && (
+                    <span className={`badge badge-2xs text-[9px] font-black tracking-tight px-1 py-0.5 rounded-md border-0 ${tab.badgeClass || "badge-primary"}`}>
+                      Active
+                    </span>
+                  )}
+                </div>
+
+                {/* Bottom: Label */}
+                <div className="z-10 leading-none">
+                  <span
+                    className={`text-xs font-black tracking-tight block truncate transition-colors ${
+                      isActive ? tab.colorClass || "text-primary" : "text-base-content/85 group-hover:text-base-content"
+                    }`}
+                  >
+                    {tab.title}
+                  </span>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Mobile Date Filter Bottom Sheet (Phone View Only - Desktop View Untouched) */}
+      {isMobileFilterOpen && (
+        <div
+          className="fixed inset-0 z-[100] flex items-end justify-center bg-black/60 backdrop-blur-md transition-opacity duration-200 animate-in fade-in"
+          onClick={(e) => { if (e.target === e.currentTarget) setIsMobileFilterOpen(false); }}
+        >
+          <div
+            className="bg-base-100 rounded-t-3xl shadow-2xl w-full max-h-[92vh] flex flex-col overflow-hidden border-t border-x border-base-300 mobile-drawer-slide-up"
+            style={{ paddingBottom: "env(safe-area-inset-bottom, 16px)" }}
+          >
+            {/* Drag Handle & Sheet Header */}
+            <div className="border-b border-base-200 bg-base-200/60 select-none touch-none">
+              {/* Grab Pill */}
+              <div className="pt-3 pb-1.5 px-4 flex justify-center items-center">
+                <div className="h-1.5 w-12 rounded-full bg-base-content/30" />
+              </div>
+
+              {/* Header row */}
+              <div className="px-3.5 pb-3.5 flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="p-2 rounded-xl bg-base-100 border border-base-300 text-primary shrink-0">
+                    <Calendar size={16} />
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="font-extrabold text-sm text-base-content truncate">Filter Date Range</h3>
+                    <span className="text-[10px] opacity-60 font-medium block truncate">Quick presets or choose custom months</span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsMobileFilterOpen(false)}
+                  className="btn btn-xs btn-ghost btn-circle rounded-full shrink-0 text-base-content/60 cursor-pointer"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            </div>
+
+            {/* Scrollable content */}
+            <div className="overflow-y-auto flex-1 p-4 space-y-4">
+              {/* Quick Presets Section */}
+              <div className="space-y-2">
+                <span className="text-[11px] font-bold text-base-content/70 uppercase tracking-wider block">
+                  Quick Presets
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  {datePresets.map((p) => {
+                    const isPresetActive =
+                      tempFromYear === p.startY &&
+                      tempFromMonth === p.startM &&
+                      tempToYear === p.endY &&
+                      tempToMonth === p.endM;
+                    return (
+                      <button
+                        key={p.label}
+                        type="button"
+                        onClick={() => applyMobilePreset(p.startY, p.startM, p.endY, p.endM)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer border ${
+                          isPresetActive
+                            ? "bg-primary text-primary-content border-primary shadow-xs font-bold"
+                            : "bg-base-200/80 hover:bg-base-200 text-base-content/80 border-base-300/80"
+                        }`}
+                      >
+                        {p.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Custom Month Range Section */}
+              <div className="space-y-2.5 pt-2 border-t border-base-300/60">
+                <span className="text-[11px] font-bold text-base-content/70 uppercase tracking-wider block">
+                  Custom Month Range
+                </span>
+
+                <div className="grid grid-cols-2 gap-2.5">
+                  {/* From Selector Card */}
+                  <div className="bg-base-200/50 p-2.5 rounded-2xl border border-base-300/70 space-y-1.5">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-base-content/60 block">From Month</span>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      <select
+                        className="select select-sm w-full bg-base-100 border border-base-300 rounded-xl text-xs font-semibold text-base-content focus:border-primary focus:outline-none cursor-pointer px-2"
+                        value={tempFromMonth}
+                        onChange={(e) => setTempFromMonth(e.target.value)}
+                      >
+                        {monthNamesList.map((m) => (
+                          <option key={`temp-fm-${m.value}`} value={m.value}>{m.label}</option>
+                        ))}
+                      </select>
+                      <select
+                        className="select select-sm w-full bg-base-100 border border-base-300 rounded-xl text-xs font-semibold text-base-content focus:border-primary focus:outline-none cursor-pointer px-2"
+                        value={tempFromYear}
+                        onChange={(e) => setTempFromYear(e.target.value)}
+                      >
+                        {availableYears.map((y) => (
+                          <option key={`temp-fy-${y}`} value={y}>{y}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* To Selector Card */}
+                  <div className="bg-base-200/50 p-2.5 rounded-2xl border border-base-300/70 space-y-1.5">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-base-content/60 block">To Month</span>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      <select
+                        className="select select-sm w-full bg-base-100 border border-base-300 rounded-xl text-xs font-semibold text-base-content focus:border-primary focus:outline-none cursor-pointer px-2"
+                        value={tempToMonth}
+                        onChange={(e) => setTempToMonth(e.target.value)}
+                      >
+                        {monthNamesList.map((m) => (
+                          <option key={`temp-tm-${m.value}`} value={m.value}>{m.label}</option>
+                        ))}
+                      </select>
+                      <select
+                        className="select select-sm w-full bg-base-100 border border-base-300 rounded-xl text-xs font-semibold text-base-content focus:border-primary focus:outline-none cursor-pointer px-2"
+                        value={tempToYear}
+                        onChange={(e) => setTempToYear(e.target.value)}
+                      >
+                        {availableYears.map((y) => (
+                          <option key={`temp-ty-${y}`} value={y}>{y}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Validation summary */}
+                <div className="pt-1">
+                  {`${tempFromYear}-${tempFromMonth}` > `${tempToYear}-${tempToMonth}` ? (
+                    <div className="flex items-center gap-1.5 text-error text-[11px] font-semibold bg-error/10 px-2.5 py-1.5 rounded-xl border border-error/20">
+                      <AlertTriangle size={14} className="shrink-0" />
+                      <span>Invalid: "From" date cannot be after "To" date</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1.5 text-base-content/70 text-[11px] font-medium bg-base-200/60 px-2.5 py-1.5 rounded-xl border border-base-300/50">
+                      <CheckCircle2 size={14} className="text-success shrink-0" />
+                      <span>
+                        Range: <strong className="text-base-content">{dayjs(`${tempFromYear}-${tempFromMonth}-01`).format("MMM YYYY")}</strong> – <strong className="text-base-content">{dayjs(`${tempToYear}-${tempToMonth}-01`).format("MMM YYYY")}</strong>
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center justify-between gap-3 pt-3 border-t border-base-300">
+                <button
+                  type="button"
+                  onClick={resetMobileFilter}
+                  className="btn btn-sm btn-ghost border border-base-300 rounded-xl px-4 cursor-pointer text-xs"
+                >
+                  Reset
+                </button>
+                <button
+                  type="button"
+                  disabled={`${tempFromYear}-${tempFromMonth}` > `${tempToYear}-${tempToMonth}`}
+                  onClick={applyMobileFilter}
+                  className="btn btn-sm btn-primary rounded-xl px-6 font-bold shadow-sm cursor-pointer text-xs disabled:opacity-50"
+                >
+                  Apply Filter
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="px-0 sm:px-4 md:px-6 w-full max-w-[1600px] mx-auto space-y-3.5 sm:space-y-4 md:space-y-6 mt-4">
         {/* Date Range Error Alert */}
         {isInvalidRange && ["SALARY", "PF", "MF"].includes(activeDashboard) && (
-          <div className="alert alert-error shadow-sm text-xs font-bold rounded-2xl">
+          <div className="alert alert-error shadow-sm text-xs font-bold rounded-2xl mx-2 sm:mx-0">
             <span>Invalid Date Range: "From" date ({fromMonthStr}) cannot be after "To" date ({toMonthStr}). Please adjust your selection or pick a Date Range preset.</span>
           </div>
         )}
@@ -2958,6 +3903,11 @@ export default function InvDashboard() {
             <span className="loading loading-spinner loading-lg text-primary"></span>
           </div>
         )}
+
+        {/* ========================================================================= */}
+        {/* DESKTOP VIEW (md and up: 100% original, untouched, multi-series charts)   */}
+        {/* ========================================================================= */}
+        <div className="hidden md:block space-y-6">
 
         {/* Empty State - Salary */}
         {!loading && salaryData.length === 0 && activeDashboard === "SALARY" && (
@@ -3056,116 +4006,117 @@ export default function InvDashboard() {
         {!loading && salaryData.length > 0 && activeDashboard === "SALARY" && (
           <>
             {/* 2. KPI Summary Cards Row */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
               {/* Total In Hand */}
-              <div className="card bg-base-200 shadow-md p-5 rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
+              <div className="card bg-base-200 shadow-md p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
                 {/* Light Background Watermark Icon */}
                 <div className="absolute -right-3 -bottom-3 text-emerald-500/10 dark:text-emerald-400/10 pointer-events-none group-hover:scale-110 group-hover:-rotate-6 transition-transform duration-500">
-                  <Wallet size={88} strokeWidth={1.5} />
+                  <Wallet className="w-14 h-14 sm:w-20 sm:h-20" strokeWidth={1.5} />
                 </div>
                 <div className="relative z-10">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold uppercase tracking-wider text-base-content/60">
+                    <span className="text-[10.5px] sm:text-xs font-bold uppercase tracking-wider text-base-content/60">
                       Total In Hand
                     </span>
                   </div>
-                  <div className="mt-3">
-                    <div className="text-2xl lg:text-3xl font-black font-mono text-emerald-600 dark:text-emerald-400">
+                  <div className="mt-2 sm:mt-3">
+                    <div className="text-lg sm:text-2xl lg:text-3xl font-black font-mono text-emerald-600 dark:text-emerald-400 truncate">
                       ₹{formatCurrency2Dec(kpiSummary.totalInHand)}
                     </div>
-                    <div className="flex items-center gap-2 mt-1.5 text-xs text-base-content/60 font-medium">
-                      <span className="badge badge-xs badge-success font-bold text-[10px]">
-                        {kpiSummary.overallTakeHomePct.toFixed(1)}% Take-Home
+                    <div className="flex items-center gap-1.5 sm:gap-2 mt-1 sm:mt-1.5 text-[11px] sm:text-xs text-base-content/60 font-medium">
+                      <span className="badge badge-xs badge-success font-bold text-[9px] sm:text-[10px]">
+                        {kpiSummary.overallTakeHomePct.toFixed(0)}% Net
                       </span>
-                      <span>of Gross Salary</span>
+                      <span className="truncate">Take-Home</span>
                     </div>
                   </div>
                 </div>
               </div>
 
               {/* Total Deductions */}
-              <div className="card bg-base-200 shadow-md p-5 rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
+              <div className="card bg-base-200 shadow-md p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
                 {/* Light Background Watermark Icon */}
                 <div className="absolute -right-3 -bottom-3 text-rose-500/10 dark:text-rose-400/10 pointer-events-none group-hover:scale-110 group-hover:-rotate-6 transition-transform duration-500">
-                  <Receipt size={88} strokeWidth={1.5} />
+                  <Receipt className="w-14 h-14 sm:w-20 sm:h-20" strokeWidth={1.5} />
                 </div>
                 <div className="relative z-10">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold uppercase tracking-wider text-base-content/60">
+                    <span className="text-[10.5px] sm:text-xs font-bold uppercase tracking-wider text-base-content/60">
                       Total Deductions
                     </span>
                   </div>
-                  <div className="mt-3">
-                    <div className="text-2xl lg:text-3xl font-black font-mono text-rose-500">
+                  <div className="mt-2 sm:mt-3">
+                    <div className="text-lg sm:text-2xl lg:text-3xl font-black font-mono text-rose-500 truncate">
                       ₹{formatCurrency2Dec(kpiSummary.totalDeductions)}
                     </div>
-                    <div className="flex items-center gap-2 mt-1.5 text-xs text-base-content/60 font-medium">
+                    <div className="flex items-center gap-1.5 sm:gap-2 mt-1 sm:mt-1.5 text-[11px] sm:text-xs text-base-content/60 font-medium">
                       <span>PF: ₹{formatCurrencyCompact(kpiSummary.totalErPf)}</span>
                       <span>•</span>
-                      <span>Taxes: ₹{formatCurrencyCompact(kpiSummary.totalTaxes)}</span>
+                      <span>Tax: ₹{formatCurrencyCompact(kpiSummary.totalTaxes)}</span>
                     </div>
                   </div>
                 </div>
               </div>
 
               {/* Total Gross / Earnings */}
-              <div className="card bg-base-200 shadow-md p-5 rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
+              <div className="card bg-base-200 shadow-md p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
                 {/* Light Background Watermark Icon */}
                 <div className="absolute -right-3 -bottom-3 text-primary/10 dark:text-primary/15 pointer-events-none group-hover:scale-110 group-hover:-rotate-6 transition-transform duration-500">
-                  <Banknote size={88} strokeWidth={1.5} />
+                  <Banknote className="w-14 h-14 sm:w-20 sm:h-20" strokeWidth={1.5} />
                 </div>
                 <div className="relative z-10">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold uppercase tracking-wider text-base-content/60">
+                    <span className="text-[10.5px] sm:text-xs font-bold uppercase tracking-wider text-base-content/60">
                       Gross Earnings
                     </span>
                   </div>
-                  <div className="mt-3">
-                    <div className="text-2xl lg:text-3xl font-black font-mono text-primary">
+                  <div className="mt-2 sm:mt-3">
+                    <div className="text-lg sm:text-2xl lg:text-3xl font-black font-mono text-primary truncate">
                       ₹{formatCurrency2Dec(kpiSummary.totalGross)}
                     </div>
-                    <div className="flex items-center gap-2 mt-1.5 text-xs text-base-content/60 font-medium">
-                      <span>Avg/Mo: ₹{formatCurrencyCompact(kpiSummary.avgMonthlyGross)}</span>
+                    <div className="flex items-center gap-1.5 sm:gap-2 mt-1 sm:mt-1.5 text-[11px] sm:text-xs text-base-content/60 font-medium truncate">
+                      <span>Avg: ₹{formatCurrencyCompact(kpiSummary.avgMonthlyGross)}/mo</span>
                     </div>
                   </div>
                 </div>
               </div>
 
               {/* Total CTC & Experience */}
-              <div className="card bg-base-200 shadow-md p-5 rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
+              <div className="card bg-base-200 shadow-md p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
                 {/* Light Background Watermark Icon */}
                 <div className="absolute -right-3 -bottom-3 text-sky-500/10 dark:text-sky-400/10 pointer-events-none group-hover:scale-110 group-hover:-rotate-6 transition-transform duration-500">
-                  <TrendingUp size={88} strokeWidth={1.5} />
+                  <TrendingUp className="w-14 h-14 sm:w-20 sm:h-20" strokeWidth={1.5} />
                 </div>
                 <div className="relative z-10">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold uppercase tracking-wider text-base-content/60">
+                    <span className="text-[10.5px] sm:text-xs font-bold uppercase tracking-wider text-base-content/60">
                       Total CTC Logged
                     </span>
                   </div>
-                  <div className="mt-3">
-                    <div className="text-2xl lg:text-3xl font-black font-mono text-sky-500">
+                  <div className="mt-2 sm:mt-3">
+                    <div className="text-lg sm:text-2xl lg:text-3xl font-black font-mono text-sky-500 truncate">
                       ₹{formatCurrency2Dec(kpiSummary.totalCtc)}
                     </div>
-                    <div className="flex items-center gap-2 mt-1.5 text-xs text-base-content/60 font-medium">
-                      <span className="badge badge-xs badge-ghost font-bold text-[10px]">
+                    <div className="flex items-center gap-1.5 sm:gap-2 mt-1 sm:mt-1.5 text-[11px] sm:text-xs text-base-content/60 font-medium truncate">
+                      <span className="badge badge-xs badge-info font-bold text-[9px] sm:text-[10px]">
                         {kpiSummary.expText}
                       </span>
-                      <span>across {kpiSummary.monthsCount} records</span>
+                      <span>({kpiSummary.monthsCount} mos)</span>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* 3. Main Salary Analysis Interactive Section */}
-            <section className="card bg-base-200 shadow-md rounded-3xl overflow-hidden">
-              <div className="card-body p-6 space-y-6">
-                {/* Section Header & View Switcher */}
+            {/* 3. Main Data Showcase Card: Graph View or Collapsible Table View */}
+            <div className="card bg-base-200 shadow-md rounded-3xl p-4 sm:p-6 border border-base-300/40">
+              <div className="space-y-4">
+                {/* Card Title & Top Controls Header */}
                 <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 border-b border-base-300/60 pb-4">
                   <div>
-                    <h2 className="text-xl font-bold flex items-center gap-2">
-                      <BarChart3 size={22} className="text-emerald-500" />
+                    <h2 className="text-lg sm:text-xl font-bold flex items-center gap-2">
+                      <PieChart size={20} className="text-emerald-500 md:hidden" />
+                      <BarChart3 size={22} className="text-emerald-500 hidden md:inline" />
                       Salary & Compensation Breakdown
                     </h2>
                     <p className="text-xs text-base-content/60 mt-0.5">
@@ -3194,27 +4145,31 @@ export default function InvDashboard() {
                       </select>
                     </div>
 
-                    {/* View Switcher: Graph View vs Table View */}
+                    {/* View Switcher: Graph/Donut View vs Table View */}
                     <div className="flex items-center gap-2 bg-base-100 p-1.5 rounded-2xl shadow-xs">
                       <button
-                        className={`px-4 py-2 text-xs font-extrabold rounded-xl transition-all flex items-center gap-2 cursor-pointer ${
+                        className={`px-3 sm:px-4 py-2 text-xs font-extrabold rounded-xl transition-all flex items-center gap-1.5 sm:gap-2 cursor-pointer ${
                           viewTab === "graph"
                             ? "bg-primary text-primary-content shadow-sm"
                             : "text-base-content/70 hover:text-base-content hover:bg-base-300/50"
                         }`}
                         onClick={() => setViewTab("graph")}
                       >
-                        <BarChart3 size={15} /> Graph View
+                        <PieChart size={14} className="md:hidden" />
+                        <BarChart3 size={15} className="hidden md:inline" />
+                        <span className="md:hidden">Donut View</span>
+                        <span className="hidden md:inline">Graph View</span>
                       </button>
                       <button
-                        className={`px-4 py-2 text-xs font-extrabold rounded-xl transition-all flex items-center gap-2 cursor-pointer ${
+                        className={`px-3 sm:px-4 py-2 text-xs font-extrabold rounded-xl transition-all flex items-center gap-1.5 sm:gap-2 cursor-pointer ${
                           viewTab === "table"
                             ? "bg-primary text-primary-content shadow-sm"
                             : "text-base-content/70 hover:text-base-content hover:bg-base-300/50"
                         }`}
                         onClick={() => setViewTab("table")}
                       >
-                        <TableProperties size={15} /> Table View
+                        <TableProperties size={14} />
+                        <span>Table View</span>
                       </button>
                     </div>
                   </div>
@@ -3423,7 +4378,7 @@ export default function InvDashboard() {
                   </div>
                 )}
               </div>
-            </section>
+            </div>
           </>
         )}
 
@@ -3433,51 +4388,51 @@ export default function InvDashboard() {
         {!loading && (salaryData.length > 0 || pfWithdrawals.length > 0) && activeDashboard === "PF" && (
           <>
             {/* 1. PF KPI Summary Cards Row */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-2.5 sm:gap-4">
               {/* Net Available Balance */}
-              <div className="card bg-base-200 shadow-md p-5 rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
+              <div className="col-span-2 lg:col-span-1 card bg-base-200 shadow-md p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
                 {/* Light Background Watermark Icon */}
                 <div className="absolute -right-3 -bottom-3 text-teal-500/10 dark:text-teal-400/10 pointer-events-none group-hover:scale-110 group-hover:-rotate-6 transition-transform duration-500">
-                  <ShieldCheck size={88} strokeWidth={1.5} />
+                  <ShieldCheck className="w-14 h-14 sm:w-20 sm:h-20" strokeWidth={1.5} />
                 </div>
                 <div className="relative z-10">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold uppercase tracking-wider text-base-content/60">
+                    <span className="text-[10.5px] sm:text-xs font-bold uppercase tracking-wider text-base-content/60">
                       Net Available Balance
                     </span>
                   </div>
-                  <div className="mt-3">
-                    <div className="text-2xl lg:text-3xl font-black font-mono text-teal-600 dark:text-teal-400">
+                  <div className="mt-2 sm:mt-3">
+                    <div className="text-xl sm:text-2xl lg:text-3xl font-black font-mono text-teal-600 dark:text-teal-400 truncate">
                       ₹{formatCurrency2Dec(pfKpiSummary.allTimeAvailablePfBalance)}
                     </div>
-                    <div className="flex items-center gap-2 mt-1.5 text-xs text-base-content/60 font-medium">
-                      <span className="badge badge-xs badge-success font-bold text-[10px]">
+                    <div className="flex items-center gap-1.5 sm:gap-2 mt-1 sm:mt-1.5 text-[11px] sm:text-xs text-base-content/60 font-medium">
+                      <span className="badge badge-xs badge-success font-bold text-[9px] sm:text-[10px]">
                         EPF Balance
                       </span>
-                      <span>Available to withdraw</span>
+                      <span className="truncate">Available to withdraw</span>
                     </div>
                   </div>
                 </div>
               </div>
 
               {/* Total Deposited in Period */}
-              <div className="card bg-base-200 shadow-md p-5 rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
+              <div className="card bg-base-200 shadow-md p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
                 {/* Light Background Watermark Icon */}
                 <div className="absolute -right-3 -bottom-3 text-primary/10 dark:text-primary/15 pointer-events-none group-hover:scale-110 group-hover:-rotate-6 transition-transform duration-500">
-                  <PiggyBank size={88} strokeWidth={1.5} />
+                  <PiggyBank className="w-14 h-14 sm:w-20 sm:h-20" strokeWidth={1.5} />
                 </div>
                 <div className="relative z-10">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold uppercase tracking-wider text-base-content/60">
+                    <span className="text-[10.5px] sm:text-xs font-bold uppercase tracking-wider text-base-content/60">
                       Period Deposits
                     </span>
                   </div>
-                  <div className="mt-3">
-                    <div className="text-2xl lg:text-3xl font-black font-mono text-primary">
+                  <div className="mt-2 sm:mt-3">
+                    <div className="text-lg sm:text-2xl lg:text-3xl font-black font-mono text-primary truncate">
                       ₹{formatCurrency2Dec(pfKpiSummary.periodTotalDeposit)}
                     </div>
-                    <div className="flex items-center gap-2 mt-1.5 text-xs text-base-content/60 font-medium">
-                      <span>Avg/Mo: ₹{formatCurrencyCompact(pfKpiSummary.avgMonthlyDeposit)}</span>
+                    <div className="flex items-center gap-1.5 sm:gap-2 mt-1 sm:mt-1.5 text-[11px] sm:text-xs text-base-content/60 font-medium truncate">
+                      <span>Avg: ₹{formatCurrencyCompact(pfKpiSummary.avgMonthlyDeposit)}/mo</span>
                       <span>•</span>
                       <span>{pfKpiSummary.activeMonths} mos</span>
                     </div>
@@ -3486,29 +4441,29 @@ export default function InvDashboard() {
               </div>
 
               {/* Total Withdrawn */}
-              <div className="card bg-base-200 shadow-md p-5 rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
+              <div className="card bg-base-200 shadow-md p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
                 {/* Light Background Watermark Icon */}
                 <div className="absolute -right-3 -bottom-3 text-amber-500/10 dark:text-amber-400/10 pointer-events-none group-hover:scale-110 group-hover:-rotate-6 transition-transform duration-500">
-                  <ArrowUpRight size={88} strokeWidth={1.5} />
+                  <ArrowUpRight className="w-14 h-14 sm:w-20 sm:h-20" strokeWidth={1.5} />
                 </div>
                 <div className="relative z-10">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold uppercase tracking-wider text-base-content/60">
+                    <span className="text-[10.5px] sm:text-xs font-bold uppercase tracking-wider text-base-content/60">
                       Total Withdrawn
                     </span>
                   </div>
-                  <div className="mt-3">
-                    <div className="text-2xl lg:text-3xl font-black font-mono text-amber-500">
+                  <div className="mt-2 sm:mt-3">
+                    <div className="text-lg sm:text-2xl lg:text-3xl font-black font-mono text-amber-500 truncate">
                       ₹{formatCurrency2Dec(pfKpiSummary.allTimePfWithdrawn)}
                     </div>
-                    <div className="flex items-center gap-2 mt-1.5 text-xs text-base-content/60 font-medium">
-                      <span className="badge badge-xs badge-warning font-bold text-[10px]">
+                    <div className="flex items-center gap-1.5 sm:gap-2 mt-1 sm:mt-1.5 text-[11px] sm:text-xs text-base-content/60 font-medium truncate">
+                      <span className="badge badge-xs badge-warning font-bold text-[9px] sm:text-[10px]">
                         {pfKpiSummary.totalWithdrawalCount} {pfKpiSummary.totalWithdrawalCount === 1 ? "Txn" : "Txns"}
                       </span>
                       <span>
                         {pfKpiSummary.periodWithdrawn > 0
                           ? `Period: ₹${formatCurrencyCompact(pfKpiSummary.periodWithdrawn)}`
-                          : "All-time withdrawals"}
+                          : "All-time"}
                       </span>
                     </div>
                   </div>
@@ -3516,50 +4471,46 @@ export default function InvDashboard() {
               </div>
 
               {/* Employer Share (ER) */}
-              <div className="card bg-base-200 shadow-md p-5 rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
+              <div className="card bg-base-200 shadow-md p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
                 {/* Light Background Watermark Icon */}
                 <div className="absolute -right-3 -bottom-3 text-sky-500/10 dark:text-sky-400/10 pointer-events-none group-hover:scale-110 group-hover:-rotate-6 transition-transform duration-500">
-                  <Building2 size={88} strokeWidth={1.5} />
+                  <Building2 className="w-14 h-14 sm:w-20 sm:h-20" strokeWidth={1.5} />
                 </div>
                 <div className="relative z-10">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold uppercase tracking-wider text-base-content/60">
+                    <span className="text-[10.5px] sm:text-xs font-bold uppercase tracking-wider text-base-content/60">
                       Employer Share (ER)
                     </span>
                   </div>
-                  <div className="mt-3">
-                    <div className="text-2xl lg:text-3xl font-black font-mono text-sky-500">
+                  <div className="mt-2 sm:mt-3">
+                    <div className="text-lg sm:text-2xl lg:text-3xl font-black font-mono text-sky-500 truncate">
                       ₹{formatCurrency2Dec(pfKpiSummary.periodErPf)}
                     </div>
-                    <div className="flex items-center gap-2 mt-1.5 text-xs text-base-content/60 font-medium">
+                    <div className="flex items-center gap-1.5 sm:gap-2 mt-1 sm:mt-1.5 text-[11px] sm:text-xs text-base-content/60 font-medium truncate">
                       <span>Company match</span>
-                      <span>•</span>
-                      <span>Period total</span>
                     </div>
                   </div>
                 </div>
               </div>
 
               {/* Employee Share (EE) */}
-              <div className="card bg-base-200 shadow-md p-5 rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
+              <div className="card bg-base-200 shadow-md p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
                 {/* Light Background Watermark Icon */}
                 <div className="absolute -right-3 -bottom-3 text-purple-500/10 dark:text-purple-400/10 pointer-events-none group-hover:scale-110 group-hover:-rotate-6 transition-transform duration-500">
-                  <Wallet size={88} strokeWidth={1.5} />
+                  <Wallet className="w-14 h-14 sm:w-20 sm:h-20" strokeWidth={1.5} />
                 </div>
                 <div className="relative z-10">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold uppercase tracking-wider text-base-content/60">
+                    <span className="text-[10.5px] sm:text-xs font-bold uppercase tracking-wider text-base-content/60">
                       Employee Share (EE)
                     </span>
                   </div>
-                  <div className="mt-3">
-                    <div className="text-2xl lg:text-3xl font-black font-mono text-purple-500">
+                  <div className="mt-2 sm:mt-3">
+                    <div className="text-lg sm:text-2xl lg:text-3xl font-black font-mono text-purple-500 truncate">
                       ₹{formatCurrency2Dec(pfKpiSummary.periodEePf)}
                     </div>
-                    <div className="flex items-center gap-2 mt-1.5 text-xs text-base-content/60 font-medium">
+                    <div className="flex items-center gap-1.5 sm:gap-2 mt-1 sm:mt-1.5 text-[11px] sm:text-xs text-base-content/60 font-medium truncate">
                       <span>Salary deduction</span>
-                      <span>•</span>
-                      <span>Period total</span>
                     </div>
                   </div>
                 </div>
@@ -3568,12 +4519,13 @@ export default function InvDashboard() {
 
             {/* 2. Main PF Analysis Interactive Section */}
             <section className="card bg-base-200 shadow-md rounded-3xl overflow-hidden">
-              <div className="card-body p-6 space-y-6">
+              <div className="card-body p-4 sm:p-6 space-y-4 sm:space-y-6">
                 {/* Section Header & View Switcher */}
                 <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 border-b border-base-300 pb-4">
                   <div>
-                    <h2 className="text-xl font-bold flex items-center gap-2">
-                      <ShieldCheck size={22} className="text-teal-500" />
+                    <h2 className="text-lg sm:text-xl font-bold flex items-center gap-2">
+                      <PieChart size={20} className="text-teal-500 md:hidden" />
+                      <ShieldCheck size={22} className="text-teal-500 hidden md:inline" />
                       Provident Fund (EPF) Growth & Contributions
                     </h2>
                     <p className="text-xs text-base-content/60 mt-0.5">
@@ -3602,27 +4554,31 @@ export default function InvDashboard() {
                       ))}
                     </div>
 
-                    {/* View Switcher: Graph View vs Table View */}
+                    {/* View Switcher: Graph/Donut View vs Table View */}
                     <div className="flex items-center gap-2 bg-base-100 p-1.5 rounded-2xl border border-base-300">
                       <button
-                        className={`px-4 py-2 text-xs font-extrabold rounded-xl transition-all flex items-center gap-2 cursor-pointer ${
+                        className={`px-3 sm:px-4 py-2 text-xs font-extrabold rounded-xl transition-all flex items-center gap-1.5 sm:gap-2 cursor-pointer ${
                           viewTab === "graph"
                             ? "bg-primary text-primary-content shadow-sm"
                             : "text-base-content/70 hover:text-base-content hover:bg-base-300/50"
                         }`}
                         onClick={() => setViewTab("graph")}
                       >
-                        <BarChart3 size={15} /> Graph View
+                        <PieChart size={14} className="md:hidden" />
+                        <BarChart3 size={15} className="hidden md:inline" />
+                        <span className="md:hidden">Donut View</span>
+                        <span className="hidden md:inline">Graph View</span>
                       </button>
                       <button
-                        className={`px-4 py-2 text-xs font-extrabold rounded-xl transition-all flex items-center gap-2 cursor-pointer ${
+                        className={`px-3 sm:px-4 py-2 text-xs font-extrabold rounded-xl transition-all flex items-center gap-1.5 sm:gap-2 cursor-pointer ${
                           viewTab === "table"
                             ? "bg-primary text-primary-content shadow-sm"
                             : "text-base-content/70 hover:text-base-content hover:bg-base-300/50"
                         }`}
                         onClick={() => setViewTab("table")}
                       >
-                        <TableProperties size={15} /> Table View
+                        <TableProperties size={14} />
+                        <span>Table View</span>
                       </button>
                     </div>
                   </div>
@@ -3944,32 +4900,32 @@ export default function InvDashboard() {
         {!loading && mfData.length > 0 && activeDashboard === "MF" && (
           <>
             {/* 1. MF KPI Summary Cards Row */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-2.5 sm:gap-4">
               {/* Card 1: Net Capital Invested */}
-              <div className="card bg-base-200 shadow-md p-5 rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
+              <div className="col-span-2 lg:col-span-1 card bg-base-200 shadow-md p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
                 {/* Light Background Watermark Icon */}
                 <div className="absolute -right-3 -bottom-3 text-purple-500/10 dark:text-purple-400/10 pointer-events-none group-hover:scale-110 group-hover:-rotate-6 transition-transform duration-500">
-                  <Wallet size={88} strokeWidth={1.5} />
+                  <Wallet className="w-14 h-14 sm:w-20 sm:h-20" strokeWidth={1.5} />
                 </div>
                 <div className="relative z-10">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold uppercase tracking-wider text-base-content/60">
+                    <span className="text-[10.5px] sm:text-xs font-bold uppercase tracking-wider text-base-content/60">
                       Net Capital Invested
                     </span>
                   </div>
-                  <div className="mt-3">
-                    <div className="text-2xl lg:text-3xl font-black font-mono text-purple-600 dark:text-purple-400">
+                  <div className="mt-2 sm:mt-3">
+                    <div className="text-xl sm:text-2xl lg:text-3xl font-black font-mono text-purple-600 dark:text-purple-400 truncate">
                       ₹{formatCurrency2Dec(mfKpiSummary.allTimeNetInvested)}
                     </div>
-                    <div className="flex items-center gap-2 mt-1.5 text-xs text-base-content/60 font-medium">
-                      <span className="badge badge-xs badge-secondary font-bold text-[10px]">
+                    <div className="flex items-center gap-1.5 sm:gap-2 mt-1 sm:mt-1.5 text-[11px] sm:text-xs text-base-content/60 font-medium">
+                      <span className="badge badge-xs badge-secondary font-bold text-[9px] sm:text-[10px]">
                         Portfolio Cost
                       </span>
-                      <span>
+                      <span className="truncate">
                         {selectedMfFund === "all"
                           ? `${activeMfFunds.length} Funds`
                           : selectedGroupObj
-                          ? `${selectedGroupObj.name} (${activeMfFunds.length} Funds)`
+                          ? `${selectedGroupObj.name} (${activeMfFunds.length})`
                           : "Selected Scheme"}
                       </span>
                     </div>
@@ -3978,24 +4934,24 @@ export default function InvDashboard() {
               </div>
 
               {/* Card 2: Period Deposits */}
-              <div className="card bg-base-200 shadow-md p-5 rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
+              <div className="card bg-base-200 shadow-md p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
                 {/* Light Background Watermark Icon */}
                 <div className="absolute -right-3 -bottom-3 text-emerald-500/10 dark:text-emerald-400/10 pointer-events-none group-hover:scale-110 group-hover:-rotate-6 transition-transform duration-500">
-                  <PiggyBank size={88} strokeWidth={1.5} />
+                  <PiggyBank className="w-14 h-14 sm:w-20 sm:h-20" strokeWidth={1.5} />
                 </div>
                 <div className="relative z-10">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold uppercase tracking-wider text-base-content/60">
+                    <span className="text-[10.5px] sm:text-xs font-bold uppercase tracking-wider text-base-content/60">
                       Period Deposits
                     </span>
                   </div>
-                  <div className="mt-3">
-                    <div className="text-2xl lg:text-3xl font-black font-mono text-emerald-600 dark:text-emerald-400">
+                  <div className="mt-2 sm:mt-3">
+                    <div className="text-lg sm:text-2xl lg:text-3xl font-black font-mono text-emerald-600 dark:text-emerald-400 truncate">
                       ₹{formatCurrency2Dec(mfKpiSummary.periodDeposited)}
                     </div>
-                    <div className="flex items-center gap-2 mt-1.5 text-xs text-base-content/60 font-medium">
-                      <span className="badge badge-xs badge-success font-bold text-[10px]">
-                        {mfKpiSummary.totalSipCount} SIPs • {mfKpiSummary.totalLsCount} LS
+                    <div className="flex items-center gap-1.5 sm:gap-2 mt-1 sm:mt-1.5 text-[11px] sm:text-xs text-base-content/60 font-medium truncate">
+                      <span className="badge badge-xs badge-success font-bold text-[9px] sm:text-[10px]">
+                        {mfKpiSummary.totalSipCount} SIP • {mfKpiSummary.totalLsCount} LS
                       </span>
                       <span>All: ₹{formatCurrencyCompact(mfKpiSummary.allTimeDeposited)}</span>
                     </div>
@@ -4004,29 +4960,29 @@ export default function InvDashboard() {
               </div>
 
               {/* Card 3: Total Withdrawn / Redeemed */}
-              <div className="card bg-base-200 shadow-md p-5 rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
+              <div className="card bg-base-200 shadow-md p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
                 {/* Light Background Watermark Icon */}
                 <div className="absolute -right-3 -bottom-3 text-amber-500/10 dark:text-amber-400/10 pointer-events-none group-hover:scale-110 group-hover:-rotate-6 transition-transform duration-500">
-                  <ArrowUpRight size={88} strokeWidth={1.5} />
+                  <ArrowUpRight className="w-14 h-14 sm:w-20 sm:h-20" strokeWidth={1.5} />
                 </div>
                 <div className="relative z-10">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold uppercase tracking-wider text-base-content/60">
+                    <span className="text-[10.5px] sm:text-xs font-bold uppercase tracking-wider text-base-content/60">
                       Total Withdrawn
                     </span>
                   </div>
-                  <div className="mt-3">
-                    <div className="text-2xl lg:text-3xl font-black font-mono text-amber-500">
+                  <div className="mt-2 sm:mt-3">
+                    <div className="text-lg sm:text-2xl lg:text-3xl font-black font-mono text-amber-500 truncate">
                       ₹{formatCurrency2Dec(mfKpiSummary.allTimeWithdrawn)}
                     </div>
-                    <div className="flex items-center gap-2 mt-1.5 text-xs text-base-content/60 font-medium">
-                      <span className="badge badge-xs badge-warning font-bold text-[10px]">
+                    <div className="flex items-center gap-1.5 sm:gap-2 mt-1 sm:mt-1.5 text-[11px] sm:text-xs text-base-content/60 font-medium truncate">
+                      <span className="badge badge-xs badge-warning font-bold text-[9px] sm:text-[10px]">
                         {mfKpiSummary.totalWithdrawalCount} {mfKpiSummary.totalWithdrawalCount === 1 ? "Redemption" : "Redemptions"}
                       </span>
                       <span>
                         {mfKpiSummary.periodWithdrawn > 0
                           ? `Period: ₹${formatCurrencyCompact(mfKpiSummary.periodWithdrawn)}`
-                          : "All-time redemptions"}
+                          : "All-time"}
                       </span>
                     </div>
                   </div>
@@ -4034,49 +4990,49 @@ export default function InvDashboard() {
               </div>
 
               {/* Card 4: Total Units Held */}
-              <div className="card bg-base-200 shadow-md p-5 rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
+              <div className="card bg-base-200 shadow-md p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
                 {/* Light Background Watermark Icon */}
                 <div className="absolute -right-3 -bottom-3 text-sky-500/10 dark:text-sky-400/10 pointer-events-none group-hover:scale-110 group-hover:-rotate-6 transition-transform duration-500">
-                  <Layers size={88} strokeWidth={1.5} />
+                  <Layers className="w-14 h-14 sm:w-20 sm:h-20" strokeWidth={1.5} />
                 </div>
                 <div className="relative z-10">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold uppercase tracking-wider text-base-content/60">
+                    <span className="text-[10.5px] sm:text-xs font-bold uppercase tracking-wider text-base-content/60">
                       Total Units Held
                     </span>
                   </div>
-                  <div className="mt-3">
-                    <div className="text-2xl lg:text-3xl font-black font-mono text-sky-500">
-                      {mfKpiSummary.allTimeUnitsHeld.toLocaleString(undefined, { minimumFractionDigits: 3, maximumFractionDigits: 3 })}
+                  <div className="mt-2 sm:mt-3">
+                    <div className="text-lg sm:text-2xl lg:text-3xl font-black font-mono text-sky-500 truncate">
+                      {mfKpiSummary.allTimeUnitsHeld.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </div>
-                    <div className="flex items-center gap-2 mt-1.5 text-xs text-base-content/60 font-medium">
-                      <span>Added: +{mfKpiSummary.periodUnitsAdded.toFixed(2)}</span>
+                    <div className="flex items-center gap-1.5 sm:gap-2 mt-1 sm:mt-1.5 text-[11px] sm:text-xs text-base-content/60 font-medium truncate">
+                      <span>+{mfKpiSummary.periodUnitsAdded.toFixed(1)} u</span>
                       <span>•</span>
-                      <span>Redeemed: -{mfKpiSummary.periodUnitsWithdrawn.toFixed(2)}</span>
+                      <span>-{mfKpiSummary.periodUnitsWithdrawn.toFixed(1)} u</span>
                     </div>
                   </div>
                 </div>
               </div>
 
               {/* Card 5: Expense Ratio & Avg NAV */}
-              <div className="card bg-base-200 shadow-md p-5 rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
+              <div className="card bg-base-200 shadow-md p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
                 {/* Light Background Watermark Icon */}
                 <div className="absolute -right-3 -bottom-3 text-rose-500/10 dark:text-rose-400/10 pointer-events-none group-hover:scale-110 group-hover:-rotate-6 transition-transform duration-500">
-                  <Percent size={88} strokeWidth={1.5} />
+                  <Percent className="w-14 h-14 sm:w-20 sm:h-20" strokeWidth={1.5} />
                 </div>
                 <div className="relative z-10">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold uppercase tracking-wider text-base-content/60">
+                    <span className="text-[10.5px] sm:text-xs font-bold uppercase tracking-wider text-base-content/60">
                       Total ER Incurred
                     </span>
                   </div>
-                  <div className="mt-3">
-                    <div className="text-2xl lg:text-3xl font-black font-mono text-rose-500">
+                  <div className="mt-2 sm:mt-3">
+                    <div className="text-lg sm:text-2xl lg:text-3xl font-black font-mono text-rose-500 truncate">
                       ₹{formatCurrency2Dec(mfKpiSummary.allTimeEr)}
                     </div>
-                    <div className="flex items-center gap-2 mt-1.5 text-xs text-base-content/60 font-medium">
-                      <span className="badge badge-xs badge-info font-bold text-[10px]">
-                        Avg NAV: ₹{mfKpiSummary.avgAcquisitionNav.toFixed(2)}
+                    <div className="flex items-center gap-1.5 sm:gap-2 mt-1 sm:mt-1.5 text-[11px] sm:text-xs text-base-content/60 font-medium truncate">
+                      <span className="badge badge-xs badge-info font-bold text-[9px] sm:text-[10px]">
+                        Avg NAV: ₹{mfKpiSummary.avgAcquisitionNav.toFixed(1)}
                       </span>
                       <span>Period: ₹{formatCurrencyCompact(mfKpiSummary.periodEr)}</span>
                     </div>
@@ -4179,34 +5135,38 @@ export default function InvDashboard() {
                       </ul>
                     </div>
 
-                    {/* View Switcher: Graph View vs Table View */}
+                    {/* View Switcher: Graph/Donut View vs Table View */}
                     <div className="bg-base-100 p-1 rounded-2xl flex items-center border border-base-300">
                       <button
-                        className={`px-4 py-2 text-xs font-extrabold rounded-xl transition-all flex items-center gap-2 cursor-pointer ${
+                        className={`px-3 sm:px-4 py-2 text-xs font-extrabold rounded-xl transition-all flex items-center gap-1.5 sm:gap-2 cursor-pointer ${
                           viewTab === "graph"
                             ? "bg-primary text-primary-content shadow-sm"
                             : "text-base-content/70 hover:text-base-content hover:bg-base-300/50"
                         }`}
                         onClick={() => setViewTab("graph")}
                       >
-                        <BarChart3 size={15} /> Graph View
+                        <PieChart size={14} className="md:hidden" />
+                        <BarChart3 size={15} className="hidden md:inline" />
+                        <span className="md:hidden">Donut View</span>
+                        <span className="hidden md:inline">Graph View</span>
                       </button>
                       <button
-                        className={`px-4 py-2 text-xs font-extrabold rounded-xl transition-all flex items-center gap-2 cursor-pointer ${
+                        className={`px-3 sm:px-4 py-2 text-xs font-extrabold rounded-xl transition-all flex items-center gap-1.5 sm:gap-2 cursor-pointer ${
                           viewTab === "table"
                             ? "bg-primary text-primary-content shadow-sm"
                             : "text-base-content/70 hover:text-base-content hover:bg-base-300/50"
                         }`}
                         onClick={() => setViewTab("table")}
                       >
-                        <TableProperties size={15} /> Table View
+                        <TableProperties size={14} />
+                        <span>Table View</span>
                       </button>
                     </div>
                   </div>
                 </div>
 
-                {/* Metric Switcher Button Toolbar - User Requested Multi-Graph Switcher */}
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-base-100 p-3 rounded-2xl border border-base-300">
+                {/* Metric Switcher Button Toolbar - Desktop Only */}
+                <div className="hidden md:flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-base-100 p-3 rounded-2xl border border-base-300">
                   <div className="flex items-center gap-2 text-xs font-bold text-base-content/70">
                     <Sparkles size={14} className="text-primary" />
                     <span>Select Metric Visualization:</span>
@@ -4280,129 +5240,131 @@ export default function InvDashboard() {
                 {viewTab === "graph" && (
                   <div className="space-y-4">
                     {mfMonthlyPlotData.length > 0 ? (
-                      mfMetricMode === "all" ? (
-                        /* All 4 Graphs Grid View */
-                        <div className="space-y-6">
-                          <div className="flex items-center justify-between px-2 text-xs font-semibold text-base-content/60">
-                            <span>Displaying all 4 Mutual Fund analytical dimensions simultaneously:</span>
-                            <span className="text-[11px] opacity-75">
-                              Showing {mfMonthlyPlotData.length} monthly timeline periods
-                            </span>
+                      <div>
+                        {mfMetricMode === "all" ? (
+                          /* All 4 Graphs Grid View */
+                          <div className="space-y-6">
+                            <div className="flex items-center justify-between px-2 text-xs font-semibold text-base-content/60">
+                              <span>Displaying all 4 Mutual Fund analytical dimensions simultaneously:</span>
+                              <span className="text-[11px] opacity-75">
+                                Showing {mfMonthlyPlotData.length} monthly timeline periods
+                              </span>
+                            </div>
+
+                            <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 [&_.apexcharts-tooltip]:!bg-transparent [&_.apexcharts-tooltip]:!border-none [&_.apexcharts-tooltip]:!shadow-none [&_.apexcharts-tooltip]:!p-0">
+                              {/* 1. Deposits & Withdrawals */}
+                              <div className="card bg-base-100 shadow-sm border border-base-300 p-4 rounded-2xl space-y-2">
+                                <div className="flex items-center justify-between">
+                                  <h3 className="font-bold text-sm flex items-center gap-1.5 text-base-content">
+                                    <PiggyBank size={15} className="text-primary" />
+                                    Deposits & Withdrawals Flow
+                                  </h3>
+                                  <span className="badge badge-xs badge-primary font-bold">Cashflow</span>
+                                </div>
+                                <Chart
+                                  options={mfCashflowOptions}
+                                  series={mfCashflowSeries}
+                                  type="line"
+                                  height={320}
+                                />
+                              </div>
+
+                              {/* 2. Purchase NAV History */}
+                              <div className="card bg-base-100 shadow-sm border border-base-300 p-4 rounded-2xl space-y-2">
+                                <div className="flex items-center justify-between">
+                                  <h3 className="font-bold text-sm flex items-center gap-1.5 text-base-content">
+                                    <TrendingUp size={15} className="text-sky-500" />
+                                    Purchase NAV Trajectory
+                                  </h3>
+                                  <span className="badge badge-xs badge-info font-bold">NAV (₹)</span>
+                                </div>
+                                <Chart
+                                  options={mfNavOptions}
+                                  series={mfNavSeries}
+                                  type="line"
+                                  height={320}
+                                />
+                              </div>
+
+                              {/* 3. Units Allocated & Held */}
+                              <div className="card bg-base-100 shadow-sm border border-base-300 p-4 rounded-2xl space-y-2">
+                                <div className="flex items-center justify-between">
+                                  <h3 className="font-bold text-sm flex items-center gap-1.5 text-base-content">
+                                    <Layers size={15} className="text-indigo-500" />
+                                    Units Allocated & Cumulative Balance
+                                  </h3>
+                                  <span className="badge badge-xs badge-ghost font-mono">Units (u)</span>
+                                </div>
+                                <Chart
+                                  options={mfUnitsOptions}
+                                  series={mfUnitsSeries}
+                                  type="line"
+                                  height={320}
+                                />
+                              </div>
+
+                              {/* 4. Expense Ratio Incurred */}
+                              <div className="card bg-base-100 shadow-sm border border-base-300 p-4 rounded-2xl space-y-2">
+                                <div className="flex items-center justify-between">
+                                  <h3 className="font-bold text-sm flex items-center gap-1.5 text-base-content">
+                                    <Percent size={15} className="text-rose-500" />
+                                    Expense Ratio (ER) Deducted
+                                  </h3>
+                                  <span className="badge badge-xs badge-error font-bold">ER Cost (₹)</span>
+                                </div>
+                                <Chart
+                                  options={mfErOptions}
+                                  series={mfErSeries}
+                                  type="line"
+                                  height={320}
+                                />
+                              </div>
+                            </div>
                           </div>
-
-                          <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 [&_.apexcharts-tooltip]:!bg-transparent [&_.apexcharts-tooltip]:!border-none [&_.apexcharts-tooltip]:!shadow-none [&_.apexcharts-tooltip]:!p-0">
-                            {/* 1. Deposits & Withdrawals */}
-                            <div className="card bg-base-100 shadow-sm border border-base-300 p-4 rounded-2xl space-y-2">
-                              <div className="flex items-center justify-between">
-                                <h3 className="font-bold text-sm flex items-center gap-1.5 text-base-content">
-                                  <PiggyBank size={15} className="text-primary" />
-                                  Deposits & Withdrawals Flow
-                                </h3>
-                                <span className="badge badge-xs badge-primary font-bold">Cashflow</span>
+                        ) : (
+                          /* Single Selected Graph View */
+                          <div className="w-full [&_.apexcharts-tooltip]:!bg-transparent [&_.apexcharts-tooltip]:!border-none [&_.apexcharts-tooltip]:!shadow-none [&_.apexcharts-tooltip]:!p-0">
+                            <div className="flex items-center justify-between px-2 pb-2 text-xs font-semibold text-base-content/60 flex-wrap gap-2">
+                              <div className="flex items-center gap-2">
+                                {mfMetricMode === "cashflow" && (
+                                  <span>
+                                    Showing <span className="font-bold text-base-content">Deposited Amount</span> (solid bar),{" "}
+                                    <span className="font-bold text-base-content">Withdrawal Amount</span> (lighter bar), and{" "}
+                                    <span className="font-bold text-sky-400">Net Cumulative Capital</span> (line).
+                                  </span>
+                                )}
+                                {mfMetricMode === "nav" && (
+                                  <span>
+                                    Showing <span className="font-bold text-base-content">Purchase NAV Trajectory</span> across logged investment installments.
+                                  </span>
+                                )}
+                                {mfMetricMode === "units" && (
+                                  <span>
+                                    Showing <span className="font-bold text-base-content">Units Added</span> vs{" "}
+                                    <span className="font-bold text-base-content">Units Redeemed</span> and{" "}
+                                    <span className="font-bold text-sky-400">Cumulative Units Balance</span>.
+                                  </span>
+                                )}
+                                {mfMetricMode === "er" && (
+                                  <span>
+                                    Showing <span className="font-bold text-base-content">Expense Ratio (ER) Incurred</span> per month and{" "}
+                                    <span className="font-bold text-sky-400">Cumulative ER Paid</span>.
+                                  </span>
+                                )}
                               </div>
-                              <Chart
-                                options={mfCashflowOptions}
-                                series={mfCashflowSeries}
-                                type="line"
-                                height={320}
-                              />
+                              <span className="text-[11px] opacity-75">
+                                Showing {mfMonthlyPlotData.length} monthly timeline periods
+                              </span>
                             </div>
-
-                            {/* 2. Purchase NAV History */}
-                            <div className="card bg-base-100 shadow-sm border border-base-300 p-4 rounded-2xl space-y-2">
-                              <div className="flex items-center justify-between">
-                                <h3 className="font-bold text-sm flex items-center gap-1.5 text-base-content">
-                                  <TrendingUp size={15} className="text-sky-500" />
-                                  Purchase NAV Trajectory
-                                </h3>
-                                <span className="badge badge-xs badge-info font-bold">NAV (₹)</span>
-                              </div>
-                              <Chart
-                                options={mfNavOptions}
-                                series={mfNavSeries}
-                                type="line"
-                                height={320}
-                              />
-                            </div>
-
-                            {/* 3. Units Allocated & Held */}
-                            <div className="card bg-base-100 shadow-sm border border-base-300 p-4 rounded-2xl space-y-2">
-                              <div className="flex items-center justify-between">
-                                <h3 className="font-bold text-sm flex items-center gap-1.5 text-base-content">
-                                  <Layers size={15} className="text-indigo-500" />
-                                  Units Allocated & Cumulative Balance
-                                </h3>
-                                <span className="badge badge-xs badge-ghost font-mono">Units (u)</span>
-                              </div>
-                              <Chart
-                                options={mfUnitsOptions}
-                                series={mfUnitsSeries}
-                                type="line"
-                                height={320}
-                              />
-                            </div>
-
-                            {/* 4. Expense Ratio Incurred */}
-                            <div className="card bg-base-100 shadow-sm border border-base-300 p-4 rounded-2xl space-y-2">
-                              <div className="flex items-center justify-between">
-                                <h3 className="font-bold text-sm flex items-center gap-1.5 text-base-content">
-                                  <Percent size={15} className="text-rose-500" />
-                                  Expense Ratio (ER) Deducted
-                                </h3>
-                                <span className="badge badge-xs badge-error font-bold">ER Cost (₹)</span>
-                              </div>
-                              <Chart
-                                options={mfErOptions}
-                                series={mfErSeries}
-                                type="line"
-                                height={320}
-                              />
-                            </div>
+                            <Chart
+                              options={mfApexOptions}
+                              series={mfApexSeries}
+                              type="line"
+                              height={440}
+                            />
                           </div>
-                        </div>
-                      ) : (
-                        /* Single Selected Graph View */
-                        <div className="w-full [&_.apexcharts-tooltip]:!bg-transparent [&_.apexcharts-tooltip]:!border-none [&_.apexcharts-tooltip]:!shadow-none [&_.apexcharts-tooltip]:!p-0">
-                          <div className="flex items-center justify-between px-2 pb-2 text-xs font-semibold text-base-content/60 flex-wrap gap-2">
-                            <div className="flex items-center gap-2">
-                              {mfMetricMode === "cashflow" && (
-                                <span>
-                                  Showing <span className="font-bold text-base-content">Deposited Amount</span> (solid bar),{" "}
-                                  <span className="font-bold text-base-content">Withdrawal Amount</span> (lighter bar), and{" "}
-                                  <span className="font-bold text-sky-400">Net Cumulative Capital</span> (line).
-                                </span>
-                              )}
-                              {mfMetricMode === "nav" && (
-                                <span>
-                                  Showing <span className="font-bold text-base-content">Purchase NAV Trajectory</span> across logged investment installments.
-                                </span>
-                              )}
-                              {mfMetricMode === "units" && (
-                                <span>
-                                  Showing <span className="font-bold text-base-content">Units Added</span> vs{" "}
-                                  <span className="font-bold text-base-content">Units Redeemed</span> and{" "}
-                                  <span className="font-bold text-sky-400">Cumulative Units Balance</span>.
-                                </span>
-                              )}
-                              {mfMetricMode === "er" && (
-                                <span>
-                                  Showing <span className="font-bold text-base-content">Expense Ratio (ER) Incurred</span> per month and{" "}
-                                  <span className="font-bold text-sky-400">Cumulative ER Paid</span>.
-                                </span>
-                              )}
-                            </div>
-                            <span className="text-[11px] opacity-75">
-                              Showing {mfMonthlyPlotData.length} monthly timeline periods
-                            </span>
-                          </div>
-                          <Chart
-                            options={mfApexOptions}
-                            series={mfApexSeries}
-                            type="line"
-                            height={440}
-                          />
-                        </div>
-                      )
+                        )}
+                      </div>
                     ) : (
                       <div className="p-12 text-center text-sm opacity-50 italic">
                         No Mutual Fund transactions match the selected scheme or date filter range.
@@ -4861,6 +5823,1038 @@ export default function InvDashboard() {
             </div>
           </div>
         )}
+        </div>
+
+        {/* ========================================================================= */}
+        {/* PHONE VIEW (mobile only: minimal single-line headers, velocity scrubber, donut chart, ranked cards) */}
+        {/* ========================================================================= */}
+        <div className="block md:hidden space-y-4 px-1 sm:px-0">
+          {/* ----------------------------------------------------------------------- */}
+          {/* A. SALARY DASHBOARD (PHONE VIEW) */}
+          {/* ----------------------------------------------------------------------- */}
+          {!loading && activeDashboard === "SALARY" && (
+            salaryData.length === 0 ? (
+              <div className="card bg-base-100 shadow-xs border border-base-content/10 p-6 text-center space-y-3 rounded-2xl">
+                <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 mx-auto flex items-center justify-center">
+                  <Banknote size={24} />
+                </div>
+                <h3 className="text-base font-bold">No Salary Records Found</h3>
+                <p className="text-xs text-base-content/60">Log monthly salary records in Table Entry to view analytics.</p>
+                <Link to="/dashboard/investment/table-entry?tab=salary" className="btn btn-primary btn-xs rounded-xl font-bold">
+                  Go to Table Entry
+                </Link>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {/* 1. Range Summary KPI Cards (2x2 Grid) */}
+                <section className="grid grid-cols-2 gap-2 px-0.5">
+                  <div className="card bg-base-100 shadow-xs border border-base-content/10 p-2.5 rounded-2xl">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-base-content/50 truncate">
+                        In-Hand Salary
+                      </span>
+                      <div className="w-7 h-7 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500 shrink-0">
+                        <Banknote size={15} />
+                      </div>
+                    </div>
+                    <span className="text-base font-black font-mono text-emerald-600 dark:text-emerald-400 mt-1.5 block truncate">
+                      {hideNumbers ? "••••••" : `₹${formatCurrency2Dec(kpiSummary.totalInHand)}`}
+                    </span>
+                    <span className="text-[9.5px] opacity-60 mt-1 block truncate">
+                      {kpiSummary.monthsCount} Mos • Take-Home
+                    </span>
+                  </div>
+
+                  <div className="card bg-base-100 shadow-xs border border-base-content/10 p-2.5 rounded-2xl">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-base-content/50 truncate">
+                        Total Deductions
+                      </span>
+                      <div className="w-7 h-7 rounded-xl bg-rose-500/10 flex items-center justify-center text-rose-500 shrink-0">
+                        <ShieldAlert size={15} />
+                      </div>
+                    </div>
+                    <span className="text-base font-black font-mono text-rose-500 mt-1.5 block truncate">
+                      {hideNumbers ? "••••••" : `₹${formatCurrency2Dec(kpiSummary.totalDeductions)}`}
+                    </span>
+                    <span className="text-[9.5px] opacity-60 mt-1 block truncate">
+                      {kpiSummary.deductionRatio.toFixed(1)}% Tax & PF
+                    </span>
+                  </div>
+
+                  <div className="card bg-base-100 shadow-xs border border-base-content/10 p-2.5 rounded-2xl">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-base-content/50 truncate">
+                        Take-Home Ratio
+                      </span>
+                      <div className="w-7 h-7 rounded-xl bg-teal-500/10 flex items-center justify-center text-teal-500 shrink-0">
+                        <TrendingUp size={15} />
+                      </div>
+                    </div>
+                    <span className="text-base font-black font-mono text-teal-600 dark:text-teal-400 mt-1.5 block truncate">
+                      {kpiSummary.avgInHandRatio.toFixed(1)}%
+                    </span>
+                    <span className="text-[9.5px] opacity-60 mt-1 block truncate">
+                      Compensation Yield
+                    </span>
+                  </div>
+
+                  <div className="card bg-base-100 shadow-xs border border-base-content/10 p-2.5 rounded-2xl">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-base-content/50 truncate">
+                        Total Gross / CTC
+                      </span>
+                      <div className="w-7 h-7 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-500 shrink-0">
+                        <Sparkles size={15} />
+                      </div>
+                    </div>
+                    <span className="text-base font-black font-mono text-indigo-600 dark:text-indigo-400 mt-1.5 block truncate">
+                      {hideNumbers ? "••••••" : `₹${formatCurrency2Dec(kpiSummary.totalCtc)}`}
+                    </span>
+                    <span className="text-[9.5px] opacity-60 mt-1 block truncate">
+                      {kpiSummary.expText}
+                    </span>
+                  </div>
+                </section>
+
+                {/* 2. Salary Analysis Section */}
+                <section className="card bg-base-100 shadow-xs border border-base-content/10 rounded-2xl">
+                  <div className="card-body p-3 space-y-3.5">
+                    {/* Minimal Single-line Heading & Subtitle */}
+                    <div className="flex items-center justify-between border-b border-base-200 pb-2.5">
+                      <div className="min-w-0 flex-1">
+                        <h2 className="text-sm font-bold flex items-center gap-1.5 truncate">
+                          <Banknote size={16} className="text-emerald-500 shrink-0" />
+                          <span className="truncate">Salary & Compensation</span>
+                        </h2>
+                        <p className="text-[11px] text-base-content/60 truncate mt-0.5">
+                          Monthly earnings and deductions distribution
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Monthly Velocity Scrubber */}
+                    <div className="space-y-2 bg-base-200/40 p-2.5 rounded-2xl border border-base-content/10">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-extrabold text-base-content/70 uppercase tracking-wider flex items-center gap-1.5">
+                          <Sparkles size={13} className="text-primary" />
+                          Monthly Velocity
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 -mx-0.5 px-0.5">
+                        {/* 'All Range' Pill */}
+                        <button
+                          type="button"
+                          onClick={() => setMobileSalarySelectedMonth("all")}
+                          className={`px-3 py-2 rounded-2xl flex flex-col items-start gap-0.5 whitespace-nowrap transition-all cursor-pointer shrink-0 border ${
+                            mobileSalarySelectedMonth === "all"
+                              ? "bg-base-200/90 dark:bg-base-800/90 border-primary/50 text-base-content shadow-xs ring-1 ring-primary/30"
+                              : "bg-base-100/60 dark:bg-base-900/40 hover:bg-base-200/60 text-base-content/80 border-base-content/10"
+                          }`}
+                        >
+                          <span className={`text-[10px] font-black uppercase tracking-wider ${mobileSalarySelectedMonth === "all" ? "text-primary" : "text-base-content/70"}`}>
+                            All Range
+                          </span>
+                          <span className="font-mono font-black text-xs text-base-content">
+                            {hideNumbers ? "••••••" : `₹${formatCurrency2Dec(kpiSummary.totalInHand)}`}
+                          </span>
+                          <span className="text-[9px] text-base-content/50 font-semibold">
+                            {sortedSalaryRecords.length} Months Total
+                          </span>
+                        </button>
+
+                        {/* Month Pills with MoM Delta */}
+                        {salaryMonthlyDataWithMoM.map((d) => {
+                          const isSelected = mobileSalarySelectedMonth === d.month;
+                          const shortMonth = dayjs(d.month).format("MMM 'YY");
+                          return (
+                            <button
+                              key={`sal-scrubber-${d.month}`}
+                              type="button"
+                              onClick={() => setMobileSalarySelectedMonth(d.month)}
+                              className={`px-3 py-2 rounded-2xl flex flex-col items-start gap-0.5 whitespace-nowrap transition-all cursor-pointer shrink-0 border ${
+                                isSelected
+                                  ? "bg-base-200/90 dark:bg-base-800/90 border-primary/50 text-base-content shadow-xs ring-1 ring-primary/30"
+                                  : "bg-base-100/60 dark:bg-base-900/40 hover:bg-base-200/60 text-base-content/80 border-base-content/10"
+                              }`}
+                            >
+                              <div className="flex items-center gap-1.5 w-full justify-between">
+                                <span className={`text-[10px] font-black uppercase tracking-wider ${isSelected ? "text-primary" : "text-base-content/70"}`}>
+                                  {shortMonth}
+                                </span>
+                                {d.momDeltaPct !== null ? (
+                                  <span
+                                    className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md flex items-center gap-0.5 ${
+                                      d.momDeltaType === "increase"
+                                        ? "bg-emerald-500/15 text-emerald-500"
+                                        : d.momDeltaType === "decrease"
+                                        ? "bg-rose-500/15 text-rose-500"
+                                        : "bg-base-content/10 text-base-content/60"
+                                    }`}
+                                  >
+                                    {d.momDeltaType === "increase" ? (
+                                      <ArrowUpRight size={10} className="shrink-0" />
+                                    ) : d.momDeltaType === "decrease" ? (
+                                      <ArrowDownLeft size={10} className="shrink-0" />
+                                    ) : null}
+                                    {d.momDeltaPct > 0 ? `+${d.momDeltaPct}%` : `${d.momDeltaPct}%`}
+                                  </span>
+                                ) : (
+                                  <span className="text-[9px] opacity-40 font-mono">—</span>
+                                )}
+                              </div>
+                              <span className="font-mono font-black text-xs text-base-content">
+                                {hideNumbers ? "••••••" : `₹${formatCurrency2Dec(d.inHand)}`}
+                              </span>
+                              <span className="text-[9px] text-base-content/50 font-semibold">
+                                In-Hand Pay
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Donut Chart */}
+                    <div className="bg-base-200/40 border border-base-content/10 rounded-2xl p-3 flex flex-col items-center justify-center">
+                      <div className="w-full flex items-center justify-between border-b border-base-200 pb-2 mb-2">
+                        <div className="flex items-center gap-2">
+                          <PieChart size={16} className="text-primary shrink-0" />
+                          <span className="text-xs font-extrabold text-base-content">
+                            Compensation Distribution
+                          </span>
+                        </div>
+                        <span className="text-[10px] font-bold font-mono px-2 py-0.5 rounded-lg bg-base-200 text-base-content/70">
+                          {mobileSalaryDonutData.periodLabel}
+                        </span>
+                      </div>
+
+                      {mobileSalaryDonutData.hasData ? (
+                        <div className="w-full">
+                          <Chart
+                            key={`sal-donut-${mobileSalarySelectedMonth}-${mobileSalaryDonutData.total}-${mobileSalaryDonutData.series.join("-")}`}
+                            options={salaryMobileDonutOptions}
+                            series={mobileSalaryDonutData.series}
+                            type="donut"
+                            height={280}
+                          />
+                        </div>
+                      ) : (
+                        <div className="py-10 flex flex-col items-center justify-center text-center space-y-2">
+                          <PieChart size={24} className="opacity-30" />
+                          <p className="text-xs font-semibold text-base-content/60">
+                            No records for {mobileSalaryDonutData.periodLabel}.
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Quick Summary Bar below Donut */}
+                      <div className="w-full grid grid-cols-3 gap-2 pt-3 border-t border-base-200 text-center text-xs">
+                        <div className="bg-base-100/70 p-2 rounded-xl border border-base-content/5">
+                          <span className="text-[9px] uppercase font-bold text-base-content/50 block truncate">
+                            In-Hand
+                          </span>
+                          <span className="font-mono font-black text-xs text-emerald-600 dark:text-emerald-400 block truncate mt-0.5">
+                            {hideNumbers ? "••••" : `₹${formatCurrencyCompact(mobileSalaryDonutData.inHand)}`}
+                          </span>
+                        </div>
+                        <div className="bg-base-100/70 p-2 rounded-xl border border-base-content/5">
+                          <span className="text-[9px] uppercase font-bold text-base-content/50 block truncate">
+                            Deductions
+                          </span>
+                          <span className="font-mono font-black text-xs text-rose-500 block truncate mt-0.5">
+                            {hideNumbers ? "••••" : `₹${formatCurrencyCompact(mobileSalaryDonutData.deductions)}`}
+                          </span>
+                        </div>
+                        <div className="bg-base-100/70 p-2 rounded-xl border border-base-content/5">
+                          <span className="text-[9px] uppercase font-bold text-base-content/50 block truncate">
+                            Total Gross
+                          </span>
+                          <span className="font-mono font-black text-xs text-primary block truncate mt-0.5">
+                            {hideNumbers ? "••••" : `₹${formatCurrencyCompact(mobileSalaryDonutData.total)}`}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Ranked Component Cards */}
+                    <div className="space-y-2.5">
+                      <div className="flex items-center justify-between px-1">
+                        <span className="text-xs font-extrabold text-base-content uppercase tracking-wider flex items-center gap-1.5">
+                          <Award size={14} className="text-primary" />
+                          Ranked Components
+                        </span>
+                        <span className="text-[10px] font-mono text-base-content/50">
+                          {mobileSalaryDonutData.rankedItems.length} Slices
+                        </span>
+                      </div>
+
+                      <div className="space-y-2">
+                        {mobileSalaryDonutData.rankedItems.map((item, idx) => (
+                          <div
+                            key={item.name}
+                            className="bg-base-200/40 border border-base-content/10 rounded-2xl p-3 space-y-2"
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <span className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black bg-base-300 text-base-content/70 shrink-0">
+                                  {idx + 1}
+                                </span>
+                                <span
+                                  className="w-2.5 h-2.5 rounded-full shrink-0"
+                                  style={{ backgroundColor: item.color }}
+                                />
+                                <span className="font-bold text-xs text-base-content truncate">
+                                  {item.name}
+                                </span>
+                              </div>
+                              <span className="font-mono text-xs font-black text-base-content shrink-0">
+                                {hideNumbers ? "••••••" : `₹${formatCurrency2Dec(item.amount)}`}
+                              </span>
+                            </div>
+
+                            <div className="w-full bg-base-300/70 h-2 rounded-full overflow-hidden">
+                              <div
+                                className="h-full rounded-full transition-all duration-300"
+                                style={{
+                                  width: `${Math.max(item.percentage, 2)}%`,
+                                  backgroundColor: item.color,
+                                }}
+                              />
+                            </div>
+
+                            <div className="flex items-center justify-between text-[10.5px] font-mono text-base-content/60 pt-0.5">
+                              <span className="truncate">{item.subtitle}</span>
+                              <span className="font-bold text-base-content/80">
+                                {item.percentage}% share
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </section>
+              </div>
+            )
+          )}
+
+          {/* ----------------------------------------------------------------------- */}
+          {/* B. PROVIDENT FUND (PF) DASHBOARD (PHONE VIEW) */}
+          {/* ----------------------------------------------------------------------- */}
+          {!loading && activeDashboard === "PF" && (
+            salaryData.length === 0 && pfWithdrawals.length === 0 ? (
+              <div className="card bg-base-100 shadow-xs border border-base-content/10 p-6 text-center space-y-3 rounded-2xl">
+                <div className="w-12 h-12 rounded-2xl bg-teal-500/10 text-teal-600 dark:text-teal-400 mx-auto flex items-center justify-center">
+                  <ShieldCheck size={24} />
+                </div>
+                <h3 className="text-base font-bold">No PF Records Found</h3>
+                <p className="text-xs text-base-content/60">Log salary or PF withdrawals in Table Entry to view PF corpus intelligence.</p>
+                <Link to="/dashboard/investment/table-entry?tab=pf" className="btn btn-primary btn-xs rounded-xl font-bold">
+                  Go to Table Entry
+                </Link>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {/* 1. Range Summary KPI Cards (2x2 Grid) */}
+                <section className="grid grid-cols-2 gap-2 px-0.5">
+                  <div className="card bg-base-100 shadow-xs border border-base-content/10 p-2.5 rounded-2xl">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-base-content/50 truncate">
+                        Net EPF Balance
+                      </span>
+                      <div className="w-7 h-7 rounded-xl bg-teal-500/10 flex items-center justify-center text-teal-500 shrink-0">
+                        <ShieldCheck size={15} />
+                      </div>
+                    </div>
+                    <span className="text-base font-black font-mono text-teal-600 dark:text-teal-400 mt-1.5 block truncate">
+                      {hideNumbers ? "••••••" : `₹${formatCurrency2Dec(pfKpiSummary.allTimeAvailablePfBalance)}`}
+                    </span>
+                    <span className="text-[9.5px] opacity-60 mt-1 block truncate">
+                      Available Corpus
+                    </span>
+                  </div>
+
+                  <div className="card bg-base-100 shadow-xs border border-base-content/10 p-2.5 rounded-2xl">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-base-content/50 truncate">
+                        Employee (EE)
+                      </span>
+                      <div className="w-7 h-7 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500 shrink-0">
+                        <User size={15} />
+                      </div>
+                    </div>
+                    <span className="text-base font-black font-mono text-blue-600 dark:text-blue-400 mt-1.5 block truncate">
+                      {hideNumbers ? "••••••" : `₹${formatCurrency2Dec(pfKpiSummary.periodEePf || pfKpiSummary.allTimeEePf)}`}
+                    </span>
+                    <span className="text-[9.5px] opacity-60 mt-1 block truncate">
+                      Your 12% Deposit
+                    </span>
+                  </div>
+
+                  <div className="card bg-base-100 shadow-xs border border-base-content/10 p-2.5 rounded-2xl">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-base-content/50 truncate">
+                        Employer (ER)
+                      </span>
+                      <div className="w-7 h-7 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500 shrink-0">
+                        <Building2 size={15} />
+                      </div>
+                    </div>
+                    <span className="text-base font-black font-mono text-emerald-600 dark:text-emerald-400 mt-1.5 block truncate">
+                      {hideNumbers ? "••••••" : `₹${formatCurrency2Dec(pfKpiSummary.periodErPf || pfKpiSummary.allTimeErPf)}`}
+                    </span>
+                    <span className="text-[9.5px] opacity-60 mt-1 block truncate">
+                      Company Match 3.67%
+                    </span>
+                  </div>
+
+                  <div className="card bg-base-100 shadow-xs border border-base-content/10 p-2.5 rounded-2xl">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-base-content/50 truncate">
+                        Withdrawn Claims
+                      </span>
+                      <div className="w-7 h-7 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-500 shrink-0">
+                        <ArrowDownRight size={15} />
+                      </div>
+                    </div>
+                    <span className="text-base font-black font-mono text-amber-500 mt-1.5 block truncate">
+                      {hideNumbers ? "••••••" : `₹${formatCurrency2Dec(pfKpiSummary.periodWithdrawn || pfKpiSummary.allTimePfWithdrawn)}`}
+                    </span>
+                    <span className="text-[9.5px] opacity-60 mt-1 block truncate">
+                      {pfWithdrawals.length} Claims Settled
+                    </span>
+                  </div>
+                </section>
+
+                {/* 2. PF Analysis Section */}
+                <section className="card bg-base-100 shadow-xs border border-base-content/10 rounded-2xl">
+                  <div className="card-body p-3 space-y-3.5">
+                    {/* Minimal Header */}
+                    <div className="flex items-center justify-between border-b border-base-200 pb-2.5">
+                      <div className="min-w-0 flex-1">
+                        <h2 className="text-sm font-bold flex items-center gap-1.5 truncate">
+                          <ShieldCheck size={16} className="text-teal-500 shrink-0" />
+                          <span className="truncate">EPF Corpus Breakdown</span>
+                        </h2>
+                        <p className="text-[11px] text-base-content/60 truncate mt-0.5">
+                          Monthly contribution ledger and retirement growth
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Monthly Velocity Scrubber */}
+                    <div className="space-y-2 bg-base-200/40 p-2.5 rounded-2xl border border-base-content/10">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-extrabold text-base-content/70 uppercase tracking-wider flex items-center gap-1.5">
+                          <Sparkles size={13} className="text-primary" />
+                          Monthly Velocity
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 -mx-0.5 px-0.5">
+                        {/* 'All Range' Pill */}
+                        <button
+                          type="button"
+                          onClick={() => setMobilePfSelectedMonth("all")}
+                          className={`px-3 py-2 rounded-2xl flex flex-col items-start gap-0.5 whitespace-nowrap transition-all cursor-pointer shrink-0 border ${
+                            mobilePfSelectedMonth === "all"
+                              ? "bg-base-200/90 dark:bg-base-800/90 border-primary/50 text-base-content shadow-xs ring-1 ring-primary/30"
+                              : "bg-base-100/60 dark:bg-base-900/40 hover:bg-base-200/60 text-base-content/80 border-base-content/10"
+                          }`}
+                        >
+                          <span className={`text-[10px] font-black uppercase tracking-wider ${mobilePfSelectedMonth === "all" ? "text-primary" : "text-base-content/70"}`}>
+                            All Range
+                          </span>
+                          <span className="font-mono font-black text-xs text-base-content">
+                            {hideNumbers ? "••••••" : `₹${formatCurrency2Dec(pfKpiSummary.allTimeAvailablePfBalance)}`}
+                          </span>
+                          <span className="text-[9px] text-base-content/50 font-semibold">
+                            {filteredPfMonths.length} Months Total
+                          </span>
+                        </button>
+
+                        {/* Month Pills with MoM Delta */}
+                        {pfMonthlyDataWithMoM.map((d) => {
+                          const isSelected = mobilePfSelectedMonth === d.month;
+                          const shortMonth = dayjs(d.month).format("MMM 'YY");
+                          return (
+                            <button
+                              key={`pf-scrubber-${d.month}`}
+                              type="button"
+                              onClick={() => setMobilePfSelectedMonth(d.month)}
+                              className={`px-3 py-2 rounded-2xl flex flex-col items-start gap-0.5 whitespace-nowrap transition-all cursor-pointer shrink-0 border ${
+                                isSelected
+                                  ? "bg-base-200/90 dark:bg-base-800/90 border-primary/50 text-base-content shadow-xs ring-1 ring-primary/30"
+                                  : "bg-base-100/60 dark:bg-base-900/40 hover:bg-base-200/60 text-base-content/80 border-base-content/10"
+                              }`}
+                            >
+                              <div className="flex items-center gap-1.5 w-full justify-between">
+                                <span className={`text-[10px] font-black uppercase tracking-wider ${isSelected ? "text-primary" : "text-base-content/70"}`}>
+                                  {shortMonth}
+                                </span>
+                                {d.momDeltaPct !== null ? (
+                                  <span
+                                    className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md flex items-center gap-0.5 ${
+                                      d.momDeltaType === "increase"
+                                        ? "bg-emerald-500/15 text-emerald-500"
+                                        : d.momDeltaType === "decrease"
+                                        ? "bg-rose-500/15 text-rose-500"
+                                        : "bg-base-content/10 text-base-content/60"
+                                    }`}
+                                  >
+                                    {d.momDeltaType === "increase" ? (
+                                      <ArrowUpRight size={10} className="shrink-0" />
+                                    ) : d.momDeltaType === "decrease" ? (
+                                      <ArrowDownLeft size={10} className="shrink-0" />
+                                    ) : null}
+                                    {d.momDeltaPct > 0 ? `+${d.momDeltaPct}%` : `${d.momDeltaPct}%`}
+                                  </span>
+                                ) : (
+                                  <span className="text-[9px] opacity-40 font-mono">—</span>
+                                )}
+                              </div>
+                              <span className="font-mono font-black text-xs text-base-content">
+                                {hideNumbers ? "••••••" : `₹${formatCurrency2Dec(d.totalDeposit)}`}
+                              </span>
+                              <span className="text-[9px] text-base-content/50 font-semibold">
+                                Monthly Deposit
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Donut Chart */}
+                    <div className="bg-base-200/40 border border-base-content/10 rounded-2xl p-3 flex flex-col items-center justify-center">
+                      <div className="w-full flex items-center justify-between border-b border-base-200 pb-2 mb-2">
+                        <div className="flex items-center gap-2">
+                          <PieChart size={16} className="text-primary shrink-0" />
+                          <span className="text-xs font-extrabold text-base-content">
+                            Corpus Distribution
+                          </span>
+                        </div>
+                        <span className="text-[10px] font-bold font-mono px-2 py-0.5 rounded-lg bg-base-200 text-base-content/70">
+                          {pfMobileDonutData.periodLabel}
+                        </span>
+                      </div>
+
+                      {pfMobileDonutData.hasData ? (
+                        <div className="w-full">
+                          <Chart
+                            key={`pf-donut-${mobilePfSelectedMonth}-${pfMobileDonutData.total}-${pfMobileDonutData.series.join("-")}`}
+                            options={pfMobileDonutOptions}
+                            series={pfMobileDonutData.series}
+                            type="donut"
+                            height={280}
+                          />
+                        </div>
+                      ) : (
+                        <div className="py-10 flex flex-col items-center justify-center text-center space-y-2">
+                          <PieChart size={24} className="opacity-30" />
+                          <p className="text-xs font-semibold text-base-content/60">
+                            No PF records for {pfMobileDonutData.periodLabel}.
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Quick Summary Bar below Donut */}
+                      <div className="w-full grid grid-cols-3 gap-2 pt-3 border-t border-base-200 text-center text-xs">
+                        <div className="bg-base-100/70 p-2 rounded-xl border border-base-content/5">
+                          <span className="text-[9px] uppercase font-bold text-base-content/50 block truncate">
+                            Employee (EE)
+                          </span>
+                          <span className="font-mono font-black text-xs text-blue-500 block truncate mt-0.5">
+                            {hideNumbers ? "••••" : `₹${formatCurrencyCompact(pfMobileDonutData.ee)}`}
+                          </span>
+                        </div>
+                        <div className="bg-base-100/70 p-2 rounded-xl border border-base-content/5">
+                          <span className="text-[9px] uppercase font-bold text-base-content/50 block truncate">
+                            Employer (ER)
+                          </span>
+                          <span className="font-mono font-black text-xs text-emerald-500 block truncate mt-0.5">
+                            {hideNumbers ? "••••" : `₹${formatCurrencyCompact(pfMobileDonutData.er)}`}
+                          </span>
+                        </div>
+                        <div className="bg-base-100/70 p-2 rounded-xl border border-base-content/5">
+                          <span className="text-[9px] uppercase font-bold text-base-content/50 block truncate">
+                            Available EPF
+                          </span>
+                          <span className="font-mono font-black text-xs text-primary block truncate mt-0.5">
+                            {hideNumbers ? "••••" : `₹${formatCurrencyCompact(pfMobileDonutData.netBalance)}`}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Ranked Component Cards */}
+                    <div className="space-y-2.5">
+                      <div className="flex items-center justify-between px-1">
+                        <span className="text-xs font-extrabold text-base-content uppercase tracking-wider flex items-center gap-1.5">
+                          <Award size={14} className="text-primary" />
+                          Corpus Components
+                        </span>
+                        <span className="text-[10px] font-mono text-base-content/50">
+                          {pfMobileDonutData.rankedItems.length} Categories
+                        </span>
+                      </div>
+
+                      <div className="space-y-2">
+                        {pfMobileDonutData.rankedItems.map((item, idx) => (
+                          <div
+                            key={item.name}
+                            className="bg-base-200/40 border border-base-content/10 rounded-2xl p-3 space-y-2"
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <span className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black bg-base-300 text-base-content/70 shrink-0">
+                                  {idx + 1}
+                                </span>
+                                <span
+                                  className="w-2.5 h-2.5 rounded-full shrink-0"
+                                  style={{ backgroundColor: item.color }}
+                                />
+                                <span className="font-bold text-xs text-base-content truncate">
+                                  {item.name}
+                                </span>
+                              </div>
+                              <span className="font-mono text-xs font-black text-base-content shrink-0">
+                                {hideNumbers ? "••••••" : `₹${formatCurrency2Dec(item.amount)}`}
+                              </span>
+                            </div>
+
+                            <div className="w-full bg-base-300/70 h-2 rounded-full overflow-hidden">
+                              <div
+                                className="h-full rounded-full transition-all duration-300"
+                                style={{
+                                  width: `${Math.max(item.percentage, 2)}%`,
+                                  backgroundColor: item.color,
+                                }}
+                              />
+                            </div>
+
+                            <div className="flex items-center justify-between text-[10.5px] font-mono text-base-content/60 pt-0.5">
+                              <span className="truncate">{item.subtitle}</span>
+                              <span className="font-bold text-base-content/80">
+                                {item.percentage}% share
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </section>
+              </div>
+            )
+          )}
+
+          {/* ----------------------------------------------------------------------- */}
+          {/* C. MUTUAL FUNDS (MF) DASHBOARD (PHONE VIEW) */}
+          {/* ----------------------------------------------------------------------- */}
+          {!loading && activeDashboard === "MF" && (
+            mfData.length === 0 ? (
+              <div className="card bg-base-100 shadow-xs border border-base-content/10 p-6 text-center space-y-3 rounded-2xl">
+                <div className="w-12 h-12 rounded-2xl bg-purple-500/10 text-purple-600 dark:text-purple-400 mx-auto flex items-center justify-center">
+                  <PieChart size={24} />
+                </div>
+                <h3 className="text-base font-bold">No Mutual Funds Found</h3>
+                <p className="text-xs text-base-content/60">Log transactions in Table Entry to activate portfolio intelligence.</p>
+                <Link to="/dashboard/investment/table-entry?tab=mf" className="btn btn-primary btn-xs rounded-xl font-bold">
+                  Go to Table Entry
+                </Link>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {/* Quick Fund Selector Bar */}
+                <div className="flex items-center justify-between bg-base-100 shadow-xs border border-base-content/10 p-2.5 rounded-2xl">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className="w-7 h-7 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-600 dark:text-purple-400 shrink-0">
+                      <PieChart size={14} />
+                    </div>
+                    <div className="min-w-0">
+                      <span className="font-bold text-xs block truncate text-base-content">
+                        {selectedMfFund === "all"
+                          ? "All Mutual Funds"
+                          : selectedGroupObj
+                          ? `Group: ${selectedGroupObj.name}`
+                          : selectedFundObj?.schemeName || selectedFundObj?.amc || "Selected Scheme"}
+                      </span>
+                      <span className="text-[10px] text-base-content/50 block truncate">
+                        {selectedMfFund === "all" ? `${mfData.length} Schemes Total` : "Filter Applied"}
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsMfModalOpen(true)}
+                    className="btn btn-xs btn-primary rounded-xl font-bold gap-1 text-[11px] h-7 px-2.5"
+                  >
+                    <span>Change</span>
+                    <ChevronRight size={12} />
+                  </button>
+                </div>
+
+                {/* 1. Range Summary KPI Cards (2x2 Grid) */}
+                <section className="grid grid-cols-2 gap-2 px-0.5">
+                  <div className="card bg-base-100 shadow-xs border border-base-content/10 p-2.5 rounded-2xl">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-base-content/50 truncate">
+                        Net Invested
+                      </span>
+                      <div className="w-7 h-7 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-500 shrink-0">
+                        <PieChart size={15} />
+                      </div>
+                    </div>
+                    <span className="text-base font-black font-mono text-purple-600 dark:text-purple-400 mt-1.5 block truncate">
+                      {hideNumbers ? "••••••" : `₹${formatCurrency2Dec(mfKpiSummary.allTimeNetInvested)}`}
+                    </span>
+                    <span className="text-[9.5px] opacity-60 mt-1 block truncate">
+                      {filteredMfData.length} Schemes
+                    </span>
+                  </div>
+
+                  <div className="card bg-base-100 shadow-xs border border-base-content/10 p-2.5 rounded-2xl">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-base-content/50 truncate">
+                        Current Value
+                      </span>
+                      <div className="w-7 h-7 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500 shrink-0">
+                        <Landmark size={15} />
+                      </div>
+                    </div>
+                    <span className="text-base font-black font-mono text-blue-600 dark:text-blue-400 mt-1.5 block truncate">
+                      {hideNumbers ? "••••••" : `₹${formatCurrency2Dec(mfKpiSummary.currentValue)}`}
+                    </span>
+                    <span className="text-[9.5px] opacity-60 mt-1 block truncate">
+                      Portfolio Valuation
+                    </span>
+                  </div>
+
+                  <div className="card bg-base-100 shadow-xs border border-base-content/10 p-2.5 rounded-2xl">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-base-content/50 truncate">
+                        Absolute Gain
+                      </span>
+                      <div className={`w-7 h-7 rounded-xl flex items-center justify-center shrink-0 ${mfKpiSummary.absoluteGain >= 0 ? "bg-emerald-500/10 text-emerald-500" : "bg-rose-500/10 text-rose-500"}`}>
+                        <TrendingUp size={15} />
+                      </div>
+                    </div>
+                    <span className={`text-base font-black font-mono mt-1.5 block truncate ${mfKpiSummary.absoluteGain >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
+                      {hideNumbers ? "••••••" : `${mfKpiSummary.absoluteGain >= 0 ? "+" : ""}₹${formatCurrency2Dec(mfKpiSummary.absoluteGain)}`}
+                    </span>
+                    <span className="text-[9.5px] opacity-60 mt-1 block truncate">
+                      {mfKpiSummary.absoluteReturnPct >= 0 ? "+" : ""}{mfKpiSummary.absoluteReturnPct.toFixed(1)}% Return
+                    </span>
+                  </div>
+
+                  <div className="card bg-base-100 shadow-xs border border-base-content/10 p-2.5 rounded-2xl">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-base-content/50 truncate">
+                        Monthly SIPs
+                      </span>
+                      <div className="w-7 h-7 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-500 shrink-0">
+                        <Clock size={15} />
+                      </div>
+                    </div>
+                    <span className="text-base font-black font-mono text-indigo-600 dark:text-indigo-400 mt-1.5 block truncate">
+                      {hideNumbers ? "••••••" : `₹${formatCurrency2Dec(mfKpiSummary.activeSipAmount)}`}
+                    </span>
+                    <span className="text-[9.5px] opacity-60 mt-1 block truncate">
+                      {mfKpiSummary.activeSipsCount} Active Plans
+                    </span>
+                  </div>
+                </section>
+
+                {/* 2. MF Analysis Section */}
+                <section className="card bg-base-100 shadow-xs border border-base-content/10 rounded-2xl">
+                  <div className="card-body p-3 space-y-3.5">
+                    {/* Minimal Header */}
+                    <div className="flex items-center justify-between border-b border-base-200 pb-2.5">
+                      <div className="min-w-0 flex-1">
+                        <h2 className="text-sm font-bold flex items-center gap-1.5 truncate">
+                          <PieChart size={16} className="text-purple-500 shrink-0" />
+                          <span className="truncate">Mutual Fund Allocation</span>
+                        </h2>
+                        <p className="text-[11px] text-base-content/60 truncate mt-0.5">
+                          Scheme diversification and capital allocation
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Monthly Velocity Scrubber */}
+                    <div className="space-y-2 bg-base-200/40 p-2.5 rounded-2xl border border-base-content/10">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-extrabold text-base-content/70 uppercase tracking-wider flex items-center gap-1.5">
+                          <Sparkles size={13} className="text-primary" />
+                          Monthly Velocity
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 -mx-0.5 px-0.5">
+                        {/* 'All Range' Pill */}
+                        <button
+                          type="button"
+                          onClick={() => setMobileMfSelectedMonth("all")}
+                          className={`px-3 py-2 rounded-2xl flex flex-col items-start gap-0.5 whitespace-nowrap transition-all cursor-pointer shrink-0 border ${
+                            mobileMfSelectedMonth === "all"
+                              ? "bg-base-200/90 dark:bg-base-800/90 border-primary/50 text-base-content shadow-xs ring-1 ring-primary/30"
+                              : "bg-base-100/60 dark:bg-base-900/40 hover:bg-base-200/60 text-base-content/80 border-base-content/10"
+                          }`}
+                        >
+                          <span className={`text-[10px] font-black uppercase tracking-wider ${mobileMfSelectedMonth === "all" ? "text-primary" : "text-base-content/70"}`}>
+                            All Range
+                          </span>
+                          <span className="font-mono font-black text-xs text-base-content">
+                            {hideNumbers ? "••••••" : `₹${formatCurrency2Dec(mfKpiSummary.allTimeNetInvested)}`}
+                          </span>
+                          <span className="text-[9px] text-base-content/50 font-semibold">
+                            {mfMonthlyPlotData.length} Months Total
+                          </span>
+                        </button>
+
+                        {/* Month Pills with MoM Delta */}
+                        {mfMonthlyDataWithMoM.map((d) => {
+                          const mLabel = d.rawMonth ? dayjs(`${d.rawMonth}-01`).format("MMM 'YY") : d.month;
+                          const isSelected = mobileMfSelectedMonth === (d.rawMonth || d.month);
+                          return (
+                            <button
+                              key={`mf-scrubber-${d.rawMonth || d.month}`}
+                              type="button"
+                              onClick={() => setMobileMfSelectedMonth(d.rawMonth || d.month)}
+                              className={`px-3 py-2 rounded-2xl flex flex-col items-start gap-0.5 whitespace-nowrap transition-all cursor-pointer shrink-0 border ${
+                                isSelected
+                                  ? "bg-base-200/90 dark:bg-base-800/90 border-primary/50 text-base-content shadow-xs ring-1 ring-primary/30"
+                                  : "bg-base-100/60 dark:bg-base-900/40 hover:bg-base-200/60 text-base-content/80 border-base-content/10"
+                              }`}
+                            >
+                              <div className="flex items-center gap-1.5 w-full justify-between">
+                                <span className={`text-[10px] font-black uppercase tracking-wider ${isSelected ? "text-primary" : "text-base-content/70"}`}>
+                                  {mLabel}
+                                </span>
+                                {d.momDeltaPct !== null ? (
+                                  <span
+                                    className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md flex items-center gap-0.5 ${
+                                      d.momDeltaType === "increase"
+                                        ? "bg-emerald-500/15 text-emerald-500"
+                                        : d.momDeltaType === "decrease"
+                                        ? "bg-rose-500/15 text-rose-500"
+                                        : "bg-base-content/10 text-base-content/60"
+                                    }`}
+                                  >
+                                    {d.momDeltaType === "increase" ? (
+                                      <ArrowUpRight size={10} className="shrink-0" />
+                                    ) : d.momDeltaType === "decrease" ? (
+                                      <ArrowDownLeft size={10} className="shrink-0" />
+                                    ) : null}
+                                    {d.momDeltaPct > 0 ? `+${d.momDeltaPct}%` : `${d.momDeltaPct}%`}
+                                  </span>
+                                ) : (
+                                  <span className="text-[9px] opacity-40 font-mono">—</span>
+                                )}
+                              </div>
+                              <span className="font-mono font-black text-xs text-base-content">
+                                {hideNumbers ? "••••••" : `₹${formatCurrency2Dec(d.totalDeposit)}`}
+                              </span>
+                              <span className="text-[9px] text-base-content/50 font-semibold">
+                                Monthly Inflow
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Donut Chart */}
+                    <div className="bg-base-200/40 border border-base-content/10 rounded-2xl p-3 flex flex-col items-center justify-center">
+                      <div className="w-full flex items-center justify-between border-b border-base-200 pb-2 mb-2">
+                        <div className="flex items-center gap-2">
+                          <PieChart size={16} className="text-primary shrink-0" />
+                          <span className="text-xs font-extrabold text-base-content">
+                            Allocation Breakdown
+                          </span>
+                        </div>
+                        <span className="text-[10px] font-bold font-mono px-2 py-0.5 rounded-lg bg-base-200 text-base-content/70">
+                          {mfMobileDonutData.periodLabel}
+                        </span>
+                      </div>
+
+                      {mfMobileDonutData.hasData ? (
+                        <div className="w-full">
+                          <Chart
+                            key={`mf-donut-${mfMobileDonutData.total}-${mfMobileDonutData.series.join("-")}`}
+                            options={mfMobileDonutOptions}
+                            series={mfMobileDonutData.series}
+                            type="donut"
+                            height={280}
+                          />
+                        </div>
+                      ) : (
+                        <div className="py-10 flex flex-col items-center justify-center text-center space-y-2">
+                          <PieChart size={24} className="opacity-30" />
+                          <p className="text-xs font-semibold text-base-content/60">
+                            No mutual fund records for {mfMobileDonutData.periodLabel}.
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Quick Summary Bar below Donut */}
+                      <div className="w-full grid grid-cols-3 gap-2 pt-3 border-t border-base-200 text-center text-xs">
+                        <div className="bg-base-100/70 p-2 rounded-xl border border-base-content/5">
+                          <span className="text-[9px] uppercase font-bold text-base-content/50 block truncate">
+                            Invested
+                          </span>
+                          <span className="font-mono font-black text-xs text-purple-500 block truncate mt-0.5">
+                            {hideNumbers ? "••••" : `₹${formatCurrencyCompact(mfMobileDonutData.total)}`}
+                          </span>
+                        </div>
+                        <div className="bg-base-100/70 p-2 rounded-xl border border-base-content/5">
+                          <span className="text-[9px] uppercase font-bold text-base-content/50 block truncate">
+                            Current
+                          </span>
+                          <span className="font-mono font-black text-xs text-blue-500 block truncate mt-0.5">
+                            {hideNumbers ? "••••" : `₹${formatCurrencyCompact(mfKpiSummary.currentValue)}`}
+                          </span>
+                        </div>
+                        <div className="bg-base-100/70 p-2 rounded-xl border border-base-content/5">
+                          <span className="text-[9px] uppercase font-bold text-base-content/50 block truncate">
+                            Net Gain
+                          </span>
+                          <span className={`font-mono font-black text-xs block truncate mt-0.5 ${mfKpiSummary.absoluteGain >= 0 ? "text-emerald-500" : "text-rose-500"}`}>
+                            {hideNumbers ? "••••" : `${mfKpiSummary.absoluteGain >= 0 ? "+" : ""}₹${formatCurrencyCompact(mfKpiSummary.absoluteGain)}`}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Ranked Schemes Cards */}
+                    <div className="space-y-2.5">
+                      <div className="flex items-center justify-between px-1">
+                        <span className="text-xs font-extrabold text-base-content uppercase tracking-wider flex items-center gap-1.5">
+                          <Award size={14} className="text-primary" />
+                          {mfMobileDonutData.isSchemeBreakdown ? "Ranked Schemes Allocation" : "Cashflow Categories"}
+                        </span>
+                        <span className="text-[10px] font-mono text-base-content/50">
+                          {mfMobileDonutData.rankedItems.length} Items
+                        </span>
+                      </div>
+
+                      <div className="space-y-2">
+                        {mfMobileDonutData.rankedItems.map((item, idx) => (
+                          <div
+                            key={item.name}
+                            className="bg-base-200/40 border border-base-content/10 rounded-2xl p-3 space-y-2"
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <span className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black bg-base-300 text-base-content/70 shrink-0">
+                                  {idx + 1}
+                                </span>
+                                <span
+                                  className="w-2.5 h-2.5 rounded-full shrink-0"
+                                  style={{ backgroundColor: item.color }}
+                                />
+                                <span className="font-bold text-xs text-base-content truncate">
+                                  {item.name}
+                                </span>
+                              </div>
+                              <span className="font-mono text-xs font-black text-base-content shrink-0">
+                                {hideNumbers ? "••••••" : `₹${formatCurrency2Dec(item.amount)}`}
+                              </span>
+                            </div>
+
+                            <div className="w-full bg-base-300/70 h-2 rounded-full overflow-hidden">
+                              <div
+                                className="h-full rounded-full transition-all duration-300"
+                                style={{
+                                  width: `${Math.max(item.percentage, 2)}%`,
+                                  backgroundColor: item.color,
+                                }}
+                              />
+                            </div>
+
+                            <div className="flex items-center justify-between text-[10.5px] font-mono text-base-content/60 pt-0.5">
+                              <span className="truncate">{item.subtitle}</span>
+                              <span className="font-bold text-base-content/80">
+                                {item.percentage}% share
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </section>
+              </div>
+            )
+          )}
+
+          {/* ----------------------------------------------------------------------- */}
+          {/* D. STOCKS DASHBOARD (PHONE VIEW) */}
+          {/* ----------------------------------------------------------------------- */}
+          {!loading && activeDashboard === "STOCKS" && (
+            <StocksDashboard
+              stocksData={stocksData}
+              loading={loading}
+              onRefresh={() => {
+                apiCache.invalidate("/investment");
+                fetchData();
+              }}
+              hideNumbers={hideNumbers}
+              externalSubView={stockSubView}
+              onSubViewChange={setStockSubView}
+              selectedCap={stockSelectedCap}
+              onCapChange={setStockSelectedCap}
+              searchQuery={stockSearchQuery}
+              onSearchChange={setStockSearchQuery}
+              activeMainTab={stockMainTab}
+              onMainTabChange={setStockMainTab}
+            />
+          )}
+
+          {/* ----------------------------------------------------------------------- */}
+          {/* E. FIXED DEPOSIT DASHBOARD (PHONE VIEW) */}
+          {/* ----------------------------------------------------------------------- */}
+          {!loading && activeDashboard === "FD" && (
+            <FixedDepositDashboard
+              fdData={fdData}
+              loading={loading}
+              onRefresh={() => {
+                apiCache.invalidate("/investment");
+                fetchData();
+              }}
+              fdStatusFilter={fdStatusFilter}
+              onFdStatusFilterChange={setFdStatusFilter}
+              bankFilter={fdBankFilter}
+              onBankFilterChange={setFdBankFilter}
+              searchQuery={fdSearchQuery}
+              onSearchChange={setFdSearchQuery}
+              activeMainTab={fdMainTab}
+              onMainTabChange={setFdMainTab}
+              hideNumbers={hideNumbers}
+              isAddModalOpen={isAddFdModalOpen}
+              setIsAddModalOpen={setIsAddFdModalOpen}
+            />
+          )}
+
+          {/* ----------------------------------------------------------------------- */}
+          {/* F. RECURRING DEPOSITS (PHONE VIEW) */}
+          {/* ----------------------------------------------------------------------- */}
+          {!loading && activeDashboard === "RD" && (
+            <div className="card bg-base-100 shadow-xs border border-base-content/10 p-6 text-center space-y-3 rounded-2xl">
+              <div className="w-12 h-12 rounded-2xl bg-orange-500/10 text-orange-600 dark:text-orange-400 mx-auto flex items-center justify-center">
+                <PiggyBank size={24} />
+              </div>
+              <h3 className="text-base font-bold">Recurring Deposits</h3>
+              <p className="text-xs text-base-content/60">Systematic Bank Recurring Deposits ledger and maturity forecasts.</p>
+              <Link to="/dashboard/investment/table-entry?tab=rd" className="btn btn-primary btn-xs rounded-xl font-bold">
+                Open RD Table Entry
+              </Link>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* MUTUAL FUND SELECTION MODAL POPUP */}

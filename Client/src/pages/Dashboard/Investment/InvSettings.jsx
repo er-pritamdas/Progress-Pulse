@@ -74,48 +74,88 @@ const getRelativeDateInfo = (targetDateStr) => {
 
   if (diffDays < 0) {
     const absDays = Math.abs(diffDays);
+    const years = today.diff(target, "year");
+    const afterYears = target.add(years, "year");
+    const months = today.diff(afterYears, "month");
+    const parts = [];
+    const shortParts = [];
+    if (years > 0) {
+      parts.push(`${years} ${years === 1 ? "year" : "years"}`);
+      shortParts.push(`${years} ${years === 1 ? "yr" : "yrs"}`);
+    }
+    if (months > 0) {
+      parts.push(`${months} ${months === 1 ? "month" : "months"}`);
+      shortParts.push(`${months} ${months === 1 ? "mo" : "mos"}`);
+    }
+    const timeStr = parts.length > 0 ? parts.join(", ") : `${absDays} ${absDays === 1 ? "day" : "days"}`;
+    const shortTimeStr = shortParts.length > 0 ? shortParts.join(", ") : `${absDays}d`;
     return {
-      text: `${absDays} ${absDays === 1 ? "day" : "days"} ago`,
+      text: `${timeStr} ago`,
+      shortText: `${shortTimeStr} ago`,
       subtext: "This date has already passed",
       isPast: true,
       diffDays,
+      years,
+      months,
     };
   }
   if (diffDays === 0) {
     return {
       text: "Today",
+      shortText: "Today",
       subtext: "Goal milestone is due today",
       isPast: false,
       isToday: true,
       diffDays: 0,
+      years: 0,
+      months: 0,
     };
   }
   if (diffDays === 1) {
     return {
       text: "Tomorrow",
+      shortText: "Tomorrow",
       subtext: "1 day from today",
       isPast: false,
       diffDays: 1,
+      years: 0,
+      months: 0,
     };
   }
 
-  const years = Math.floor(diffDays / 365);
-  const remainingDays = diffDays % 365;
-  const months = Math.floor(remainingDays / 30);
-  const days = remainingDays % 30;
+  const years = target.diff(today, "year");
+  const afterYears = today.add(years, "year");
+  const months = target.diff(afterYears, "month");
+  const afterMonths = afterYears.add(months, "month");
+  const days = target.diff(afterMonths, "day");
 
   const parts = [];
-  if (years > 0) parts.push(`${years} ${years === 1 ? "year" : "years"}`);
-  if (months > 0) parts.push(`${months} ${months === 1 ? "month" : "months"}`);
-  if (days > 0 && years === 0) parts.push(`${days} ${days === 1 ? "day" : "days"}`);
+  const shortParts = [];
+  if (years > 0) {
+    parts.push(`${years} ${years === 1 ? "year" : "years"}`);
+    shortParts.push(`${years} ${years === 1 ? "yr" : "yrs"}`);
+  }
+  if (months > 0) {
+    parts.push(`${months} ${months === 1 ? "month" : "months"}`);
+    shortParts.push(`${months} ${months === 1 ? "mo" : "mos"}`);
+  }
+  if (years === 0 && months === 0 && days > 0) {
+    parts.push(`${days} ${days === 1 ? "day" : "days"}`);
+    shortParts.push(`${days}d`);
+  }
 
   const timeString = parts.length > 0 ? parts.join(", ") : `${diffDays} days`;
+  const shortTimeString = shortParts.length > 0 ? shortParts.join(", ") : `${diffDays} days`;
 
   return {
-    text: `${timeString} away`,
+    text: `${timeString}`,
+    shortText: `${shortTimeString}`,
     subtext: `${diffDays.toLocaleString("en-IN")} days from today (${dayjs(targetDateStr).format("DD MMM YYYY")})`,
     isPast: false,
     diffDays,
+    years,
+    months,
+    days,
   };
 };
 
@@ -1605,7 +1645,11 @@ export default function InvSettings() {
   };
 
   return (
-    <div className="w-full space-y-6 pb-28 select-none">
+    <div className="w-full select-none">
+      {/* ============================================================ */}
+      {/* DESKTOP VIEW (hidden md:block)                              */}
+      {/* ============================================================ */}
+      <div className="hidden md:block w-full space-y-6 pb-28">
       {/* -------------------------------------------------------------------- */}
       {/* 1. TOP STICKY HEADER BAR                                             */}
       {/* -------------------------------------------------------------------- */}
@@ -2784,6 +2828,831 @@ export default function InvSettings() {
           </>
         )}
       </div>
+      </div>
+
+      {/* ============================================================ */}
+      {/* MOBILE VIEW (block md:hidden)                               */}
+      {/* ============================================================ */}
+      <div className="block md:hidden w-full pb-24 select-none">
+        {/* 1. Sticky Mobile Top Header (In-flow sticky inside main) */}
+        <div className="sticky top-0 z-30 bg-base-100/95 dark:bg-base-900/95 backdrop-blur-md px-3 h-12 border-b border-base-content/8 shadow-xs flex items-center">
+          <div className="flex items-center justify-between gap-2 w-full">
+            {/* Title & Goal Count */}
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold border border-primary/20 shrink-0 shadow-2xs">
+                <Target size={16} />
+              </div>
+              <div className="min-w-0">
+                <h1 className="text-sm font-extrabold tracking-tight text-base-content truncate leading-tight">
+                  Investment Planner
+                </h1>
+                <span className="text-[10px] text-base-content/50 font-bold block">
+                  {goals.length} Life {goals.length === 1 ? "Goal" : "Goals"}
+                </span>
+              </div>
+            </div>
+
+            {/* Actions: Portfolio link, Refresh, + Plan */}
+            <div className="flex items-center gap-1.5 shrink-0">
+              <Link
+                to="/dashboard/investment/portfolio"
+                className="btn btn-ghost btn-xs btn-circle text-base-content/60 hover:text-primary hover:bg-base-200"
+                title="Go to Portfolio"
+              >
+                <ExternalLink size={14} />
+              </Link>
+              <button
+                type="button"
+                onClick={() => {
+                  apiCache.invalidate("/investment");
+                  fetchAllData();
+                }}
+                disabled={loading}
+                className="btn btn-ghost btn-xs btn-circle text-base-content/60 hover:text-primary hover:bg-base-200"
+                title="Refresh all data"
+              >
+                <RefreshCw size={13} className={loading ? "animate-spin text-primary" : ""} />
+              </button>
+              <button
+                type="button"
+                onClick={openCreateGoalModal}
+                disabled={loading}
+                className="btn btn-primary btn-xs rounded-xl font-extrabold gap-1 shadow-xs px-2.5"
+              >
+                <Plus size={13} />
+                <span>Plan</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Mobile Content Container */}
+        <div className="px-3 pt-3 space-y-3.5">
+          {/* Loading Spinner */}
+          {loading && (
+            <div className="h-60 flex items-center justify-center">
+              <span className="loading loading-spinner loading-md text-primary"></span>
+            </div>
+          )}
+
+          {/* Error Alert */}
+          {error && !loading && (
+            <div className="alert alert-warning shadow-xs text-xs font-bold rounded-2xl py-2 px-3">
+              <AlertCircle size={14} />
+              <span>{error}</span>
+            </div>
+          )}
+
+          {!loading && (
+            <>
+              {/* Top Summary Card */}
+              <div className="card bg-base-200 border border-base-content/8 rounded-2xl p-3.5 space-y-3 shadow-xs">
+                {/* Header & Target Funding */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <Target size={14} className="text-primary" />
+                    <span className="text-[10.5px] uppercase font-bold text-base-content/60 tracking-wider">
+                      Target Funding
+                    </span>
+                  </div>
+                  <span className="badge badge-xs font-mono font-bold bg-primary/10 text-primary border-primary/20">
+                    {topMetrics.totalPlansCount} {topMetrics.totalPlansCount === 1 ? "Goal" : "Goals"}
+                  </span>
+                </div>
+
+                {/* Amount and Percent */}
+                <div className="flex items-baseline justify-between gap-2">
+                  <div className="min-w-0">
+                    <span className="text-xl font-black font-mono tracking-tight text-emerald-600 dark:text-emerald-400">
+                      {formatINRCompact(topMetrics.totalEarmarked)}
+                    </span>
+                    <span className="text-xs text-base-content/50 font-medium ml-1.5">
+                      of {formatINRCompact(topMetrics.totalTarget)} Target
+                    </span>
+                  </div>
+                  <span className="font-mono font-black text-xs px-2 py-0.5 rounded-lg bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shrink-0">
+                    {topMetrics.overallFunded}%
+                  </span>
+                </div>
+
+                {/* Progress Bar */}
+                <div className="w-full bg-base-100 rounded-full h-2 overflow-hidden border border-base-300/50">
+                  <div
+                    className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-500 rounded-full"
+                    style={{ width: `${Math.min(100, topMetrics.overallFunded)}%` }}
+                  />
+                </div>
+
+                {/* 2 Tappable Sub-Cards: Earmarked Breakdown & Unallocated Assets */}
+                <div className="grid grid-cols-2 gap-2 pt-0.5">
+                  {/* Tappable Card 1: Total Earmarked */}
+                  <div
+                    onClick={() => setIsEarmarkedModalOpen(true)}
+                    className="bg-base-100/90 p-2.5 rounded-xl border border-base-300/60 active:scale-[0.98] transition-transform cursor-pointer space-y-1 shadow-2xs"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-[9.5px] font-bold text-base-content/60 uppercase tracking-wide flex items-center gap-1">
+                        <Coins size={11} className="text-emerald-500" /> Earmarked
+                      </span>
+                      <ArrowUpRight size={11} className="text-emerald-500 opacity-70" />
+                    </div>
+                    <div className="font-mono font-extrabold text-xs text-emerald-600 dark:text-emerald-400 truncate">
+                      {formatINRCompact(topMetrics.totalEarmarked)}
+                    </div>
+                    <div className="text-[9px] text-base-content/50 truncate">
+                      Tap breakdown ↗
+                    </div>
+                  </div>
+
+                  {/* Tappable Card 2: Unallocated Assets */}
+                  <div
+                    onClick={() => setIsUnallocatedModalOpen(true)}
+                    className="bg-base-100/90 p-2.5 rounded-xl border border-base-300/60 active:scale-[0.98] transition-transform cursor-pointer space-y-1 shadow-2xs"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-[9.5px] font-bold text-base-content/60 uppercase tracking-wide flex items-center gap-1">
+                        <Sparkles size={11} className="text-amber-500" /> Free Assets
+                      </span>
+                      <ArrowUpRight size={11} className="text-amber-500 opacity-70" />
+                    </div>
+                    <div className="font-mono font-extrabold text-xs text-amber-500 truncate">
+                      {formatINRCompact(topMetrics.totalUnallocatedWealth)}
+                    </div>
+                    <div className="text-[9px] text-base-content/50 truncate">
+                      {topMetrics.totalHoldingsWealth > 0
+                        ? `${Math.round((topMetrics.totalUnallocatedWealth / topMetrics.totalHoldingsWealth) * 100)}% free ↗`
+                        : "100% free ↗"}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Net Worth Footnote */}
+                <div className="flex items-center justify-between pt-2 border-t border-base-300/50 text-[10px] text-base-content/55 font-medium px-0.5">
+                  <span>Total Net Worth Across Holdings</span>
+                  <span className="font-mono font-bold text-base-content/80">
+                    {formatINRCompact(topMetrics.totalHoldingsWealth)}
+                  </span>
+                </div>
+              </div>
+
+              {/* Section Header Toolbar */}
+              <div className="flex items-center justify-between px-0.5 pt-1">
+                <div className="flex items-center gap-1.5">
+                  <h2 className="text-xs font-black uppercase tracking-wider text-base-content/70">
+                    Life Goals & Planners
+                  </h2>
+                  <span className="badge badge-xs badge-neutral font-mono font-bold">
+                    {goals.length}
+                  </span>
+                </div>
+
+                {goals.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={toggleAllPlansCollapse}
+                    className="btn btn-ghost btn-xs text-primary font-bold gap-1 text-[11px] h-6 min-h-0 px-2 rounded-lg"
+                  >
+                    {areAllPlansCollapsed ? (
+                      <>
+                        <ChevronDown size={12} />
+                        <span>Expand All</span>
+                      </>
+                    ) : (
+                      <>
+                        <ChevronUp size={12} />
+                        <span>Collapse</span>
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
+
+              {/* Goals List or Empty State */}
+              {goals.length === 0 ? (
+                <div className="card bg-base-200 border border-base-300 p-6 text-center rounded-2xl space-y-3 shadow-xs">
+                  <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mx-auto border border-primary/20 shadow-2xs">
+                    <Target size={24} />
+                  </div>
+                  <div>
+                    <h3 className="font-extrabold text-base text-base-content">
+                      No Financial Goals Created Yet
+                    </h3>
+                    <p className="text-xs text-base-content/60 mt-1 max-w-xs mx-auto">
+                      Create your first goal to start earmarking your savings, stocks, mutual funds, FDs, RDs, and PF.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={openCreateGoalModal}
+                    className="btn btn-primary btn-sm rounded-xl font-bold gap-1.5 mx-auto px-4 shadow-sm"
+                  >
+                    <Plus size={15} />
+                    <span>Create Your First Goal</span>
+                  </button>
+                  <div className="pt-3 border-t border-base-300/80 space-y-2">
+                    <span className="text-[10px] font-bold text-base-content/50 uppercase tracking-wider block">
+                      Quick Start Presets
+                    </span>
+                    <div className="flex flex-wrap items-center justify-center gap-1.5">
+                      {GOAL_PRESETS.filter((p) => p.id !== "custom").map((preset) => (
+                        <button
+                          key={preset.id}
+                          type="button"
+                          onClick={() => {
+                            setEditingGoal(null);
+                            setGoalForm({
+                              title: preset.name,
+                              icon: preset.icon,
+                              category: preset.id,
+                              targetAmount: preset.defaultAmount,
+                              targetDate: dayjs().add(2, "year").format("YYYY-MM-DD"),
+                              notes: "",
+                            });
+                            setIsGoalModalOpen(true);
+                          }}
+                          className="btn btn-xs btn-ghost bg-base-100 hover:bg-base-300 border border-base-300 rounded-lg gap-1 text-[11px] font-semibold py-0.5 h-6 min-h-0"
+                        >
+                          <span>{preset.icon}</span>
+                          <span>{preset.name}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {goals.map((goal) => {
+                    const metrics = calculateGoalMetrics(goal);
+                    const isCollapsed = !expandedPlans[goal.id];
+                    const hasItems = metrics.items.length > 0;
+                    const dateInfo = getRelativeDateInfo(goal.targetDate);
+                    const activeTab = getGoalTab(goal.id);
+
+                    return (
+                      <div
+                        key={goal.id}
+                        className="bg-base-200 border border-base-300/80 rounded-2xl shadow-xs transition-all duration-200"
+                      >
+                        {/* Goal Header (Sticky while scrolling) */}
+                        <div
+                          onClick={() => togglePlanCollapse(goal.id)}
+                          className={`sticky top-12 z-20 p-3 bg-base-300/95 dark:bg-base-800/95 backdrop-blur-md active:bg-base-300 transition-colors cursor-pointer select-none space-y-2.5 rounded-t-2xl shadow-xs ${
+                            isCollapsed ? "rounded-b-2xl" : "border-b border-base-300/80"
+                          }`}
+                        >
+                          {/* Row 1: Icon, Title, % Badge, Chevron */}
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 min-w-0 flex-1">
+                              <div className="w-8 h-8 rounded-xl bg-base-100 flex items-center justify-center text-base border border-base-300/70 shadow-2xs shrink-0">
+                                {goal.icon || "🎯"}
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <h3 className="font-extrabold text-sm text-base-content truncate leading-tight">
+                                  {goal.title}
+                                </h3>
+                                {goal.notes ? (
+                                  <p className="text-[10px] text-base-content/60 truncate leading-tight mt-0.5">
+                                    {goal.notes}
+                                  </p>
+                                ) : (
+                                  <p className="text-[10px] text-base-content/50 font-mono leading-tight mt-0.5">
+                                    Target: {formatINRCompact(goal.targetAmount)}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Status Badge & Chevron */}
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <span
+                                className={`font-mono font-black text-xs px-2 py-0.5 rounded-lg shadow-2xs ${
+                                  metrics.percentFunded >= 100
+                                    ? "bg-emerald-600 text-white"
+                                    : metrics.percentFunded >= 50
+                                    ? "bg-primary text-primary-content"
+                                    : "bg-amber-400 text-slate-950"
+                                }`}
+                              >
+                                {metrics.percentFunded}%
+                              </span>
+                              <div className="w-6 h-6 flex items-center justify-center text-primary/70">
+                                {isCollapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Row 2: Funding Numbers & Progress Bar */}
+                          <div className="space-y-1">
+                            <div className="flex items-baseline justify-between text-xs font-mono">
+                              <span className="font-extrabold text-base-content">
+                                {formatINR(metrics.totalAllocated)}
+                              </span>
+                              <span className="text-[10.5px] text-base-content/50">
+                                / {formatINRCompact(goal.targetAmount)}
+                              </span>
+                            </div>
+                            <div className="w-full bg-base-100 rounded-full h-1.5 overflow-hidden border border-base-300/40">
+                              <div
+                                className={`h-full rounded-full transition-all duration-500 ${
+                                  metrics.percentFunded >= 100
+                                    ? "bg-emerald-500"
+                                    : metrics.percentFunded >= 50
+                                    ? "bg-primary"
+                                    : "bg-amber-500"
+                                }`}
+                                style={{ width: `${Math.min(100, metrics.percentFunded)}%` }}
+                              />
+                            </div>
+                          </div>
+
+                          {/* Row 3: Dedicated Symmetrical Line for Target Date & Distance */}
+                          {goal.targetDate ? (
+                            <div className="flex items-center justify-between gap-2 text-xs font-mono bg-base-100/90 dark:bg-base-900/60 px-2.5 py-1.5 rounded-xl border border-base-300/70 shadow-2xs">
+                              {/* Left Side: Target Date (Fully visible, never truncated) */}
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                <div className="w-5 h-5 rounded-md bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                                  <Calendar size={11} />
+                                </div>
+                                <div className="flex items-center gap-1 shrink-0">
+                                  <span className="text-[9.5px] uppercase font-bold text-base-content/50 tracking-wider">
+                                    Target:
+                                  </span>
+                                  <span className="font-extrabold text-[11px] sm:text-xs text-base-content whitespace-nowrap">
+                                    {dayjs(goal.targetDate).format("DD MMM YYYY")}
+                                  </span>
+                                </div>
+                              </div>
+
+                              {/* Symmetrical Center Divider Dot */}
+                              <span className="w-1 h-1 rounded-full bg-base-content/25 shrink-0" />
+
+                              {/* Right Side: Distance Horizon (Symmetrical Icon + Text) */}
+                              {dateInfo && (
+                                <div className="flex items-center gap-1.5 shrink-0">
+                                  <div className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 ${
+                                    dateInfo.isPast ? "bg-error/10 text-error" : "bg-primary/10 text-primary"
+                                  }`}>
+                                    <Clock size={11} />
+                                  </div>
+                                  <span
+                                    className={`font-black text-[11px] sm:text-xs whitespace-nowrap ${
+                                      dateInfo.isPast
+                                        ? "text-error"
+                                        : dateInfo.isToday
+                                        ? "text-warning"
+                                        : "text-primary"
+                                    }`}
+                                  >
+                                    {dateInfo.shortText || dateInfo.text}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="flex items-center justify-between gap-2 text-xs font-mono bg-base-100/90 dark:bg-base-900/60 px-2.5 py-1.5 rounded-xl border border-base-300/70 shadow-2xs">
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                <div className="w-5 h-5 rounded-md bg-base-200 text-base-content/40 flex items-center justify-center shrink-0">
+                                  <Calendar size={11} />
+                                </div>
+                                <span className="text-[10.5px] text-base-content/50 italic">No target date set</span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openEditGoalModal(goal);
+                                }}
+                                className="btn btn-xs btn-ghost text-primary text-[10px] font-bold h-5 min-h-0 px-1.5"
+                              >
+                                + Set Date
+                              </button>
+                            </div>
+                          )}
+
+                          {/* Row 4: Sources Count & Quick Add Sources button */}
+                          <div className="flex items-center justify-between gap-1.5 pt-0.5">
+                            <div className="flex items-center gap-1.5">
+                              <span className="badge badge-xs text-[10px] font-mono py-1.5 px-2 gap-1 bg-base-100 border border-base-300/70">
+                                <Layers size={10} className="opacity-60" />
+                                <span>{metrics.itemCount} {metrics.itemCount === 1 ? "source" : "sources"}</span>
+                              </span>
+                              {metrics.percentFunded < 100 && (
+                                <span className="text-[10px] font-mono text-base-content/50 truncate">
+                                  Need {formatINRCompact(Math.max(0, goal.targetAmount - metrics.totalAllocated))} more
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Quick Add Sources button on header */}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openAllocateModal(goal);
+                              }}
+                              className="btn btn-primary btn-xs rounded-lg font-bold gap-1 px-2.5 h-6 min-h-0 text-[11px]"
+                            >
+                              <Plus size={12} />
+                              <span>Sources</span>
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Goal Expanded Body */}
+                        {!isCollapsed && (
+                          <div className="p-3 space-y-3 bg-base-100/50 animate-in fade-in duration-150 rounded-b-2xl">
+                            {/* Actions Ribbon */}
+                            <div className="flex items-center justify-between gap-1.5 bg-base-200/80 p-1.5 rounded-xl border border-base-300/60">
+                              <div className="flex items-center gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => openEditGoalModal(goal)}
+                                  className="btn btn-ghost btn-xs border border-base-300/80 rounded-lg gap-1 text-[11px] font-semibold h-6 min-h-0 px-2"
+                                  title="Edit Goal Name, Target Amount, and Date"
+                                >
+                                  <Edit3 size={11} className="text-primary" />
+                                  <span>Edit</span>
+                                </button>
+                                {hasItems && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setPlanToClear(goal);
+                                      setIsClearModalOpen(true);
+                                    }}
+                                    className="btn btn-ghost btn-xs text-error border border-error/20 rounded-lg gap-1 text-[11px] font-semibold h-6 min-h-0 px-2"
+                                    title="Clear all allocated sources"
+                                  >
+                                    <Trash2 size={11} />
+                                    <span>Clear</span>
+                                  </button>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setPlanToDelete(goal);
+                                    setIsDeleteModalOpen(true);
+                                  }}
+                                  className="btn btn-ghost btn-xs text-error hover:bg-error/10 rounded-lg h-6 min-h-0 px-1.5"
+                                  title="Delete Planner"
+                                >
+                                  <Trash2 size={12} />
+                                </button>
+                              </div>
+
+                              <Link
+                                to={`/dashboard/investment/portfolio?planner=${goal.id}`}
+                                className="btn btn-ghost btn-xs border border-base-300/80 text-primary rounded-lg gap-1 text-[11px] font-bold h-6 min-h-0 px-2"
+                              >
+                                <ExternalLink size={11} />
+                                <span>Portfolio</span>
+                              </Link>
+                            </div>
+
+                            {/* Source Type Breakdown Mini Cards (3-col Grid) */}
+                            <div className="grid grid-cols-3 gap-1.5">
+                              {getGoalSourceTypeStats(metrics.items).map((st) => (
+                                <div
+                                  key={st.label}
+                                  className={`p-1.5 rounded-lg border text-center ${
+                                    st.count > 0
+                                      ? `${st.bg} ${st.border} shadow-2xs`
+                                      : "bg-base-200/30 border-base-300/40 opacity-50"
+                                  }`}
+                                >
+                                  <div className={`text-[9px] font-extrabold uppercase truncate flex items-center justify-center gap-0.5 ${st.color}`}>
+                                    <st.icon size={10} />
+                                    <span>{st.label}</span>
+                                  </div>
+                                  <div className="font-mono font-black text-[10.5px] text-base-content truncate mt-0.5">
+                                    {formatINRCompact(st.amount)}
+                                  </div>
+                                  <div className="text-[8.5px] text-base-content/50 font-mono">
+                                    {st.count} {st.count === 1 ? "src" : "srcs"}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+
+                            {/* Tabs Toggle: Allocated Sources / Projection */}
+                            <div className="join w-full bg-base-200 p-0.5 rounded-xl border border-base-300 text-xs">
+                              <button
+                                type="button"
+                                onClick={() => setGoalTab(goal.id, "sources")}
+                                className={`join-item flex-1 btn btn-xs border-0 rounded-lg font-bold ${
+                                  activeTab === "sources"
+                                    ? "btn-primary shadow-xs"
+                                    : "btn-ghost text-base-content/70"
+                                }`}
+                              >
+                                <Layers size={12} />
+                                <span>Sources ({metrics.itemCount})</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setGoalTab(goal.id, "projection")}
+                                className={`join-item flex-1 btn btn-xs border-0 rounded-lg font-bold ${
+                                  activeTab === "projection"
+                                    ? "btn-primary shadow-xs"
+                                    : "btn-ghost text-base-content/70"
+                                }`}
+                              >
+                                <TrendingUp size={12} />
+                                <span>Projection</span>
+                              </button>
+                            </div>
+
+                            {/* 1. SOURCES TAB */}
+                            {activeTab === "sources" && (
+                              <div className="space-y-2">
+                                {!hasItems ? (
+                                  <div className="py-6 px-3 text-center border-2 border-dashed border-base-300 rounded-xl bg-base-100/40 space-y-2">
+                                    <Coins size={28} className="text-base-content/30 mx-auto" />
+                                    <p className="font-bold text-xs text-base-content">
+                                      No sources allotted to {goal.title} yet
+                                    </p>
+                                    <button
+                                      type="button"
+                                      onClick={() => openAllocateModal(goal)}
+                                      className="btn btn-xs btn-primary rounded-lg font-bold gap-1 shadow-xs"
+                                    >
+                                      <Plus size={12} />
+                                      <span>Add Sources</span>
+                                    </button>
+                                  </div>
+                                ) : (
+                                  metrics.items.map((item) => {
+                                    const unallocated = getSourceUnallocatedStats(item);
+                                    return (
+                                      <div
+                                        key={item.id}
+                                        className="bg-base-100 p-2.5 rounded-xl border border-base-300/70 shadow-2xs space-y-2"
+                                      >
+                                        {/* Source Header: Logo, Name, Subtitle, Actions */}
+                                        <div className="flex items-center justify-between gap-2">
+                                          <div className="flex items-center gap-2 min-w-0">
+                                            <CompanyLogo
+                                              name={item.displayName || item.name}
+                                              type={item.sourceType === "bank" ? "bank" : item.sourceType}
+                                              size="w-7 h-7"
+                                              className="shrink-0"
+                                            />
+                                            <div className="min-w-0">
+                                              <div className="font-bold text-xs truncate text-base-content">
+                                                {item.displayName || item.name}
+                                              </div>
+                                              <div className="text-[10px] text-base-content/50 truncate">
+                                                {item.sourceType === "stock" && `${item.holdingQty} shares`}
+                                                {item.sourceType === "mf" && `${item.category || "Mutual Fund"}`}
+                                                {item.sourceType === "bank" && `${item.accountType || "Bank"}`}
+                                                {item.sourceType === "fd" && `${item.interestRate || "FD"}%`}
+                                                {item.sourceType === "rd" && `${formatINRCompact(item.monthlyAmount)}/mo`}
+                                                {item.sourceType === "pf" && "EPF Balance"}
+                                              </div>
+                                            </div>
+                                          </div>
+
+                                          <div className="flex items-center gap-1 shrink-0">
+                                            <button
+                                              type="button"
+                                              onClick={() => openAllocateModal(goal, item)}
+                                              className="btn btn-ghost btn-xs text-primary p-1 h-6 w-6 min-h-0"
+                                              title="Fine Tune"
+                                            >
+                                              <SlidersHorizontal size={13} />
+                                            </button>
+                                            <button
+                                              type="button"
+                                              onClick={() => handleRemoveAllocation(goal.id, item.id, item.sourceType)}
+                                              className="btn btn-ghost btn-xs text-error p-1 h-6 w-6 min-h-0"
+                                              title="Remove"
+                                            >
+                                              <Trash2 size={13} />
+                                            </button>
+                                          </div>
+                                        </div>
+
+                                        {/* Valuations Row */}
+                                        <div className="grid grid-cols-2 gap-2 bg-base-200/50 p-2 rounded-lg text-xs font-mono">
+                                          <div>
+                                            <span className="text-[9px] text-base-content/50 uppercase font-bold block">
+                                              Earmarked
+                                            </span>
+                                            <span className="font-black text-primary text-xs">
+                                              {formatINR(item.allocatedAmount)}
+                                            </span>
+                                          </div>
+                                          <div className="text-right">
+                                            <span className="text-[9px] text-base-content/50 uppercase font-bold block">
+                                              Total Holding
+                                            </span>
+                                            <span className="font-bold text-base-content/80 text-xs">
+                                              {formatINR(item.holdingValue)}
+                                            </span>
+                                          </div>
+                                        </div>
+
+                                        {/* Allotment Stepper */}
+                                        <div className="flex items-center justify-between gap-2 pt-0.5">
+                                          <div className="inline-flex items-center join join-horizontal border border-base-300 rounded-lg overflow-hidden">
+                                            <button
+                                              type="button"
+                                              onClick={() => handleQuickAdjustPercent(goal.id, item, -5)}
+                                              className="join-item btn btn-xs btn-ghost px-2 font-bold h-6 min-h-0"
+                                            >
+                                              -
+                                            </button>
+                                            <div className="join-item px-2 py-0.5 text-xs font-mono font-bold bg-base-200/60 flex items-center gap-0.5 h-6">
+                                              <input
+                                                type="number"
+                                                min="0"
+                                                max={Math.min(100, (Number(item.allocatedPercent) || 0) + unallocated.remainingPct)}
+                                                value={item.allocatedPercent}
+                                                onChange={(e) => handleQuickSetPercent(goal.id, item, e.target.value)}
+                                                className="w-8 text-center bg-transparent font-mono font-bold text-xs focus:outline-none"
+                                              />
+                                              <span className="text-[10px] text-base-content/60">%</span>
+                                            </div>
+                                            <button
+                                              type="button"
+                                              onClick={() => handleQuickAdjustPercent(goal.id, item, 5)}
+                                              className="join-item btn btn-xs btn-ghost px-2 font-bold h-6 min-h-0"
+                                            >
+                                              +
+                                            </button>
+                                          </div>
+
+                                          <span className="text-[10px] text-base-content/50 font-mono">
+                                            {formatINR(unallocated.remainingAmt)} left ({unallocated.remainingPct}%)
+                                          </span>
+                                        </div>
+                                      </div>
+                                    );
+                                  })
+                                )}
+                              </div>
+                            )}
+
+                            {/* 2. PROJECTION TAB */}
+                            {activeTab === "projection" && (
+                              <div className="space-y-2">
+                                {!goal.targetDate && (
+                                  <div className="p-2.5 rounded-xl bg-warning/10 border border-warning/30 flex items-center justify-between gap-2 text-xs">
+                                    <div className="flex items-center gap-1.5 text-warning-content dark:text-warning text-[11px]">
+                                      <AlertCircle size={14} className="shrink-0 text-warning" />
+                                      <span>Target date needed</span>
+                                    </div>
+                                    <button
+                                      type="button"
+                                      onClick={() => openEditGoalModal(goal)}
+                                      className="btn btn-xs btn-warning font-bold rounded-lg shrink-0 gap-1 h-6 min-h-0 text-[10.5px]"
+                                    >
+                                      Set Date
+                                    </button>
+                                  </div>
+                                )}
+
+                                {metrics.items.map((item) => {
+                                  const spanMonths = getGoalSpanMonths(goal.targetDate);
+                                  const proj = goal.projections?.[item.id] || {};
+                                  const isActive = proj.active !== undefined ? Boolean(proj.active) : false;
+                                  const monthlyAmt = proj.monthlyAmount !== undefined ? proj.monthlyAmount : (item.monthlyAmount || 0);
+                                  const projectedMoney = isActive ? (spanMonths * (Number(monthlyAmt) || 0)) : 0;
+
+                                  return (
+                                    <div
+                                      key={item.id}
+                                      className={`p-2.5 rounded-xl border transition-colors space-y-2 ${
+                                        isActive
+                                          ? "bg-base-100 border-base-300 shadow-2xs"
+                                          : "bg-base-200/40 border-base-300/50 opacity-60"
+                                      }`}
+                                    >
+                                      {/* Header: Name + Active Toggle */}
+                                      <div className="flex items-center justify-between gap-2">
+                                        <div className="flex items-center gap-2 min-w-0">
+                                          <CompanyLogo
+                                            name={item.displayName || item.name}
+                                            type={item.sourceType === "bank" ? "bank" : item.sourceType}
+                                            size="w-6 h-6"
+                                            className="shrink-0"
+                                          />
+                                          <span className="font-bold text-xs truncate text-base-content">
+                                            {item.displayName || item.name}
+                                          </span>
+                                        </div>
+
+                                        <label className="label cursor-pointer p-0 gap-1.5 shrink-0">
+                                          <span className="text-[10px] font-bold text-base-content/60">
+                                            {isActive ? "Active" : "Off"}
+                                          </span>
+                                          <input
+                                            type="checkbox"
+                                            checked={isActive}
+                                            onChange={(e) => {
+                                              const checked = e.target.checked;
+                                              handleUpdateProjection(goal.id, item.id, {
+                                                active: checked,
+                                                monthlyAmount: monthlyAmt,
+                                              });
+                                            }}
+                                            className="toggle toggle-primary toggle-xs"
+                                          />
+                                        </label>
+                                      </div>
+
+                                      {/* Monthly Input & Projected Output */}
+                                      <div className="flex items-center justify-between gap-2 pt-0.5">
+                                        <div className="flex items-center gap-1">
+                                          <span className="text-[10px] text-base-content/60 font-semibold">₹</span>
+                                          <input
+                                            type="number"
+                                            min="0"
+                                            step="500"
+                                            disabled={!isActive}
+                                            value={monthlyAmt === 0 && !proj.monthlyAmount && proj.monthlyAmount !== 0 ? "" : monthlyAmt}
+                                            onChange={(e) => {
+                                              const val = e.target.value === "" ? 0 : Number(e.target.value);
+                                              handleUpdateProjection(goal.id, item.id, {
+                                                active: true,
+                                                monthlyAmount: val,
+                                              });
+                                            }}
+                                            className="input input-bordered input-xs w-20 font-mono font-bold text-xs rounded-lg"
+                                            placeholder="₹/mo"
+                                          />
+                                          <span className="text-[10px] text-base-content/50">/mo</span>
+                                        </div>
+
+                                        <div className="text-right font-mono">
+                                          <div className="font-black text-xs text-primary">
+                                            {isActive ? formatINRCompact(projectedMoney) : "₹0"}
+                                          </div>
+                                          <div className="text-[9px] text-base-content/50">
+                                            in {spanMonths} mos
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+
+                                {/* Mobile Projection Summary Card */}
+                                {(() => {
+                                  const spanMonths = getGoalSpanMonths(goal.targetDate);
+                                  const totalMonthly = metrics.items.reduce((sum, it) => {
+                                    const p = goal.projections?.[it.id];
+                                    const active = p?.active !== undefined ? Boolean(p.active) : false;
+                                    const amt = p?.monthlyAmount !== undefined ? Number(p.monthlyAmount) : (it.monthlyAmount || 0);
+                                    return sum + (active ? amt : 0);
+                                  }, 0);
+
+                                  const totalProjected = metrics.items.reduce((sum, it) => {
+                                    const p = goal.projections?.[it.id];
+                                    const active = p?.active !== undefined ? Boolean(p.active) : false;
+                                    const amt = p?.monthlyAmount !== undefined ? Number(p.monthlyAmount) : (it.monthlyAmount || 0);
+                                    return sum + (active ? (spanMonths * amt) : 0);
+                                  }, 0);
+
+                                  const totalWithEarmarked = (metrics.totalAllocated || 0) + totalProjected;
+                                  const targetAmt = Number(goal.targetAmount) || 0;
+                                  const projectedFundingPct = targetAmt > 0 ? Math.min(999, Math.round((totalWithEarmarked / targetAmt) * 100)) : 0;
+
+                                  return (
+                                    <div className="bg-base-200/90 p-2.5 rounded-xl border border-base-300/80 space-y-1.5 text-xs font-mono">
+                                      <div className="flex items-center justify-between text-[11px]">
+                                        <span className="text-base-content/60 font-sans font-bold">Total Monthly SIP</span>
+                                        <span className="font-extrabold text-primary">{formatINR(totalMonthly)}/mo</span>
+                                      </div>
+                                      <div className="flex items-center justify-between text-[11px]">
+                                        <span className="text-base-content/60 font-sans font-bold">Projected Additions ({spanMonths} mos)</span>
+                                        <span className="font-extrabold text-emerald-600 dark:text-emerald-400">+{formatINR(totalProjected)}</span>
+                                      </div>
+                                      <div className="flex items-center justify-between pt-1 border-t border-base-300 text-xs">
+                                        <span className="text-base-content font-sans font-black">Total at Target</span>
+                                        <div className="flex items-center gap-1.5">
+                                          <span className="font-black text-primary">{formatINR(totalWithEarmarked)}</span>
+                                          <span className={`badge badge-xs font-bold ${totalWithEarmarked >= targetAmt ? "badge-success text-white" : "badge-warning"}`}>
+                                            {projectedFundingPct}%
+                                          </span>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  );
+                                })()}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
 
       {/* -------------------------------------------------------------------- */}
       {/* 4. THE 3-PANEL ALLOCATION MODAL (Pop-up window as in Food Logging)   */}
@@ -2815,7 +3684,7 @@ export default function InvSettings() {
       {/* -------------------------------------------------------------------- */}
       {isGoalModalOpen && (
         <div
-          className="fixed inset-0 z-[99999] bg-black/70 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 overflow-y-auto"
+          className="fixed inset-0 z-[99999] bg-black/70 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-y-auto"
           onClick={(e) => {
             if (e.target === e.currentTarget) {
               setIsGoalModalOpen(false);
@@ -2825,7 +3694,7 @@ export default function InvSettings() {
             }
           }}
         >
-          <div className="flex flex-col md:flex-row items-stretch justify-center gap-3.5 w-full max-w-5xl max-h-[92vh] my-auto">
+          <div className="flex flex-col md:flex-row items-stretch justify-center gap-0 sm:gap-3.5 w-full max-w-5xl max-h-[92vh] my-0 sm:my-auto">
             {/* 1. SEPARATE TEMPLATES POPUP / PANEL ON THE LEFT (Vertically Stacked List) */}
             <div
               className="hidden md:flex flex-col w-60 lg:w-64 bg-base-100 rounded-3xl border border-base-300 shadow-2xl overflow-hidden shrink-0 animate-in fade-in zoom-in-95 duration-200"
@@ -2923,20 +3792,25 @@ export default function InvSettings() {
 
             {/* 2. MAIN CREATE / EDIT GOAL POPUP (RIGHT) */}
             <div
-              className="flex-1 bg-base-100 rounded-3xl border border-base-300 shadow-2xl overflow-hidden flex flex-col max-h-[92vh] animate-in fade-in zoom-in-95 duration-200"
+              className="flex-1 bg-base-100 rounded-t-3xl sm:rounded-3xl border border-base-300 shadow-2xl overflow-hidden flex flex-col max-h-[90vh] sm:max-h-[92vh] animate-in slide-in-from-bottom-6 sm:zoom-in-95 duration-200 w-full"
               onClick={(e) => e.stopPropagation()}
             >
+              {/* Mobile Drag Pill */}
+              <div className="sm:hidden w-full flex items-center justify-center pt-2.5 pb-1 shrink-0 bg-base-200/30">
+                <div className="w-10 h-1 rounded-full bg-base-content/20" />
+              </div>
+
               {/* Modal Header */}
-              <div className="px-6 py-4 border-b border-base-300 flex items-center justify-between shrink-0 bg-base-200/30">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-10 h-10 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-xl shadow-xs shrink-0">
+              <div className="px-4 py-3 sm:px-6 sm:py-4 border-b border-base-300 flex items-center justify-between shrink-0 bg-base-200/30">
+                <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+                  <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-lg sm:text-xl shadow-xs shrink-0">
                     {goalForm.icon || "🎯"}
                   </div>
                   <div className="min-w-0">
-                    <h3 className="font-extrabold text-base text-base-content leading-tight truncate">
+                    <h3 className="font-extrabold text-sm sm:text-base text-base-content leading-tight truncate">
                       {editingGoal ? "Edit Financial Goal" : "Create New Goal"}
                     </h3>
-                    <p className="text-xs text-base-content/50 mt-0.5 truncate">
+                    <p className="text-[11px] sm:text-xs text-base-content/50 mt-0.5 truncate">
                       {editingGoal
                         ? "Update your target amount, completion date, or notes"
                         : "Define your target capital, timeline, and life vision"}
@@ -2951,18 +3825,18 @@ export default function InvSettings() {
                     setIsMonthOpen(false);
                     setIsYearOpen(false);
                   }}
-                  className="btn btn-sm btn-circle btn-ghost text-base-content/60 hover:text-base-content"
+                  className="btn btn-xs sm:btn-sm btn-circle btn-ghost text-base-content/60 hover:text-base-content"
                   title="Close"
                 >
-                  <X size={18} />
+                  <X size={16} className="sm:w-[18px] sm:h-[18px]" />
                 </button>
               </div>
 
               {/* Form & Body */}
               <form onSubmit={handleSaveGoal} className="flex-1 min-h-0 flex flex-col overflow-hidden">
-                <div className="flex-1 overflow-y-auto custom-scrollbar p-4 sm:p-5 space-y-3.5">
+                <div className="flex-1 overflow-y-auto custom-scrollbar p-3 sm:p-5 space-y-3 sm:space-y-3.5">
                   {/* Mobile-only Templates Carousel (md:hidden) */}
-                  <div className="md:hidden space-y-1.5 p-3 rounded-2xl bg-base-200/60 border border-base-300/80">
+                  <div className="md:hidden space-y-1.5 p-2.5 sm:p-3 rounded-xl sm:rounded-2xl bg-base-200/60 border border-base-300/80">
                     <div className="flex items-center justify-between">
                       <span className="text-[10px] font-extrabold uppercase tracking-wider text-base-content/50 flex items-center gap-1">
                         <Sparkles size={11} className="text-primary" /> Goal Templates
@@ -2991,7 +3865,7 @@ export default function InvSettings() {
                                   : prev.targetDate,
                               }));
                             }}
-                            className={`px-2.5 py-1.5 rounded-xl text-xs font-semibold shrink-0 transition-all flex items-center gap-1.5 border cursor-pointer ${
+                            className={`px-2.5 py-1 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-semibold shrink-0 transition-all flex items-center gap-1.5 border cursor-pointer ${
                               isSelected
                                 ? "bg-primary text-primary-content border-primary shadow-xs font-bold"
                                 : "bg-base-100 border-base-300 text-base-content/80"
@@ -3008,9 +3882,9 @@ export default function InvSettings() {
                   {/* -------------------------------------------------------- */}
                   {/* SECTION 1: GOAL TITLE & CATEGORY / ICON (Darker Card)     */}
                   {/* -------------------------------------------------------- */}
-                  <div className="p-4 rounded-2xl bg-base-200/60 border border-base-300/80 space-y-2.5 shadow-xs">
+                  <div className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-base-200/60 border border-base-300/80 space-y-2 sm:space-y-2.5 shadow-xs">
                     <div className="flex items-center justify-between">
-                      <label className="text-[11px] font-extrabold uppercase tracking-wider text-base-content/60 flex items-center gap-1.5">
+                      <label className="text-[10.5px] sm:text-[11px] font-extrabold uppercase tracking-wider text-base-content/60 flex items-center gap-1.5">
                         <Target size={13} className="text-primary" />
                         <span>Goal Title & Icon</span>
                         <span className="text-error">*</span>
@@ -3028,7 +3902,7 @@ export default function InvSettings() {
                         <button
                           type="button"
                           onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                          className="w-10 h-10 rounded-xl bg-base-100 hover:bg-base-200 border border-base-300 flex items-center justify-center text-lg transition-all cursor-pointer shadow-xs hover:border-primary/40 active:scale-95"
+                          className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-base-100 hover:bg-base-200 border border-base-300 flex items-center justify-center text-base sm:text-lg transition-all cursor-pointer shadow-xs hover:border-primary/40 active:scale-95"
                           title="Choose icon"
                         >
                           {goalForm.icon || "🎯"}
@@ -3036,7 +3910,7 @@ export default function InvSettings() {
 
                         {/* Emoji Dropdown Popover */}
                         {showEmojiPicker && (
-                          <div className="absolute top-full left-0 mt-2 z-50 p-3 bg-base-100 rounded-2xl border border-base-300 shadow-xl w-64 animate-in fade-in zoom-in-95 duration-150">
+                          <div className="absolute top-full left-0 mt-2 z-50 p-3 bg-base-100 rounded-2xl border border-base-300 shadow-xl w-64 max-w-[calc(100vw-32px)] animate-in fade-in zoom-in-95 duration-150">
                             <div className="text-[10px] font-bold text-base-content/50 uppercase tracking-wider mb-2 flex items-center justify-between">
                               <span>Select Goal Icon</span>
                               <button
@@ -3086,7 +3960,7 @@ export default function InvSettings() {
                         placeholder="e.g. Wedding 2027, Dream Home Down Payment"
                         value={goalForm.title}
                         onChange={(e) => setGoalForm({ ...goalForm, title: e.target.value })}
-                        className="input input-bordered h-10 flex-1 rounded-xl text-xs sm:text-sm font-semibold bg-base-100 focus:border-primary transition-all shadow-2xs"
+                        className="input input-bordered h-9 sm:h-10 flex-1 rounded-xl text-xs sm:text-sm font-semibold bg-base-100 focus:border-primary transition-all shadow-2xs"
                       />
                     </div>
                   </div>
@@ -3094,17 +3968,17 @@ export default function InvSettings() {
                   {/* -------------------------------------------------------- */}
                   {/* SECTION 2: TARGET CAPITAL (Darker Card)                   */}
                   {/* -------------------------------------------------------- */}
-                  <div className="p-4 rounded-2xl bg-base-200/60 border border-base-300/80 space-y-2.5 shadow-xs">
+                  <div className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-base-200/60 border border-base-300/80 space-y-2 sm:space-y-2.5 shadow-xs">
                     <div className="flex items-center justify-between">
-                      <label className="text-[11px] font-extrabold uppercase tracking-wider text-base-content/60 flex items-center gap-1.5">
+                      <label className="text-[10.5px] sm:text-[11px] font-extrabold uppercase tracking-wider text-base-content/60 flex items-center gap-1.5">
                         <span className="font-mono text-primary font-bold">₹</span>
                         <span>Target Capital</span>
                         <span className="text-error">*</span>
                       </label>
                       {Number(goalForm.targetAmount) > 0 && (
-                        <span className="text-xs font-mono font-bold text-primary bg-primary/10 px-2.5 py-0.5 rounded-xl border border-primary/20">
+                        <span className="text-[11px] sm:text-xs font-mono font-bold text-primary bg-primary/10 px-2 sm:px-2.5 py-0.5 rounded-lg sm:rounded-xl border border-primary/20">
                           {formatINR(goalForm.targetAmount)}
-                          <span className="text-base-content/50 ml-1.5 font-medium">
+                          <span className="text-base-content/50 ml-1 sm:ml-1.5 font-medium hidden xs:inline sm:inline">
                             ({formatINRCompact(goalForm.targetAmount)})
                           </span>
                         </span>
@@ -3112,7 +3986,7 @@ export default function InvSettings() {
                     </div>
 
                     <div className="relative max-w-md">
-                      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-mono font-bold text-sm text-base-content/40">
+                      <span className="absolute left-3 sm:left-3.5 top-1/2 -translate-y-1/2 font-mono font-bold text-xs sm:text-sm text-base-content/40">
                         ₹
                       </span>
                       <input
@@ -3129,7 +4003,7 @@ export default function InvSettings() {
                             targetAmount: val === "" ? "" : val,
                           }));
                         }}
-                        className="input input-bordered h-10 w-full pl-8 rounded-xl font-mono text-xs sm:text-sm font-bold bg-base-100 focus:border-primary transition-all shadow-2xs"
+                        className="input input-bordered h-9 sm:h-10 w-full pl-7 sm:pl-8 rounded-xl font-mono text-xs sm:text-sm font-bold bg-base-100 focus:border-primary transition-all shadow-2xs"
                       />
                     </div>
 
@@ -3159,9 +4033,9 @@ export default function InvSettings() {
                   {/* -------------------------------------------------------- */}
                   {/* SECTION 3: TARGET DATE & HORIZON TIMELINE (Darker Card)   */}
                   {/* -------------------------------------------------------- */}
-                  <div className="p-4 rounded-2xl bg-base-200/60 border border-base-300/80 space-y-3 shadow-xs">
+                  <div className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-base-200/60 border border-base-300/80 space-y-2.5 sm:space-y-3 shadow-xs">
                     <div className="flex items-center justify-between">
-                      <label className="text-[11px] font-extrabold uppercase tracking-wider text-base-content/60 flex items-center gap-1.5">
+                      <label className="text-[10.5px] sm:text-[11px] font-extrabold uppercase tracking-wider text-base-content/60 flex items-center gap-1.5">
                         <Calendar size={13} className="text-primary" />
                         <span>Target Date & Timeline</span>
                         <span className="text-error">*</span>
@@ -3195,20 +4069,20 @@ export default function InvSettings() {
                             setIsYearOpen(false);
                             setShowEmojiPicker(false);
                           }}
-                          className={`h-10 w-full px-3 sm:px-3.5 rounded-xl border flex items-center justify-between text-xs font-bold transition-all cursor-pointer shadow-2xs ${
+                          className={`h-9 sm:h-10 w-full px-2.5 sm:px-3.5 rounded-xl border flex items-center justify-between text-xs font-bold transition-all cursor-pointer shadow-2xs ${
                             isMonthOpen
                               ? "bg-base-100 border-primary ring-2 ring-primary/20 text-primary"
                               : "bg-base-100 hover:bg-base-200/80 border-base-300 text-base-content hover:border-primary/40"
                           }`}
                           title="Select Target Month"
                         >
-                          <div className="flex items-center gap-2 min-w-0">
-                            <Calendar size={14} className={isMonthOpen ? "text-primary shrink-0" : "text-base-content/50 shrink-0"} />
+                          <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+                            <Calendar size={13} className={isMonthOpen ? "text-primary shrink-0" : "text-base-content/50 shrink-0 sm:w-[14px] sm:h-[14px]"} />
                             <span className="truncate">{MONTHS[currentMonthIndex]?.name || "Select Month"}</span>
                           </div>
                           <ChevronDown
-                            size={14}
-                            className={`transition-transform duration-200 shrink-0 text-base-content/50 ${
+                            size={13}
+                            className={`transition-transform duration-200 shrink-0 text-base-content/50 sm:w-[14px] sm:h-[14px] ${
                               isMonthOpen ? "rotate-180 text-primary" : ""
                             }`}
                           />
@@ -3216,7 +4090,7 @@ export default function InvSettings() {
 
                         {/* Month Popup Menu */}
                         {isMonthOpen && (
-                          <div className="absolute top-full left-0 mt-2 z-50 bg-base-100 rounded-2xl border border-base-300 shadow-2xl p-2.5 w-64 sm:w-72 animate-in fade-in zoom-in-95 duration-150">
+                          <div className="absolute top-full left-0 mt-2 z-50 bg-base-100 rounded-2xl border border-base-300 shadow-2xl p-2.5 w-64 sm:w-72 max-w-[calc(100vw-32px)] animate-in fade-in zoom-in-95 duration-150">
                             <div className="flex items-center justify-between pb-2 mb-1 border-b border-base-200 px-1">
                               <span className="text-[10px] font-extrabold uppercase tracking-wider text-base-content/50">
                                 Select Target Month
@@ -3265,20 +4139,20 @@ export default function InvSettings() {
                             setIsMonthOpen(false);
                             setShowEmojiPicker(false);
                           }}
-                          className={`h-10 w-full px-3 sm:px-3.5 rounded-xl border flex items-center justify-between text-xs font-bold transition-all cursor-pointer shadow-2xs ${
+                          className={`h-9 sm:h-10 w-full px-2.5 sm:px-3.5 rounded-xl border flex items-center justify-between text-xs font-bold transition-all cursor-pointer shadow-2xs ${
                             isYearOpen
                               ? "bg-base-100 border-primary ring-2 ring-primary/20 text-primary"
                               : "bg-base-100 hover:bg-base-200/80 border-base-300 text-base-content hover:border-primary/40"
                           }`}
                           title="Select Target Year"
                         >
-                          <div className="flex items-center gap-2 min-w-0">
-                            <Clock size={14} className={isYearOpen ? "text-primary shrink-0" : "text-base-content/50 shrink-0"} />
+                          <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+                            <Clock size={13} className={isYearOpen ? "text-primary shrink-0" : "text-base-content/50 shrink-0 sm:w-[14px] sm:h-[14px]"} />
                             <span className="font-mono text-xs font-extrabold truncate">{currentYearVal}</span>
                           </div>
                           <ChevronDown
-                            size={14}
-                            className={`transition-transform duration-200 shrink-0 text-base-content/50 ${
+                            size={13}
+                            className={`transition-transform duration-200 shrink-0 text-base-content/50 sm:w-[14px] sm:h-[14px] ${
                               isYearOpen ? "rotate-180 text-primary" : ""
                             }`}
                           />
@@ -3286,7 +4160,7 @@ export default function InvSettings() {
 
                         {/* Year Popup Menu */}
                         {isYearOpen && (
-                          <div className="absolute top-full right-0 mt-2 z-50 bg-base-100 rounded-2xl border border-base-300 shadow-2xl p-2.5 w-64 sm:w-72 animate-in fade-in zoom-in-95 duration-150">
+                          <div className="absolute top-full right-0 mt-2 z-50 bg-base-100 rounded-2xl border border-base-300 shadow-2xl p-2.5 w-64 sm:w-72 max-w-[calc(100vw-32px)] animate-in fade-in zoom-in-95 duration-150">
                             <div className="flex items-center justify-between pb-2 mb-1 border-b border-base-200 px-1">
                               <span className="text-[10px] font-extrabold uppercase tracking-wider text-base-content/50">
                                 Select Target Year
@@ -3324,7 +4198,7 @@ export default function InvSettings() {
                     </div>
 
                     {/* Quick Horizon Buttons */}
-                    <div className="flex items-center gap-1 bg-base-100 border border-base-300 rounded-2xl p-1 justify-between shadow-2xs">
+                    <div className="flex items-center gap-1 bg-base-100 border border-base-300 rounded-xl sm:rounded-2xl p-1 justify-between shadow-2xs">
                       {[
                         { label: "+1Y", years: 1 },
                         { label: "+2Y", years: 2 },
@@ -3343,7 +4217,7 @@ export default function InvSettings() {
                               const targetFromHorizon = dayjs().add(h.years, "year").date(1).format("YYYY-MM-DD");
                               setGoalForm((prev) => ({ ...prev, targetDate: targetFromHorizon }));
                             }}
-                            className={`flex-1 py-1.5 font-mono text-[11px] rounded-xl font-bold transition-all text-center cursor-pointer ${
+                            className={`flex-1 py-1 sm:py-1.5 font-mono text-[10px] sm:text-[11px] rounded-lg sm:rounded-xl font-bold transition-all text-center cursor-pointer ${
                               isSelected
                                 ? "bg-primary text-primary-content shadow-xs"
                                 : "hover:bg-base-200 text-base-content/70 hover:text-base-content"
@@ -3356,9 +4230,9 @@ export default function InvSettings() {
                     </div>
 
                     {/* Age on Target Date Card */}
-                    <div className="rounded-2xl bg-base-100 border border-base-300 p-3 flex items-center justify-between gap-3 shadow-2xs">
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <div className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0 border border-primary/20 overflow-hidden shadow-xs">
+                    <div className="rounded-xl sm:rounded-2xl bg-base-100 border border-base-300 p-2.5 sm:p-3 flex items-center justify-between gap-2.5 sm:gap-3 shadow-2xs">
+                      <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
+                        <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0 border border-primary/20 overflow-hidden shadow-xs">
                           {userProfilePic ? (
                             <img
                               src={userProfilePic}
@@ -3366,28 +4240,28 @@ export default function InvSettings() {
                               className="w-full h-full object-cover"
                             />
                           ) : (
-                            <span className="text-xs font-bold text-primary font-mono">
+                            <span className="text-[11px] sm:text-xs font-bold text-primary font-mono">
                               {userInitials || "U"}
                             </span>
                           )}
                         </div>
                         <div className="min-w-0">
-                          <div className="text-[10px] font-semibold text-base-content/50 uppercase tracking-wider">
+                          <div className="text-[9.5px] sm:text-[10px] font-semibold text-base-content/50 uppercase tracking-wider truncate">
                             Age on Target Date
                           </div>
-                          <div className="flex items-center gap-1.5 mt-0.5">
+                          <div className="flex items-center gap-1 sm:gap-1.5 mt-0.5 flex-wrap">
                             {userAgeOnTargetDate ? (
-                              <span className="font-mono font-bold text-xs text-primary">
+                              <span className="font-mono font-bold text-[11px] sm:text-xs text-primary">
                                 {userAgeOnTargetDate.years} Yrs{userAgeOnTargetDate.months > 0 ? `, ${userAgeOnTargetDate.months} Mos` : ""}
                               </span>
                             ) : (
-                              <span className="text-xs text-base-content/40 font-mono">
+                              <span className="text-[11px] sm:text-xs text-base-content/40 font-mono">
                                 {userDob ? "—" : "Set DOB to calculate age"}
                               </span>
                             )}
                             {modalDateInfo && !modalDateInfo.isPast && (
-                              <span className="text-[10px] text-base-content/40 font-mono">
-                                • {dayjs(goalForm.targetDate).format("MMMM YYYY")}
+                              <span className="text-[9.5px] sm:text-[10px] text-base-content/40 font-mono truncate">
+                                • {dayjs(goalForm.targetDate).format("MMM YYYY")}
                               </span>
                             )}
                           </div>
@@ -3395,7 +4269,7 @@ export default function InvSettings() {
                       </div>
 
                       <div className="text-right shrink-0">
-                        <div className="text-[10px] text-base-content/50 font-mono">
+                        <div className="text-[9.5px] sm:text-[10px] text-base-content/50 font-mono">
                           {userDob && dayjs(userDob).isValid() ? `DOB: ${dayjs(userDob).format("DD MMM YYYY")}` : "DOB: Not set"}
                         </div>
                         <button
@@ -3404,10 +4278,10 @@ export default function InvSettings() {
                             setIsGoalModalOpen(false);
                             navigate("/dashboard/settings/profile");
                           }}
-                          className="text-[10px] text-primary hover:underline font-bold inline-flex items-center gap-1 mt-0.5 cursor-pointer"
+                          className="text-[9.5px] sm:text-[10px] text-primary hover:underline font-bold inline-flex items-center gap-1 mt-0.5 cursor-pointer"
                           title="Update your Date of Birth in Profile Settings"
                         >
-                          <span>{userDob ? "Change in Settings" : "Set in Settings"}</span>
+                          <span>{userDob ? "Change" : "Set in Settings"}</span>
                           <ExternalLink size={9} className="opacity-70" />
                         </button>
                       </div>
@@ -3424,9 +4298,9 @@ export default function InvSettings() {
                   {/* -------------------------------------------------------- */}
                   {/* SECTION 4: NOTES & VISION (Darker Card)                   */}
                   {/* -------------------------------------------------------- */}
-                  <div className="p-4 rounded-2xl bg-base-200/60 border border-base-300/80 space-y-2 shadow-xs">
+                  <div className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-base-200/60 border border-base-300/80 space-y-1.5 sm:space-y-2 shadow-xs">
                     <div className="flex items-center justify-between">
-                      <label className="text-[11px] font-extrabold uppercase tracking-wider text-base-content/60 flex items-center gap-1.5">
+                      <label className="text-[10.5px] sm:text-[11px] font-extrabold uppercase tracking-wider text-base-content/60 flex items-center gap-1.5">
                         <Layers size={13} className="text-primary" />
                         <span>Notes & Vision</span>
                       </label>
@@ -3437,17 +4311,17 @@ export default function InvSettings() {
                       placeholder="e.g. Venue, jewelry, down payment breakdown, vacation wishlist..."
                       value={goalForm.notes}
                       onChange={(e) => setGoalForm({ ...goalForm, notes: e.target.value })}
-                      className="textarea textarea-bordered w-full rounded-2xl text-xs bg-base-100 focus:border-primary transition-all resize-none min-h-[58px] shadow-2xs"
+                      className="textarea textarea-bordered w-full rounded-xl sm:rounded-2xl text-xs bg-base-100 focus:border-primary transition-all resize-none min-h-[50px] sm:min-h-[58px] shadow-2xs"
                     />
                   </div>
                 </div>
 
                 {/* Modal Footer */}
-                <div className="px-6 py-4 border-t border-base-300 bg-base-200/30 flex items-center justify-between gap-2 shrink-0">
+                <div className="px-4 py-3 sm:px-6 sm:py-4 border-t border-base-300 bg-base-200/30 flex items-center justify-between gap-2 shrink-0">
                   <p className="text-[11px] text-base-content/45 font-medium hidden sm:block">
                     {editingGoal ? "Changes save directly to your database." : "You can allot savings & investments after creating."}
                   </p>
-                  <div className="flex items-center gap-2 ml-auto">
+                  <div className="flex items-center gap-2 w-full sm:w-auto sm:ml-auto">
                     <button
                       type="button"
                       onClick={() => {
@@ -3456,13 +4330,13 @@ export default function InvSettings() {
                         setIsMonthOpen(false);
                         setIsYearOpen(false);
                       }}
-                      className="btn btn-sm btn-ghost rounded-xl font-semibold"
+                      className="btn btn-sm btn-ghost rounded-xl font-semibold flex-1 sm:flex-initial"
                     >
                       Cancel
                     </button>
                     <button
                       type="submit"
-                      className="btn btn-sm btn-primary rounded-xl font-bold gap-1.5 px-5 shadow-sm"
+                      className="btn btn-sm btn-primary rounded-xl font-bold gap-1.5 px-5 shadow-sm flex-1 sm:flex-initial"
                     >
                       <Check size={14} />
                       <span>{editingGoal ? "Save Changes" : "Create Goal"}</span>
@@ -3559,114 +4433,133 @@ export default function InvSettings() {
       {/* 8. TOTAL EARMARKED BREAKDOWN BY SOURCE TYPE MODAL                   */}
       {/* -------------------------------------------------------------------- */}
       {isEarmarkedModalOpen && (
-        <div className="fixed inset-0 z-[99999] bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-base-100 rounded-3xl border border-base-300 shadow-2xl max-w-2xl w-full p-5 sm:p-6 space-y-5 animate-in fade-in zoom-in-95 duration-200">
-            {/* Header */}
-            <div className="flex items-center justify-between pb-3 border-b border-base-300">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center font-bold shrink-0">
-                  <Coins size={22} />
+        <div
+          className="fixed inset-0 z-[99999] bg-black/60 backdrop-blur-md flex items-center justify-center p-2.5 sm:p-4 overflow-y-auto"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setIsEarmarkedModalOpen(false);
+          }}
+        >
+          <div className="bg-base-100 rounded-2xl sm:rounded-3xl border border-base-300 shadow-2xl max-w-2xl w-full max-h-[92dvh] sm:max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            {/* Pinned Header */}
+            <div className="p-3.5 sm:p-5 border-b border-base-300 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1 mr-2">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center font-bold shrink-0">
+                  <Coins size={18} className="sm:hidden" />
+                  <Coins size={22} className="hidden sm:block" />
                 </div>
-                <div>
-                  <h3 className="font-extrabold text-base sm:text-lg text-base-content leading-tight">
-                    Total Earmarked Breakdown by Source Type
+                <div className="min-w-0 flex-1">
+                  <h3 className="font-extrabold text-sm sm:text-lg text-base-content leading-tight whitespace-nowrap truncate">
+                    <span className="hidden sm:inline">Total Earmarked Breakdown by Source Type</span>
+                    <span className="sm:hidden">Earmarked Assets Breakdown</span>
                   </h3>
-                  <p className="text-xs text-base-content/60">
-                    Accumulated capital and source counts across all your financial goals
+                  <p className="text-[10px] sm:text-xs text-base-content/60 whitespace-nowrap truncate mt-0.5">
+                    <span className="hidden sm:inline">Accumulated capital and source counts across all your financial goals</span>
+                    <span className="sm:hidden">Allocated capital across all financial goals</span>
                   </p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setIsEarmarkedModalOpen(false)}
-                className="btn btn-sm btn-circle btn-ghost"
+                className="btn btn-xs sm:btn-sm btn-circle btn-ghost shrink-0"
               >
                 <X size={16} />
               </button>
             </div>
 
-            {/* Overview Metric Banner */}
-            <div className="bg-base-200/70 p-4 rounded-2xl border border-base-300 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
-              <div className="space-y-1.5 flex-1 w-full">
-                <div className="flex justify-between items-center font-bold">
-                  <span className="text-base-content/70">
-                    Overall Funded Progress
-                  </span>
-                  <span className="font-mono text-emerald-500 text-sm">
-                    {topMetrics.overallFunded}% ({formatINRCompact(topMetrics.totalEarmarked)} / {formatINRCompact(topMetrics.totalTarget)})
-                  </span>
-                </div>
-                <div className="w-full bg-base-100 rounded-full h-2.5 overflow-hidden border border-base-300">
-                  <div
-                    className="h-full bg-emerald-500 transition-all duration-500 rounded-full"
-                    style={{ width: `${topMetrics.overallFunded}%` }}
-                  ></div>
-                </div>
-              </div>
-
-              <div className="text-right shrink-0">
-                <span className="text-[10px] uppercase font-bold text-base-content/50 block">
-                  Total Active Allocations
-                </span>
-                <span className="font-mono font-extrabold text-base text-primary">
-                  {topMetrics.totalAllottedItems} Assets
-                </span>
-              </div>
-            </div>
-
-            {/* 6 Source Types Grid (Showing all 6, if 0 shows 0) */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-xs font-bold text-base-content/70 px-1">
-                <span>Asset Categories Breakdown</span>
-                <span className="font-mono text-[11px] text-base-content/50 font-normal">
-                  All 6 Asset Classes
-                </span>
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                {overallSourceTypeStats.map((st) => (
-                  <div
-                    key={st.label}
-                    className={`p-3 rounded-2xl border flex flex-col justify-between transition-all ${
-                      st.count > 0
-                        ? `${st.bg} ${st.border} shadow-xs`
-                        : "bg-base-200/30 border-base-300/40 opacity-60"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between gap-1">
-                      <span className={`text-xs font-extrabold uppercase tracking-wider truncate flex items-center gap-1.5 ${st.color}`}>
-                        <st.icon size={14} className="shrink-0" />
-                        <span>{st.label}</span>
+            {/* Scrollable Body */}
+            <div className="p-3 sm:p-6 space-y-3 sm:space-y-4 overflow-y-auto no-scrollbar scrollbar-none [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden flex-1 min-h-0">
+              {/* Overview Metric Banner */}
+              <div className="bg-base-200/70 p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-base-300 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 sm:gap-3 text-xs">
+                <div className="space-y-1.5 flex-1 w-full">
+                  <div className="flex justify-between items-center font-bold whitespace-nowrap text-[11px] sm:text-xs">
+                    <span className="text-base-content/70">
+                      <span className="hidden sm:inline">Overall Funded Progress</span>
+                      <span className="sm:hidden">Funded Progress</span>
+                    </span>
+                    <span className="font-mono text-emerald-500 text-xs sm:text-sm font-bold whitespace-nowrap">
+                      {topMetrics.overallFunded}%{" "}
+                      <span className="text-[10px] sm:text-xs text-base-content/60 font-semibold">
+                        ({formatINRCompact(topMetrics.totalEarmarked)} / {formatINRCompact(topMetrics.totalTarget)})
                       </span>
-                      <span
-                        className={`badge badge-xs font-mono font-bold ${
-                          st.count > 0 ? "badge-primary badge-soft text-primary" : "badge-ghost opacity-60"
-                        }`}
-                      >
-                        {st.count} {st.count === 1 ? "source" : "sources"}
-                      </span>
-                    </div>
-                    <div className="mt-2.5">
-                      <div className="font-mono font-black text-sm sm:text-base text-base-content truncate">
-                        {formatINRCompact(st.amount)}
-                      </div>
-                      <div className="text-[10.5px] text-base-content/50 font-mono truncate mt-0.5">
-                        {formatINR(st.amount)}
-                      </div>
-                    </div>
+                    </span>
                   </div>
-                ))}
+                  <div className="w-full bg-base-100 rounded-full h-2 sm:h-2.5 overflow-hidden border border-base-300">
+                    <div
+                      className="h-full bg-emerald-500 transition-all duration-500 rounded-full"
+                      style={{ width: `${topMetrics.overallFunded}%` }}
+                    ></div>
+                  </div>
+                </div>
+
+                <div className="sm:text-right shrink-0 flex sm:flex-col justify-between sm:justify-center items-center sm:items-end w-full sm:w-auto pt-1 sm:pt-0 border-t sm:border-t-0 border-base-300/50">
+                  <span className="text-[9.5px] sm:text-[10px] uppercase font-bold text-base-content/50 block whitespace-nowrap">
+                    <span className="hidden sm:inline">Total Active Allocations</span>
+                    <span className="sm:hidden">Active Allocations</span>
+                  </span>
+                  <span className="font-mono font-extrabold text-xs sm:text-base text-primary whitespace-nowrap">
+                    {topMetrics.totalAllottedItems} Assets
+                  </span>
+                </div>
+              </div>
+
+              {/* 6 Source Types Grid (Showing all 6, if 0 shows 0) */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-[11px] sm:text-xs font-bold text-base-content/70 px-0.5 sm:px-1 whitespace-nowrap">
+                  <span className="truncate">Asset Categories Breakdown</span>
+                  <span className="font-mono text-[10px] sm:text-[11px] text-base-content/50 font-normal shrink-0">
+                    All 6 Classes
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-2.5">
+                  {overallSourceTypeStats.map((st) => (
+                    <div
+                      key={st.label}
+                      className={`p-2.5 sm:p-3 rounded-xl sm:rounded-2xl border flex flex-col justify-between transition-all ${
+                        st.count > 0
+                          ? `${st.bg} ${st.border} shadow-xs`
+                          : "bg-base-200/30 border-base-300/40 opacity-60"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-1 min-w-0 whitespace-nowrap">
+                        <span className={`text-[11px] sm:text-xs font-extrabold uppercase tracking-wider truncate flex items-center gap-1 sm:gap-1.5 min-w-0 ${st.color}`}>
+                          <st.icon size={13} className="shrink-0" />
+                          <span className="truncate">{st.label}</span>
+                        </span>
+                        <span
+                          className={`badge badge-xs font-mono font-bold shrink-0 px-1.5 py-0.5 whitespace-nowrap ${
+                            st.count > 0 ? "badge-primary badge-soft text-primary" : "badge-ghost opacity-60"
+                          }`}
+                        >
+                          <span className="hidden sm:inline">{st.count} {st.count === 1 ? "source" : "sources"}</span>
+                          <span className="sm:hidden">{st.count}</span>
+                        </span>
+                      </div>
+                      <div className="mt-2 sm:mt-2.5">
+                        <div className="font-mono font-black text-xs sm:text-base text-base-content truncate whitespace-nowrap">
+                          {formatINRCompact(st.amount)}
+                        </div>
+                        <div className="text-[9.5px] sm:text-[10.5px] text-base-content/50 font-mono truncate whitespace-nowrap mt-0.5">
+                          <span className="hidden sm:inline">{formatINR(st.amount)}</span>
+                          <span className="sm:hidden">{st.amount > 0 ? formatINR(st.amount) : "₹0"}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
 
-            {/* Footer */}
-            <div className="pt-3 border-t border-base-300 flex items-center justify-between">
-              <span className="text-xs text-base-content/50">
-                Click any goal below to adjust individual asset allotments
+            {/* Pinned Footer */}
+            <div className="p-3 sm:p-4 border-t border-base-300 flex items-center justify-between shrink-0 bg-base-100 whitespace-nowrap gap-2">
+              <span className="text-[10px] sm:text-xs text-base-content/50 truncate whitespace-nowrap">
+                <span className="hidden sm:inline">Click any goal below to adjust individual asset allotments</span>
+                <span className="sm:hidden">Adjust allotments in the goals below</span>
               </span>
               <button
                 type="button"
                 onClick={() => setIsEarmarkedModalOpen(false)}
-                className="btn btn-sm btn-primary rounded-xl font-bold px-5"
+                className="btn btn-xs sm:btn-sm btn-primary rounded-xl font-bold px-4 sm:px-5 shrink-0 whitespace-nowrap"
               >
                 Close
               </button>
@@ -3679,122 +4572,142 @@ export default function InvSettings() {
       {/* 9. UNALLOCATED ASSETS BREAKDOWN BY SOURCE TYPE MODAL                 */}
       {/* -------------------------------------------------------------------- */}
       {isUnallocatedModalOpen && (
-        <div className="fixed inset-0 z-[99999] bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-base-100 rounded-3xl border border-base-300 shadow-2xl max-w-2xl w-full p-5 sm:p-6 space-y-5 animate-in fade-in zoom-in-95 duration-200">
-            {/* Header */}
-            <div className="flex items-center justify-between pb-3 border-b border-base-300">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center font-bold shrink-0">
-                  <Sparkles size={22} />
+        <div
+          className="fixed inset-0 z-[99999] bg-black/60 backdrop-blur-md flex items-center justify-center p-2.5 sm:p-4 overflow-y-auto"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setIsUnallocatedModalOpen(false);
+          }}
+        >
+          <div className="bg-base-100 rounded-2xl sm:rounded-3xl border border-base-300 shadow-2xl max-w-2xl w-full max-h-[92dvh] sm:max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            {/* Pinned Header */}
+            <div className="p-3.5 sm:p-5 border-b border-base-300 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1 mr-2">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center font-bold shrink-0">
+                  <Sparkles size={18} className="sm:hidden" />
+                  <Sparkles size={22} className="hidden sm:block" />
                 </div>
-                <div>
-                  <h3 className="font-extrabold text-base sm:text-lg text-base-content leading-tight">
-                    Unallocated Assets Breakdown by Source Type
+                <div className="min-w-0 flex-1">
+                  <h3 className="font-extrabold text-sm sm:text-lg text-base-content leading-tight whitespace-nowrap truncate">
+                    <span className="hidden sm:inline">Unallocated Assets Breakdown by Source Type</span>
+                    <span className="sm:hidden">Free Assets Breakdown</span>
                   </h3>
-                  <p className="text-xs text-base-content/60">
-                    Available uncommitted capital across all 6 asset classes ready for goal planning
+                  <p className="text-[10px] sm:text-xs text-base-content/60 whitespace-nowrap truncate mt-0.5">
+                    <span className="hidden sm:inline">Available uncommitted capital across all 6 asset classes ready for goal planning</span>
+                    <span className="sm:hidden">Uncommitted capital ready for goal planning</span>
                   </p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setIsUnallocatedModalOpen(false)}
-                className="btn btn-sm btn-circle btn-ghost"
+                className="btn btn-xs sm:btn-sm btn-circle btn-ghost shrink-0"
               >
                 <X size={16} />
               </button>
             </div>
 
-            {/* Overview Metric Banner */}
-            <div className="bg-base-200/70 p-4 rounded-2xl border border-base-300 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
-              <div className="space-y-1.5 flex-1 w-full">
-                <div className="flex justify-between items-center font-bold">
-                  <span className="text-base-content/70">
-                    Free Portfolio Capital
-                  </span>
-                  <span className="font-mono text-amber-500 text-sm">
-                    {topMetrics.totalHoldingsWealth > 0
-                      ? `${Math.round((topMetrics.totalUnallocatedWealth / topMetrics.totalHoldingsWealth) * 100)}%`
-                      : "100%"} Free ({formatINRCompact(topMetrics.totalUnallocatedWealth)} of {formatINRCompact(topMetrics.totalHoldingsWealth)})
-                  </span>
-                </div>
-                <div className="w-full bg-base-100 rounded-full h-2.5 overflow-hidden border border-base-300">
-                  <div
-                    className="h-full bg-amber-500 transition-all duration-500 rounded-full"
-                    style={{
-                      width: `${
-                        topMetrics.totalHoldingsWealth > 0
-                          ? (topMetrics.totalUnallocatedWealth / topMetrics.totalHoldingsWealth) * 100
-                          : 100
-                      }%`,
-                    }}
-                  ></div>
-                </div>
-              </div>
-
-              <div className="text-right shrink-0">
-                <span className="text-[10px] uppercase font-bold text-base-content/50 block">
-                  Unallocated Sources
-                </span>
-                <span className="font-mono font-extrabold text-base text-amber-500">
-                  {overallUnallocatedSourceTypeStats.reduce((sum, t) => sum + t.count, 0)} Assets
-                </span>
-              </div>
-            </div>
-
-            {/* 6 Source Types Grid (Showing all 6, if 0 shows 0) */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-xs font-bold text-base-content/70 px-1">
-                <span>Asset Categories Breakdown</span>
-                <span className="font-mono text-[11px] text-base-content/50 font-normal">
-                  All 6 Asset Classes
-                </span>
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                {overallUnallocatedSourceTypeStats.map((st) => (
-                  <div
-                    key={st.label}
-                    className={`p-3 rounded-2xl border flex flex-col justify-between transition-all ${
-                      st.count > 0
-                        ? `${st.bg} ${st.border} shadow-xs`
-                        : "bg-base-200/30 border-base-300/40 opacity-60"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between gap-1">
-                      <span className={`text-xs font-extrabold uppercase tracking-wider truncate flex items-center gap-1.5 ${st.color}`}>
-                        <st.icon size={14} className="shrink-0" />
-                        <span>{st.label}</span>
+            {/* Scrollable Body */}
+            <div className="p-3 sm:p-6 space-y-3 sm:space-y-4 overflow-y-auto no-scrollbar scrollbar-none [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden flex-1 min-h-0">
+              {/* Overview Metric Banner */}
+              <div className="bg-base-200/70 p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-base-300 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 sm:gap-3 text-xs">
+                <div className="space-y-1.5 flex-1 w-full">
+                  <div className="flex justify-between items-center font-bold whitespace-nowrap text-[11px] sm:text-xs">
+                    <span className="text-base-content/70">
+                      <span className="hidden sm:inline">Free Portfolio Capital</span>
+                      <span className="sm:hidden">Free Capital</span>
+                    </span>
+                    <span className="font-mono text-amber-500 text-xs sm:text-sm font-bold whitespace-nowrap">
+                      {topMetrics.totalHoldingsWealth > 0
+                        ? `${Math.round((topMetrics.totalUnallocatedWealth / topMetrics.totalHoldingsWealth) * 100)}%`
+                        : "100%"}{" "}
+                      Free{" "}
+                      <span className="text-[10px] sm:text-xs text-base-content/60 font-semibold">
+                        ({formatINRCompact(topMetrics.totalUnallocatedWealth)} / {formatINRCompact(topMetrics.totalHoldingsWealth)})
                       </span>
-                      <span
-                        className={`badge badge-xs font-mono font-bold ${
-                          st.count > 0 ? "badge-warning badge-soft text-amber-600 dark:text-amber-400" : "badge-ghost opacity-60"
-                        }`}
-                      >
-                        {st.count} {st.count === 1 ? "source" : "sources"}
-                      </span>
-                    </div>
-                    <div className="mt-2.5">
-                      <div className="font-mono font-black text-sm sm:text-base text-base-content truncate">
-                        {formatINRCompact(st.amount)}
-                      </div>
-                      <div className="text-[10.5px] text-base-content/50 font-mono truncate mt-0.5">
-                        {formatINR(st.amount)}
-                      </div>
-                    </div>
+                    </span>
                   </div>
-                ))}
+                  <div className="w-full bg-base-100 rounded-full h-2 sm:h-2.5 overflow-hidden border border-base-300">
+                    <div
+                      className="h-full bg-amber-500 transition-all duration-500 rounded-full"
+                      style={{
+                        width: `${
+                          topMetrics.totalHoldingsWealth > 0
+                            ? (topMetrics.totalUnallocatedWealth / topMetrics.totalHoldingsWealth) * 100
+                            : 100
+                        }%`,
+                      }}
+                    ></div>
+                  </div>
+                </div>
+
+                <div className="sm:text-right shrink-0 flex sm:flex-col justify-between sm:justify-center items-center sm:items-end w-full sm:w-auto pt-1 sm:pt-0 border-t sm:border-t-0 border-base-300/50">
+                  <span className="text-[9.5px] sm:text-[10px] uppercase font-bold text-base-content/50 block whitespace-nowrap">
+                    <span className="hidden sm:inline">Unallocated Sources</span>
+                    <span className="sm:hidden">Free Sources</span>
+                  </span>
+                  <span className="font-mono font-extrabold text-xs sm:text-base text-amber-500 whitespace-nowrap">
+                    {overallUnallocatedSourceTypeStats.reduce((sum, t) => sum + t.count, 0)} Assets
+                  </span>
+                </div>
+              </div>
+
+              {/* 6 Source Types Grid (Showing all 6, if 0 shows 0) */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-[11px] sm:text-xs font-bold text-base-content/70 px-0.5 sm:px-1 whitespace-nowrap">
+                  <span className="truncate">Asset Categories Breakdown</span>
+                  <span className="font-mono text-[10px] sm:text-[11px] text-base-content/50 font-normal shrink-0">
+                    All 6 Classes
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-2.5">
+                  {overallUnallocatedSourceTypeStats.map((st) => (
+                    <div
+                      key={st.label}
+                      className={`p-2.5 sm:p-3 rounded-xl sm:rounded-2xl border flex flex-col justify-between transition-all ${
+                        st.count > 0
+                          ? `${st.bg} ${st.border} shadow-xs`
+                          : "bg-base-200/30 border-base-300/40 opacity-60"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-1 min-w-0 whitespace-nowrap">
+                        <span className={`text-[11px] sm:text-xs font-extrabold uppercase tracking-wider truncate flex items-center gap-1 sm:gap-1.5 min-w-0 ${st.color}`}>
+                          <st.icon size={13} className="shrink-0" />
+                          <span className="truncate">{st.label}</span>
+                        </span>
+                        <span
+                          className={`badge badge-xs font-mono font-bold shrink-0 px-1.5 py-0.5 whitespace-nowrap ${
+                            st.count > 0 ? "badge-warning badge-soft text-amber-600 dark:text-amber-400" : "badge-ghost opacity-60"
+                          }`}
+                        >
+                          <span className="hidden sm:inline">{st.count} {st.count === 1 ? "source" : "sources"}</span>
+                          <span className="sm:hidden">{st.count}</span>
+                        </span>
+                      </div>
+                      <div className="mt-2 sm:mt-2.5">
+                        <div className="font-mono font-black text-xs sm:text-base text-base-content truncate whitespace-nowrap">
+                          {formatINRCompact(st.amount)}
+                        </div>
+                        <div className="text-[9.5px] sm:text-[10.5px] text-base-content/50 font-mono truncate whitespace-nowrap mt-0.5">
+                          <span className="hidden sm:inline">{formatINR(st.amount)}</span>
+                          <span className="sm:hidden">{st.amount > 0 ? formatINR(st.amount) : "₹0"}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
 
-            {/* Footer */}
-            <div className="pt-3 border-t border-base-300 flex items-center justify-between">
-              <span className="text-xs text-base-content/50">
-                Allocate unassigned capital to your goals from the planner sections below
+            {/* Pinned Footer */}
+            <div className="p-3 sm:p-4 border-t border-base-300 flex items-center justify-between shrink-0 bg-base-100 whitespace-nowrap gap-2">
+              <span className="text-[10px] sm:text-xs text-base-content/50 truncate whitespace-nowrap">
+                <span className="hidden sm:inline">Allocate unassigned capital to your goals from the planner sections below</span>
+                <span className="sm:hidden">Allocate free capital in the goals below</span>
               </span>
               <button
                 type="button"
                 onClick={() => setIsUnallocatedModalOpen(false)}
-                className="btn btn-sm btn-primary rounded-xl font-bold px-5"
+                className="btn btn-xs sm:btn-sm btn-primary rounded-xl font-bold px-4 sm:px-5 shrink-0 whitespace-nowrap"
               >
                 Close
               </button>

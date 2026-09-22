@@ -43,6 +43,7 @@ import {
   ArrowUp,
   ArrowDown,
   Pencil,
+  X,
 } from "lucide-react";
 
 const ASSET_THEMES = {
@@ -275,6 +276,10 @@ export default function InvTableView() {
       setSelectedPlannerId(fromUrl);
     }
   }, [searchParams]);
+
+  // Mobile phone view states
+  const [isMobilePlannerSheetOpen, setIsMobilePlannerSheetOpen] = useState(false);
+  const [mobileSectionTab, setMobileSectionTab] = useState("assets"); // "assets" | "gauge"
 
 
   // Sync latest planner goals from DB or localStorage whenever window gets focus
@@ -1642,9 +1647,184 @@ export default function InvTableView() {
     });
   }, [ledgerRows, tableSortColumn, tableSortDirection]);
 
+  // Mobile Asset Allocation Donut Chart Data
+  const mobileDonutData = useMemo(() => {
+    const rawItems = [
+      {
+        key: "bank",
+        label: "Bank Balance",
+        shortLabel: "Bank Cash",
+        value: displayBankValuation,
+        share: Number(assetShares.bank) || 0,
+        color: ASSET_THEMES.bank.color,
+      },
+      {
+        key: "demat",
+        label: "Demat Holdings",
+        shortLabel: "Stocks",
+        value: displayDematValuation,
+        share: Number(assetShares.demat) || 0,
+        color: ASSET_THEMES.demat.color,
+      },
+      {
+        key: "mf",
+        label: "Mutual Funds",
+        shortLabel: "Mutual Funds",
+        value: displayMfValuation,
+        share: Number(assetShares.mf) || 0,
+        color: ASSET_THEMES.mf.color,
+      },
+      {
+        key: "fd",
+        label: "Fixed Deposits",
+        shortLabel: "Fixed Dep.",
+        value: displayFdValuation,
+        share: Number(assetShares.fd) || 0,
+        color: ASSET_THEMES.fd.color,
+      },
+      {
+        key: "rd",
+        label: "Recurring Deposits",
+        shortLabel: "Recurring Dep.",
+        value: displayRdValuation,
+        share: Number(assetShares.rd) || 0,
+        color: ASSET_THEMES.rd.color,
+      },
+      {
+        key: "pf",
+        label: "Provident Fund",
+        shortLabel: "EPF",
+        value: displayPfValuation,
+        share: Number(assetShares.pf) || 0,
+        color: ASSET_THEMES.pf.color,
+      },
+    ];
+
+    const activeItems = rawItems.filter((item) => item.value > 0);
+    const hasData = activeItems.length > 0 && displayTotalWorth > 0;
+    const displayItems = hasData ? activeItems : [];
+
+    return {
+      hasData,
+      rawItems,
+      activeCount: activeItems.length,
+      series: displayItems.map((item) => item.value),
+      labels: displayItems.map((item) => item.shortLabel),
+      colors: displayItems.map((item) => item.color),
+    };
+  }, [
+    displayTotalWorth,
+    displayBankValuation,
+    displayDematValuation,
+    displayMfValuation,
+    displayFdValuation,
+    displayRdValuation,
+    displayPfValuation,
+    assetShares,
+  ]);
+
+  const mobileDonutOptions = useMemo(() => {
+    return {
+      chart: {
+        type: "donut",
+        background: "transparent",
+        animations: {
+          enabled: true,
+          easing: "easeinout",
+          speed: 450,
+        },
+        dropShadow: { enabled: false },
+      },
+      labels: mobileDonutData.labels,
+      colors: mobileDonutData.colors,
+      stroke: {
+        show: true,
+        width: 2.5,
+        colors: ["#0f172a"],
+      },
+      fill: {
+        type: "solid",
+        opacity: 0.95,
+      },
+      dataLabels: {
+        enabled: true,
+        formatter: function (val) {
+          return Number(val) >= 7 ? `${Math.round(val)}%` : "";
+        },
+        style: {
+          fontSize: "11px",
+          fontFamily: "monospace",
+          fontWeight: "800",
+          colors: ["#ffffff"],
+        },
+        dropShadow: {
+          enabled: true,
+          top: 1,
+          left: 1,
+          blur: 2,
+          color: "#000000",
+          opacity: 0.85,
+        },
+      },
+      plotOptions: {
+        pie: {
+          donut: {
+            size: "70%",
+            background: "transparent",
+            labels: {
+              show: true,
+              name: {
+                show: true,
+                fontSize: "10px",
+                fontWeight: "700",
+                color: "#94a3b8",
+                offsetY: -3,
+                formatter: () => (projectionMode ? "Target Total" : "Net Worth"),
+              },
+              value: {
+                show: true,
+                fontSize: "15px",
+                fontWeight: "900",
+                fontFamily: "monospace",
+                color: "#38bdf8",
+                offsetY: 3,
+                formatter: (val) =>
+                  hideNumbers ? "••••" : formatCurrencyCompact(Number(val)),
+              },
+              total: {
+                show: true,
+                showAlways: true,
+                label: projectionMode ? "Target Total" : "Net Worth",
+                fontSize: "9.5px",
+                fontWeight: "800",
+                color: "#94a3b8",
+                formatter: () =>
+                  hideNumbers ? "••••••" : formatCurrencyCompact(displayTotalWorth),
+              },
+            },
+          },
+        },
+      },
+      legend: {
+        show: false,
+      },
+      tooltip: {
+        theme: "dark",
+        y: {
+          formatter: (val) =>
+            hideNumbers ? "••••••" : `₹${formatCurrency2Dec(val)}`,
+        },
+      },
+    };
+  }, [mobileDonutData, hideNumbers, displayTotalWorth, projectionMode]);
+
   return (
     <div className="w-full space-y-6 pb-20">
-      {/* 1. Sticky Glassmorphism Header */}
+      {/* =================================================================== */}
+      {/* DESKTOP VIEW (hidden md:block) - 100% UNTOUCHED ORIGINAL LAYOUT     */}
+      {/* =================================================================== */}
+      <div className="hidden md:block w-full space-y-6">
+        {/* 1. Sticky Glassmorphism Header */}
       <div className="sticky top-[-17px] z-40 bg-base-100/95 backdrop-blur-md shadow-md border-b border-base-300/40 -mx-4 px-4 py-2.5 mt-[-16px]">
         <div className="flex items-center justify-between gap-3 max-w-[1600px] mx-auto px-2 md:px-4">
           {/* Left: Page Title & Breadcrumb subtext */}
@@ -3355,6 +3535,738 @@ export default function InvTableView() {
                 </div>
               </div>
             )}
+          </>
+        )}
+      </div>
+      </div>
+      {/* =================================================================== */}
+      {/* END OF DESKTOP VIEW (hidden md:block)                              */}
+      {/* =================================================================== */}
+
+      {/* =================================================================== */}
+      {/* PHONE VIEW (block md:hidden) - TAILORED FINTECH MOBILE DASHBOARD     */}
+      {/* =================================================================== */}
+      <div className="block md:hidden w-full pb-8">
+        {/* 1. Mobile Glassmorphism Fixed Header (Pinned firmly at top under navbar) */}
+        <div className="fixed top-16 left-0 right-0 z-40 bg-base-100/95 dark:bg-base-900/95 backdrop-blur-md px-3 py-2 border-b border-base-content/8 shadow-xs">
+          <div className="flex items-center justify-between gap-2 max-w-full">
+            {/* Left: Title & Planner Selector Pill */}
+            <div className="flex items-center gap-2 min-w-0 flex-1">
+              <div className="w-7 h-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0 border border-primary/20">
+                <Layers size={14} />
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsMobilePlannerSheetOpen(true)}
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-base-200/80 hover:bg-base-200 border border-base-content/10 text-xs font-bold text-base-content min-w-0 max-w-[170px] truncate shadow-2xs cursor-pointer transition-all active:scale-95"
+              >
+                <span className="truncate">
+                  {selectedPlannerId === "all" ? "🌐 Whole Portfolio" : `${activePlanner?.icon || "🎯"} ${activePlanner?.title || "Goal"}`}
+                </span>
+                <ChevronDown size={12} className="text-base-content/50 shrink-0" />
+              </button>
+            </div>
+
+            {/* Right: Quick Action cluster */}
+            <div className="flex items-center gap-1.5 shrink-0">
+              {/* Projection Mode Toggle */}
+              <button
+                type="button"
+                onClick={() => toggleProjectionMode(!projectionMode)}
+                className={`px-2 py-1 rounded-xl text-[10.5px] font-bold flex items-center gap-1 border transition-all cursor-pointer ${
+                  projectionMode
+                    ? "bg-primary text-primary-content border-primary shadow-xs"
+                    : "bg-base-200 text-base-content/70 border-base-content/10 hover:text-base-content"
+                }`}
+                title={projectionMode ? "Projection Mode ON" : "Projection Mode OFF"}
+              >
+                <Sparkles size={11} className={projectionMode ? "text-primary-content" : "opacity-60"} />
+                <span>Proj</span>
+              </button>
+
+              {/* Privacy Mask Toggle */}
+              <button
+                type="button"
+                onClick={toggleHideNumbers}
+                className={`w-7 h-7 rounded-xl flex items-center justify-center border transition-all cursor-pointer ${
+                  hideNumbers
+                    ? "bg-warning/15 text-warning border-warning/30"
+                    : "bg-base-200 text-base-content/70 border-base-content/10"
+                }`}
+                title={hideNumbers ? "Reveal numbers" : "Conceal numbers"}
+              >
+                {hideNumbers ? <EyeOff size={13} /> : <Eye size={13} />}
+              </button>
+
+              {/* Settings Trigger */}
+              <button
+                type="button"
+                onClick={() => setIsSettingsOpen(true)}
+                className="w-7 h-7 rounded-xl bg-base-200 hover:bg-base-300 text-base-content/70 border border-base-content/10 flex items-center justify-center cursor-pointer"
+                title="Settings"
+              >
+                <SlidersHorizontal size={13} />
+              </button>
+
+              {/* Refresh */}
+              <button
+                type="button"
+                onClick={() => {
+                  apiCache.invalidate("/investment");
+                  fetchAllPortfolioData();
+                }}
+                disabled={loading}
+                className="w-7 h-7 rounded-xl bg-base-200 hover:bg-base-300 text-base-content/70 border border-base-content/10 flex items-center justify-center cursor-pointer"
+                title="Refresh"
+              >
+                <RefreshCw size={12} className={loading ? "animate-spin text-primary" : ""} />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* 2. Scrollable Body Container with top offset for fixed header */}
+        <div className="pt-14 px-3 space-y-3">
+        {/* Loading Spinner */}
+        {loading && (
+          <div className="h-48 flex flex-col items-center justify-center gap-2">
+            <span className="loading loading-spinner loading-md text-primary"></span>
+            <p className="text-[11px] text-base-content/60 font-semibold">
+              Synchronizing portfolio assets...
+            </p>
+          </div>
+        )}
+
+        {/* Error Alert */}
+        {error && !loading && (
+          <div className="alert alert-warning shadow-xs text-xs font-bold rounded-xl py-2">
+            <AlertCircle size={15} />
+            <span>{error}</span>
+          </div>
+        )}
+
+        {!loading && (
+          <div className="space-y-3 animate-in fade-in duration-200">
+            {/* 3. Fintech Hero Net Worth Card */}
+            <div className="bg-gradient-to-br from-base-200 via-base-200 to-base-300/80 dark:from-base-900 dark:via-base-900 dark:to-base-950 rounded-2xl border border-base-300 dark:border-base-700/80 p-3.5 shadow-sm space-y-3">
+              {/* Header row */}
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <span className="text-[10px] font-black uppercase tracking-wider text-base-content/60 flex items-center gap-1.5">
+                    <Wallet size={12} className="text-primary" />
+                    {activePlanner ? `${activePlanner.title} Valuation` : "Consolidated Net Worth"}
+                  </span>
+                  <div className="text-2xl sm:text-3xl font-black font-mono tracking-tight text-base-content mt-0.5">
+                    {hideNumbers ? "••••••••" : `₹${formatCurrency2Dec(displayTotalWorth)}`}
+                  </div>
+                </div>
+
+                <div className="flex flex-col items-end gap-1">
+                  {projectionMode ? (
+                    <span className="badge badge-xs font-bold font-mono text-[9px] px-2 py-1 rounded-lg bg-primary/15 text-primary border border-primary/30 flex items-center gap-1">
+                      <Sparkles size={9} /> Proj: {targetMonthFormattedShort || "Target"}
+                    </span>
+                  ) : (
+                    <span className="badge badge-xs font-bold font-mono text-[9px] px-2 py-1 rounded-lg bg-success/15 text-success border border-success/30">
+                      Live Valuations
+                    </span>
+                  )}
+                  <span className="text-[9.5px] font-semibold text-base-content/50">
+                    {ledgerRows.length} Asset Classes
+                  </span>
+                </div>
+              </div>
+
+              {/* Projection Growth Pill (if projectionMode) */}
+              {projectionMode && (
+                <div className="p-2 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-between text-xs font-mono">
+                  <span className="text-[10px] text-primary/80 font-bold uppercase">Estimated Compounding</span>
+                  <span className="font-black text-primary">
+                    +{hideNumbers ? "••••" : formatCurrencyCompact(Math.max(0, projectedMetrics.totalWorth - totalWorth))}
+                  </span>
+                </div>
+              )}
+
+              {/* Goal Progress Bar */}
+              <div className="space-y-1 pt-0.5">
+                <div className="flex items-center justify-between text-[10px]">
+                  <span className="font-bold text-base-content/70">
+                    Goal: {formatCurrencyCompact(activeUpperLimit)}
+                  </span>
+                  <span className="font-mono font-black text-primary">
+                    {achievementPercent}% Achieved
+                  </span>
+                </div>
+                <div className="w-full bg-base-300 dark:bg-base-700/60 h-2 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-primary to-emerald-500 rounded-full transition-all duration-500"
+                    style={{ width: `${Math.min(100, achievementPercent)}%` }}
+                  />
+                </div>
+                <div className="flex items-center justify-between text-[9px] text-base-content/45 font-medium">
+                  <span>{formatCurrencyCompact(displayTotalWorth)} accumulated</span>
+                  <span>Remaining: {formatCurrencyCompact(remainingToGoal)}</span>
+                </div>
+              </div>
+
+              {/* 4-Metric Mini Grid */}
+              <div className="grid grid-cols-2 gap-2 pt-2 border-t border-base-300/80 dark:border-base-700/60">
+                <div className="bg-base-100/90 dark:bg-base-800/80 p-2 rounded-xl border border-base-300/60 dark:border-base-700/60 shadow-2xs">
+                  <div className="text-[9px] font-bold text-emerald-600 dark:text-emerald-400 uppercase">Cash & Liquid</div>
+                  <div className="text-xs font-black font-mono text-base-content truncate">
+                    {hideNumbers ? "••••" : formatCurrencyCompact(displayBankValuation)}
+                  </div>
+                  <div className="text-[8.5px] text-base-content/40 font-mono">{assetShares.bank}% share</div>
+                </div>
+                <div className="bg-base-100/90 dark:bg-base-800/80 p-2 rounded-xl border border-base-300/60 dark:border-base-700/60 shadow-2xs">
+                  <div className="text-[9px] font-bold text-blue-600 dark:text-blue-400 uppercase">Equities & SIPs</div>
+                  <div className="text-xs font-black font-mono text-base-content truncate">
+                    {hideNumbers ? "••••" : formatCurrencyCompact(displayDematValuation + displayMfValuation)}
+                  </div>
+                  <div className="text-[8.5px] text-base-content/40 font-mono">{(Number(assetShares.demat) + Number(assetShares.mf)).toFixed(1)}% share</div>
+                </div>
+                <div className="bg-base-100/90 dark:bg-base-800/80 p-2 rounded-xl border border-base-300/60 dark:border-base-700/60 shadow-2xs">
+                  <div className="text-[9px] font-bold text-amber-600 dark:text-amber-400 uppercase">Deposits (FD+RD)</div>
+                  <div className="text-xs font-black font-mono text-base-content truncate">
+                    {hideNumbers ? "••••" : formatCurrencyCompact(displayFdValuation + displayRdValuation)}
+                  </div>
+                  <div className="text-[8.5px] text-base-content/40 font-mono">{(Number(assetShares.fd) + Number(assetShares.rd)).toFixed(1)}% share</div>
+                </div>
+                <div className="bg-base-100/90 dark:bg-base-800/80 p-2 rounded-xl border border-base-300/60 dark:border-base-700/60 shadow-2xs">
+                  <div className="text-[9px] font-bold text-teal-600 dark:text-teal-400 uppercase">Retirement (PF)</div>
+                  <div className="text-xs font-black font-mono text-base-content truncate">
+                    {hideNumbers ? "••••" : formatCurrencyCompact(displayPfValuation)}
+                  </div>
+                  <div className="text-[8.5px] text-base-content/40 font-mono">{assetShares.pf}% share</div>
+                </div>
+              </div>
+            </div>
+
+            {/* 4. Asset Allocation Donut Graph Card */}
+            <div className="bg-base-100 rounded-2xl border border-base-content/8 p-3.5 space-y-3 shadow-2xs">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-black uppercase tracking-wider text-base-content/70 flex items-center gap-1.5">
+                  <PieChart size={13} className="text-purple-500" />
+                  Asset Allocation Stack
+                </span>
+                <span className="badge badge-xs font-mono font-bold px-2 py-0.5 rounded-lg bg-base-200 text-base-content/60 border border-base-content/8">
+                  {mobileDonutData.activeCount} Active • 100%
+                </span>
+              </div>
+
+              {/* ApexCharts Donut Graph */}
+              {mobileDonutData.hasData ? (
+                <div className="w-full flex flex-col items-center justify-center -my-1">
+                  <Chart
+                    key={`mobile-donut-${projectionMode}-${hideNumbers}-${displayTotalWorth}-${mobileDonutData.series.join("-")}`}
+                    options={mobileDonutOptions}
+                    series={mobileDonutData.series}
+                    type="donut"
+                    height={220}
+                    width="100%"
+                  />
+                </div>
+              ) : (
+                <div className="py-6 flex flex-col items-center justify-center text-center space-y-1.5">
+                  <div className="w-10 h-10 rounded-2xl bg-base-200 flex items-center justify-center text-base-content/40">
+                    <PieChart size={20} />
+                  </div>
+                  <p className="text-xs font-semibold text-base-content/60">
+                    No portfolio valuation available to graph yet.
+                  </p>
+                </div>
+              )}
+
+              {/* Multi-segment thin progress bar for continuous visual distribution */}
+              <div className="h-2 w-full bg-base-200 rounded-full overflow-hidden flex gap-0.5 p-0.5">
+                {Number(assetShares.bank) > 0 && (
+                  <div style={{ width: `${assetShares.bank}%` }} className="bg-emerald-500 h-full rounded-full" title={`Bank: ${assetShares.bank}%`} />
+                )}
+                {Number(assetShares.demat) > 0 && (
+                  <div style={{ width: `${assetShares.demat}%` }} className="bg-blue-500 h-full rounded-full" title={`Stocks: ${assetShares.demat}%`} />
+                )}
+                {Number(assetShares.mf) > 0 && (
+                  <div style={{ width: `${assetShares.mf}%` }} className="bg-purple-500 h-full rounded-full" title={`MF: ${assetShares.mf}%`} />
+                )}
+                {Number(assetShares.fd) > 0 && (
+                  <div style={{ width: `${assetShares.fd}%` }} className="bg-amber-500 h-full rounded-full" title={`FD: ${assetShares.fd}%`} />
+                )}
+                {Number(assetShares.rd) > 0 && (
+                  <div style={{ width: `${assetShares.rd}%` }} className="bg-orange-500 h-full rounded-full" title={`RD: ${assetShares.rd}%`} />
+                )}
+                {Number(assetShares.pf) > 0 && (
+                  <div style={{ width: `${assetShares.pf}%` }} className="bg-teal-500 h-full rounded-full" title={`PF: ${assetShares.pf}%`} />
+                )}
+              </div>
+
+              {/* 2-Column Asset Allocation Legend Grid with Valuations & Shares */}
+              <div className="grid grid-cols-2 gap-1.5 pt-0.5">
+                {mobileDonutData.rawItems.map((item) => (
+                  <div
+                    key={item.key}
+                    className="p-2 rounded-xl bg-base-200/40 border border-base-content/6 flex items-center justify-between gap-1.5"
+                  >
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span
+                        className="w-2.5 h-2.5 rounded-full shrink-0 shadow-2xs"
+                        style={{ backgroundColor: item.color }}
+                      />
+                      <span className="text-[10.5px] font-bold text-base-content truncate">
+                        {item.shortLabel}
+                      </span>
+                    </div>
+                    <div className="text-right shrink-0 font-mono">
+                      <span className="text-[10.5px] font-black text-base-content block">
+                        {item.share}%
+                      </span>
+                      <span className="text-[9px] text-base-content/50 block">
+                        {hideNumbers ? "••••" : formatCurrencyCompact(item.value)}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* 5. Sticky Segmented Sub-Navigation Tabs (Assets & Milestones) */}
+            <div className="sticky top-[45px] z-30 bg-base-100/95 dark:bg-base-900/95 backdrop-blur-md py-1.5 -mx-3 px-3 border-y border-base-content/8 shadow-xs">
+              <div className="grid grid-cols-2 gap-1.5 bg-base-200/90 dark:bg-base-800/80 p-1 rounded-2xl border border-base-content/8 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setMobileSectionTab("assets")}
+                  className={`py-2 rounded-xl font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                    mobileSectionTab === "assets"
+                      ? "bg-base-100 text-primary shadow-xs border border-base-content/8 scale-[1.01]"
+                      : "text-base-content/60 hover:text-base-content"
+                  }`}
+                >
+                  <TableProperties size={14} />
+                  <span>Assets ({ledgerRows.length})</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMobileSectionTab("gauge")}
+                  className={`py-2 rounded-xl font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                    mobileSectionTab === "gauge"
+                      ? "bg-base-100 text-primary shadow-xs border border-base-content/8 scale-[1.01]"
+                      : "text-base-content/60 hover:text-base-content"
+                  }`}
+                >
+                  <Target size={14} />
+                  <span>Milestones</span>
+                </button>
+              </div>
+            </div>
+
+            {/* 6. Section Tab Content */}
+            {mobileSectionTab === "assets" && (
+              <div className="space-y-2.5 animate-in fade-in duration-150">
+                {ledgerRows.map((row) => {
+                  const theme = ASSET_THEMES[row.key] || {};
+                  const IconComponent = theme.icon || Layers;
+                  return (
+                    <div
+                      key={row.key}
+                      className="bg-base-100 rounded-2xl border border-base-content/8 dark:border-base-content/8 p-3.5 space-y-2.5 shadow-2xs transition-all"
+                    >
+                      {/* Top Identity Row */}
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div
+                            className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border"
+                            style={{
+                              backgroundColor: `${row.color}18`,
+                              borderColor: `${row.color}35`,
+                              color: row.color,
+                            }}
+                          >
+                            <IconComponent size={18} />
+                          </div>
+                          <div className="min-w-0">
+                            <h4 className="font-extrabold text-xs text-base-content leading-snug truncate">
+                              {row.assetClass}
+                            </h4>
+                            <span className="text-[10px] text-base-content/50 font-medium">
+                              {row.category}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Share Badge */}
+                        <div className="text-right shrink-0">
+                          <span
+                            className="badge badge-xs font-bold font-mono px-2 py-0.5 rounded-lg"
+                            style={{
+                              backgroundColor: `${row.color}15`,
+                              color: row.color,
+                              borderColor: `${row.color}30`,
+                            }}
+                          >
+                            {row.share}% Share
+                          </span>
+                          <span className="text-[9px] text-base-content/40 font-mono block mt-0.5">
+                            {row.countLabel}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Valuation & Link Strip */}
+                      <div className="p-2.5 bg-base-200/50 dark:bg-base-800/50 rounded-xl border border-base-content/6 flex items-center justify-between">
+                        <div>
+                          <span className="text-[9px] uppercase font-bold text-base-content/45 block mb-0.5">
+                            {projectionMode ? "Projected Valuation" : "Current Valuation"}
+                          </span>
+                          <span className="text-base font-black font-mono tracking-tight text-base-content">
+                            {hideNumbers ? "••••••••" : `₹${formatCurrency2Dec(row.valuation)}`}
+                          </span>
+                        </div>
+
+                        <Link
+                          to={row.link}
+                          className="btn btn-xs rounded-xl text-[10.5px] font-bold border border-base-content/10 bg-base-100 hover:bg-base-200 text-primary flex items-center gap-1 shadow-2xs cursor-pointer"
+                        >
+                          <span>{row.linkText}</span>
+                          <ArrowUpRight size={12} />
+                        </Link>
+                      </div>
+
+                      {/* Asset-Specific Submetrics Strip */}
+                      {row.key === "bank" && (
+                        <div className="grid grid-cols-2 gap-1.5 text-[10px] pt-0.5">
+                          <div className="bg-base-200/30 p-1.5 rounded-lg text-base-content/70">
+                            <span className="text-base-content/40 block text-[8.5px] uppercase font-bold">Accounts</span>
+                            <span className="font-mono font-bold">{bankMetrics.count} Connected</span>
+                          </div>
+                          <div className="bg-base-200/30 p-1.5 rounded-lg text-base-content/70 text-right">
+                            <span className="text-base-content/40 block text-[8.5px] uppercase font-bold">Total Cash</span>
+                            <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                              {hideNumbers ? "••••" : formatCurrencyCompact(bankMetrics.total)}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+
+                      {row.key === "demat" && (
+                        <div className="grid grid-cols-3 gap-1.5 text-[10px] pt-0.5">
+                          <div className="bg-base-200/30 p-1.5 rounded-lg text-base-content/70">
+                            <span className="text-base-content/40 block text-[8.5px] uppercase font-bold">Holdings</span>
+                            <span className="font-mono font-bold">{dematMetrics.holdingsCount} Stocks</span>
+                          </div>
+                          <div className="bg-base-200/30 p-1.5 rounded-lg text-base-content/70">
+                            <span className="text-base-content/40 block text-[8.5px] uppercase font-bold">Invested</span>
+                            <span className="font-mono font-bold text-base-content">
+                              {hideNumbers ? "••••" : formatCurrencyCompact(dematMetrics.invested)}
+                            </span>
+                          </div>
+                          <div className="bg-base-200/30 p-1.5 rounded-lg text-base-content/70 text-right">
+                            <span className="text-base-content/40 block text-[8.5px] uppercase font-bold">Net P&L</span>
+                            <span className={`font-mono font-bold ${dematMetrics.totalGain >= 0 ? "text-success" : "text-error"}`}>
+                              {hideNumbers ? "••••" : formatCurrencyCompact(dematMetrics.totalGain)}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+
+                      {row.key === "fd" && (
+                        <div className="grid grid-cols-3 gap-1.5 text-[10px] pt-0.5">
+                          <div className="bg-base-200/30 p-1.5 rounded-lg text-base-content/70">
+                            <span className="text-base-content/40 block text-[8.5px] uppercase font-bold">Deposits</span>
+                            <span className="font-mono font-bold">{fdMetrics.count} Active</span>
+                          </div>
+                          <div className="bg-base-200/30 p-1.5 rounded-lg text-base-content/70">
+                            <span className="text-base-content/40 block text-[8.5px] uppercase font-bold">Principal</span>
+                            <span className="font-mono font-bold text-base-content">
+                              {hideNumbers ? "••••" : formatCurrencyCompact(fdMetrics.totalPrincipal)}
+                            </span>
+                          </div>
+                          <div className="bg-base-200/30 p-1.5 rounded-lg text-base-content/70 text-right">
+                            <span className="text-base-content/40 block text-[8.5px] uppercase font-bold">Interest</span>
+                            <span className="font-mono font-bold text-amber-600 dark:text-amber-400">
+                              +{hideNumbers ? "••••" : formatCurrencyCompact(fdMetrics.totalInterest)}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+
+                      {row.key === "rd" && (
+                        <div className="grid grid-cols-3 gap-1.5 text-[10px] pt-0.5">
+                          <div className="bg-base-200/30 p-1.5 rounded-lg text-base-content/70">
+                            <span className="text-base-content/40 block text-[8.5px] uppercase font-bold">Schemes</span>
+                            <span className="font-mono font-bold">{rdMetrics.count} Active</span>
+                          </div>
+                          <div className="bg-base-200/30 p-1.5 rounded-lg text-base-content/70">
+                            <span className="text-base-content/40 block text-[8.5px] uppercase font-bold">Paid</span>
+                            <span className="font-mono font-bold text-base-content">
+                              {hideNumbers ? "••••" : formatCurrencyCompact(rdMetrics.totalPaid)}
+                            </span>
+                          </div>
+                          <div className="bg-base-200/30 p-1.5 rounded-lg text-base-content/70 text-right">
+                            <span className="text-base-content/40 block text-[8.5px] uppercase font-bold">Interest</span>
+                            <span className="font-mono font-bold text-orange-600 dark:text-orange-400">
+                              +{hideNumbers ? "••••" : formatCurrencyCompact(rdMetrics.totalInterest)}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+
+                      {row.key === "mf" && (
+                        <div className="grid grid-cols-3 gap-1.5 text-[10px] pt-0.5">
+                          <div className="bg-base-200/30 p-1.5 rounded-lg text-base-content/70">
+                            <span className="text-base-content/40 block text-[8.5px] uppercase font-bold">Folios</span>
+                            <span className="font-mono font-bold">{mfMetrics.count} Funds</span>
+                          </div>
+                          <div className="bg-base-200/30 p-1.5 rounded-lg text-base-content/70">
+                            <span className="text-base-content/40 block text-[8.5px] uppercase font-bold">Invested</span>
+                            <span className="font-mono font-bold text-base-content">
+                              {hideNumbers ? "••••" : formatCurrencyCompact(mfMetrics.totalInvested)}
+                            </span>
+                          </div>
+                          <div className="bg-base-200/30 p-1.5 rounded-lg text-base-content/70 text-right">
+                            <span className="text-base-content/40 block text-[8.5px] uppercase font-bold">Growth</span>
+                            <span className="font-mono font-bold text-purple-600 dark:text-purple-400">
+                              {hideNumbers ? "••••" : formatCurrencyCompact(mfMetrics.totalReturns)}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+
+                      {row.key === "pf" && (
+                        <div className="grid grid-cols-3 gap-1.5 text-[10px] pt-0.5">
+                          <div className="bg-base-200/30 p-1.5 rounded-lg text-base-content/70">
+                            <span className="text-base-content/40 block text-[8.5px] uppercase font-bold">Tenure</span>
+                            <span className="font-mono font-bold">{pfMetrics.monthsCount} Mos</span>
+                          </div>
+                          <div className="bg-base-200/30 p-1.5 rounded-lg text-base-content/70">
+                            <span className="text-base-content/40 block text-[8.5px] uppercase font-bold">Total PF</span>
+                            <span className="font-mono font-bold text-base-content">
+                              {hideNumbers ? "••••" : formatCurrencyCompact(pfMetrics.totalEmployeePf + pfMetrics.totalEmployerPf)}
+                            </span>
+                          </div>
+                          <div className="bg-base-200/30 p-1.5 rounded-lg text-base-content/70 text-right">
+                            <span className="text-base-content/40 block text-[8.5px] uppercase font-bold">Interest</span>
+                            <span className="font-mono font-bold text-teal-600 dark:text-teal-400">
+                              +{hideNumbers ? "••••" : formatCurrencyCompact(pfMetrics.interestAccrued)}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Sub-Nav Tab 2: Gauge & Milestones */}
+            {mobileSectionTab === "gauge" && (
+              <div className="space-y-3 animate-in fade-in duration-150">
+                {/* Gauge Card */}
+                <div className="bg-base-100 rounded-2xl border border-base-content/8 p-3 shadow-2xs overflow-hidden">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-base-content/60 flex items-center gap-1.5">
+                      <Target size={12} className="text-primary" />
+                      Semi-Circle Target Gauge
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setIsSettingsOpen(true)}
+                      className="text-[10px] font-bold text-primary flex items-center gap-1 hover:underline cursor-pointer"
+                    >
+                      <SlidersHorizontal size={11} />
+                      <span>Adjust Limit</span>
+                    </button>
+                  </div>
+
+                  <InteractivePortfolioGauge
+                    totalWorth={displayTotalWorth}
+                    upperLimit={activeUpperLimit}
+                    milestones={activeMilestones}
+                    hideNumbers={hideNumbers}
+                    onOpenSettings={() => setIsSettingsOpen(true)}
+                  />
+                </div>
+
+                {/* Milestones Roadmap Card */}
+                <div className="bg-base-100 rounded-2xl border border-base-content/8 p-3.5 space-y-2.5 shadow-2xs">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="p-1.5 rounded-lg bg-amber-500/10 text-amber-600">
+                        <Flag size={14} />
+                      </div>
+                      <div>
+                        <h4 className="font-black text-xs text-base-content">Milestone Checkpoints</h4>
+                        <span className="text-[10px] text-base-content/50">Roadmap to {formatCurrencyCompact(activeUpperLimit)}</span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setIsSettingsOpen(true)}
+                      className="btn btn-ghost btn-xs text-primary font-bold gap-1"
+                    >
+                      <Pencil size={11} />
+                      <span>Edit</span>
+                    </button>
+                  </div>
+
+                  <div className="space-y-2">
+                    {activeMilestones.map((m, idx) => {
+                      const isAchieved = displayTotalWorth >= Number(m.amount);
+                      const mPct = activeUpperLimit > 0 ? Math.round((Number(m.amount) / activeUpperLimit) * 100) : 0;
+                      return (
+                        <div
+                          key={m.id || idx}
+                          className={`p-2.5 rounded-xl border flex items-center justify-between transition-all ${
+                            isAchieved
+                              ? "bg-emerald-500/5 border-emerald-500/30"
+                              : "bg-base-200/40 border-base-content/8"
+                          }`}
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <div
+                              className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-[11px] font-black ${
+                                isAchieved ? "bg-emerald-500 text-white" : "bg-base-300 text-base-content/60"
+                              }`}
+                            >
+                              {isAchieved ? <Check size={12} strokeWidth={3} /> : idx + 1}
+                            </div>
+                            <div className="min-w-0">
+                              <span className="font-black text-xs text-base-content block truncate">{m.label}</span>
+                              <span className="text-[9.5px] text-base-content/50 font-mono">
+                                {mPct}% Target Marker
+                              </span>
+                            </div>
+                          </div>
+                          <div className="text-right shrink-0 font-mono">
+                            <span className="text-xs font-black text-base-content block">
+                              {hideNumbers ? "••••" : formatCurrencyCompact(m.amount)}
+                            </span>
+                            <span className={`text-[9px] font-bold ${isAchieved ? "text-emerald-600 dark:text-emerald-400" : "text-base-content/40"}`}>
+                              {isAchieved ? "✓ Achieved" : `₹${formatCurrencyCompact(Math.max(0, m.amount - displayTotalWorth))} to go`}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+        </div>
+
+        {/* 7. Mobile Planner Selection Bottom Sheet */}
+        {isMobilePlannerSheetOpen && (
+          <>
+            {/* Backdrop */}
+            <div
+              className="fixed inset-0 z-[99998] bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
+              onClick={() => setIsMobilePlannerSheetOpen(false)}
+            />
+            {/* Sheet */}
+            <div className="fixed bottom-0 left-0 right-0 z-[99999] bg-base-100 rounded-t-3xl border-t border-base-content/10 shadow-2xl animate-in slide-in-from-bottom duration-300 max-h-[82vh] flex flex-col">
+              {/* Header */}
+              <div className="px-4 pt-3 pb-2.5 border-b border-base-content/8 bg-base-200/40 shrink-0">
+                <div className="w-10 h-1 bg-base-content/20 rounded-full mx-auto mb-2.5" />
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 rounded-lg bg-primary/15 text-primary">
+                      <Target size={15} />
+                    </div>
+                    <div>
+                      <h3 className="font-black text-sm text-base-content">Select Portfolio View</h3>
+                      <p className="text-[10px] text-base-content/50 font-medium">Switch between Whole Portfolio and Goal Plans</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsMobilePlannerSheetOpen(false)}
+                    className="btn btn-xs btn-ghost btn-circle rounded-full text-base-content/60 cursor-pointer"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Sheet Body */}
+              <div className="flex-1 overflow-y-auto p-3 space-y-2 min-h-0">
+                {/* Option 1: Whole Portfolio */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedPlannerId("all");
+                    setSearchParams({});
+                    setIsMobilePlannerSheetOpen(false);
+                  }}
+                  className={`w-full p-3 rounded-2xl border flex items-center justify-between text-left transition-all cursor-pointer ${
+                    selectedPlannerId === "all"
+                      ? "bg-primary/10 border-primary text-primary shadow-xs"
+                      : "bg-base-200/40 border-base-content/8 hover:bg-base-200"
+                  }`}
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className="text-xl shrink-0">🌐</span>
+                    <div className="min-w-0">
+                      <span className="font-black text-xs text-base-content block truncate">
+                        Whole Portfolio
+                      </span>
+                      <span className="text-[10px] text-base-content/55 font-medium block">
+                        Consolidated net worth across all 6 asset classes
+                      </span>
+                    </div>
+                  </div>
+                  {selectedPlannerId === "all" && (
+                    <div className="w-6 h-6 rounded-full bg-primary text-primary-content flex items-center justify-center shrink-0">
+                      <Check size={13} strokeWidth={3} />
+                    </div>
+                  )}
+                </button>
+
+                {/* Divider */}
+                {plannerGoals.length > 0 && (
+                  <div className="text-[10px] font-extrabold uppercase tracking-wider text-base-content/40 px-2 pt-2">
+                    Goals & Planners ({plannerGoals.length})
+                  </div>
+                )}
+
+                {/* Goal Plans */}
+                {plannerGoals.map((goal) => {
+                  const isSelected = selectedPlannerId === goal.id || selectedPlannerId === goal._id;
+                  return (
+                    <button
+                      key={goal.id || goal._id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedPlannerId(goal.id || goal._id);
+                        setSearchParams({ planner: goal.id || goal._id });
+                        setIsMobilePlannerSheetOpen(false);
+                      }}
+                      className={`w-full p-3 rounded-2xl border flex items-center justify-between text-left transition-all cursor-pointer ${
+                        isSelected
+                          ? "bg-primary/10 border-primary text-primary shadow-xs"
+                          : "bg-base-200/40 border-base-content/8 hover:bg-base-200"
+                      }`}
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <span className="text-xl shrink-0">{goal.icon || "🎯"}</span>
+                        <div className="min-w-0">
+                          <span className="font-black text-xs text-base-content block truncate">
+                            {goal.title}
+                          </span>
+                          <span className="text-[10px] text-base-content/55 font-medium block">
+                            Target: {formatCurrencyCompact(goal.targetAmount)} • {goal.targetDate ? dayjs(goal.targetDate).format("MMM YYYY") : "No date"}
+                          </span>
+                        </div>
+                      </div>
+                      {isSelected && (
+                        <div className="w-6 h-6 rounded-full bg-primary text-primary-content flex items-center justify-center shrink-0">
+                          <Check size={13} strokeWidth={3} />
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           </>
         )}
       </div>

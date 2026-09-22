@@ -14,6 +14,7 @@ import {
   Percent,
   Coins,
   ChevronRight,
+  ChevronLeft,
   Info,
   CheckCheck,
   AlertCircle,
@@ -148,8 +149,13 @@ export default function AllocateSourceModal({
         const matched = allSources.find((s) => s.id === initialSelectedSource.id) || initialSelectedSource;
         setSelectedSource(matched);
         setSelectedCategory("all");
-      } else if (!selectedSource && allSources.length > 0) {
-        setSelectedSource(allSources[0]);
+      } else {
+        // On desktop, auto-select first source. On mobile, start with null so user sees the list first.
+        if (typeof window !== "undefined" && window.innerWidth >= 768) {
+          setSelectedSource((prev) => prev || allSources[0] || null);
+        } else {
+          setSelectedSource(null);
+        }
         setSelectedCategory("all");
       }
     } else {
@@ -197,6 +203,11 @@ export default function AllocateSourceModal({
 
   const handleCategoryClick = (catId) => {
     setSelectedCategory(catId);
+    // On phone view, clicking a tab/category must always show the list of sources, never jump to the first item
+    if (typeof window !== "undefined" && window.innerWidth < 768) {
+      setSelectedSource(null);
+      return;
+    }
     if (catId === "in_plan") {
       const firstInPlan = allSources.find((s) => isSourceInCurrentPlan(s));
       if (firstInPlan) {
@@ -210,8 +221,9 @@ export default function AllocateSourceModal({
     }
   };
 
-  // When in_plan category is active and currentPlan changes, ensure selectedSource is in plan
+  // When in_plan category is active and currentPlan changes, ensure selectedSource is in plan (desktop only)
   useEffect(() => {
+    if (typeof window !== "undefined" && window.innerWidth < 768) return;
     if (selectedCategory === "in_plan") {
       if (!selectedSource || !isSourceInCurrentPlan(selectedSource)) {
         const firstInPlan = allSources.find((s) => isSourceInCurrentPlan(s));
@@ -514,12 +526,19 @@ export default function AllocateSourceModal({
   if (!isOpen || !currentPlan) return null;
 
   return (
-    <div className="fixed inset-0 z-[99999] bg-black/60 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 overflow-x-auto">
-      <div className="flex items-stretch justify-center gap-3 sm:gap-4 max-w-[1440px] w-full h-[680px]">
+    <div
+      className="fixed inset-0 z-[99999] bg-black/60 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-y-auto"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
+    >
+      <div className="flex items-stretch justify-center gap-3 sm:gap-4 max-w-[1440px] w-full h-[92dvh] sm:h-[680px]">
         {/* ================================================================ */}
         {/* 1. LEFT POPUP: ASSET CATEGORIES (Exact replica of Food Logging)  */}
         {/* ================================================================ */}
-        <div className="bg-base-100 rounded-3xl border border-base-300 shadow-2xl h-[680px] w-60 sm:w-68 flex flex-col overflow-hidden shrink-0 animate-in fade-in zoom-in-95 duration-200">
+        <div className="hidden md:flex bg-base-100 rounded-3xl border border-base-300 shadow-2xl h-full w-60 sm:w-68 flex-col overflow-hidden shrink-0 animate-in fade-in zoom-in-95 duration-200">
           {/* Header */}
           <div className="p-4 border-b border-base-300 flex items-center justify-between shrink-0">
             <div className="flex items-center gap-2">
@@ -631,21 +650,31 @@ export default function AllocateSourceModal({
         {/* ================================================================ */}
         {/* 2. MAIN POPUP: MIDDLE (LIST) & RIGHT (ALLOTMENT CONTROLS)        */}
         {/* ================================================================ */}
-        <div className="bg-base-200 rounded-3xl flex-1 h-[680px] border border-base-300 shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200 min-w-0 max-w-5xl">
+        <div className="bg-base-200 rounded-t-3xl sm:rounded-3xl flex-1 h-full border border-base-300 shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-6 sm:zoom-in-95 duration-200 min-w-0 max-w-5xl">
+          {/* Mobile Drag Pill */}
+          <div className="sm:hidden w-full flex items-center justify-center pt-2.5 pb-1 shrink-0 bg-base-100">
+            <div className="w-10 h-1 rounded-full bg-base-content/20" />
+          </div>
+
           {/* Main Modal Header */}
-          <div className="p-4 border-b border-base-300 flex justify-between items-center shrink-0 bg-base-100 gap-3">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <span className="text-2xl shrink-0">{currentPlan.icon || "🎯"}</span>
+          <div className="p-2.5 sm:p-4 border-b border-base-300 flex justify-between items-center shrink-0 bg-base-100 gap-2 sm:gap-3">
+            <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+              <span className="text-xl sm:text-2xl shrink-0">{currentPlan.icon || "🎯"}</span>
               <div className="min-w-0">
-                <h3 className="font-extrabold text-base text-base-content flex items-center gap-2 leading-tight">
-                  <span className="truncate">Add Sources to {currentPlan.title}</span>
-                  <span className="badge badge-sm font-bold bg-primary text-primary-content shrink-0">
+                {/* Line 1: Heading */}
+                <h3 className="font-extrabold text-sm sm:text-base text-base-content truncate leading-tight whitespace-nowrap">
+                  Add Sources to {currentPlan.title}
+                </h3>
+                {/* Line 2: Target Badge + Guidance */}
+                <div className="flex items-center gap-1.5 text-[11px] sm:text-xs text-base-content/60 mt-1 whitespace-nowrap truncate">
+                  <span className="badge badge-xs sm:badge-sm font-bold bg-primary text-primary-content shrink-0 font-mono whitespace-nowrap">
                     Target: {formatINRCompact(currentPlan.targetAmount)}
                   </span>
-                </h3>
-                <p className="text-xs text-base-content/60 truncate">
-                  Pick an investment source from the list and choose how much money or percentage to allot
-                </p>
+                  <span className="text-base-content/30 text-[10px] hidden xs:inline">•</span>
+                  <span className="text-[10.5px] sm:text-xs text-base-content/60 font-medium truncate hidden xs:inline whitespace-nowrap">
+                    Choose an asset to allocate funds
+                  </span>
+                </div>
               </div>
             </div>
 
@@ -668,7 +697,7 @@ export default function AllocateSourceModal({
                   ) : (
                     <CheckCircle2 size={15} className="shrink-0 text-emerald-500" />
                   )}
-                  <span className="font-semibold max-w-[240px] sm:max-w-[340px] truncate">
+                  <span className="font-semibold max-w-[120px] xs:max-w-[200px] sm:max-w-[340px] truncate">
                     {topNotification.message}
                   </span>
                   <button
@@ -697,12 +726,63 @@ export default function AllocateSourceModal({
           </div>
 
           {/* Main Body Grid */}
-          <div className="p-4 flex-1 min-h-0 flex flex-col overflow-hidden">
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-4 flex-1 min-h-0 overflow-hidden">
+          <div className="p-2.5 sm:p-4 flex-1 min-h-0 flex flex-col overflow-hidden">
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-3 sm:gap-4 flex-1 min-h-0 overflow-hidden">
               {/* ---------------------------------------------------------- */}
               {/* MIDDLE COLUMN: SEARCH & ASSETS LIST (6 cols)               */}
               {/* ---------------------------------------------------------- */}
-              <div className="md:col-span-6 flex flex-col gap-3 h-full min-h-0 overflow-hidden">
+              <div className={`${selectedSource ? "hidden md:flex" : "flex"} md:col-span-6 flex-col gap-2.5 sm:gap-3 h-full min-h-0 overflow-hidden`}>
+                {/* Mobile Category Carousel (Phone View Only) */}
+                <div className="flex md:hidden items-center gap-1.5 overflow-x-auto pb-0.5 no-scrollbar scrollbar-none [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden shrink-0">
+                  {ASSET_CATEGORIES.map((cat) => {
+                    const IconComp = cat.icon;
+                    const isSelected = selectedCategory === cat.id;
+                    const count =
+                      cat.id === "all"
+                        ? allSources.length
+                        : cat.id === "in_plan"
+                        ? allSources.filter((s) => isSourceInCurrentPlan(s)).length
+                        : cat.id === "bank"
+                        ? bankAccounts.length
+                        : cat.id === "stock"
+                        ? heldStocks.length
+                        : cat.id === "mf"
+                        ? (holdingMutualFunds || []).filter((m) => (m.availableUnits ?? m.activeUnits ?? 0) > 0.0001 && Number(m.holdingValue) > 0).length
+                        : cat.id === "fd"
+                        ? activeFixedDeposits.length
+                        : cat.id === "rd"
+                        ? activeRecurringDeposits.length
+                        : pfSource?.balance > 0
+                        ? 1
+                        : 0;
+
+                    return (
+                      <button
+                        key={cat.id}
+                        type="button"
+                        onClick={() => handleCategoryClick(cat.id)}
+                        className={`btn btn-xs rounded-xl px-2.5 h-7 min-h-0 font-bold text-[11px] gap-1.5 shrink-0 whitespace-nowrap transition-all ${
+                          isSelected
+                            ? "btn-primary shadow-xs"
+                            : "btn-ghost bg-base-100 border border-base-300 text-base-content/70 hover:text-base-content"
+                        }`}
+                      >
+                        <span className={isSelected ? "text-primary-content" : cat.color}>
+                          <IconComp size={13} />
+                        </span>
+                        <span>{cat.label}</span>
+                        <span
+                          className={`badge badge-xs font-mono font-bold ${
+                            isSelected ? "bg-primary-content/20 text-primary-content" : "bg-base-200 text-base-content/60"
+                          }`}
+                        >
+                          {count}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+
                 {/* Search Bar */}
                 <div className="relative shrink-0">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 opacity-40" size={15} />
@@ -726,20 +806,22 @@ export default function AllocateSourceModal({
 
                 {/* Active Category Filter Tag if not All */}
                 {selectedCategory !== "all" && (
-                  <div className="flex items-center justify-between px-3 py-1.5 rounded-xl border border-base-300 text-xs shrink-0 bg-base-100">
-                    <span className="text-base-content/80 flex items-center gap-1.5 font-semibold">
-                      <Layers size={13} className="text-primary" />
-                      Showing:{" "}
-                      <span className="font-bold text-primary">
-                        {selectedCategory === "in_plan"
-                          ? `In Plan (${currentPlan?.title || "Active"})`
-                          : ASSET_CATEGORIES.find((c) => c.id === selectedCategory)?.label}
+                  <div className="flex items-center justify-between px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl border border-base-300 text-xs shrink-0 bg-base-100 whitespace-nowrap gap-2">
+                    <span className="text-base-content/80 flex items-center gap-1.5 font-semibold min-w-0 truncate">
+                      <Layers size={13} className="text-primary shrink-0" />
+                      <span className="truncate">
+                        Showing:{" "}
+                        <span className="font-bold text-primary">
+                          {selectedCategory === "in_plan"
+                            ? `In Plan (${currentPlan?.title || "Active"})`
+                            : ASSET_CATEGORIES.find((c) => c.id === selectedCategory)?.label}
+                        </span>
                       </span>
                     </span>
                     <button
                       type="button"
                       onClick={() => setSelectedCategory("all")}
-                      className="btn btn-ghost btn-xs text-[10px] text-primary hover:underline h-5 min-h-0 px-1.5 rounded-md font-semibold"
+                      className="btn btn-ghost btn-xs text-[10px] text-primary hover:underline h-5 min-h-0 px-1.5 rounded-md font-semibold shrink-0"
                     >
                       Show All
                     </button>
@@ -747,7 +829,7 @@ export default function AllocateSourceModal({
                 )}
 
                 {/* Source Items List */}
-                <div className="flex-1 min-h-0 overflow-y-auto bg-base-100 rounded-2xl p-2 border border-base-300 space-y-1.5 custom-scrollbar">
+                <div className="flex-1 min-h-0 overflow-y-auto bg-base-100 rounded-2xl p-1.5 sm:p-2 border border-base-300 space-y-1.5 custom-scrollbar">
                   {filteredSources.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-full text-center p-4">
                       <Coins size={32} className="opacity-30 mb-2" />
@@ -773,13 +855,13 @@ export default function AllocateSourceModal({
                           key={`${item.sourceType}-${item.id}`}
                           id={`source-item-${item.id}`}
                           onClick={() => setSelectedSource(item)}
-                          className={`p-3 rounded-xl cursor-pointer transition-all flex justify-between items-center border ${
+                          className={`p-2.5 sm:p-3 rounded-xl cursor-pointer transition-all flex justify-between items-center border ${
                             isSelected
                               ? "bg-primary/10 border-primary shadow-xs ring-1 ring-primary/30"
                               : "bg-base-200/50 hover:bg-base-200 border-base-300/50"
                           }`}
                         >
-                          <div className="flex items-center gap-2.5 overflow-hidden">
+                          <div className="flex items-center gap-2 sm:gap-2.5 min-w-0 flex-1 overflow-hidden">
                             <CompanyLogo
                               name={
                                 item.sourceType === "stock"
@@ -788,7 +870,7 @@ export default function AllocateSourceModal({
                                   ? item.amc
                                   : item.bankName || "Bank"
                               }
-                              size="w-8 h-8"
+                              size="w-7 h-7 sm:w-8 sm:h-8"
                               type={
                                 item.sourceType === "stock"
                                   ? "stock"
@@ -797,18 +879,18 @@ export default function AllocateSourceModal({
                                   : "bank"
                               }
                             />
-                            <div className="overflow-hidden text-left">
-                              <div className="font-extrabold text-xs text-base-content truncate max-w-[180px] leading-tight">
+                            <div className="overflow-hidden text-left min-w-0 flex-1">
+                              <div className="font-extrabold text-xs text-base-content truncate whitespace-nowrap leading-tight">
                                 {item.displayName}
                               </div>
-                              <div className="text-[10px] text-base-content/50 font-semibold flex items-center gap-1.5 mt-0.5">
-                                <span>
+                              <div className="text-[10px] text-base-content/50 font-semibold flex items-center gap-1 mt-0.5 whitespace-nowrap truncate leading-tight">
+                                <span className="truncate">
                                   {item.sourceType === "bank"
                                     ? item.accountType ? `${item.accountType} Account` : "Liquid Balance"
                                     : item.sourceType === "stock"
                                     ? `${item.holdingQty} shares`
                                     : item.sourceType === "mf"
-                                    ? `${(item.availableUnits ?? item.activeUnits ?? 0).toFixed(2)} units • ${item.category || "Equity"}`
+                                    ? `${(item.availableUnits ?? item.activeUnits ?? 0).toFixed(2)} units`
                                     : item.sourceType === "fd"
                                     ? `${item.interestRate}% Interest`
                                     : item.sourceType === "rd"
@@ -816,44 +898,47 @@ export default function AllocateSourceModal({
                                     : "EPF"}
                                 </span>
                                 <span>•</span>
-                                <span className="font-mono text-base-content/70">
-                                  Total: {formatINRCompact(item.holdingValue)}
+                                <span className="font-mono text-base-content/70 shrink-0">
+                                  {formatINRCompact(item.holdingValue)}
                                 </span>
                               </div>
                             </div>
                           </div>
 
-                          <div className="text-right shrink-0 font-mono">
-                            <div className="font-black text-xs text-base-content">
-                              Left: {formatINRCompact(stats.maxAllowedAmt)}
+                          <div className="flex items-center gap-1 shrink-0 ml-2 whitespace-nowrap">
+                            <div className="text-right shrink-0 font-mono whitespace-nowrap">
+                              <div className="font-black text-xs text-base-content whitespace-nowrap">
+                                Left: {formatINRCompact(stats.maxAllowedAmt)}
+                              </div>
+                              <div className="mt-0.5 whitespace-nowrap">
+                                {isAllottedHere ? (
+                                  <span
+                                    className={`badge badge-xs font-bold whitespace-nowrap ${
+                                      stats.currentGoalPercent === 0
+                                        ? "bg-base-200 text-base-content/60 border border-base-300"
+                                        : "bg-primary text-primary-content"
+                                    }`}
+                                  >
+                                    In Plan ({stats.currentGoalPercent}%)
+                                  </span>
+                                ) : stats.maxAllowedPct < 100 ? (
+                                  <span
+                                    className={`badge badge-xs font-semibold whitespace-nowrap ${
+                                      stats.maxAllowedPct === 0
+                                        ? "badge-error badge-soft text-error font-bold"
+                                        : "bg-base-300 text-base-content/70"
+                                    }`}
+                                  >
+                                    {stats.maxAllowedPct === 0 ? "0% Left" : `${stats.maxAllowedPct}% left`}
+                                  </span>
+                                ) : (
+                                  <span className="badge badge-xs bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold border-emerald-500/20 whitespace-nowrap">
+                                    100% Free
+                                  </span>
+                                )}
+                              </div>
                             </div>
-                            <div className="mt-0.5">
-                              {isAllottedHere ? (
-                                <span
-                                  className={`badge badge-xs font-bold ${
-                                    stats.currentGoalPercent === 0
-                                      ? "bg-base-200 text-base-content/60 border border-base-300"
-                                      : "bg-primary text-primary-content"
-                                  }`}
-                                >
-                                  In Plan ({stats.currentGoalPercent}%)
-                                </span>
-                              ) : stats.maxAllowedPct < 100 ? (
-                                <span
-                                  className={`badge badge-xs font-semibold ${
-                                    stats.maxAllowedPct === 0
-                                      ? "badge-error badge-soft text-error font-bold"
-                                      : "bg-base-300 text-base-content/70"
-                                  }`}
-                                >
-                                  {stats.maxAllowedPct === 0 ? "0% Left" : `${stats.maxAllowedPct}% left`}
-                                </span>
-                              ) : (
-                                <span className="badge badge-xs bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold border-emerald-500/20">
-                                  100% Free
-                                </span>
-                              )}
-                            </div>
+                            <ChevronRight size={15} className="md:hidden text-base-content/40 shrink-0" />
                           </div>
                         </div>
                       );
@@ -865,26 +950,40 @@ export default function AllocateSourceModal({
               {/* ---------------------------------------------------------- */}
               {/* RIGHT COLUMN: ALLOTMENT CONTROLS & LIVE STATS (6 cols)     */}
               {/* ---------------------------------------------------------- */}
-              <div className="md:col-span-6 bg-base-100 rounded-2xl p-4 border border-base-300 flex flex-col justify-between h-full min-h-0 overflow-hidden">
+              <div className={`${selectedSource ? "flex" : "hidden md:flex"} md:col-span-6 bg-base-100 rounded-xl sm:rounded-2xl p-2.5 sm:p-4 border border-base-300 flex-col justify-between h-full min-h-0 overflow-hidden`}>
+                {/* Mobile Only: Back to Sources Navigation Header */}
+                <div className="md:hidden flex items-center justify-between pb-1.5 mb-1.5 border-b border-base-300 shrink-0 whitespace-nowrap">
+                  <button
+                    type="button"
+                    className="btn btn-xs btn-ghost gap-1 font-bold text-base-content/80 hover:text-base-content px-1.5 -ml-1 shrink-0 whitespace-nowrap"
+                    onClick={() => setSelectedSource(null)}
+                  >
+                    <ChevronLeft size={16} /> Back
+                  </button>
+                  <span className="text-[11px] font-bold text-primary truncate max-w-[170px] xs:max-w-[220px] text-right whitespace-nowrap">
+                    {selectedSource?.displayName || "Configure Allotment"}
+                  </span>
+                </div>
+
                 {/* Target Goal / Planner Dropdown Selector */}
-                <div className="bg-base-200/60 p-3 rounded-2xl border border-base-300 flex items-center justify-between gap-2.5 shrink-0 mb-3">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className="text-xl shrink-0">{currentPlan?.icon || "🎯"}</span>
-                    <div className="min-w-0">
-                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-primary block leading-tight">
-                        Target Goal / Planner
+                <div className="bg-base-200/60 p-1.5 sm:p-3 rounded-xl sm:rounded-2xl border border-base-300 flex items-center justify-between gap-2 shrink-0 mb-1.5 sm:mb-3 whitespace-nowrap">
+                  <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+                    <span className="text-base sm:text-xl shrink-0">{currentPlan?.icon || "🎯"}</span>
+                    <div className="min-w-0 truncate">
+                      <span className="text-[9px] sm:text-[10px] font-extrabold uppercase tracking-wider text-primary block leading-tight whitespace-nowrap truncate">
+                        Target Goal
                       </span>
-                      <span className="text-xs font-bold text-base-content truncate block">
+                      <span className="text-xs font-bold text-base-content truncate block whitespace-nowrap max-w-[80px] xs:max-w-[120px] sm:max-w-none">
                         {currentPlan?.title || "Select Planner"}
                       </span>
                     </div>
                   </div>
 
-                  <div className="shrink-0 w-44 sm:w-56">
+                  <div className="shrink-0 w-36 xs:w-44 sm:w-56">
                     <select
                       value={currentPlan?.id || ""}
                       onChange={(e) => setSelectedPlanId(e.target.value)}
-                      className="select select-sm select-bordered w-full rounded-xl bg-base-100 font-bold text-xs text-base-content focus:border-primary focus:outline-none shadow-xs"
+                      className="select select-xs sm:select-sm select-bordered w-full rounded-xl bg-base-100 font-bold text-[11px] sm:text-xs text-base-content focus:border-primary focus:outline-none shadow-xs truncate"
                     >
                       {goals.map((g) => {
                         const isAlloc =
@@ -910,10 +1009,10 @@ export default function AllocateSourceModal({
                 </div>
 
                 {selectedSource ? (
-                  <div className="space-y-3 flex-1 min-h-0 overflow-y-auto no-scrollbar scrollbar-none [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden pr-0.5">
+                  <div className="space-y-1.5 sm:space-y-3 flex-1 min-h-0 overflow-y-auto no-scrollbar scrollbar-none [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden pr-0.5">
                     {/* Selected Source Header Banner */}
-                    <div className="bg-base-200/60 p-3.5 rounded-2xl border border-base-300 flex items-start justify-between gap-3">
-                      <div className="flex items-center gap-2.5 overflow-hidden">
+                    <div className="bg-base-200/60 p-2 sm:p-3.5 rounded-xl sm:rounded-2xl border border-base-300 flex items-center justify-between gap-2.5 shrink-0 whitespace-nowrap">
+                      <div className="flex items-center gap-2 sm:gap-2.5 min-w-0 flex-1 overflow-hidden">
                         <CompanyLogo
                           name={
                             selectedSource.sourceType === "stock"
@@ -922,7 +1021,7 @@ export default function AllocateSourceModal({
                               ? selectedSource.amc
                               : selectedSource.bankName || "Bank"
                           }
-                          size="w-10 h-10"
+                          size="w-8 h-8 sm:w-10 sm:h-10"
                           type={
                             selectedSource.sourceType === "stock"
                               ? "stock"
@@ -931,28 +1030,33 @@ export default function AllocateSourceModal({
                               : "bank"
                           }
                         />
-                        <div className="overflow-hidden">
-                          <span className="text-[10px] font-extrabold uppercase tracking-wider text-primary block">
+                        <div className="overflow-hidden min-w-0 flex-1">
+                          <span className="text-[9px] sm:text-[10px] font-extrabold uppercase tracking-wider text-primary block leading-tight whitespace-nowrap">
                             Selected Source
                           </span>
-                          <h4 className="font-extrabold text-sm text-base-content truncate leading-tight">
+                          <h4 className="font-extrabold text-xs sm:text-sm text-base-content truncate whitespace-nowrap leading-tight">
                             {selectedSource.displayName}
                           </h4>
-                          <div className="flex items-center gap-2 text-[11px] text-base-content/60 font-semibold flex-wrap">
-                            <span>Total Value: {formatINR(selectedSource.holdingValue)}</span>
+                          <div className="flex items-center gap-1.5 text-[10px] sm:text-[11px] text-base-content/60 font-semibold whitespace-nowrap truncate leading-tight mt-0.5">
+                            <span className="whitespace-nowrap">
+                              <span className="hidden sm:inline">Total Value: </span>
+                              <span className="sm:hidden">Val: </span>
+                              <span className="hidden sm:inline font-mono">{formatINR(selectedSource.holdingValue)}</span>
+                              <span className="sm:hidden font-mono">{formatINRCompact(selectedSource.holdingValue)}</span>
+                            </span>
                             {selectedSource.sourceType === "stock" && (
                               <>
                                 <span>•</span>
-                                <span className="text-primary font-mono font-bold">
-                                  {selectedSource.holdingQty || 0} Total Shares
+                                <span className="text-primary font-mono font-bold whitespace-nowrap truncate">
+                                  {selectedSource.holdingQty || 0} shares
                                 </span>
                               </>
                             )}
                             {selectedSource.sourceType === "mf" && (
                               <>
                                 <span>•</span>
-                                <span className="text-primary font-mono font-bold">
-                                  {(selectedSource.availableUnits ?? selectedSource.activeUnits ?? 0).toFixed(3)} Units Available
+                                <span className="text-primary font-mono font-bold whitespace-nowrap truncate">
+                                  {(selectedSource.availableUnits ?? selectedSource.activeUnits ?? 0).toFixed(2)} units
                                 </span>
                               </>
                             )}
@@ -960,34 +1064,37 @@ export default function AllocateSourceModal({
                         </div>
                       </div>
 
-                      <span className="badge badge-sm font-bold uppercase tracking-wider bg-base-100 border-base-300 text-[10px]">
+                      <span className="badge badge-xs sm:badge-sm font-bold uppercase tracking-wider bg-base-100 border-base-300 text-[9px] sm:text-[10px] shrink-0 whitespace-nowrap">
                         {selectedSource.sourceType.toUpperCase()}
                       </span>
                     </div>
 
-                    {/* Allotment Across All Plans Breakdown Card (Exact user requirement!) */}
-                    <div className="bg-base-200/50 p-3.5 rounded-2xl border border-base-300 space-y-2.5">
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="font-extrabold text-base-content/80 flex items-center gap-1.5">
-                          <SlidersHorizontal size={13} className="text-primary" />
-                          Source Allocation Status
+                    {/* Allotment Across All Plans Breakdown Card */}
+                    <div className="bg-base-200/50 p-2 sm:p-3.5 rounded-xl sm:rounded-2xl border border-base-300 space-y-1.5 sm:space-y-2">
+                      <div className="flex items-center justify-between text-xs whitespace-nowrap gap-2">
+                        <span className="font-extrabold text-[11px] sm:text-xs text-base-content/80 flex items-center gap-1.5 shrink-0 whitespace-nowrap">
+                          <SlidersHorizontal size={13} className="text-primary shrink-0" />
+                          <span className="hidden sm:inline">Source Allocation Status</span>
+                          <span className="sm:hidden">Allocation</span>
                         </span>
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-[10px] text-base-content/50 font-bold uppercase tracking-wider">
-                            Left to Allocate:
+                        <div className="flex items-center gap-1 shrink-0 whitespace-nowrap text-[10px] sm:text-[11px]">
+                          <span className="text-base-content/50 font-bold uppercase tracking-wider hidden xs:inline">
+                            Left:
                           </span>
                           <span
-                            className={`font-mono text-[11px] font-bold ${
+                            className={`font-mono font-bold whitespace-nowrap ${
                               currentStats.maxAllowedPct === 0 ? "text-error" : "text-primary"
                             }`}
                           >
-                            {formatINR(currentStats.maxAllowedAmt)} ({currentStats.maxAllowedPct}%)
+                            <span className="hidden sm:inline">{formatINR(currentStats.maxAllowedAmt)}</span>
+                            <span className="sm:hidden">{formatINRCompact(currentStats.maxAllowedAmt)}</span>
+                            {" "}({currentStats.maxAllowedPct}%)
                           </span>
                         </div>
                       </div>
 
                       {/* Visual Multi-color Progress Distribution Bar */}
-                      <div className="w-full bg-base-300/80 rounded-full h-2.5 overflow-hidden flex">
+                      <div className="w-full bg-base-300/80 rounded-full h-2 sm:h-2.5 overflow-hidden flex">
                         {currentStats.breakdown
                           .filter((b) => b.percent > 0)
                           .map((b) => (
@@ -1003,35 +1110,36 @@ export default function AllocateSourceModal({
                       </div>
 
                       {/* Distribution Items */}
-                      <div className="space-y-1.5 pt-1">
+                      <div className="space-y-1 pt-0.5 max-h-20 sm:max-h-40 overflow-y-auto no-scrollbar scrollbar-none [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
                         {currentStats.breakdown.length === 0 ? (
-                          <div className="text-[11px] text-base-content/50 italic flex items-center gap-1">
-                            <Info size={12} />
-                            <span>This asset is not yet allotted to any life plan.</span>
+                          <div className="text-[11px] text-base-content/50 italic flex items-center gap-1 whitespace-nowrap">
+                            <Info size={12} className="shrink-0" />
+                            <span className="truncate">This asset is not yet allotted to any life plan.</span>
                           </div>
                         ) : (
                           currentStats.breakdown.map((b) => (
                             <div
                               key={b.goalId}
-                              className={`flex items-center justify-between text-xs px-2.5 py-1.5 rounded-xl font-mono ${
+                              className={`flex items-center justify-between text-xs px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-lg sm:rounded-xl font-mono whitespace-nowrap ${
                                 b.goalId === currentPlan.id
                                   ? "bg-primary/10 text-primary font-bold border border-primary/20"
                                   : "bg-base-100 text-base-content/70 border border-base-300"
                               }`}
                             >
-                              <div className="flex items-center gap-1.5 min-w-0">
-                                <span>{b.goalIcon}</span>
-                                <span className="font-sans font-extrabold truncate max-w-[150px]">
+                              <div className="flex items-center gap-1 sm:gap-1.5 min-w-0 overflow-hidden">
+                                <span className="shrink-0 text-xs sm:text-sm">{b.goalIcon}</span>
+                                <span className="font-sans font-extrabold truncate whitespace-nowrap text-[11px] sm:text-xs">
                                   {b.goalTitle}
                                   {b.goalId === currentPlan.id ? " (This Plan)" : ""}
                                 </span>
                               </div>
-                              <div className="flex items-center gap-2 shrink-0">
-                                <span className={b.percent === 0 ? "text-base-content/40 font-bold" : "font-bold"}>
-                                  {formatINR(b.amount)}
+                              <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 ml-2 whitespace-nowrap">
+                                <span className={`text-[11px] sm:text-xs whitespace-nowrap ${b.percent === 0 ? "text-base-content/40 font-bold" : "font-bold"}`}>
+                                  <span className="hidden sm:inline">{formatINR(b.amount)}</span>
+                                  <span className="sm:hidden">{formatINRCompact(b.amount)}</span>
                                 </span>
                                 <span
-                                  className={`badge badge-xs font-bold font-mono px-2 py-0.5 ${
+                                  className={`badge badge-xs font-bold font-mono px-1.5 sm:px-2 py-0.5 whitespace-nowrap ${
                                     b.percent === 0
                                       ? "bg-base-200 text-base-content/50"
                                       : b.goalId === currentPlan.id
@@ -1049,35 +1157,39 @@ export default function AllocateSourceModal({
                     </div>
 
                     {/* Allotment Input Controls for Current Plan */}
-                    <div className="bg-base-200/60 p-3.5 rounded-2xl border border-base-300 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-black uppercase tracking-wider text-base-content/80">
+                    <div className="bg-base-200/60 p-2 sm:p-3.5 rounded-xl sm:rounded-2xl border border-base-300 space-y-2 sm:space-y-2.5">
+                      <div className="flex items-center justify-between whitespace-nowrap gap-2">
+                        <span className="text-[11px] sm:text-xs font-black uppercase tracking-wider text-base-content/80 truncate whitespace-nowrap max-w-[120px] xs:max-w-[180px] sm:max-w-none">
                           Allot to {currentPlan.title}
                         </span>
 
                         {/* Mode Toggle */}
-                        <div className="join rounded-xl bg-base-100 p-0.5 border border-base-300">
+                        <div className="join rounded-xl bg-base-100 p-0.5 border border-base-300 shrink-0 whitespace-nowrap">
                           <button
                             type="button"
                             onClick={() => setAllotmentMode("percent")}
-                            className={`join-item btn btn-xs h-6 min-h-0 rounded-lg font-bold text-[10px] ${
+                            className={`join-item btn btn-xs h-6 min-h-0 rounded-lg font-bold text-[10px] whitespace-nowrap px-2 ${
                               allotmentMode === "percent"
                                 ? "btn-primary text-primary-content shadow-xs"
                                 : "btn-ghost text-base-content/60"
                             }`}
                           >
-                            <Percent size={11} /> Percentage
+                            <Percent size={11} className="shrink-0" />
+                            <span className="hidden sm:inline">Percentage</span>
+                            <span className="sm:hidden">Percent</span>
                           </button>
                           <button
                             type="button"
                             onClick={() => setAllotmentMode("amount")}
-                            className={`join-item btn btn-xs h-6 min-h-0 rounded-lg font-bold text-[10px] ${
+                            className={`join-item btn btn-xs h-6 min-h-0 rounded-lg font-bold text-[10px] whitespace-nowrap px-2 ${
                               allotmentMode === "amount"
                                 ? "btn-primary text-primary-content shadow-xs"
                                 : "btn-ghost text-base-content/60"
                             }`}
                           >
-                            <Coins size={11} /> Fixed INR
+                            <Coins size={11} className="shrink-0" />
+                            <span className="hidden sm:inline">Fixed INR</span>
+                            <span className="sm:hidden">Amount</span>
                           </button>
                         </div>
                       </div>
@@ -1085,7 +1197,7 @@ export default function AllocateSourceModal({
                       {/* Percentage Mode Controls - Clamped to maxAllowedPct */}
                       {allotmentMode === "percent" ? (
                         <div className="space-y-2">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 whitespace-nowrap">
                             <input
                               type="range"
                               min="0"
@@ -1095,7 +1207,7 @@ export default function AllocateSourceModal({
                               onChange={(e) => handlePercentChange(e.target.value)}
                               className="range range-primary range-xs flex-1 disabled:opacity-30"
                             />
-                            <div className="w-16 shrink-0">
+                            <div className="w-14 sm:w-16 shrink-0">
                               <input
                                 type="number"
                                 min="0"
@@ -1106,11 +1218,11 @@ export default function AllocateSourceModal({
                                 className="input input-xs input-bordered w-full font-mono font-bold text-center bg-base-100 rounded-lg disabled:opacity-50"
                               />
                             </div>
-                            <span className="text-xs font-bold font-mono">%</span>
+                            <span className="text-xs font-bold font-mono shrink-0">%</span>
                           </div>
 
-                          {/* Quick Percentage Presets - only show options that do not exceed maxAllowedPct */}
-                          <div className="flex items-center gap-1.5 flex-wrap">
+                          {/* Quick Percentage Presets - single-line horizontal scrollable, no wrap */}
+                          <div className="flex items-center gap-1 sm:gap-1.5 overflow-x-auto no-scrollbar scrollbar-none [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden pb-0.5 whitespace-nowrap">
                             {[0, 25, 50, 75, 100]
                               .filter((pct) => pct <= currentStats.maxAllowedPct)
                               .map((pct) => (
@@ -1118,8 +1230,8 @@ export default function AllocateSourceModal({
                                   key={pct}
                                   type="button"
                                   onClick={() => handlePercentChange(pct)}
-                                  className={`btn btn-xs h-6 min-h-0 font-bold font-mono rounded-lg ${
-                                    allotPercent === pct ? "btn-primary shadow-xs" : "btn-ghost bg-base-100"
+                                  className={`btn btn-xs h-6 min-h-0 font-bold font-mono rounded-lg px-2 shrink-0 whitespace-nowrap ${
+                                    allotPercent === pct ? "btn-primary shadow-xs" : "btn-ghost bg-base-100 border border-base-300/60"
                                   }`}
                                 >
                                   {pct}%
@@ -1130,18 +1242,18 @@ export default function AllocateSourceModal({
                                 <button
                                   type="button"
                                   onClick={() => handlePercentChange(currentStats.maxAllowedPct)}
-                                  className="btn btn-xs h-6 min-h-0 btn-outline btn-primary font-bold font-mono rounded-lg"
+                                  className="btn btn-xs h-6 min-h-0 btn-outline btn-primary font-bold font-mono rounded-lg px-2 shrink-0 whitespace-nowrap"
                                   title="Allot exact remaining unallocated share"
                                 >
-                                  Allot Left ({currentStats.maxAllowedPct}%)
+                                  Left ({currentStats.maxAllowedPct}%)
                                 </button>
                               )}
                           </div>
 
                           {currentStats.maxAllowedPct === 0 && (
-                            <div className="text-[11px] text-error flex items-center gap-1.5 font-medium pt-1">
+                            <div className="text-[10px] sm:text-[11px] text-error flex items-center gap-1.5 font-medium pt-0.5 whitespace-nowrap truncate">
                               <AlertCircle size={13} className="shrink-0" />
-                              <span>This source is 100% allocated to other planners. 0% left to allocate.</span>
+                              <span className="truncate">Fully allocated to other planners (0% left).</span>
                             </div>
                           )}
                         </div>
@@ -1163,28 +1275,29 @@ export default function AllocateSourceModal({
                             />
                           </div>
 
-                          <div className="flex items-center justify-between text-[11px]">
-                            <span className="text-base-content/50 font-medium">
+                          <div className="flex items-center justify-between text-[11px] whitespace-nowrap gap-1">
+                            <span className="text-base-content/50 font-medium truncate whitespace-nowrap">
                               Max Left:{" "}
                               <strong className="text-base-content font-mono">
-                                {formatINR(currentStats.maxAllowedAmt)}
+                                <span className="hidden sm:inline">{formatINR(currentStats.maxAllowedAmt)}</span>
+                                <span className="sm:hidden">{formatINRCompact(currentStats.maxAllowedAmt)}</span>
                               </strong>
                             </span>
                             {currentStats.maxAllowedAmt > 0 && (
                               <button
                                 type="button"
                                 onClick={() => handleAmountChange(currentStats.maxAllowedAmt)}
-                                className="btn btn-xs btn-ghost text-primary text-[10px] font-bold hover:underline p-0 h-auto min-h-0"
+                                className="btn btn-xs btn-ghost text-primary text-[10px] font-bold hover:underline p-0 h-auto min-h-0 shrink-0 whitespace-nowrap"
                               >
-                                Fill Max Left ({formatINRCompact(currentStats.maxAllowedAmt)})
+                                Fill Max ({formatINRCompact(currentStats.maxAllowedAmt)})
                               </button>
                             )}
                           </div>
 
                           {currentStats.maxAllowedAmt === 0 && (
-                            <div className="text-[11px] text-error flex items-center gap-1.5 font-medium pt-1">
+                            <div className="text-[10px] sm:text-[11px] text-error flex items-center gap-1.5 font-medium pt-0.5 whitespace-nowrap truncate">
                               <AlertCircle size={13} className="shrink-0" />
-                              <span>This source is fully allocated to other planners. 0 INR left to allocate.</span>
+                              <span className="truncate">Fully allocated to other planners (0 INR left).</span>
                             </div>
                           )}
                         </div>
@@ -1192,11 +1305,11 @@ export default function AllocateSourceModal({
 
                       {/* If Stock: Shares Counter - Clamped to maxAllowedShares */}
                       {selectedSource.sourceType === "stock" && (
-                        <div className="pt-2 border-t border-base-300 flex items-center justify-between gap-2">
-                          <span className="text-[11px] font-bold text-base-content/70">
-                            Shares Allocation:
+                        <div className="pt-2 border-t border-base-300 flex items-center justify-between gap-1.5 whitespace-nowrap">
+                          <span className="text-[11px] font-bold text-base-content/70 whitespace-nowrap shrink-0">
+                            Shares:
                           </span>
-                          <div className="join border border-base-300 rounded-lg overflow-hidden">
+                          <div className="join border border-base-300 rounded-lg overflow-hidden shrink-0">
                             <button
                               type="button"
                               disabled={allotShares <= 0}
@@ -1212,7 +1325,7 @@ export default function AllocateSourceModal({
                               value={allotShares}
                               disabled={currentStats.maxAllowedShares === 0}
                               onChange={(e) => handleSharesChange(e.target.value)}
-                              className="join-item input input-xs text-center font-bold font-mono w-14 bg-base-100 focus:outline-none disabled:opacity-50"
+                              className="join-item input input-xs text-center font-bold font-mono w-12 sm:w-14 bg-base-100 focus:outline-none disabled:opacity-50"
                             />
                             <button
                               type="button"
@@ -1223,30 +1336,36 @@ export default function AllocateSourceModal({
                               +
                             </button>
                           </div>
-                          <span className="text-[10px] font-mono text-base-content/50">
-                            Max {currentStats.maxAllowedShares} of {selectedSource.holdingQty} shares left
+                          <span className="text-[10px] font-mono text-base-content/50 whitespace-nowrap truncate text-right">
+                            <span className="hidden sm:inline">Max </span>{currentStats.maxAllowedShares}/{selectedSource.holdingQty} left
                           </span>
                         </div>
                       )}
                     </div>
 
                     {/* Live Calculation Preview Badge */}
-                    <div className="bg-primary/10 border border-primary/20 p-3 rounded-2xl flex items-center justify-between text-xs">
-                      <div>
-                        <span className="text-[10px] uppercase tracking-wider font-extrabold text-primary/70 block">
+                    <div className="bg-primary/10 border border-primary/20 p-2.5 sm:p-3 rounded-xl sm:rounded-2xl flex items-center justify-between text-xs whitespace-nowrap gap-2">
+                      <div className="min-w-0 flex-1 truncate">
+                        <span className="text-[9px] sm:text-[10px] uppercase tracking-wider font-extrabold text-primary/70 block truncate whitespace-nowrap">
                           Allocating to {currentPlan.title}
                         </span>
-                        <span className="font-black text-primary font-mono text-sm">
-                          {formatINR(allotAmount)}
-                        </span>
-                        <span className="text-[10px] text-base-content/60 font-mono ml-1.5">
-                          ({allotPercent}%)
-                        </span>
+                        <div className="flex items-baseline gap-1 mt-0.5 whitespace-nowrap">
+                          <span className="font-black text-primary font-mono text-xs sm:text-sm whitespace-nowrap">
+                            <span className="hidden sm:inline">{formatINR(allotAmount)}</span>
+                            <span className="sm:hidden">{formatINRCompact(allotAmount)}</span>
+                          </span>
+                          <span className="text-[10px] text-base-content/60 font-mono">
+                            ({allotPercent}%)
+                          </span>
+                        </div>
                       </div>
-                      <div className="text-right font-mono text-[11px]">
-                        <span className="text-base-content/50 block">Remaining Left:</span>
-                        <span className="font-bold text-base-content">
-                          {formatINR(Math.max(0, currentStats.maxAllowedAmt - allotAmount))}
+                      <div className="text-right font-mono text-[10px] sm:text-[11px] shrink-0 whitespace-nowrap">
+                        <span className="text-base-content/50 block text-[9px] sm:text-[10px] uppercase tracking-wider font-bold">
+                          Remaining Left
+                        </span>
+                        <span className="font-bold text-base-content whitespace-nowrap mt-0.5 block">
+                          <span className="hidden sm:inline">{formatINR(Math.max(0, currentStats.maxAllowedAmt - allotAmount))}</span>
+                          <span className="sm:hidden">{formatINRCompact(Math.max(0, currentStats.maxAllowedAmt - allotAmount))}</span>
                           <span className="text-[10px] text-base-content/60 ml-1">
                             ({Math.max(0, Math.round((currentStats.maxAllowedPct - allotPercent) * 10) / 10)}%)
                           </span>
@@ -1266,14 +1385,14 @@ export default function AllocateSourceModal({
 
                 {/* Footer Action Buttons */}
                 {selectedSource && (
-                  <div className="pt-3 border-t border-base-300 flex items-center gap-2 shrink-0">
+                  <div className="pt-2 sm:pt-3 border-t border-base-300 flex items-center gap-2 shrink-0 whitespace-nowrap">
                     {currentStats.isAllottedToCurrentGoal && (
                       <button
                         type="button"
                         onClick={handleRemove}
-                        className="btn btn-sm btn-error btn-outline rounded-xl font-bold gap-1 text-xs"
+                        className="btn btn-sm btn-error btn-outline rounded-xl font-bold gap-1 text-xs shrink-0 whitespace-nowrap px-2.5 sm:px-3"
                       >
-                        <Trash2 size={13} />
+                        <Trash2 size={13} className="shrink-0" />
                         <span>Remove</span>
                       </button>
                     )}
@@ -1281,10 +1400,10 @@ export default function AllocateSourceModal({
                       type="button"
                       onClick={handleSave}
                       disabled={currentStats.maxAllowedPct === 0 && !currentStats.isAllottedToCurrentGoal}
-                      className="btn btn-sm btn-primary rounded-xl font-bold gap-1.5 text-xs flex-1 shadow-sm transition-all duration-200 cursor-pointer disabled:opacity-40"
+                      className="btn btn-sm btn-primary rounded-xl font-bold gap-1.5 text-xs flex-1 shadow-sm transition-all duration-200 cursor-pointer disabled:opacity-40 whitespace-nowrap overflow-hidden"
                     >
-                      <Plus size={15} />
-                      <span>
+                      <Plus size={15} className="shrink-0" />
+                      <span className="truncate whitespace-nowrap">
                         {currentStats.isAllottedToCurrentGoal
                           ? "Update Allotment"
                           : `Add to ${currentPlan.title}`}

@@ -675,25 +675,25 @@ export default function FixedDepositDashboard({
       {/* -------------------------------------------------------------------- */}
       {/* 1. Top Metric KPI Cards */}
       {/* -------------------------------------------------------------------- */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-2.5 sm:gap-4">
         
         {/* Card 1: Active Principal Deposited */}
-        <div className="card bg-base-200 rounded-3xl p-5 shadow-md flex flex-col justify-between group hover:shadow-lg transition-all relative overflow-hidden">
+        <div className="col-span-2 lg:col-span-1 card bg-base-200 rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 shadow-md flex flex-col justify-between group hover:shadow-lg transition-all relative overflow-hidden">
           {/* Light Background Watermark Icon */}
           <div className="absolute -right-3 -bottom-3 text-amber-500/10 dark:text-amber-400/10 pointer-events-none group-hover:scale-110 group-hover:-rotate-6 transition-transform duration-500">
-            <Landmark size={88} strokeWidth={1.5} />
+            <Landmark className="w-14 h-14 sm:w-20 sm:h-20" strokeWidth={1.5} />
           </div>
           <div className="relative z-10 flex flex-col justify-between h-full">
             <div className="flex items-center justify-between gap-2">
-              <span className="text-xs font-bold text-base-content/60 uppercase tracking-wider">
+              <span className="text-[10.5px] sm:text-xs font-bold text-base-content/60 uppercase tracking-wider">
                 Active Principal
               </span>
             </div>
-            <div className="mt-3">
-              <div className="text-2xl font-black font-mono tracking-tight text-base-content">
+            <div className="mt-2 sm:mt-3">
+              <div className="text-xl sm:text-2xl font-black font-mono tracking-tight text-base-content truncate">
                 {hideNumbers ? "••••••••" : `₹${formatCurrency2Dec(kpis.activePrincipal)}`}
               </div>
-              <p className="text-[11px] text-base-content/60 font-medium mt-1 flex items-center gap-1">
+              <p className="text-[11px] text-base-content/60 font-medium mt-1 flex items-center gap-1 truncate">
                 <span>Across {kpis.activeCount} active deposit{kpis.activeCount !== 1 ? "s" : ""}</span>
               </p>
             </div>
@@ -701,95 +701,95 @@ export default function FixedDepositDashboard({
         </div>
 
         {/* Card 2: Estimated Maturity Amount */}
-        <div className="card bg-base-200 rounded-3xl p-5 shadow-md flex flex-col justify-between group hover:shadow-lg transition-all relative overflow-hidden">
+        <div className="card bg-base-200 rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 shadow-md flex flex-col justify-between group hover:shadow-lg transition-all relative overflow-hidden">
           {/* Light Background Watermark Icon */}
           <div className="absolute -right-3 -bottom-3 text-emerald-500/10 dark:text-emerald-400/10 pointer-events-none group-hover:scale-110 group-hover:-rotate-6 transition-transform duration-500">
-            <TrendingUp size={88} strokeWidth={1.5} />
+            <TrendingUp className="w-14 h-14 sm:w-20 sm:h-20" strokeWidth={1.5} />
           </div>
           <div className="relative z-10 flex flex-col justify-between h-full">
             <div className="flex items-center justify-between gap-2">
-              <span className="text-xs font-bold text-base-content/60 uppercase tracking-wider">
+              <span className="text-[10.5px] sm:text-xs font-bold text-base-content/60 uppercase tracking-wider">
                 Maturity Value
               </span>
             </div>
-            <div className="mt-3">
-              <div className="text-2xl font-black font-mono tracking-tight text-emerald-600 dark:text-emerald-400">
+            <div className="mt-2 sm:mt-3">
+              <div className="text-xl sm:text-2xl font-black font-mono tracking-tight text-emerald-600 dark:text-emerald-400 truncate">
                 {hideNumbers ? "••••••••" : `₹${formatCurrency2Dec(kpis.activeMaturity)}`}
               </div>
-              <p className="text-[11px] text-base-content/60 font-medium mt-1">
-                Expected at full maturity
+              <p className="text-[11px] text-base-content/60 font-medium mt-1 truncate">
+                At full maturity
               </p>
             </div>
           </div>
         </div>
 
         {/* Card 3: Expected Interest / Accrued Gain */}
-        <div className="card bg-base-200 rounded-3xl p-5 shadow-md flex flex-col justify-between group hover:shadow-lg transition-all relative overflow-hidden">
+        <div className="card bg-base-200 rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 shadow-md flex flex-col justify-between group hover:shadow-lg transition-all relative overflow-hidden">
           {/* Light Background Watermark Icon */}
           <div className="absolute -right-3 -bottom-3 text-purple-500/10 dark:text-purple-400/10 pointer-events-none group-hover:scale-110 group-hover:-rotate-6 transition-transform duration-500">
-            <Sparkles size={88} strokeWidth={1.5} />
+            <Sparkles className="w-14 h-14 sm:w-20 sm:h-20" strokeWidth={1.5} />
           </div>
           <div className="relative z-10 flex flex-col justify-between h-full">
             <div className="flex items-center justify-between gap-2">
-              <span className="text-xs font-bold text-base-content/60 uppercase tracking-wider">
+              <span className="text-[10.5px] sm:text-xs font-bold text-base-content/60 uppercase tracking-wider">
                 Expected Interest
               </span>
             </div>
-            <div className="mt-3">
-              <div className="text-2xl font-black font-mono tracking-tight text-purple-600 dark:text-purple-400">
+            <div className="mt-2 sm:mt-3">
+              <div className="text-xl sm:text-2xl font-black font-mono tracking-tight text-purple-600 dark:text-purple-400 truncate">
                 {hideNumbers ? "••••••••" : `+₹${formatCurrency2Dec(kpis.activeInterest)}`}
               </div>
-              <p className="text-[11px] text-base-content/60 font-medium mt-1 flex items-center gap-1">
+              <p className="text-[11px] text-base-content/60 font-medium mt-1 flex items-center gap-1 truncate">
                 <span className="text-emerald-600 dark:text-emerald-400 font-bold">
                   +{kpis.returnPct.toFixed(2)}%
                 </span>
-                <span>projected growth</span>
+                <span>growth</span>
               </p>
             </div>
           </div>
         </div>
 
         {/* Card 4: Weighted Average Rate */}
-        <div className="card bg-base-200 rounded-3xl p-5 shadow-md flex flex-col justify-between group hover:shadow-lg transition-all relative overflow-hidden">
+        <div className="card bg-base-200 rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 shadow-md flex flex-col justify-between group hover:shadow-lg transition-all relative overflow-hidden">
           {/* Light Background Watermark Icon */}
           <div className="absolute -right-3 -bottom-3 text-blue-500/10 dark:text-blue-400/10 pointer-events-none group-hover:scale-110 group-hover:-rotate-6 transition-transform duration-500">
-            <Percent size={88} strokeWidth={1.5} />
+            <Percent className="w-14 h-14 sm:w-20 sm:h-20" strokeWidth={1.5} />
           </div>
           <div className="relative z-10 flex flex-col justify-between h-full">
             <div className="flex items-center justify-between gap-2">
-              <span className="text-xs font-bold text-base-content/60 uppercase tracking-wider">
-                Avg Interest Rate
+              <span className="text-[10.5px] sm:text-xs font-bold text-base-content/60 uppercase tracking-wider">
+                Avg Rate
               </span>
             </div>
-            <div className="mt-3">
-              <div className="text-2xl font-black font-mono tracking-tight text-blue-600 dark:text-blue-400">
+            <div className="mt-2 sm:mt-3">
+              <div className="text-xl sm:text-2xl font-black font-mono tracking-tight text-blue-600 dark:text-blue-400 truncate">
                 {kpis.weightedRate.toFixed(2)}%
               </div>
-              <p className="text-[11px] text-base-content/60 font-medium mt-1">
-                Weighted p.a. return rate
+              <p className="text-[11px] text-base-content/60 font-medium mt-1 truncate">
+                Weighted p.a.
               </p>
             </div>
           </div>
         </div>
 
         {/* Card 5: Realized Payout (Withdrawn) */}
-        <div className="card bg-base-200 rounded-3xl p-5 shadow-md flex flex-col justify-between group hover:shadow-lg transition-all relative overflow-hidden">
+        <div className="card bg-base-200 rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 shadow-md flex flex-col justify-between group hover:shadow-lg transition-all relative overflow-hidden">
           {/* Light Background Watermark Icon */}
           <div className="absolute -right-3 -bottom-3 text-teal-500/10 dark:text-teal-400/10 pointer-events-none group-hover:scale-110 group-hover:-rotate-6 transition-transform duration-500">
-            <CheckCircle2 size={88} strokeWidth={1.5} />
+            <CheckCircle2 className="w-14 h-14 sm:w-20 sm:h-20" strokeWidth={1.5} />
           </div>
           <div className="relative z-10 flex flex-col justify-between h-full">
             <div className="flex items-center justify-between gap-2">
-              <span className="text-xs font-bold text-base-content/60 uppercase tracking-wider">
+              <span className="text-[10.5px] sm:text-xs font-bold text-base-content/60 uppercase tracking-wider">
                 Realized Payout
               </span>
             </div>
-            <div className="mt-3">
-              <div className="text-2xl font-black font-mono tracking-tight text-teal-600 dark:text-teal-400">
+            <div className="mt-2 sm:mt-3">
+              <div className="text-xl sm:text-2xl font-black font-mono tracking-tight text-teal-600 dark:text-teal-400 truncate">
                 {hideNumbers ? "••••••••" : `₹${formatCurrency2Dec(kpis.realizedPayout)}`}
               </div>
-              <p className="text-[11px] text-base-content/60 font-medium mt-1">
-                From {kpis.withdrawnCount} settled deposit{kpis.withdrawnCount !== 1 ? "s" : ""}
+              <p className="text-[11px] text-base-content/60 font-medium mt-1 truncate">
+                From {kpis.withdrawnCount} settled
               </p>
             </div>
           </div>
