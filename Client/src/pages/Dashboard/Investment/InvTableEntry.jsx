@@ -7896,6 +7896,19 @@ export default function InvTableEntry() {
               const totalErPf = filteredEntries.reduce((s, e) => s + (Number(e.erPf) || 0), 0);
               const totalDeductions = totalTaxes + totalErPf;
 
+              const compMonths = sortedEntries.length;
+              const compYrs = Math.floor(compMonths / 12);
+              const compRemMos = compMonths % 12;
+              let compExpText = "0 Months";
+              if (compYrs > 0 && compRemMos > 0) {
+                compExpText = `${compYrs} ${compYrs === 1 ? "Year" : "Years"} ${compRemMos} ${compRemMos === 1 ? "Month" : "Months"}`;
+              } else if (compYrs > 0) {
+                compExpText = `${compYrs} ${compYrs === 1 ? "Year" : "Years"}`;
+              } else if (compRemMos > 0) {
+                compExpText = `${compRemMos} ${compRemMos === 1 ? "Month" : "Months"}`;
+              }
+              const compExpShort = compYrs > 0 ? (compRemMos > 0 ? `${compYrs}y ${compRemMos}m` : `${compYrs}y`) : `${compRemMos}m`;
+
               return {
                 company,
                 entries: sortedEntries,
@@ -7906,6 +7919,9 @@ export default function InvTableEntry() {
                 totalDeductions,
                 startDate,
                 endDate,
+                compExpText,
+                compExpShort,
+                compMonths,
               };
             })
             .filter(Boolean);
@@ -7917,6 +7933,18 @@ export default function InvTableEntry() {
                 return salarySortOrder === "asc" ? cmp : -cmp;
               })
             : [];
+
+          const bsMonths = bottomSheetSalaryEntries.length;
+          const bsYrs = Math.floor(bsMonths / 12);
+          const bsRemMos = bsMonths % 12;
+          let bsExpText = "";
+          if (bsYrs > 0 && bsRemMos > 0) {
+            bsExpText = `${bsYrs} ${bsYrs === 1 ? "Year" : "Years"} ${bsRemMos} ${bsRemMos === 1 ? "Month" : "Months"}`;
+          } else if (bsYrs > 0) {
+            bsExpText = `${bsYrs} ${bsYrs === 1 ? "Year" : "Years"}`;
+          } else if (bsRemMos > 0) {
+            bsExpText = `${bsRemMos} ${bsRemMos === 1 ? "Month" : "Months"}`;
+          }
 
           const sheetTotalInHand = bottomSheetSalaryEntries.reduce((s, e) => {
             const basic = Number(e.basicSalary || 0);
@@ -7993,7 +8021,10 @@ export default function InvTableEntry() {
                   <div className="bg-base-100/90 dark:bg-base-800/80 p-2 rounded-xl border border-base-300/60 dark:border-base-700/60 shadow-2xs">
                     <div className="text-[9.5px] font-bold text-base-content/60 uppercase">Experience</div>
                     <div className="text-xs font-black font-mono text-base-content truncate">
-                      {salarySummary.totalMonths} months
+                      {salarySummary.expYears > 0 ? `${salarySummary.expYears}y ${salarySummary.expMonths}m` : `${salarySummary.expMonths}m`}
+                    </div>
+                    <div className="text-[8.5px] text-base-content/40 font-mono">
+                      {salarySummary.totalMonths} mos total
                     </div>
                   </div>
                 </div>
@@ -8094,7 +8125,7 @@ export default function InvTableEntry() {
                 </div>
               ) : (
                 <div className="space-y-3 pb-4">
-                  {salaryCompanyCards.map(({ company, entries: compEntries, totalInHand, totalCtc, totalDeductions, startDate, endDate }) => (
+                  {salaryCompanyCards.map(({ company, entries: compEntries, totalInHand, totalCtc, totalDeductions, startDate, endDate, compExpText, compExpShort, compMonths }) => (
                     <div
                       key={company}
                       className="bg-base-100 rounded-2xl border border-base-content/8 dark:border-base-content/8 shadow-2xs overflow-hidden"
@@ -8107,8 +8138,8 @@ export default function InvTableEntry() {
                             <CompanyLogo name={company} size="w-9 h-9" type="company" />
                             <div className="min-w-0">
                               <span className="font-black text-sm text-base-content truncate block">{company}</span>
-                              <span className="text-[10px] text-base-content/55 font-medium">
-                                {dayjs(startDate).format("MMM YYYY")} → {dayjs(endDate).format("MMM YYYY")}
+                              <span className="text-[10px] text-base-content/55 font-medium block">
+                                {dayjs(startDate).format("MMM YYYY")} → {dayjs(endDate).format("MMM YYYY")} • <span className="text-primary font-bold">{compExpText}</span>
                               </span>
                             </div>
                           </div>
@@ -8135,8 +8166,8 @@ export default function InvTableEntry() {
                             <span className="text-xs font-black text-emerald-600 dark:text-emerald-400 font-mono">₹{totalCtc.toLocaleString("en-IN")}</span>
                           </div>
                           <div className="bg-base-200/50 p-2.5 rounded-xl border border-base-content/6 dark:border-base-content/6">
-                            <span className="text-[9.5px] font-bold text-base-content/55 uppercase block mb-0.5">No. of Payslips</span>
-                            <span className="text-xs font-black text-base-content font-mono">{compEntries.length} Months</span>
+                            <span className="text-[9.5px] font-bold text-base-content/55 uppercase block mb-0.5">Experience</span>
+                            <span className="text-xs font-black text-base-content font-mono">{compExpShort} ({compMonths}m)</span>
                           </div>
                           <div className="bg-base-200/50 p-2.5 rounded-xl border border-base-content/6 dark:border-base-content/6">
                             <span className="text-[9.5px] font-bold text-base-content/55 uppercase block mb-0.5">Taxes & PF</span>
@@ -8148,7 +8179,7 @@ export default function InvTableEntry() {
                       {/* Card Footer */}
                       <div className="px-3.5 py-2 bg-base-200/30 border-t border-base-content/8 dark:border-base-content/8 flex items-center justify-between">
                         <span className="text-[10px] text-base-content/55 font-medium">
-                          {dayjs(startDate).format("MMM YY")} – {dayjs(endDate).format("MMM YY")} ({compEntries.length} payslips)
+                          {compExpText} ({compEntries.length} payslips)
                         </span>
                         <button
                           type="button"
@@ -8177,34 +8208,47 @@ export default function InvTableEntry() {
                     {/* Sheet Header */}
                     <div className="px-4 pt-3 pb-2.5 border-b border-base-content/8 dark:border-base-content/8 bg-base-200/40 shrink-0">
                       {/* Drag handle */}
-                      <div className="w-10 h-1 bg-base-content/20 rounded-full mx-auto mb-3" />
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <CompanyLogo name={salaryBottomSheetCompany} size="w-8 h-8" type="company" />
-                          <div className="min-w-0">
-                            <h3 className="font-black text-sm text-base-content truncate">{salaryBottomSheetCompany}</h3>
-                            <p className="text-[10px] text-base-content/55 font-medium">{bottomSheetSalaryEntries.length} Payslips</p>
+                      <div className="w-10 h-1 bg-base-content/20 rounded-full mx-auto mb-2.5" />
+                      
+                      {/* Top Row: Full Company Name with prominent Close Button at corner */}
+                      <div className="flex items-start justify-between gap-2.5">
+                        <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                          <CompanyLogo name={salaryBottomSheetCompany} size="w-9 h-9" type="company" />
+                          <div className="min-w-0 flex-1">
+                            <h3 className="font-black text-sm text-base-content leading-snug break-words">
+                              {salaryBottomSheetCompany}
+                            </h3>
+                            <p className="text-[10px] text-base-content/55 font-medium mt-0.5">
+                              {bsExpText ? `${bsExpText} • ` : ""}{bottomSheetSalaryEntries.length} Payslips Recorded
+                            </p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          {/* Order Change Button */}
-                          <button
-                            type="button"
-                            onClick={() => setSalarySortOrder((prev) => (prev === "desc" ? "asc" : "desc"))}
-                            className="btn btn-xs rounded-xl px-2.5 text-[10px] font-bold border border-base-content/12 bg-base-100 hover:bg-base-200 text-base-content flex items-center gap-1.5 shadow-2xs cursor-pointer transition-all"
-                            title={`Current order: ${salarySortOrder === "desc" ? "Most Recent on Top" : "Oldest on Top"}. Click to flip.`}
-                          >
-                            <ArrowUpDown size={11} className="text-primary shrink-0" />
-                            <span>{salarySortOrder === "desc" ? "Recent First" : "Oldest First"}</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setSalaryBottomSheetCompany(null)}
-                            className="btn btn-xs btn-ghost btn-circle rounded-full text-base-content/60 cursor-pointer"
-                          >
-                            <X size={16} />
-                          </button>
-                        </div>
+
+                        {/* Proper close symbol at corner */}
+                        <button
+                          type="button"
+                          onClick={() => setSalaryBottomSheetCompany(null)}
+                          className="btn btn-xs btn-ghost btn-circle rounded-full hover:bg-base-200 text-base-content/60 hover:text-base-content cursor-pointer shrink-0 -mr-1 -mt-0.5"
+                          title="Close"
+                        >
+                          <X size={17} />
+                        </button>
+                      </div>
+
+                      {/* Sub-bar: Reordering button moved here to give full width to company name */}
+                      <div className="flex items-center justify-between pt-2 mt-2 border-t border-base-content/6">
+                        <span className="text-[10px] font-bold text-base-content/60 uppercase tracking-wider">
+                          Salary Slips Breakdown
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setSalarySortOrder((prev) => (prev === "desc" ? "asc" : "desc"))}
+                          className="btn btn-xs rounded-xl px-2.5 text-[10px] font-bold border border-base-content/12 bg-base-100 hover:bg-base-200 text-base-content flex items-center gap-1.5 shadow-2xs cursor-pointer transition-all"
+                          title={`Current order: ${salarySortOrder === "desc" ? "Most Recent on Top" : "Oldest on Top"}. Click to flip.`}
+                        >
+                          <ArrowUpDown size={11} className="text-primary shrink-0" />
+                          <span>{salarySortOrder === "desc" ? "Recent First" : "Oldest First"}</span>
+                        </button>
                       </div>
                     </div>
 
@@ -8704,34 +8748,47 @@ export default function InvTableEntry() {
                     {/* Sheet Header */}
                     <div className="px-4 pt-3 pb-2.5 border-b border-base-content/8 dark:border-base-content/8 bg-base-200/40 shrink-0">
                       {/* Drag handle */}
-                      <div className="w-10 h-1 bg-base-content/20 rounded-full mx-auto mb-3" />
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <CompanyLogo name={pfBottomSheetCompany} size="w-8 h-8" type="company" />
-                          <div className="min-w-0">
-                            <h3 className="font-black text-sm text-base-content truncate">{pfBottomSheetCompany}</h3>
-                            <p className="text-[10px] text-base-content/55 font-medium">{bottomSheetEntries.length} PF Entries</p>
+                      <div className="w-10 h-1 bg-base-content/20 rounded-full mx-auto mb-2.5" />
+                      
+                      {/* Top Row: Full Company Name & Corner Close Button */}
+                      <div className="flex items-start justify-between gap-2.5">
+                        <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                          <CompanyLogo name={pfBottomSheetCompany} size="w-9 h-9" type="company" />
+                          <div className="min-w-0 flex-1">
+                            <h3 className="font-black text-sm text-base-content leading-snug break-words">
+                              {pfBottomSheetCompany}
+                            </h3>
+                            <p className="text-[10px] text-base-content/55 font-medium mt-0.5">
+                              {bottomSheetEntries.length} PF Contributions
+                            </p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          {/* Order Change Button */}
-                          <button
-                            type="button"
-                            onClick={() => setPfSortOrder((prev) => (prev === "desc" ? "asc" : "desc"))}
-                            className="btn btn-xs rounded-xl px-2.5 text-[10px] font-bold border border-base-content/12 bg-base-100 hover:bg-base-200 text-base-content flex items-center gap-1.5 shadow-2xs cursor-pointer transition-all"
-                            title={`Current order: ${pfSortOrder === "desc" ? "Most Recent on Top" : "Oldest on Top"}. Click to flip.`}
-                          >
-                            <ArrowUpDown size={11} className="text-primary shrink-0" />
-                            <span>{pfSortOrder === "desc" ? "Recent First" : "Oldest First"}</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setPfBottomSheetCompany(null)}
-                            className="btn btn-xs btn-ghost btn-circle rounded-full text-base-content/60 cursor-pointer"
-                          >
-                            <X size={16} />
-                          </button>
-                        </div>
+
+                        {/* Proper close symbol at corner */}
+                        <button
+                          type="button"
+                          onClick={() => setPfBottomSheetCompany(null)}
+                          className="btn btn-xs btn-ghost btn-circle rounded-full hover:bg-base-200 text-base-content/60 hover:text-base-content cursor-pointer shrink-0 -mr-1 -mt-0.5"
+                          title="Close"
+                        >
+                          <X size={17} />
+                        </button>
+                      </div>
+
+                      {/* Sub-bar: Reordering button moved here to give full width to company name */}
+                      <div className="flex items-center justify-between pt-2 mt-2 border-t border-base-content/6">
+                        <span className="text-[10px] font-bold text-base-content/60 uppercase tracking-wider">
+                          Contribution History
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setPfSortOrder((prev) => (prev === "desc" ? "asc" : "desc"))}
+                          className="btn btn-xs rounded-xl px-2.5 text-[10px] font-bold border border-base-content/12 bg-base-100 hover:bg-base-200 text-base-content flex items-center gap-1.5 shadow-2xs cursor-pointer transition-all"
+                          title={`Current order: ${pfSortOrder === "desc" ? "Most Recent on Top" : "Oldest on Top"}. Click to flip.`}
+                        >
+                          <ArrowUpDown size={11} className="text-primary shrink-0" />
+                          <span>{pfSortOrder === "desc" ? "Recent First" : "Oldest First"}</span>
+                        </button>
                       </div>
                     </div>
 

@@ -17,6 +17,8 @@ import {
   Info,
   Award,
   TrendingUp,
+  ArrowRight,
+  ArrowLeft,
 } from "lucide-react";
 import { evaluateMathExpression } from "../../../utils/mathExpression";
 
@@ -39,9 +41,11 @@ function AddSalaryModal({ isOpen, onClose, onSave, initialData = null, lastSalar
   const [isManualCtc, setIsManualCtc] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [mobileTab, setMobileTab] = useState("earnings"); // "earnings" | "deductions" | "payout"
 
   useEffect(() => {
     if (!isOpen) return;
+    setMobileTab("earnings");
 
     if (initialData) {
       const initBasic = Number(initialData.basicSalary || 0);
@@ -259,10 +263,12 @@ function AddSalaryModal({ isOpen, onClose, onSave, initialData = null, lastSalar
 
     if (!formData.month) {
       setErrorMsg("Please select a Month and Year.");
+      setMobileTab("earnings");
       return;
     }
     if (!formData.company.trim()) {
       setErrorMsg("Please enter the Company name.");
+      setMobileTab("earnings");
       return;
     }
 
@@ -303,7 +309,7 @@ function AddSalaryModal({ isOpen, onClose, onSave, initialData = null, lastSalar
     >
       <form
         onSubmit={handleSubmit}
-        className="w-full max-w-6xl my-auto space-y-4"
+        className="hidden sm:block w-full max-w-6xl my-auto space-y-4"
         onClick={(e) => e.stopPropagation()}
       >
         {/* TOP FLOATING HEADER CARD: Month, Company, Notes & Action Buttons */}
@@ -784,6 +790,478 @@ function AddSalaryModal({ isOpen, onClose, onSave, initialData = null, lastSalar
                 </div>
               </div>
             </div>
+        </div>
+      </form>
+
+      {/* =================================================================== */}
+      {/* MOBILE COMPACT MODAL (Phone View: block sm:hidden)                 */}
+      {/* =================================================================== */}
+      <form
+        onSubmit={handleSubmit}
+        className="block sm:hidden w-full max-w-[420px] bg-base-100 rounded-2xl shadow-2xl border border-base-content/12 my-auto overflow-hidden flex flex-col max-h-[90vh]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Compact Header */}
+        <div className="px-3.5 py-2.5 border-b border-base-content/8 bg-base-200/40 flex justify-between items-center shrink-0">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="p-1.5 rounded-lg bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 shrink-0">
+              <Briefcase size={15} />
+            </div>
+            <div className="min-w-0">
+              <h3 className="font-extrabold text-xs flex items-center gap-1.5 leading-tight text-base-content truncate">
+                <span>{initialData ? "Edit Salary Record" : "Add Salary Record"}</span>
+                <span className="badge badge-primary badge-xs text-[9px] font-bold">
+                  {initialData ? "Update" : "New"}
+                </span>
+              </h3>
+              <p className="text-[10px] text-base-content/55 font-medium leading-tight truncate">
+                {formData.company ? formData.company : "Monthly compensation breakdown"}
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="btn btn-xs btn-ghost btn-circle rounded-full hover:bg-base-200 text-base-content/60 hover:text-base-content cursor-pointer shrink-0"
+            title="Close"
+          >
+            <X size={15} />
+          </button>
+        </div>
+
+        {/* Segmented Tab Navigation Ribbon */}
+        <div className="px-3 py-1.5 bg-base-200/60 border-b border-base-content/8 shrink-0">
+          <div className="grid grid-cols-3 gap-1 bg-base-200 dark:bg-base-800 p-0.5 rounded-xl border border-base-content/8 text-[10.5px]">
+            <button
+              type="button"
+              onClick={() => setMobileTab("earnings")}
+              className={`py-1 px-1.5 rounded-lg font-bold flex items-center justify-center gap-1 transition-all cursor-pointer ${
+                mobileTab === "earnings"
+                  ? "bg-base-100 text-emerald-600 dark:text-emerald-400 shadow-xs border border-base-content/8 scale-[1.01]"
+                  : "text-base-content/60 hover:text-base-content"
+              }`}
+            >
+              <Coins size={12} className="shrink-0" />
+              <span className="truncate">1. Earnings</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setMobileTab("deductions")}
+              className={`py-1 px-1.5 rounded-lg font-bold flex items-center justify-center gap-1 transition-all cursor-pointer ${
+                mobileTab === "deductions"
+                  ? "bg-base-100 text-rose-600 dark:text-rose-400 shadow-xs border border-base-content/8 scale-[1.01]"
+                  : "text-base-content/60 hover:text-base-content"
+              }`}
+            >
+              <Receipt size={12} className="shrink-0" />
+              <span className="truncate">2. Deductions</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setMobileTab("payout")}
+              className={`py-1 px-1.5 rounded-lg font-bold flex items-center justify-center gap-1 transition-all cursor-pointer ${
+                mobileTab === "payout"
+                  ? "bg-base-100 text-primary shadow-xs border border-base-content/8 scale-[1.01]"
+                  : "text-base-content/60 hover:text-base-content"
+              }`}
+            >
+              <Calculator size={12} className="shrink-0" />
+              <span className="truncate">3. Payout</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Error Alert */}
+        {errorMsg && (
+          <div className="px-3 pt-2 shrink-0">
+            <div className="alert alert-error text-xs py-1.5 px-2.5 rounded-xl flex items-center gap-1.5 shadow-xs font-semibold">
+              <AlertCircle size={14} className="shrink-0" />
+              <span className="truncate">{errorMsg}</span>
+            </div>
+          </div>
+        )}
+
+        {/* Scrollable Tab Body */}
+        <div className="flex-1 overflow-y-auto min-h-0 p-3 space-y-3">
+          {/* TAB 1: EARNINGS */}
+          {mobileTab === "earnings" && (
+            <div className="space-y-2.5 animate-in fade-in duration-150">
+              {/* Month & Company */}
+              <div className="grid grid-cols-2 gap-2 p-2.5 bg-base-200/40 rounded-xl border border-base-content/8">
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-wider text-base-content/70 mb-1">
+                    Month & Year *
+                  </label>
+                  <input
+                    type="month"
+                    name="month"
+                    required
+                    value={formData.month}
+                    onChange={handleChange}
+                    className="input input-xs h-8 w-full rounded-lg bg-base-100 border-base-content/15 font-mono text-xs font-semibold focus:border-primary"
+                  />
+                  <span className="text-[9px] text-base-content/50 mt-0.5 block truncate">
+                    {formData.month ? dayjs(formData.month).format("MMMM YYYY") : "Select month"}
+                  </span>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-wider text-base-content/70 mb-1">
+                    Company *
+                  </label>
+                  <input
+                    type="text"
+                    name="company"
+                    required
+                    placeholder="e.g. Google, TCS..."
+                    value={formData.company}
+                    onChange={handleChange}
+                    className="input input-xs h-8 w-full rounded-lg bg-base-100 border-base-content/15 text-xs font-semibold focus:border-primary"
+                  />
+                  <span className="text-[9px] text-base-content/50 mt-0.5 block truncate">
+                    Employer name
+                  </span>
+                </div>
+              </div>
+
+              {/* Earnings 2-Col Grid */}
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-[10px] font-bold text-base-content mb-1 flex items-center justify-between">
+                    <span>Basic (₹)</span>
+                    <span className="text-[9px] text-base-content/45 font-normal">Base</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="basicSalary"
+                    placeholder="0 or math"
+                    value={formData.basicSalary}
+                    onChange={handleChange}
+                    className="input input-xs h-8 w-full rounded-lg bg-base-200/50 focus:bg-base-100 border-base-content/15 font-mono text-xs font-semibold focus:border-primary"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-base-content mb-1 flex items-center justify-between">
+                    <span>HRA (₹)</span>
+                    <span className="text-[9px] text-base-content/45 font-normal">Rent</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="hra"
+                    placeholder="0 or math"
+                    value={formData.hra}
+                    onChange={handleChange}
+                    className="input input-xs h-8 w-full rounded-lg bg-base-200/50 focus:bg-base-100 border-base-content/15 font-mono text-xs font-semibold focus:border-primary"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-base-content mb-1 flex items-center justify-between">
+                    <span>Flexi / RSA (₹)</span>
+                    <span className="text-[9px] text-base-content/45 font-normal">Allowances</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="flexi"
+                    placeholder="0 or math"
+                    value={formData.flexi}
+                    onChange={handleChange}
+                    className="input input-xs h-8 w-full rounded-lg bg-base-200/50 focus:bg-base-100 border-base-content/15 font-mono text-xs font-semibold focus:border-primary"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-emerald-600 dark:text-emerald-400 mb-1 flex items-center justify-between">
+                    <span className="flex items-center gap-0.5"><Gift size={11} /> Bonus (₹)</span>
+                    <span className="text-[9px] text-emerald-600/70 font-normal">Perf</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="bonus"
+                    placeholder="0 or math"
+                    value={formData.bonus}
+                    onChange={handleChange}
+                    className="input input-xs h-8 w-full rounded-lg bg-emerald-500/5 border-emerald-500/30 focus:border-emerald-500 focus:bg-base-100 font-mono text-xs font-semibold"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-base-content mb-1 flex items-center justify-between">
+                    <span className="flex items-center gap-0.5"><Award size={11} className="text-primary" /> Gratuity (₹)</span>
+                    <span className="text-[9px] text-base-content/45 font-normal">Benefit</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="gratuity"
+                    placeholder="0 or math"
+                    value={formData.gratuity}
+                    onChange={handleChange}
+                    className="input input-xs h-8 w-full rounded-lg bg-base-200/50 focus:bg-base-100 border-base-content/15 font-mono text-xs font-semibold focus:border-primary"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-base-content mb-1 flex items-center justify-between">
+                    <span className="flex items-center gap-0.5"><TrendingUp size={11} className="text-primary" /> Var Pay (₹)</span>
+                    <span className="text-[9px] text-base-content/45 font-normal">Incentive</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="variablePay"
+                    placeholder="0 or math"
+                    value={formData.variablePay}
+                    onChange={handleChange}
+                    className="input input-xs h-8 w-full rounded-lg bg-base-200/50 focus:bg-base-100 border-base-content/15 font-mono text-xs font-semibold focus:border-primary"
+                  />
+                </div>
+              </div>
+
+              {/* Subtotal Ribbon */}
+              <div className="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/40 flex items-center justify-between">
+                <div>
+                  <span className="text-[10px] font-bold text-emerald-800 dark:text-emerald-200 uppercase tracking-wider block">
+                    Total Earnings
+                  </span>
+                  <span className="text-[9.5px] text-emerald-600/80 dark:text-emerald-400/80">
+                    Gross Cash: ₹{calculated.gross.toLocaleString("en-IN")}
+                  </span>
+                </div>
+                <span className="text-sm font-black text-emerald-600 dark:text-emerald-400 font-mono">
+                  ₹{calculated.totalEarnings.toLocaleString("en-IN")}
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 2: DEDUCTIONS */}
+          {mobileTab === "deductions" && (
+            <div className="space-y-3 animate-in fade-in duration-150">
+              <div>
+                <label className="block text-[10.5px] font-bold text-base-content mb-1 flex items-center justify-between">
+                  <span>Employer PF (E6r PF) (₹)</span>
+                  <span className="text-[9.5px] text-base-content/50">PF Contribution</span>
+                </label>
+                <input
+                  type="text"
+                  name="erPf"
+                  placeholder="0 or math (e.g. 1800)"
+                  value={formData.erPf}
+                  onChange={handleChange}
+                  className="input input-xs h-8 w-full rounded-lg bg-base-200/50 focus:bg-base-100 border-base-content/15 font-mono text-xs font-semibold focus:border-primary"
+                />
+                <span className="text-[9.5px] text-base-content/50 mt-0.5 block">
+                  Employer's Provident Fund deduction
+                </span>
+              </div>
+
+              <div>
+                <label className="block text-[10.5px] font-bold text-base-content mb-1 flex items-center justify-between">
+                  <span>Tax + State Tax + Spl Allowance (₹)</span>
+                  <span className="text-[9.5px] text-base-content/50">TDS & Taxes</span>
+                </label>
+                <input
+                  type="text"
+                  name="taxes"
+                  placeholder="0 or math (e.g. 8500)"
+                  value={formData.taxes}
+                  onChange={handleChange}
+                  className="input input-xs h-8 w-full rounded-lg bg-base-200/50 focus:bg-base-100 border-base-content/15 font-mono text-xs font-semibold focus:border-primary"
+                />
+                <span className="text-[9.5px] text-base-content/50 mt-0.5 block">
+                  Income TDS, Professional Tax & State taxes
+                </span>
+              </div>
+
+              <div>
+                <label className="block text-[10.5px] font-bold text-base-content mb-1 flex items-center gap-1">
+                  <Sparkles size={12} className="text-primary" />
+                  <span>Notes / Remarks (Optional)</span>
+                </label>
+                <input
+                  type="text"
+                  name="notes"
+                  placeholder="e.g. Appraisal increment, Joining bonus..."
+                  value={formData.notes}
+                  onChange={handleChange}
+                  className="input input-xs h-8 w-full rounded-lg bg-base-200/50 focus:bg-base-100 border-base-content/15 text-xs focus:border-primary"
+                />
+                <span className="text-[9.5px] text-base-content/50 mt-0.5 block">
+                  Remarks or slip reference
+                </span>
+              </div>
+
+              {/* Subtotal Ribbon */}
+              <div className="p-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800/40 flex items-center justify-between">
+                <div>
+                  <span className="text-[10px] font-bold text-rose-800 dark:text-rose-200 uppercase tracking-wider block">
+                    Total Deductions
+                  </span>
+                  <span className="text-[9.5px] text-rose-600/80 dark:text-rose-400/80">
+                    Employer PF + Taxes
+                  </span>
+                </div>
+                <span className="text-sm font-black text-rose-600 dark:text-rose-400 font-mono">
+                  -₹{calculated.deductions.toLocaleString("en-IN")}
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 3: PAYOUT & CTC */}
+          {mobileTab === "payout" && (
+            <div className="space-y-3 animate-in fade-in duration-150">
+              {/* Prominent In-Hand Banner */}
+              <div className="p-3 rounded-xl bg-gradient-to-br from-success/20 via-success/10 to-primary/10 border-2 border-success/40 text-center shadow-xs space-y-1">
+                <div className="flex items-center justify-center gap-1.5 text-success font-black text-[10.5px] uppercase tracking-wider">
+                  <CheckCircle2 size={13} /> Total In-Hand (Automatic)
+                </div>
+                <div className="text-2xl font-black text-success tracking-tight font-mono">
+                  ₹{calculated.inHand.toLocaleString("en-IN")}
+                </div>
+                <div className="text-[9.5px] text-base-content/60 font-medium">
+                  Gross (₹{calculated.gross.toLocaleString("en-IN")}) − Deductions (₹{calculated.deductions.toLocaleString("en-IN")})
+                </div>
+              </div>
+
+              {/* Monthly CTC */}
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <label className="text-[10.5px] font-bold text-base-content">
+                    Monthly CTC (₹)
+                  </label>
+                  {isManualCtc ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsManualCtc(false);
+                        setFormData((prev) => ({ ...prev, ctc: "" }));
+                      }}
+                      className="badge badge-xs badge-warning hover:badge-error cursor-pointer font-bold text-[8.5px]"
+                    >
+                      Custom ✕ (Reset to Auto)
+                    </button>
+                  ) : (
+                    <span className="badge badge-xs badge-success/20 text-success border border-success/30 font-bold text-[8.5px]">
+                      Auto-calculated
+                    </span>
+                  )}
+                </div>
+                <input
+                  type="text"
+                  name="ctc"
+                  placeholder={`Auto: ${calculated.autoCtc}`}
+                  value={isManualCtc ? formData.ctc : (calculated.autoCtc > 0 ? calculated.autoCtc : "")}
+                  onChange={handleChange}
+                  onBlur={handleCtcBlur}
+                  className={`input input-xs h-8 w-full rounded-lg bg-base-200/50 focus:bg-base-100 font-mono text-xs font-semibold ${
+                    isManualCtc ? "border-warning/60 focus:border-warning" : "border-base-content/15 focus:border-primary"
+                  }`}
+                />
+                <div className="text-[9.5px] text-base-content/50">
+                  {isManualCtc
+                    ? "Custom value active. Edit any component to recalculate."
+                    : "Auto-computed from Total Earnings + Employer PF."}
+                </div>
+              </div>
+
+              {/* CTC Breakdown Box */}
+              <div className="p-2.5 rounded-xl bg-base-200/50 border border-base-content/8 space-y-1 text-xs">
+                <div className="text-[9.5px] uppercase font-bold text-base-content/50 tracking-wider">
+                  CTC Summary
+                </div>
+                <div className="flex items-center justify-between text-[10.5px] text-base-content/70">
+                  <span>Total Earnings (Gross + Benefits):</span>
+                  <span className="font-mono font-bold text-base-content">₹{calculated.totalEarnings.toLocaleString("en-IN")}</span>
+                </div>
+                <div className="flex items-center justify-between text-[10.5px] text-base-content/70">
+                  <span>+ Employer PF:</span>
+                  <span className="font-mono font-bold text-base-content">₹{calculated.erPf.toLocaleString("en-IN")}</span>
+                </div>
+                <div className="border-t border-base-content/10 pt-1 flex items-center justify-between font-bold text-[11px]">
+                  <span className="text-primary font-black">= Total CTC:</span>
+                  <span className="font-mono text-primary font-black">
+                    ₹{(isManualCtc && formData.ctc ? parseVal(formData.ctc) : calculated.autoCtc).toLocaleString("en-IN")}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Pinned Mobile Footer with Next/Back/Submit buttons */}
+        <div className="shrink-0 px-3.5 py-2.5 bg-base-200/70 border-t border-base-content/8 flex items-center justify-between gap-2">
+          {mobileTab === "earnings" && (
+            <>
+              <button
+                type="button"
+                onClick={onClose}
+                className="btn btn-xs btn-ghost rounded-xl text-xs font-bold px-3 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (!formData.company.trim()) {
+                    setErrorMsg("Please enter the Company name.");
+                    return;
+                  }
+                  setErrorMsg("");
+                  setMobileTab("deductions");
+                }}
+                className="btn btn-xs btn-primary rounded-xl text-xs font-bold gap-1 px-3.5 shadow-xs cursor-pointer"
+              >
+                <span>Next: Deductions</span>
+                <ArrowRight size={13} />
+              </button>
+            </>
+          )}
+
+          {mobileTab === "deductions" && (
+            <>
+              <button
+                type="button"
+                onClick={() => {
+                  setErrorMsg("");
+                  setMobileTab("earnings");
+                }}
+                className="btn btn-xs btn-ghost rounded-xl text-xs font-bold gap-1 px-2.5 cursor-pointer"
+              >
+                <ArrowLeft size={13} />
+                <span>Back</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setErrorMsg("");
+                  setMobileTab("payout");
+                }}
+                className="btn btn-xs btn-primary rounded-xl text-xs font-bold gap-1 px-3.5 shadow-xs cursor-pointer"
+              >
+                <span>Next: Payout & CTC</span>
+                <ArrowRight size={13} />
+              </button>
+            </>
+          )}
+
+          {mobileTab === "payout" && (
+            <>
+              <button
+                type="button"
+                onClick={() => {
+                  setErrorMsg("");
+                  setMobileTab("deductions");
+                }}
+                className="btn btn-xs btn-ghost rounded-xl text-xs font-bold gap-1 px-2.5 cursor-pointer"
+              >
+                <ArrowLeft size={13} />
+                <span>Back</span>
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="btn btn-xs btn-primary rounded-xl text-xs font-bold gap-1.5 px-4 shadow-md shadow-primary/25 cursor-pointer"
+              >
+                <Save size={13} />
+                <span>{isSubmitting ? "Saving..." : initialData ? "Update Record" : "Save Record"}</span>
+              </button>
+            </>
+          )}
         </div>
       </form>
     </div>,
