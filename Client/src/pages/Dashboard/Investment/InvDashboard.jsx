@@ -4245,8 +4245,8 @@ export default function InvDashboard() {
                       </select>
                     </div>
 
-                    {/* View Switcher: Graph View vs Table View */}
-                    <div className="flex items-center gap-2 bg-base-100 p-1.5 rounded-2xl shadow-xs">
+                    {/* View Switcher: Graph View vs Table View (Desktop Only) */}
+                    <div className="hidden md:flex items-center gap-2 bg-base-100 p-1.5 rounded-2xl shadow-xs">
                       <button
                         className={`px-3 sm:px-4 py-2 text-xs font-extrabold rounded-xl transition-all flex items-center gap-1.5 sm:gap-2 cursor-pointer ${
                           viewTab === "graph"
@@ -4273,49 +4273,29 @@ export default function InvDashboard() {
                   </div>
                 </div>
 
-                {/* TAB 1: Graph View */}
+                {/* DESKTOP: TAB 1: Graph View */}
                 {viewTab === "graph" && (
-                  <div className="space-y-4">
+                  <div className="hidden md:block space-y-4">
                     {monthlyPlotData.length > 0 ? (
                       <div className="w-full [&_.apexcharts-tooltip]:!bg-transparent [&_.apexcharts-tooltip]:!border-none [&_.apexcharts-tooltip]:!shadow-none [&_.apexcharts-tooltip]:!p-0">
-                        {/* Desktop: Horizontal multi-series line chart */}
-                        <div className="hidden md:block">
-                          <div className="flex items-center justify-between px-2 pb-2 text-xs font-semibold text-base-content/60">
-                            <span>
-                              {salaryComponentView === "earnings"
-                                ? "Click legend items below to toggle individual earnings components or Total Earnings line:"
-                                : salaryComponentView === "deductions"
-                                ? "Click legend items below to toggle deduction components or Total Deductions line:"
-                                : "Click legend items below to toggle In Hand, Total Deductions, or Total CTC:"}
-                            </span>
-                            <span className="text-[11px] opacity-75">
-                              Showing {monthlyPlotData.length} monthly records
-                            </span>
-                          </div>
-                          <Chart
-                            options={apexOptions}
-                            series={apexSeries}
-                            type="line"
-                            height={440}
-                          />
+                        <div className="flex items-center justify-between px-2 pb-2 text-xs font-semibold text-base-content/60">
+                          <span>
+                            {salaryComponentView === "earnings"
+                              ? "Click legend items below to toggle individual earnings components or Total Earnings line:"
+                              : salaryComponentView === "deductions"
+                              ? "Click legend items below to toggle deduction components or Total Deductions line:"
+                              : "Click legend items below to toggle In Hand, Total Deductions, or Total CTC:"}
+                          </span>
+                          <span className="text-[11px] opacity-75">
+                            Showing {monthlyPlotData.length} monthly records
+                          </span>
                         </div>
-
-                        {/* Phone: The same trend in vertical way */}
-                        <div className="block md:hidden w-full max-w-full overflow-hidden">
-                          <div className="flex items-center justify-between px-1 pb-2 text-[11px] font-semibold text-base-content/60">
-                            <span>
-                              Vertical Monthly Trend ({salaryComponentView === "earnings" ? "Earnings" : salaryComponentView === "deductions" ? "Deductions" : "In-Hand & Deductions"}):
-                            </span>
-                            <span className="opacity-75 font-mono">{monthlyPlotData.length} mos</span>
-                          </div>
-                          <Chart
-                            options={salaryVerticalApexOptions}
-                            series={salaryVerticalSeries}
-                            type="bar"
-                            width="100%"
-                            height={Math.max(380, monthlyPlotData.length * 44)}
-                          />
-                        </div>
+                        <Chart
+                          options={apexOptions}
+                          series={apexSeries}
+                          type="line"
+                          height={440}
+                        />
                       </div>
                     ) : (
                       <div className="p-12 text-center text-sm opacity-50 italic">
@@ -4325,9 +4305,34 @@ export default function InvDashboard() {
                   </div>
                 )}
 
-                {/* TAB 2: Collapsible Table View */}
+                {/* PHONE VIEW: Always show the Vertical Trend Graph (No Table View on Phone) */}
+                <div className="block md:hidden space-y-4">
+                  {monthlyPlotData.length > 0 ? (
+                    <div className="w-full max-w-full overflow-hidden [&_.apexcharts-tooltip]:!bg-transparent [&_.apexcharts-tooltip]:!border-none [&_.apexcharts-tooltip]:!shadow-none [&_.apexcharts-tooltip]:!p-0">
+                      <div className="flex items-center justify-between px-1 pb-2 text-[11px] font-semibold text-base-content/60">
+                        <span>
+                          Vertical Monthly Trend ({salaryComponentView === "earnings" ? "Earnings" : salaryComponentView === "deductions" ? "Deductions" : "In-Hand & Deductions"}):
+                        </span>
+                        <span className="opacity-75 font-mono">{monthlyPlotData.length} mos</span>
+                      </div>
+                      <Chart
+                        options={salaryVerticalApexOptions}
+                        series={salaryVerticalSeries}
+                        type="bar"
+                        width="100%"
+                        height={Math.max(380, monthlyPlotData.length * 44)}
+                      />
+                    </div>
+                  ) : (
+                    <div className="p-8 text-center text-xs opacity-50 italic">
+                      No salary records match the selected company or date filter range.
+                    </div>
+                  )}
+                </div>
+
+                {/* DESKTOP: TAB 2: Collapsible Table View (Hidden on Phone View Only) */}
                 {viewTab === "table" && (
-                  <div className="space-y-4">
+                  <div className="hidden md:block space-y-4">
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-base-200/50 p-3 rounded-2xl border border-base-300">
                       <p className="text-xs font-semibold text-base-content/70">
                         Monthly salary records with In-Hand, Deductions (PF + Taxes), Gross Earnings, and full itemized details.
@@ -4671,8 +4676,8 @@ export default function InvDashboard() {
                       ))}
                     </div>
 
-                    {/* View Switcher: Graph View vs Table View */}
-                    <div className="flex items-center gap-2 bg-base-100 p-1.5 rounded-2xl border border-base-300">
+                    {/* View Switcher: Graph View vs Table View (Desktop Only) */}
+                    <div className="hidden md:flex items-center gap-2 bg-base-100 p-1.5 rounded-2xl border border-base-300">
                       <button
                         className={`px-3 sm:px-4 py-2 text-xs font-extrabold rounded-xl transition-all flex items-center gap-1.5 sm:gap-2 cursor-pointer ${
                           viewTab === "graph"
@@ -4699,44 +4704,26 @@ export default function InvDashboard() {
                   </div>
                 </div>
 
-                {/* TAB 1: Graph View */}
+                {/* DESKTOP: TAB 1: Graph View */}
                 {viewTab === "graph" && (
-                  <div className="space-y-4">
+                  <div className="hidden md:block space-y-4">
                     {pfMonthlyPlotData.length > 0 ? (
                       <div className="w-full [&_.apexcharts-tooltip]:!bg-transparent [&_.apexcharts-tooltip]:!border-none [&_.apexcharts-tooltip]:!shadow-none [&_.apexcharts-tooltip]:!p-0">
-                        {/* Desktop: Horizontal multi-series line chart */}
-                        <div className="hidden md:block">
-                          <div className="flex items-center justify-between px-2 pb-2 text-xs font-semibold text-base-content/60 flex-wrap gap-2">
-                            <span>
-                              Click legend items below to toggle <span className="font-bold">Employee Share (EE)</span>,{" "}
-                              <span className="font-bold">Employer Share (ER)</span>, or <span className="font-bold">Cumulative PF Balance</span>:
-                            </span>
-                            <span className="text-[11px] opacity-75">
-                              Showing {pfMonthlyPlotData.length} timeline records
-                            </span>
-                          </div>
-                          <Chart
-                            options={pfApexOptions}
-                            series={pfApexSeries}
-                            type="line"
-                            height={440}
-                          />
+                        <div className="flex items-center justify-between px-2 pb-2 text-xs font-semibold text-base-content/60 flex-wrap gap-2">
+                          <span>
+                            Click legend items below to toggle <span className="font-bold">Employee Share (EE)</span>,{" "}
+                            <span className="font-bold">Employer Share (ER)</span>, or <span className="font-bold">Cumulative PF Balance</span>:
+                          </span>
+                          <span className="text-[11px] opacity-75">
+                            Showing {pfMonthlyPlotData.length} timeline records
+                          </span>
                         </div>
-
-                        {/* Phone: The same trend in vertical way */}
-                        <div className="block md:hidden w-full max-w-full overflow-hidden">
-                          <div className="flex items-center justify-between px-1 pb-2 text-[11px] font-semibold text-base-content/60">
-                            <span>Vertical PF Contributions (EE & ER Shares):</span>
-                            <span className="opacity-75 font-mono">{pfMonthlyPlotData.length} mos</span>
-                          </div>
-                          <Chart
-                            options={pfVerticalApexOptions}
-                            series={pfVerticalSeries}
-                            type="bar"
-                            width="100%"
-                            height={Math.max(380, pfMonthlyPlotData.length * 44)}
-                          />
-                        </div>
+                        <Chart
+                          options={pfApexOptions}
+                          series={pfApexSeries}
+                          type="line"
+                          height={440}
+                        />
                       </div>
                     ) : (
                       <div className="p-12 text-center text-sm opacity-50 italic">
@@ -4746,9 +4733,32 @@ export default function InvDashboard() {
                   </div>
                 )}
 
-                {/* TAB 2: Table View */}
+                {/* PHONE VIEW: Always show the Vertical Trend Graph (No Table View on Phone) */}
+                <div className="block md:hidden space-y-4">
+                  {pfMonthlyPlotData.length > 0 ? (
+                    <div className="w-full max-w-full overflow-hidden [&_.apexcharts-tooltip]:!bg-transparent [&_.apexcharts-tooltip]:!border-none [&_.apexcharts-tooltip]:!shadow-none [&_.apexcharts-tooltip]:!p-0">
+                      <div className="flex items-center justify-between px-1 pb-2 text-[11px] font-semibold text-base-content/60">
+                        <span>Vertical PF Contributions (EE & ER Shares):</span>
+                        <span className="opacity-75 font-mono">{pfMonthlyPlotData.length} mos</span>
+                      </div>
+                      <Chart
+                        options={pfVerticalApexOptions}
+                        series={pfVerticalSeries}
+                        type="bar"
+                        width="100%"
+                        height={Math.max(380, pfMonthlyPlotData.length * 44)}
+                      />
+                    </div>
+                  ) : (
+                    <div className="p-8 text-center text-xs opacity-50 italic">
+                      No Provident Fund records match the selected company or date filter range.
+                    </div>
+                  )}
+                </div>
+
+                {/* DESKTOP: TAB 2: Table View (Hidden on Phone View Only) */}
                 {viewTab === "table" && (
-                  <div className="space-y-4">
+                  <div className="hidden md:block space-y-4">
                     {/* Sub-tab Navigation Bar */}
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-base-200/50 p-3 rounded-2xl border border-base-300">
                       <div className="flex items-center gap-2 overflow-x-auto no-scrollbar w-full sm:w-auto pb-1 sm:pb-0">
@@ -5268,8 +5278,8 @@ export default function InvDashboard() {
                       </ul>
                     </div>
 
-                    {/* View Switcher: Graph View vs Table View */}
-                    <div className="bg-base-100 p-1 rounded-2xl flex items-center border border-base-300">
+                    {/* View Switcher: Graph View vs Table View (Desktop Only) */}
+                    <div className="hidden md:flex bg-base-100 p-1 rounded-2xl items-center border border-base-300">
                       <button
                         className={`px-3 sm:px-4 py-2 text-xs font-extrabold rounded-xl transition-all flex items-center gap-1.5 sm:gap-2 cursor-pointer ${
                           viewTab === "graph"
@@ -5367,9 +5377,9 @@ export default function InvDashboard() {
                   </div>
                 </div>
 
-                {/* TAB 1: Graph View */}
+                {/* DESKTOP: TAB 1: Graph View */}
                 {viewTab === "graph" && (
-                  <div className="space-y-4">
+                  <div className="hidden md:block space-y-4">
                     {mfMonthlyPlotData.length > 0 ? (
                       <div>
                         {mfMetricMode === "all" ? (
@@ -5392,23 +5402,12 @@ export default function InvDashboard() {
                                   </h3>
                                   <span className="badge badge-xs badge-primary font-bold">Cashflow</span>
                                 </div>
-                                <div className="hidden md:block">
-                                  <Chart
-                                    options={mfCashflowOptions}
-                                    series={mfCashflowSeries}
-                                    type="line"
-                                    height={320}
-                                  />
-                                </div>
-                                <div className="block md:hidden w-full max-w-full overflow-hidden">
-                                  <Chart
-                                    options={mfCashflowVerticalOptions}
-                                    series={mfCashflowVerticalSeries}
-                                    type="bar"
-                                    width="100%"
-                                    height={Math.max(280, mfMonthlyPlotData.length * 36)}
-                                  />
-                                </div>
+                                <Chart
+                                  options={mfCashflowOptions}
+                                  series={mfCashflowSeries}
+                                  type="line"
+                                  height={320}
+                                />
                               </div>
 
                               {/* 2. Purchase NAV History */}
@@ -5420,23 +5419,12 @@ export default function InvDashboard() {
                                   </h3>
                                   <span className="badge badge-xs badge-info font-bold">NAV (₹)</span>
                                 </div>
-                                <div className="hidden md:block">
-                                  <Chart
-                                    options={mfNavOptions}
-                                    series={mfNavSeries}
-                                    type="line"
-                                    height={320}
-                                  />
-                                </div>
-                                <div className="block md:hidden w-full max-w-full overflow-hidden">
-                                  <Chart
-                                    options={mfNavVerticalOptions}
-                                    series={mfNavVerticalSeries}
-                                    type="bar"
-                                    width="100%"
-                                    height={Math.max(280, mfMonthlyPlotData.length * 36)}
-                                  />
-                                </div>
+                                <Chart
+                                  options={mfNavOptions}
+                                  series={mfNavSeries}
+                                  type="line"
+                                  height={320}
+                                />
                               </div>
 
                               {/* 3. Units Allocated & Held */}
@@ -5448,23 +5436,12 @@ export default function InvDashboard() {
                                   </h3>
                                   <span className="badge badge-xs badge-ghost font-mono">Units (u)</span>
                                 </div>
-                                <div className="hidden md:block">
-                                  <Chart
-                                    options={mfUnitsOptions}
-                                    series={mfUnitsSeries}
-                                    type="line"
-                                    height={320}
-                                  />
-                                </div>
-                                <div className="block md:hidden w-full max-w-full overflow-hidden">
-                                  <Chart
-                                    options={mfUnitsVerticalOptions}
-                                    series={mfUnitsVerticalSeries}
-                                    type="bar"
-                                    width="100%"
-                                    height={Math.max(280, mfMonthlyPlotData.length * 36)}
-                                  />
-                                </div>
+                                <Chart
+                                  options={mfUnitsOptions}
+                                  series={mfUnitsSeries}
+                                  type="line"
+                                  height={320}
+                                />
                               </div>
 
                               {/* 4. Expense Ratio Incurred */}
@@ -5476,23 +5453,12 @@ export default function InvDashboard() {
                                   </h3>
                                   <span className="badge badge-xs badge-error font-bold">ER Cost (₹)</span>
                                 </div>
-                                <div className="hidden md:block">
-                                  <Chart
-                                    options={mfErOptions}
-                                    series={mfErSeries}
-                                    type="line"
-                                    height={320}
-                                  />
-                                </div>
-                                <div className="block md:hidden w-full max-w-full overflow-hidden">
-                                  <Chart
-                                    options={mfErVerticalOptions}
-                                    series={mfErVerticalSeries}
-                                    type="bar"
-                                    width="100%"
-                                    height={Math.max(280, mfMonthlyPlotData.length * 36)}
-                                  />
-                                </div>
+                                <Chart
+                                  options={mfErOptions}
+                                  series={mfErSeries}
+                                  type="line"
+                                  height={320}
+                                />
                               </div>
                             </div>
                           </div>
@@ -5531,25 +5497,12 @@ export default function InvDashboard() {
                                 {mfMonthlyPlotData.length} periods
                               </span>
                             </div>
-                            {/* Desktop: Horizontal Chart */}
-                            <div className="hidden md:block">
-                              <Chart
-                                options={mfApexOptions}
-                                series={mfApexSeries}
-                                type="line"
-                                height={440}
-                              />
-                            </div>
-                            {/* Phone: Vertical Bar Trend Chart */}
-                            <div className="block md:hidden w-full max-w-full overflow-hidden">
-                              <Chart
-                                options={mfApexVerticalOptions}
-                                series={mfApexVerticalSeries}
-                                type="bar"
-                                width="100%"
-                                height={Math.max(380, mfMonthlyPlotData.length * 44)}
-                              />
-                            </div>
+                            <Chart
+                              options={mfApexOptions}
+                              series={mfApexSeries}
+                              type="line"
+                              height={440}
+                            />
                           </div>
                         )}
                       </div>
@@ -5561,9 +5514,118 @@ export default function InvDashboard() {
                   </div>
                 )}
 
-                {/* TAB 2: Table View */}
+                {/* PHONE VIEW: Always show the Vertical Trend Graph (No Table View on Phone) */}
+                <div className="block md:hidden space-y-4">
+                  {mfMonthlyPlotData.length > 0 ? (
+                    <div>
+                      {mfMetricMode === "all" ? (
+                        <div className="space-y-4">
+                          {/* 1. Deposits & Withdrawals */}
+                          <div className="card bg-base-100 shadow-sm border border-base-300 p-3.5 rounded-2xl space-y-2">
+                            <div className="flex items-center justify-between">
+                              <h3 className="font-bold text-sm flex items-center gap-1.5 text-base-content">
+                                <PiggyBank size={15} className="text-primary" />
+                                Deposits & Withdrawals Flow
+                              </h3>
+                              <span className="badge badge-xs badge-primary font-bold">Cashflow</span>
+                            </div>
+                            <div className="w-full max-w-full overflow-hidden">
+                              <Chart
+                                options={mfCashflowVerticalOptions}
+                                series={mfCashflowVerticalSeries}
+                                type="bar"
+                                width="100%"
+                                height={Math.max(280, mfMonthlyPlotData.length * 36)}
+                              />
+                            </div>
+                          </div>
+
+                          {/* 2. Purchase NAV History */}
+                          <div className="card bg-base-100 shadow-sm border border-base-300 p-3.5 rounded-2xl space-y-2">
+                            <div className="flex items-center justify-between">
+                              <h3 className="font-bold text-sm flex items-center gap-1.5 text-base-content">
+                                <TrendingUp size={15} className="text-sky-500" />
+                                Purchase NAV Trajectory
+                              </h3>
+                              <span className="badge badge-xs badge-info font-bold">NAV (₹)</span>
+                            </div>
+                            <div className="w-full max-w-full overflow-hidden">
+                              <Chart
+                                options={mfNavVerticalOptions}
+                                series={mfNavVerticalSeries}
+                                type="bar"
+                                width="100%"
+                                height={Math.max(280, mfMonthlyPlotData.length * 36)}
+                              />
+                            </div>
+                          </div>
+
+                          {/* 3. Units Allocated & Held */}
+                          <div className="card bg-base-100 shadow-sm border border-base-300 p-3.5 rounded-2xl space-y-2">
+                            <div className="flex items-center justify-between">
+                              <h3 className="font-bold text-sm flex items-center gap-1.5 text-base-content">
+                                <Layers size={15} className="text-indigo-500" />
+                                Units Allocated & Cumulative Balance
+                              </h3>
+                              <span className="badge badge-xs badge-ghost font-mono">Units (u)</span>
+                            </div>
+                            <div className="w-full max-w-full overflow-hidden">
+                              <Chart
+                                options={mfUnitsVerticalOptions}
+                                series={mfUnitsVerticalSeries}
+                                type="bar"
+                                width="100%"
+                                height={Math.max(280, mfMonthlyPlotData.length * 36)}
+                              />
+                            </div>
+                          </div>
+
+                          {/* 4. Expense Ratio Incurred */}
+                          <div className="card bg-base-100 shadow-sm border border-base-300 p-3.5 rounded-2xl space-y-2">
+                            <div className="flex items-center justify-between">
+                              <h3 className="font-bold text-sm flex items-center gap-1.5 text-base-content">
+                                <Percent size={15} className="text-rose-500" />
+                                Expense Ratio (ER) Deducted
+                              </h3>
+                              <span className="badge badge-xs badge-error font-bold">ER Cost (₹)</span>
+                            </div>
+                            <div className="w-full max-w-full overflow-hidden">
+                              <Chart
+                                options={mfErVerticalOptions}
+                                series={mfErVerticalSeries}
+                                type="bar"
+                                width="100%"
+                                height={Math.max(280, mfMonthlyPlotData.length * 36)}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="w-full max-w-full overflow-hidden [&_.apexcharts-tooltip]:!bg-transparent [&_.apexcharts-tooltip]:!border-none [&_.apexcharts-tooltip]:!shadow-none [&_.apexcharts-tooltip]:!p-0">
+                          <div className="flex items-center justify-between px-1 pb-2 text-[11px] font-semibold text-base-content/60">
+                            <span>Vertical Trend ({mfMetricMode.toUpperCase()}):</span>
+                            <span className="opacity-75 font-mono">{mfMonthlyPlotData.length} mos</span>
+                          </div>
+                          <Chart
+                            options={mfApexVerticalOptions}
+                            series={mfApexVerticalSeries}
+                            type="bar"
+                            width="100%"
+                            height={Math.max(380, mfMonthlyPlotData.length * 44)}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="p-8 text-center text-xs opacity-50 italic">
+                      No Mutual Fund transactions match the selected scheme or date filter range.
+                    </div>
+                  )}
+                </div>
+
+                {/* DESKTOP: TAB 2: Table View (Hidden on Phone View Only) */}
                 {viewTab === "table" && (
-                  <div className="space-y-4">
+                  <div className="hidden md:block space-y-4">
                     {/* Sub-tab Navigation Bar */}
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-base-100 p-3 rounded-2xl border border-base-300">
                       <div className="flex items-center gap-2 flex-wrap">
