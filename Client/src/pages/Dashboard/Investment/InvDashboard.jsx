@@ -1289,6 +1289,7 @@ export default function InvDashboard() {
         stacked: true,
         background: "transparent",
         toolbar: { show: false },
+        parentHeightOffset: 0,
         animations: {
           enabled: true,
           easing: "easeinout",
@@ -1352,6 +1353,12 @@ export default function InvDashboard() {
         show: true,
         borderColor: "#334155",
         strokeDashArray: 3,
+        padding: {
+          left: 0,
+          right: 25,
+          top: 0,
+          bottom: 0,
+        },
         xaxis: { lines: { show: true } },
         yaxis: { lines: { show: false } },
       },
@@ -1893,6 +1900,7 @@ export default function InvDashboard() {
         stacked: true,
         background: "transparent",
         toolbar: { show: false },
+        parentHeightOffset: 0,
         animations: { enabled: true, easing: "easeinout", speed: 600 },
       },
       colors: [themeColor, "#38bdf8"],
@@ -1941,6 +1949,12 @@ export default function InvDashboard() {
         show: true,
         borderColor: "#334155",
         strokeDashArray: 3,
+        padding: {
+          left: 0,
+          right: 25,
+          top: 0,
+          bottom: 0,
+        },
         xaxis: { lines: { show: true } },
         yaxis: { lines: { show: false } },
       },
@@ -2786,6 +2800,7 @@ export default function InvDashboard() {
         stacked: false,
         background: "transparent",
         toolbar: { show: false },
+        parentHeightOffset: 0,
         animations: { enabled: true, easing: "easeinout", speed: 600 },
       },
       colors,
@@ -2838,6 +2853,12 @@ export default function InvDashboard() {
         show: true,
         borderColor: "#334155",
         strokeDashArray: 3,
+        padding: {
+          left: 0,
+          right: 25,
+          top: 0,
+          bottom: 0,
+        },
         xaxis: { lines: { show: true } },
         yaxis: { lines: { show: false } },
       },
@@ -2961,9 +2982,9 @@ export default function InvDashboard() {
   }, [currentThemeObj, mfMonthlyPlotData, mfMetricMode, selectedFundObj, selectedGroupObj]);
 
   return (
-    <div className="w-full space-y-6 pb-20">
+    <div className="w-full max-w-full overflow-x-hidden space-y-4 sm:space-y-6 pb-20">
       {/* 1. Sticky Glassmorphism Header - Desktop View (Hidden on Phone) */}
-      <div className="hidden md:block sticky top-[-17px] z-40 bg-base-100/95 backdrop-blur-md shadow-md border-b border-base-300/40 -mx-4 px-4 py-2 mt-[-16px]">
+      <div className="hidden md:block sticky top-0 z-40 bg-base-100/95 backdrop-blur-md shadow-md border-b border-base-300/40 px-4 py-2">
         <div className="flex items-center justify-between p-3 flex-wrap gap-3 max-w-[1600px] mx-auto px-4 md:px-6">
           {/* Left: Investment Category Selector Dropdown */}
           <div className="flex items-center gap-2 flex-wrap">
@@ -3662,7 +3683,7 @@ export default function InvDashboard() {
       </div>
 
       {/* 2. Sticky Header - Mobile Phone View (Hidden on Desktop) */}
-      <div className="block md:hidden sticky top-[-17px] z-40 bg-base-100/95 dark:bg-base-900/95 backdrop-blur-md border-b border-base-300 px-3 py-2 shadow-xs space-y-2 -mx-4 mt-[-16px]">
+      <div className="block md:hidden sticky top-0 z-40 bg-base-100/95 dark:bg-base-900/95 backdrop-blur-md border-b border-base-300 px-3 py-2 shadow-xs space-y-2">
         {/* Row 1: Active Dashboard Badge + Privacy Eye + Date Filter Button + Quick Entry Link */}
         <div className="flex items-center justify-between gap-2">
           {/* Active Dashboard Badge */}
@@ -3740,7 +3761,7 @@ export default function InvDashboard() {
         </div>
 
         {/* Row 2: Horizontal Scrollable Category Boxes with Watermark Background Icon */}
-        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 -mx-1 px-1">
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 px-0.5">
           {DASHBOARDS_LIST.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeDashboard === tab.id;
@@ -3969,7 +3990,7 @@ export default function InvDashboard() {
         </div>
       )}
 
-      <div className="px-0 sm:px-4 md:px-6 w-full max-w-[1600px] mx-auto space-y-3.5 sm:space-y-4 md:space-y-6 mt-4">
+      <div className="px-2.5 sm:px-4 md:px-6 w-full max-w-[1600px] mx-auto space-y-3.5 sm:space-y-4 md:space-y-6 mt-4">
         {/* Date Range Error Alert */}
         {isInvalidRange && ["SALARY", "PF", "MF"].includes(activeDashboard) && (
           <div className="alert alert-error shadow-sm text-xs font-bold rounded-2xl mx-2 sm:mx-0">
@@ -4280,7 +4301,7 @@ export default function InvDashboard() {
                         </div>
 
                         {/* Phone: The same trend in vertical way */}
-                        <div className="block md:hidden">
+                        <div className="block md:hidden w-full max-w-full overflow-hidden">
                           <div className="flex items-center justify-between px-1 pb-2 text-[11px] font-semibold text-base-content/60">
                             <span>
                               Vertical Monthly Trend ({salaryComponentView === "earnings" ? "Earnings" : salaryComponentView === "deductions" ? "Deductions" : "In-Hand & Deductions"}):
@@ -4291,6 +4312,7 @@ export default function InvDashboard() {
                             options={salaryVerticalApexOptions}
                             series={salaryVerticalSeries}
                             type="bar"
+                            width="100%"
                             height={Math.max(380, monthlyPlotData.length * 44)}
                           />
                         </div>
@@ -4702,7 +4724,7 @@ export default function InvDashboard() {
                         </div>
 
                         {/* Phone: The same trend in vertical way */}
-                        <div className="block md:hidden">
+                        <div className="block md:hidden w-full max-w-full overflow-hidden">
                           <div className="flex items-center justify-between px-1 pb-2 text-[11px] font-semibold text-base-content/60">
                             <span>Vertical PF Contributions (EE & ER Shares):</span>
                             <span className="opacity-75 font-mono">{pfMonthlyPlotData.length} mos</span>
@@ -4711,6 +4733,7 @@ export default function InvDashboard() {
                             options={pfVerticalApexOptions}
                             series={pfVerticalSeries}
                             type="bar"
+                            width="100%"
                             height={Math.max(380, pfMonthlyPlotData.length * 44)}
                           />
                         </div>
@@ -4728,10 +4751,10 @@ export default function InvDashboard() {
                   <div className="space-y-4">
                     {/* Sub-tab Navigation Bar */}
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-base-200/50 p-3 rounded-2xl border border-base-300">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 overflow-x-auto no-scrollbar w-full sm:w-auto pb-1 sm:pb-0">
                         <button
                           onClick={() => setPfSubTab("contributions")}
-                          className={`btn btn-xs rounded-xl font-bold px-3 transition-all ${
+                          className={`btn btn-xs rounded-xl font-bold px-3 transition-all shrink-0 ${
                             pfSubTab === "contributions"
                               ? "bg-primary text-primary-content shadow-sm"
                               : "btn-ghost text-base-content/70 hover:bg-base-300/50"
@@ -4742,7 +4765,7 @@ export default function InvDashboard() {
                         </button>
                         <button
                           onClick={() => setPfSubTab("withdrawals")}
-                          className={`btn btn-xs rounded-xl font-bold px-3 transition-all ${
+                          className={`btn btn-xs rounded-xl font-bold px-3 transition-all shrink-0 ${
                             pfSubTab === "withdrawals"
                               ? "bg-primary text-primary-content shadow-sm"
                               : "btn-ghost text-base-content/70 hover:bg-base-300/50"
@@ -5377,11 +5400,12 @@ export default function InvDashboard() {
                                     height={320}
                                   />
                                 </div>
-                                <div className="block md:hidden">
+                                <div className="block md:hidden w-full max-w-full overflow-hidden">
                                   <Chart
                                     options={mfCashflowVerticalOptions}
                                     series={mfCashflowVerticalSeries}
                                     type="bar"
+                                    width="100%"
                                     height={Math.max(280, mfMonthlyPlotData.length * 36)}
                                   />
                                 </div>
@@ -5404,11 +5428,12 @@ export default function InvDashboard() {
                                     height={320}
                                   />
                                 </div>
-                                <div className="block md:hidden">
+                                <div className="block md:hidden w-full max-w-full overflow-hidden">
                                   <Chart
                                     options={mfNavVerticalOptions}
                                     series={mfNavVerticalSeries}
                                     type="bar"
+                                    width="100%"
                                     height={Math.max(280, mfMonthlyPlotData.length * 36)}
                                   />
                                 </div>
@@ -5431,11 +5456,12 @@ export default function InvDashboard() {
                                     height={320}
                                   />
                                 </div>
-                                <div className="block md:hidden">
+                                <div className="block md:hidden w-full max-w-full overflow-hidden">
                                   <Chart
                                     options={mfUnitsVerticalOptions}
                                     series={mfUnitsVerticalSeries}
                                     type="bar"
+                                    width="100%"
                                     height={Math.max(280, mfMonthlyPlotData.length * 36)}
                                   />
                                 </div>
@@ -5458,11 +5484,12 @@ export default function InvDashboard() {
                                     height={320}
                                   />
                                 </div>
-                                <div className="block md:hidden">
+                                <div className="block md:hidden w-full max-w-full overflow-hidden">
                                   <Chart
                                     options={mfErVerticalOptions}
                                     series={mfErVerticalSeries}
                                     type="bar"
+                                    width="100%"
                                     height={Math.max(280, mfMonthlyPlotData.length * 36)}
                                   />
                                 </div>
@@ -5514,11 +5541,12 @@ export default function InvDashboard() {
                               />
                             </div>
                             {/* Phone: Vertical Bar Trend Chart */}
-                            <div className="block md:hidden">
+                            <div className="block md:hidden w-full max-w-full overflow-hidden">
                               <Chart
                                 options={mfApexVerticalOptions}
                                 series={mfApexVerticalSeries}
                                 type="bar"
+                                width="100%"
                                 height={Math.max(380, mfMonthlyPlotData.length * 44)}
                               />
                             </div>
