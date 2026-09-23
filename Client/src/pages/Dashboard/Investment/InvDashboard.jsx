@@ -101,6 +101,49 @@ const formatCurrencyCompact = (val) => {
   return `₹${num.toLocaleString("en-IN")}`;
 };
 
+// Sticky Chart Legend for Phone/Desktop Views
+const StickyChartLegend = ({ items = [], title, countText, className = "" }) => {
+  if (!items || items.length === 0) return null;
+  return (
+    <div
+      className={`sticky top-[114px] md:top-[56px] z-30 bg-base-100/95 dark:bg-base-900/95 backdrop-blur-md py-1.5 px-2.5 rounded-2xl border border-base-300 shadow-xs flex items-center justify-between gap-1.5 sm:gap-2 flex-wrap transition-all ${className}`}
+    >
+      <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap min-w-0">
+        {title && (
+          <span className="text-[10px] font-bold text-base-content/60 uppercase tracking-wider shrink-0 flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-primary inline-block"></span>
+            {title}:
+          </span>
+        )}
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {items.map((item, idx) => (
+            <div
+              key={idx}
+              className="flex items-center gap-1.5 text-[11px] font-bold text-base-content/90 bg-base-200/80 dark:bg-base-800/80 px-2 py-0.5 rounded-lg border border-base-300/50 shadow-2xs"
+            >
+              <span
+                className="w-2 h-2 rounded-full shrink-0 shadow-2xs ring-1 ring-base-content/10"
+                style={{ backgroundColor: item.color }}
+              />
+              <span className="truncate max-w-[130px]">{item.label}</span>
+              {item.badge && (
+                <span className="badge badge-2xs font-mono font-bold opacity-60">
+                  {item.badge}
+                </span>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+      {countText && (
+        <span className="text-[10px] font-mono font-bold text-base-content/50 shrink-0 ml-auto bg-base-200/60 dark:bg-base-800/60 px-1.5 py-0.5 rounded-md">
+          {countText}
+        </span>
+      )}
+    </div>
+  );
+};
+
 const isFundHoldingActive = (fund) => {
   if (!fund) return false;
   const txns = fund.transactions || [];
@@ -1271,6 +1314,37 @@ export default function InvDashboard() {
     ];
   }, [monthlyPlotData, salaryComponentView]);
 
+  // Legend items for sticky legend in Mobile Phone View (Salary)
+  const salaryLegendItems = useMemo(() => {
+    if (salaryComponentView === "earnings") {
+      const items = [
+        { label: "Basic", color: "#10b981" },
+        { label: "HRA", color: "#06b6d4" },
+        { label: "Flexi", color: "#3b82f6" },
+      ];
+      if (monthlyPlotData.some((m) => (m.bonus || 0) > 0)) {
+        items.push({ label: "Bonus", color: "#f59e0b" });
+      }
+      if (monthlyPlotData.some((m) => (m.variablePay || 0) > 0)) {
+        items.push({ label: "Variable", color: "#8b5cf6" });
+      }
+      if (monthlyPlotData.some((m) => (m.gratuity || 0) > 0)) {
+        items.push({ label: "Gratuity", color: "#ec4899" });
+      }
+      return items;
+    }
+    if (salaryComponentView === "deductions") {
+      return [
+        { label: "Employer PF", color: "#f97316" },
+        { label: "Taxes & Statutory", color: "#ef4444" },
+      ];
+    }
+    return [
+      { label: "In-Hand", color: "#10b981" },
+      { label: "Deductions", color: "#ef4444" },
+    ];
+  }, [salaryComponentView, monthlyPlotData]);
+
   // Vertical ApexCharts Options for Mobile Phone View (Salary)
   const salaryVerticalApexOptions = useMemo(() => {
     let verticalColors = ["#10b981", "#ef4444"];
@@ -1327,13 +1401,7 @@ export default function InvDashboard() {
         opacity: 0.9,
       },
       legend: {
-        show: true,
-        position: "top",
-        horizontalAlign: "left",
-        labels: { colors: "#FFFFFF" },
-        markers: { radius: 10 },
-        itemMargin: { horizontal: 8, vertical: 4 },
-        fontSize: "11px",
+        show: false,
       },
       xaxis: {
         categories: monthlyPlotData.map((m) => m.monthLabel),
@@ -1891,6 +1959,12 @@ export default function InvDashboard() {
     ];
   }, [pfMonthlyPlotData]);
 
+  // Legend items for sticky legend in Mobile Phone View (PF)
+  const pfLegendItems = useMemo(() => [
+    { label: "Employee (EE)", color: currentThemeObj.hex },
+    { label: "Employer (ER)", color: "#38bdf8" },
+  ], [currentThemeObj.hex]);
+
   // Vertical ApexCharts Options for Mobile Phone View (PF)
   const pfVerticalApexOptions = useMemo(() => {
     const themeColor = currentThemeObj.hex;
@@ -1923,13 +1997,7 @@ export default function InvDashboard() {
       stroke: { width: 1, colors: ["transparent"] },
       fill: { opacity: [0.95, 0.75] },
       legend: {
-        show: true,
-        position: "top",
-        horizontalAlign: "left",
-        labels: { colors: "#FFFFFF" },
-        markers: { radius: 10 },
-        itemMargin: { horizontal: 8, vertical: 4 },
-        fontSize: "11px",
+        show: false,
       },
       xaxis: {
         categories: pfMonthlyPlotData.map((m) => m.monthLabel),
@@ -2827,13 +2895,7 @@ export default function InvDashboard() {
         opacity: 0.9,
       },
       legend: {
-        show: true,
-        position: "top",
-        horizontalAlign: "left",
-        labels: { colors: "#FFFFFF" },
-        markers: { radius: 10 },
-        itemMargin: { horizontal: 8, vertical: 4 },
-        fontSize: "11px",
+        show: false,
       },
       xaxis: {
         categories: mfMonthlyPlotData.map((m) => m.monthLabel),
@@ -2981,8 +3043,34 @@ export default function InvDashboard() {
     return generateMfVerticalApexOptions(mfMetricMode === "all" ? "cashflow" : mfMetricMode);
   }, [currentThemeObj, mfMonthlyPlotData, mfMetricMode, selectedFundObj, selectedGroupObj]);
 
+  // Legend items for sticky legend in Mobile Phone View (Mutual Funds)
+  const mfCashflowLegendItems = useMemo(() => [
+    { label: "Deposited", color: currentThemeObj.hex },
+    { label: "Withdrawn", color: "#f59e0b" },
+  ], [currentThemeObj.hex]);
+
+  const mfNavLegendItems = useMemo(() => [
+    { label: "Purchase NAV", color: "#38bdf8" },
+  ], []);
+
+  const mfUnitsLegendItems = useMemo(() => [
+    { label: "Allocated", color: "#10b981" },
+    { label: "Cumulative", color: "#f43f5e" },
+  ], []);
+
+  const mfErLegendItems = useMemo(() => [
+    { label: "Expense Ratio Paid", color: "#f43f5e" },
+  ], []);
+
+  const mfActiveLegendItems = useMemo(() => {
+    if (mfMetricMode === "nav") return mfNavLegendItems;
+    if (mfMetricMode === "units") return mfUnitsLegendItems;
+    if (mfMetricMode === "er") return mfErLegendItems;
+    return mfCashflowLegendItems;
+  }, [mfMetricMode, mfNavLegendItems, mfUnitsLegendItems, mfErLegendItems, mfCashflowLegendItems]);
+
   return (
-    <div className="w-full max-w-full overflow-x-hidden space-y-4 sm:space-y-6 pb-20">
+    <div className="w-full max-w-full overflow-x-clip space-y-4 sm:space-y-6 pb-20">
       {/* 1. Sticky Glassmorphism Header - Desktop View (Hidden on Phone) */}
       <div className="hidden md:block sticky top-0 z-40 bg-base-100/95 backdrop-blur-md shadow-md border-b border-base-300/40 px-4 py-2">
         <div className="flex items-center justify-between p-3 flex-wrap gap-3 max-w-[1600px] mx-auto px-4 md:px-6">
@@ -4306,22 +4394,23 @@ export default function InvDashboard() {
                 )}
 
                 {/* PHONE VIEW: Always show the Vertical Trend Graph (No Table View on Phone) */}
-                <div className="block md:hidden space-y-4">
+                <div className="block md:hidden space-y-3">
                   {monthlyPlotData.length > 0 ? (
-                    <div className="w-full max-w-full overflow-hidden [&_.apexcharts-tooltip]:!bg-transparent [&_.apexcharts-tooltip]:!border-none [&_.apexcharts-tooltip]:!shadow-none [&_.apexcharts-tooltip]:!p-0">
-                      <div className="flex items-center justify-between px-1 pb-2 text-[11px] font-semibold text-base-content/60">
-                        <span>
-                          Vertical Monthly Trend ({salaryComponentView === "earnings" ? "Earnings" : salaryComponentView === "deductions" ? "Deductions" : "In-Hand & Deductions"}):
-                        </span>
-                        <span className="opacity-75 font-mono">{monthlyPlotData.length} mos</span>
-                      </div>
-                      <Chart
-                        options={salaryVerticalApexOptions}
-                        series={salaryVerticalSeries}
-                        type="bar"
-                        width="100%"
-                        height={Math.max(380, monthlyPlotData.length * 44)}
+                    <div className="w-full max-w-full space-y-2">
+                      <StickyChartLegend
+                        title={salaryComponentView === "earnings" ? "Earnings" : salaryComponentView === "deductions" ? "Deductions" : "In-Hand & Deductions"}
+                        items={salaryLegendItems}
+                        countText={`${monthlyPlotData.length} mos`}
                       />
+                      <div className="w-full max-w-full overflow-x-clip [&_.apexcharts-tooltip]:!bg-transparent [&_.apexcharts-tooltip]:!border-none [&_.apexcharts-tooltip]:!shadow-none [&_.apexcharts-tooltip]:!p-0">
+                        <Chart
+                          options={salaryVerticalApexOptions}
+                          series={salaryVerticalSeries}
+                          type="bar"
+                          width="100%"
+                          height={Math.max(380, monthlyPlotData.length * 44)}
+                        />
+                      </div>
                     </div>
                   ) : (
                     <div className="p-8 text-center text-xs opacity-50 italic">
@@ -4641,7 +4730,7 @@ export default function InvDashboard() {
             </div>
 
             {/* 2. Main PF Analysis Interactive Section */}
-            <section className="card bg-base-200 shadow-md rounded-3xl overflow-hidden">
+            <section className="card bg-base-200 shadow-md rounded-3xl overflow-x-clip">
               <div className="card-body p-4 sm:p-6 space-y-4 sm:space-y-6">
                 {/* Section Header & View Switcher */}
                 <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 border-b border-base-300 pb-4">
@@ -4734,20 +4823,23 @@ export default function InvDashboard() {
                 )}
 
                 {/* PHONE VIEW: Always show the Vertical Trend Graph (No Table View on Phone) */}
-                <div className="block md:hidden space-y-4">
+                <div className="block md:hidden space-y-3">
                   {pfMonthlyPlotData.length > 0 ? (
-                    <div className="w-full max-w-full overflow-hidden [&_.apexcharts-tooltip]:!bg-transparent [&_.apexcharts-tooltip]:!border-none [&_.apexcharts-tooltip]:!shadow-none [&_.apexcharts-tooltip]:!p-0">
-                      <div className="flex items-center justify-between px-1 pb-2 text-[11px] font-semibold text-base-content/60">
-                        <span>Vertical PF Contributions (EE & ER Shares):</span>
-                        <span className="opacity-75 font-mono">{pfMonthlyPlotData.length} mos</span>
-                      </div>
-                      <Chart
-                        options={pfVerticalApexOptions}
-                        series={pfVerticalSeries}
-                        type="bar"
-                        width="100%"
-                        height={Math.max(380, pfMonthlyPlotData.length * 44)}
+                    <div className="w-full max-w-full space-y-2">
+                      <StickyChartLegend
+                        title="Contributions"
+                        items={pfLegendItems}
+                        countText={`${pfMonthlyPlotData.length} mos`}
                       />
+                      <div className="w-full max-w-full overflow-x-clip [&_.apexcharts-tooltip]:!bg-transparent [&_.apexcharts-tooltip]:!border-none [&_.apexcharts-tooltip]:!shadow-none [&_.apexcharts-tooltip]:!p-0">
+                        <Chart
+                          options={pfVerticalApexOptions}
+                          series={pfVerticalSeries}
+                          type="bar"
+                          width="100%"
+                          height={Math.max(380, pfMonthlyPlotData.length * 44)}
+                        />
+                      </div>
                     </div>
                   ) : (
                     <div className="p-8 text-center text-xs opacity-50 italic">
@@ -5185,7 +5277,7 @@ export default function InvDashboard() {
             </div>
 
             {/* 2. Main Mutual Fund Section Card */}
-            <section className="card bg-base-200 shadow-md rounded-3xl overflow-hidden">
+            <section className="card bg-base-200 shadow-md rounded-3xl overflow-x-clip">
               <div className="card-body p-4 sm:p-6 space-y-6">
                 {/* Header Row */}
                 <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 border-b border-base-300 pb-5">
@@ -5515,7 +5607,7 @@ export default function InvDashboard() {
                 )}
 
                 {/* PHONE VIEW: Always show the Vertical Trend Graph (No Table View on Phone) */}
-                <div className="block md:hidden space-y-4">
+                <div className="block md:hidden space-y-3">
                   {mfMonthlyPlotData.length > 0 ? (
                     <div>
                       {mfMetricMode === "all" ? (
@@ -5529,7 +5621,12 @@ export default function InvDashboard() {
                               </h3>
                               <span className="badge badge-xs badge-primary font-bold">Cashflow</span>
                             </div>
-                            <div className="w-full max-w-full overflow-hidden">
+                            <StickyChartLegend
+                              title="Cashflow"
+                              items={mfCashflowLegendItems}
+                              countText={`${mfMonthlyPlotData.length} mos`}
+                            />
+                            <div className="w-full max-w-full overflow-x-clip">
                               <Chart
                                 options={mfCashflowVerticalOptions}
                                 series={mfCashflowVerticalSeries}
@@ -5549,7 +5646,12 @@ export default function InvDashboard() {
                               </h3>
                               <span className="badge badge-xs badge-info font-bold">NAV (₹)</span>
                             </div>
-                            <div className="w-full max-w-full overflow-hidden">
+                            <StickyChartLegend
+                              title="NAV"
+                              items={mfNavLegendItems}
+                              countText={`${mfMonthlyPlotData.length} mos`}
+                            />
+                            <div className="w-full max-w-full overflow-x-clip">
                               <Chart
                                 options={mfNavVerticalOptions}
                                 series={mfNavVerticalSeries}
@@ -5569,7 +5671,12 @@ export default function InvDashboard() {
                               </h3>
                               <span className="badge badge-xs badge-ghost font-mono">Units (u)</span>
                             </div>
-                            <div className="w-full max-w-full overflow-hidden">
+                            <StickyChartLegend
+                              title="Units"
+                              items={mfUnitsLegendItems}
+                              countText={`${mfMonthlyPlotData.length} mos`}
+                            />
+                            <div className="w-full max-w-full overflow-x-clip">
                               <Chart
                                 options={mfUnitsVerticalOptions}
                                 series={mfUnitsVerticalSeries}
@@ -5589,7 +5696,12 @@ export default function InvDashboard() {
                               </h3>
                               <span className="badge badge-xs badge-error font-bold">ER Cost (₹)</span>
                             </div>
-                            <div className="w-full max-w-full overflow-hidden">
+                            <StickyChartLegend
+                              title="Expense Ratio"
+                              items={mfErLegendItems}
+                              countText={`${mfMonthlyPlotData.length} mos`}
+                            />
+                            <div className="w-full max-w-full overflow-x-clip">
                               <Chart
                                 options={mfErVerticalOptions}
                                 series={mfErVerticalSeries}
@@ -5601,18 +5713,21 @@ export default function InvDashboard() {
                           </div>
                         </div>
                       ) : (
-                        <div className="w-full max-w-full overflow-hidden [&_.apexcharts-tooltip]:!bg-transparent [&_.apexcharts-tooltip]:!border-none [&_.apexcharts-tooltip]:!shadow-none [&_.apexcharts-tooltip]:!p-0">
-                          <div className="flex items-center justify-between px-1 pb-2 text-[11px] font-semibold text-base-content/60">
-                            <span>Vertical Trend ({mfMetricMode.toUpperCase()}):</span>
-                            <span className="opacity-75 font-mono">{mfMonthlyPlotData.length} mos</span>
-                          </div>
-                          <Chart
-                            options={mfApexVerticalOptions}
-                            series={mfApexVerticalSeries}
-                            type="bar"
-                            width="100%"
-                            height={Math.max(380, mfMonthlyPlotData.length * 44)}
+                        <div className="w-full max-w-full space-y-2">
+                          <StickyChartLegend
+                            title={mfMetricMode.toUpperCase()}
+                            items={mfActiveLegendItems}
+                            countText={`${mfMonthlyPlotData.length} mos`}
                           />
+                          <div className="w-full max-w-full overflow-x-clip [&_.apexcharts-tooltip]:!bg-transparent [&_.apexcharts-tooltip]:!border-none [&_.apexcharts-tooltip]:!shadow-none [&_.apexcharts-tooltip]:!p-0">
+                            <Chart
+                              options={mfApexVerticalOptions}
+                              series={mfApexVerticalSeries}
+                              type="bar"
+                              width="100%"
+                              height={Math.max(380, mfMonthlyPlotData.length * 44)}
+                            />
+                          </div>
                         </div>
                       )}
                     </div>
