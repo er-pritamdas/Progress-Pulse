@@ -422,6 +422,7 @@ export default function InvDashboard() {
   const [tempFromMonth, setTempFromMonth] = useState(fromMonth);
   const [tempToYear, setTempToYear] = useState(toYear);
   const [tempToMonth, setTempToMonth] = useState(toMonth);
+  const [tempCompany, setTempCompany] = useState(selectedCompany);
 
   // Global Privacy Mode (Hide/Show Numbers) for Investment Dashboard
   const [hideNumbers, setHideNumbers] = useState(() => {
@@ -442,6 +443,7 @@ export default function InvDashboard() {
     setTempFromMonth(fromMonth);
     setTempToYear(toYear);
     setTempToMonth(toMonth);
+    setTempCompany(selectedCompany);
     setIsMobileFilterOpen(true);
   };
 
@@ -457,12 +459,15 @@ export default function InvDashboard() {
     setFromMonth(tempFromMonth);
     setToYear(tempToYear);
     setToMonth(tempToMonth);
+    setSelectedCompany(tempCompany);
     setActivePreset("custom");
     setIsMobileFilterOpen(false);
   };
 
   const resetMobileFilter = () => {
     handleQuickRange("all");
+    setSelectedCompany("all");
+    setTempCompany("all");
     setIsMobileFilterOpen(false);
   };
 
@@ -3796,16 +3801,21 @@ export default function InvDashboard() {
               {hideNumbers ? <EyeOff size={15} className="text-primary font-bold" /> : <Eye size={15} />}
             </button>
 
-            {/* Date Filter Button (Opens Bottom Sheet) */}
+            {/* Date & Company Filter Button (Opens Bottom Sheet) */}
             {["SALARY", "PF", "MF"].includes(activeDashboard) && (
               <button
                 type="button"
                 onClick={openMobileFilter}
-                className="btn btn-xs h-7 px-2 rounded-xl font-medium bg-base-200 hover:bg-base-300 border border-base-300/80 shadow-xs flex items-center gap-1.5 text-xs text-base-content cursor-pointer"
-                title="Filter Date Range"
+                className={`btn btn-xs h-7 px-2 rounded-xl font-medium border shadow-xs flex items-center gap-1.5 text-xs text-base-content cursor-pointer ${
+                  (activeDashboard === "SALARY" || activeDashboard === "PF") && selectedCompany !== "all"
+                    ? "bg-primary/10 border-primary/40 text-primary font-bold"
+                    : "bg-base-200 hover:bg-base-300 border-base-300/80"
+                }`}
+                title="Filter Date Range & Company"
               >
                 <Calendar className="w-3.5 h-3.5 text-primary shrink-0" />
-                <span className="truncate max-w-[120px] font-semibold text-[11px]">
+                <span className="truncate max-w-[130px] font-semibold text-[11px]">
+                  {(activeDashboard === "SALARY" || activeDashboard === "PF") && selectedCompany !== "all" ? `${selectedCompany} • ` : ""}
                   {dayjs(`${fromYear}-${fromMonth}-01`).format("MMM 'YY")} - {dayjs(`${toYear}-${toMonth}-01`).format("MMM 'YY")}
                 </span>
                 <Filter className="w-3 h-3 opacity-60 shrink-0" />
@@ -3949,8 +3959,55 @@ export default function InvDashboard() {
 
             {/* Scrollable content */}
             <div className="overflow-y-auto flex-1 p-4 space-y-4">
+              {/* Company / Employer Selector (Visible when SALARY or PF is active) */}
+              {(activeDashboard === "SALARY" || activeDashboard === "PF") && companiesList.length > 0 && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold text-base-content/70 uppercase tracking-wider flex items-center gap-1.5">
+                      <Building2 size={13} className="text-primary" /> Company / Employer
+                    </span>
+                    {tempCompany !== "all" && (
+                      <button
+                        type="button"
+                        onClick={() => setTempCompany("all")}
+                        className="text-[10px] text-primary font-bold hover:underline cursor-pointer"
+                      >
+                        Reset to All
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setTempCompany("all")}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer border ${
+                        tempCompany === "all"
+                          ? "bg-primary text-primary-content border-primary shadow-xs font-bold"
+                          : "bg-base-200/80 hover:bg-base-200 text-base-content/80 border-base-300/80"
+                      }`}
+                    >
+                      All Companies
+                    </button>
+                    {companiesList.map((c) => (
+                      <button
+                        key={`drawer-comp-${c}`}
+                        type="button"
+                        onClick={() => setTempCompany(c)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer border ${
+                          tempCompany === c
+                            ? "bg-primary text-primary-content border-primary shadow-xs font-bold"
+                            : "bg-base-200/80 hover:bg-base-200 text-base-content/80 border-base-300/80"
+                        }`}
+                      >
+                        {c}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Quick Presets Section */}
-              <div className="space-y-2">
+              <div className={`space-y-2 ${(activeDashboard === "SALARY" || activeDashboard === "PF") && companiesList.length > 0 ? "pt-2 border-t border-base-300/60" : ""}`}>
                 <span className="text-[11px] font-bold text-base-content/70 uppercase tracking-wider block">
                   Quick Presets
                 </span>
@@ -4316,7 +4373,28 @@ export default function InvDashboard() {
                     </p>
                   </div>
 
-                  <div className="flex items-center gap-3 flex-wrap">
+                  <div className="flex items-center gap-2.5 sm:gap-3 flex-wrap">
+                    {/* Company Filter Dropdown */}
+                    {companiesList.length > 0 && (
+                      <div className="flex items-center gap-2 bg-base-100 px-3 py-1.5 rounded-2xl shadow-xs">
+                        <span className="text-xs font-bold text-base-content/70 flex items-center gap-1.5 whitespace-nowrap">
+                          <Building2 size={13} className="text-primary" /> Company:
+                        </span>
+                        <select
+                          className="select select-bordered select-xs font-bold bg-base-200/60 text-xs min-w-[125px] max-w-[190px] truncate"
+                          value={selectedCompany}
+                          onChange={(e) => setSelectedCompany(e.target.value)}
+                        >
+                          <option value="all">All Companies</option>
+                          {companiesList.map((c) => (
+                            <option key={`comp-salary-card-${c}`} value={c}>
+                              {c}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+
                     {/* Component Distribution Dropdown */}
                     <div className="flex items-center gap-2 bg-base-100 px-3 py-1.5 rounded-2xl shadow-xs">
                       <span className="text-xs font-bold text-base-content/70 flex items-center gap-1.5 whitespace-nowrap">
@@ -4744,7 +4822,28 @@ export default function InvDashboard() {
                     </p>
                   </div>
 
-                  <div className="flex items-center gap-3 flex-wrap">
+                  <div className="flex items-center gap-2.5 sm:gap-3 flex-wrap">
+                    {/* Company Filter Dropdown */}
+                    {companiesList.length > 0 && (
+                      <div className="flex items-center gap-2 bg-base-100 px-3 py-1.5 rounded-2xl border border-base-300 shadow-2xs">
+                        <span className="text-xs font-bold text-base-content/70 flex items-center gap-1.5 whitespace-nowrap">
+                          <Building2 size={13} className="text-teal-500" /> Company:
+                        </span>
+                        <select
+                          className="select select-bordered select-xs font-bold bg-base-200/60 text-xs min-w-[125px] max-w-[190px] truncate"
+                          value={selectedCompany}
+                          onChange={(e) => setSelectedCompany(e.target.value)}
+                        >
+                          <option value="all">All Companies</option>
+                          {companiesList.map((c) => (
+                            <option key={`comp-pf-card-${c}`} value={c}>
+                              {c}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+
                     {/* Theme Color Selector */}
                     <div className="flex items-center gap-1.5 bg-base-100 p-1 rounded-xl border border-base-300">
                       <span className="text-[10.5px] font-bold text-base-content/50 uppercase px-1 flex items-center gap-1">
