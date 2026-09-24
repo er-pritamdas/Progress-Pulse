@@ -1825,8 +1825,8 @@ export default function InvTableView() {
       {/* =================================================================== */}
       <div className="hidden md:block w-full space-y-6">
         {/* 1. Sticky Glassmorphism Header */}
-      <div className="sticky top-[-17px] z-40 bg-base-100/95 backdrop-blur-md shadow-md border-b border-base-300/40 -mx-4 px-4 py-2.5 mt-[-16px]">
-        <div className="flex items-center justify-between gap-3 max-w-[1600px] mx-auto px-2 md:px-4">
+      <div className="sticky top-0 z-40 bg-base-100/95 backdrop-blur-md shadow-md border-b border-base-300/40 -mx-4 px-4 py-2.5 min-h-[64px] flex items-center">
+        <div className="flex items-center justify-between gap-3 max-w-[1600px] mx-auto px-2 md:px-4 w-full">
           {/* Left: Page Title & Breadcrumb subtext */}
           <div className="flex items-center gap-2.5 shrink-0">
             <div className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-black border border-primary/20 shadow-xs shrink-0">

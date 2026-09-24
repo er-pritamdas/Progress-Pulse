@@ -1653,32 +1653,32 @@ export default function InvSettings() {
       {/* -------------------------------------------------------------------- */}
       {/* 1. TOP STICKY HEADER BAR                                             */}
       {/* -------------------------------------------------------------------- */}
-      <div className="sticky top-[-17px] z-40 bg-base-100/95 backdrop-blur-md shadow-md border-b border-base-300/40 -mx-4 px-4 py-3 mt-[-16px]">
-        <div className="flex items-center justify-between flex-wrap gap-4 max-w-[1680px] mx-auto px-4 md:px-6">
-          <div className="flex items-center gap-3">
+      <div className="sticky top-0 z-40 bg-base-100/95 backdrop-blur-md shadow-md border-b border-base-300/40 -mx-4 px-4 py-2.5 min-h-[64px] flex items-center">
+        <div className="flex items-center justify-between gap-3 max-w-[1680px] mx-auto px-4 md:px-6 w-full">
+          <div className="flex items-center gap-3 min-w-0">
             <div className="w-10 h-10 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shrink-0 shadow-xs border border-primary/20">
               <Target size={22} className="text-primary" />
             </div>
-            <div>
+            <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <h1 className="text-xl sm:text-2xl font-black tracking-tight text-base-content">
+                <h1 className="text-lg sm:text-xl font-black tracking-tight text-base-content truncate">
                   Investment Planner
                 </h1>
-                <span className="badge badge-sm font-bold bg-primary/10 text-primary border-primary/20">
+                <span className="badge badge-sm font-bold bg-primary/10 text-primary border-primary/20 shrink-0">
                   Goal-Based Allocation
                 </span>
               </div>
-              <p className="text-xs text-base-content/60 font-medium hidden sm:block">
+              <p className="text-xs text-base-content/60 font-medium hidden sm:block truncate max-w-[450px] xl:max-w-none">
                 Organize and earmark your liquid savings, holding stocks, mutual funds, FDs, RDs, and PF across your life milestones
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 w-full sm:w-auto justify-end flex-wrap">
+          <div className="flex items-center gap-2 shrink-0 ml-auto flex-nowrap">
             {/* View In Portfolio Dashboard Button */}
             <Link
               to="/dashboard/investment/portfolio"
-              className="btn btn-sm btn-ghost border border-base-300/80 hover:bg-base-200 rounded-xl gap-1.5 font-bold text-xs"
+              className="btn btn-sm btn-ghost border border-base-300/80 hover:bg-base-200 rounded-xl gap-1.5 font-bold text-xs shrink-0"
               title="Open the full portfolio analytics dashboard"
             >
               <span>Portfolio Dashboard</span>
@@ -1693,7 +1693,7 @@ export default function InvSettings() {
                 fetchAllData();
               }}
               disabled={loading}
-              className="btn btn-circle btn-sm bg-base-200 hover:bg-base-300 border border-base-300/50"
+              className="btn btn-circle btn-sm bg-base-200 hover:bg-base-300 border border-base-300/50 shrink-0"
               title="Refresh all investment sources"
             >
               <RefreshCw size={14} className={loading ? "animate-spin text-primary" : "opacity-70"} />
@@ -1704,7 +1704,7 @@ export default function InvSettings() {
               type="button"
               onClick={openCreateGoalModal}
               disabled={loading}
-              className="btn btn-sm btn-primary rounded-xl font-bold gap-1.5 shadow-sm"
+              className="btn btn-sm btn-primary rounded-xl font-bold gap-1.5 shadow-sm shrink-0"
             >
               <Plus size={15} />
               <span>Create Goal / Planner</span>
@@ -1983,7 +1983,7 @@ export default function InvSettings() {
                   {/* Planner Header (Sticky while sources scroll)                 */}
                   {/* ------------------------------------------------------------ */}
                   <div
-                    className={`sticky top-[47px] z-30 p-4 bg-base-300/95 backdrop-blur-md flex flex-wrap justify-between items-center cursor-pointer select-none hover:bg-base-300 transition-colors gap-3 rounded-t-2xl shadow-xs ${
+                    className={`sticky top-[64px] z-30 p-4 bg-base-300/95 backdrop-blur-md flex flex-wrap justify-between items-center cursor-pointer select-none hover:bg-base-300 transition-colors gap-3 rounded-t-2xl shadow-xs ${
                       isCollapsed ? "rounded-b-2xl" : "border-b border-base-300"
                     }`}
                     onClick={() => togglePlanCollapse(goal.id)}
@@ -3334,32 +3334,34 @@ export default function InvSettings() {
                               ))}
                             </div>
 
-                            {/* Tabs Toggle: Allocated Sources / Projection */}
-                            <div className="join w-full bg-base-200 p-0.5 rounded-xl border border-base-300 text-xs">
-                              <button
-                                type="button"
-                                onClick={() => setGoalTab(goal.id, "sources")}
-                                className={`join-item flex-1 btn btn-xs border-0 rounded-lg font-bold ${
-                                  activeTab === "sources"
-                                    ? "btn-primary shadow-xs"
-                                    : "btn-ghost text-base-content/70"
-                                }`}
-                              >
-                                <Layers size={12} />
-                                <span>Sources ({metrics.itemCount})</span>
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setGoalTab(goal.id, "projection")}
-                                className={`join-item flex-1 btn btn-xs border-0 rounded-lg font-bold ${
-                                  activeTab === "projection"
-                                    ? "btn-primary shadow-xs"
-                                    : "btn-ghost text-base-content/70"
-                                }`}
-                              >
-                                <TrendingUp size={12} />
-                                <span>Projection</span>
-                              </button>
+                            {/* Tabs Toggle: Allocated Sources / Projection (Sticky while scrolling) */}
+                            <div className="sticky top-[226px] z-10 bg-base-100/95 dark:bg-base-900/95 backdrop-blur-md py-1.5 -mx-3 px-3 border-y border-base-content/8 shadow-xs">
+                              <div className="join w-full bg-base-200/90 dark:bg-base-800/80 p-0.5 rounded-xl border border-base-content/8 text-xs">
+                                <button
+                                  type="button"
+                                  onClick={() => setGoalTab(goal.id, "sources")}
+                                  className={`join-item flex-1 btn btn-xs border-0 rounded-lg font-bold transition-all ${
+                                    activeTab === "sources"
+                                      ? "btn-primary shadow-xs"
+                                      : "btn-ghost text-base-content/70"
+                                  }`}
+                                >
+                                  <Layers size={12} />
+                                  <span>Sources ({metrics.itemCount})</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setGoalTab(goal.id, "projection")}
+                                  className={`join-item flex-1 btn btn-xs border-0 rounded-lg font-bold transition-all ${
+                                    activeTab === "projection"
+                                      ? "btn-primary shadow-xs"
+                                      : "btn-ghost text-base-content/70"
+                                  }`}
+                                >
+                                  <TrendingUp size={12} />
+                                  <span>Projection</span>
+                                </button>
+                              </div>
                             </div>
 
                             {/* 1. SOURCES TAB */}
