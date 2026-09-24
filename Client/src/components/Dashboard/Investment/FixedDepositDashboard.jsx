@@ -1263,7 +1263,7 @@ export default function FixedDepositDashboard({
                             </h4>
                           </div>
                           <span className="font-mono text-xs font-bold text-base-content shrink-0">
-                            {hideNumbers ? "••••••" : `₹${formatCurrencyCompact(bank.principal)}`}
+                            {hideNumbers ? "••••••" : formatCurrencyCompact(bank.principal)}
                           </span>
                         </div>
 

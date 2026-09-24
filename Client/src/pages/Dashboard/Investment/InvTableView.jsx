@@ -3573,15 +3573,14 @@ export default function InvTableView() {
               <button
                 type="button"
                 onClick={() => toggleProjectionMode(!projectionMode)}
-                className={`px-2 py-1 rounded-xl text-[10.5px] font-bold flex items-center gap-1 border transition-all cursor-pointer ${
+                className={`w-7 h-7 rounded-xl flex items-center justify-center border transition-all cursor-pointer ${
                   projectionMode
                     ? "bg-primary text-primary-content border-primary shadow-xs"
                     : "bg-base-200 text-base-content/70 border-base-content/10 hover:text-base-content"
                 }`}
                 title={projectionMode ? "Projection Mode ON" : "Projection Mode OFF"}
               >
-                <Sparkles size={11} className={projectionMode ? "text-primary-content" : "opacity-60"} />
-                <span>Proj</span>
+                <Sparkles size={13} className={projectionMode ? "text-primary-content" : "opacity-60"} />
               </button>
 
               {/* Privacy Mask Toggle */}
@@ -4140,7 +4139,7 @@ export default function InvTableView() {
                               {hideNumbers ? "••••" : formatCurrencyCompact(m.amount)}
                             </span>
                             <span className={`text-[9px] font-bold ${isAchieved ? "text-emerald-600 dark:text-emerald-400" : "text-base-content/40"}`}>
-                              {isAchieved ? "✓ Achieved" : `₹${formatCurrencyCompact(Math.max(0, m.amount - displayTotalWorth))} to go`}
+                              {isAchieved ? "✓ Achieved" : `${formatCurrencyCompact(Math.max(0, m.amount - displayTotalWorth))} to go`}
                             </span>
                           </div>
                         </div>

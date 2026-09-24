@@ -101,6 +101,20 @@ const formatCurrencyCompact = (val) => {
   return `₹${num.toLocaleString("en-IN")}`;
 };
 
+// Format company names: multi-word names become uppercase acronyms (e.g. "Tata Communication Limited" -> "TCL"), single-word names stay as-is (e.g. "Capgemini" -> "Capgemini")
+const formatCompanyShortName = (name) => {
+  if (!name || typeof name !== "string") return "";
+  const trimmed = name.trim();
+  if (trimmed.toLowerCase() === "all" || trimmed.toLowerCase() === "all companies") {
+    return trimmed;
+  }
+  const words = trimmed.split(/\s+/).filter(Boolean);
+  if (words.length <= 1) {
+    return trimmed;
+  }
+  return words.map((w) => w[0].toUpperCase()).join("");
+};
+
 // Sticky Chart Legend for Phone/Desktop Views
 const StickyChartLegend = ({ items = [], title, countText, className = "" }) => {
   if (!items || items.length === 0) return null;
@@ -189,8 +203,19 @@ export default function InvDashboard() {
 
   // Active dashboard view: "SALARY" | "PF" | "MF" | "STOCKS" | "FD" | "RD" (persisted in localStorage)
   const [activeDashboard, setActiveDashboard] = useState(() => {
-    return localStorage.getItem("pulse_inv_dash_active_view") || "SALARY";
+    const saved = localStorage.getItem("pulse_inv_dash_active_view") || "SALARY";
+    if (typeof window !== "undefined" && window.innerWidth < 768 && (saved === "FD" || saved === "RD")) {
+      return "SALARY";
+    }
+    return saved;
   });
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.innerWidth < 768 && (activeDashboard === "FD" || activeDashboard === "RD")) {
+      setActiveDashboard("SALARY");
+      localStorage.setItem("pulse_inv_dash_active_view", "SALARY");
+    }
+  }, [activeDashboard]);
 
   // Dashboard Selection Modal Popup state
   const [isDashboardModalOpen, setIsDashboardModalOpen] = useState(false);
@@ -1319,6 +1344,57 @@ export default function InvDashboard() {
     ];
   }, [monthlyPlotData, salaryComponentView]);
 
+  // Mobile Phone View: Multiselect disabled legends for Salary interactive visualization
+  const [mobileDisabledLegends, setMobileDisabledLegends] = useState(() => new Set());
+
+  // Reset disabled legends whenever salary component view changes
+  useEffect(() => {
+    setMobileDisabledLegends(new Set());
+  }, [salaryComponentView]);
+
+  const toggleMobileLegend = (id) => {
+    setMobileDisabledLegends((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  // Salary Legend Definitions with value getters for mobile multi-stacked rectangular visualization
+  const activeSalaryLegendDefs = useMemo(() => {
+    if (salaryComponentView === "earnings") {
+      const items = [
+        { id: "basic", label: "Basic", color: "#10b981", getValue: (m) => m.basic },
+        { id: "hra", label: "HRA", color: "#06b6d4", getValue: (m) => m.hra },
+        { id: "flexi", label: "Flexi", color: "#3b82f6", getValue: (m) => m.flexi },
+      ];
+      if (monthlyPlotData.some((m) => (m.bonus || 0) > 0)) {
+        items.push({ id: "bonus", label: "Bonus", color: "#f59e0b", getValue: (m) => m.bonus });
+      }
+      if (monthlyPlotData.some((m) => (m.variablePay || 0) > 0)) {
+        items.push({ id: "variablePay", label: "Variable", color: "#8b5cf6", getValue: (m) => m.variablePay });
+      }
+      if (monthlyPlotData.some((m) => (m.gratuity || 0) > 0)) {
+        items.push({ id: "gratuity", label: "Gratuity", color: "#ec4899", getValue: (m) => m.gratuity });
+      }
+      return items;
+    }
+    if (salaryComponentView === "deductions") {
+      return [
+        { id: "erPf", label: "Employer PF", color: "#f97316", getValue: (m) => m.erPf },
+        { id: "taxes", label: "Taxes & Statutory", color: "#ef4444", getValue: (m) => m.taxes },
+      ];
+    }
+    return [
+      { id: "inHand", label: "In-Hand", color: "#10b981", getValue: (m) => m.inHand },
+      { id: "deductions", label: "Deductions", color: "#ef4444", getValue: (m) => m.deductions },
+    ];
+  }, [salaryComponentView, monthlyPlotData]);
+
   // Legend items for sticky legend in Mobile Phone View (Salary)
   const salaryLegendItems = useMemo(() => {
     if (salaryComponentView === "earnings") {
@@ -1890,7 +1966,7 @@ export default function InvDashboard() {
                   <span class="text-[11px] opacity-75 font-medium" style="font-size: 10.5px; opacity: 0.75; color: #cbd5e1;">${companyStr}</span>
                 </div>
                 <span class="badge badge-sm font-bold text-[10.5px] px-2.5 py-1 rounded-full" style="background: rgba(16, 185, 129, 0.25); border: 1px solid rgba(16, 185, 129, 0.45); color: #34d399; font-weight: 700;">
-                  +₹${formatCurrencyCompact(totalDeposit)} Added
+                  +${formatCurrencyCompact(totalDeposit)} Added
                 </span>
               </div>
 
@@ -1963,6 +2039,32 @@ export default function InvDashboard() {
       },
     ];
   }, [pfMonthlyPlotData]);
+
+  // Mobile Phone View: Multiselect disabled legends for PF interactive visualization
+  const [mobilePfDisabledLegends, setMobilePfDisabledLegends] = useState(() => new Set());
+
+  const toggleMobilePfLegend = (id) => {
+    setMobilePfDisabledLegends((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const activePfLegendDefs = useMemo(() => {
+    const items = [
+      { id: "eePf", label: "Employee (EE)", color: currentThemeObj.hex, getValue: (m) => m.eePf },
+      { id: "erPf", label: "Employer (ER)", color: "#38bdf8", getValue: (m) => m.erPf },
+    ];
+    if (pfMonthlyPlotData.some((m) => (m.withdrawn || 0) > 0)) {
+      items.push({ id: "withdrawn", label: "Withdrawn", color: "#f59e0b", getValue: (m) => m.withdrawn });
+    }
+    return items;
+  }, [currentThemeObj.hex, pfMonthlyPlotData]);
 
   // Legend items for sticky legend in Mobile Phone View (PF)
   const pfLegendItems = useMemo(() => [
@@ -2753,7 +2855,7 @@ export default function InvDashboard() {
                   <span class="text-[11px] opacity-75 font-medium truncate max-w-[170px] block" style="font-size: 10.5px; opacity: 0.75; color: #cbd5e1;">${fundHeader}</span>
                 </div>
                 <span class="badge badge-sm font-bold text-[10.5px] px-2.5 py-1 rounded-full" style="background: rgba(16, 185, 129, 0.25); border: 1px solid rgba(16, 185, 129, 0.45); color: #34d399; font-weight: 700;">
-                  +₹${formatCurrencyCompact(item.deposited)} Deposited
+                  +${formatCurrencyCompact(item.deposited)} Deposited
                 </span>
               </div>
 
@@ -3073,6 +3175,97 @@ export default function InvDashboard() {
     if (mfMetricMode === "er") return mfErLegendItems;
     return mfCashflowLegendItems;
   }, [mfMetricMode, mfNavLegendItems, mfUnitsLegendItems, mfErLegendItems, mfCashflowLegendItems]);
+
+  // Mobile Phone View: Multiselect disabled legends for MF interactive visualization
+  const [mobileMfDisabledLegends, setMobileMfDisabledLegends] = useState(() => new Set());
+
+  const toggleMobileMfLegend = (id) => {
+    setMobileMfDisabledLegends((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const activeMfLegendDefs = useMemo(() => {
+    const hasLumpsum = mfMonthlyPlotData.some((m) =>
+      (m.transactions || []).some((t) => {
+        const typeLower = (t.type || "").toLowerCase();
+        return typeLower.includes("lump");
+      })
+    );
+
+    const items = [];
+    if (hasLumpsum) {
+      items.push({
+        id: "sip",
+        label: "SIP",
+        color: currentThemeObj.hex,
+        getValue: (m) => {
+          return (m.transactions || [])
+            .filter((t) => {
+              const typeLower = (t.type || "").toLowerCase();
+              return !typeLower.includes("withdr") && !typeLower.includes("redemp") && !typeLower.includes("lump");
+            })
+            .reduce((acc, t) => {
+              const amt = Number(
+                t.actualAmt !== undefined && t.actualAmt !== null
+                  ? t.actualAmt
+                  : Math.max(0, Math.abs(t.amtDeposit ?? t.amount ?? 0) - Number(t.er ?? 0))
+              );
+              return acc + (amt > 0 ? amt : Math.abs(Number(t.amtDeposit ?? t.amount ?? 0)));
+            }, 0);
+        },
+      });
+      items.push({
+        id: "lumpsum",
+        label: "Lumpsum",
+        color: "#38bdf8",
+        getValue: (m) => {
+          return (m.transactions || [])
+            .filter((t) => {
+              const typeLower = (t.type || "").toLowerCase();
+              return typeLower.includes("lump");
+            })
+            .reduce((acc, t) => {
+              const amt = Number(
+                t.actualAmt !== undefined && t.actualAmt !== null
+                  ? t.actualAmt
+                  : Math.max(0, Math.abs(t.amtDeposit ?? t.amount ?? 0) - Number(t.er ?? 0))
+              );
+              return acc + (amt > 0 ? amt : Math.abs(Number(t.amtDeposit ?? t.amount ?? 0)));
+            }, 0);
+        },
+      });
+    } else {
+      items.push({
+        id: "deposited",
+        label: "Deposited",
+        color: currentThemeObj.hex,
+        getValue: (m) => m.deposited,
+      });
+    }
+
+    if (mfMonthlyPlotData.some((m) => (m.withdrawn || 0) > 0)) {
+      items.push({
+        id: "withdrawn",
+        label: "Withdrawn",
+        color: "#f59e0b",
+        getValue: (m) => m.withdrawn,
+      });
+    }
+
+    return items;
+  }, [currentThemeObj.hex, mfMonthlyPlotData]);
+
+  // MF Table rows sorted descending (latest month first)
+  const mfTableDataDescending = useMemo(() => {
+    return [...mfMonthlyPlotData].sort((a, b) => b.rawMonth.localeCompare(a.rawMonth));
+  }, [mfMonthlyPlotData]);
 
   return (
     <div className="w-full max-w-full overflow-x-clip space-y-4 sm:space-y-6 pb-20">
@@ -3801,21 +3994,20 @@ export default function InvDashboard() {
               {hideNumbers ? <EyeOff size={15} className="text-primary font-bold" /> : <Eye size={15} />}
             </button>
 
-            {/* Date & Company Filter Button (Opens Bottom Sheet) */}
+            {/* Date Filter Button (Opens Bottom Sheet) */}
             {["SALARY", "PF", "MF"].includes(activeDashboard) && (
               <button
                 type="button"
                 onClick={openMobileFilter}
                 className={`btn btn-xs h-7 px-2 rounded-xl font-medium border shadow-xs flex items-center gap-1.5 text-xs text-base-content cursor-pointer ${
-                  (activeDashboard === "SALARY" || activeDashboard === "PF") && selectedCompany !== "all"
+                  activePreset !== "all"
                     ? "bg-primary/10 border-primary/40 text-primary font-bold"
                     : "bg-base-200 hover:bg-base-300 border-base-300/80"
                 }`}
-                title="Filter Date Range & Company"
+                title="Filter Date Range"
               >
                 <Calendar className="w-3.5 h-3.5 text-primary shrink-0" />
                 <span className="truncate max-w-[130px] font-semibold text-[11px]">
-                  {(activeDashboard === "SALARY" || activeDashboard === "PF") && selectedCompany !== "all" ? `${selectedCompany} • ` : ""}
                   {dayjs(`${fromYear}-${fromMonth}-01`).format("MMM 'YY")} - {dayjs(`${toYear}-${toMonth}-01`).format("MMM 'YY")}
                 </span>
                 <Filter className="w-3 h-3 opacity-60 shrink-0" />
@@ -3860,7 +4052,7 @@ export default function InvDashboard() {
 
         {/* Row 2: Horizontal Scrollable Category Boxes with Watermark Background Icon */}
         <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 px-0.5">
-          {DASHBOARDS_LIST.map((tab) => {
+          {DASHBOARDS_LIST.filter((tab) => tab.id !== "FD" && tab.id !== "RD").map((tab) => {
             const Icon = tab.icon;
             const isActive = activeDashboard === tab.id;
             return (
@@ -3999,7 +4191,7 @@ export default function InvDashboard() {
                             : "bg-base-200/80 hover:bg-base-200 text-base-content/80 border-base-300/80"
                         }`}
                       >
-                        {c}
+                        {formatCompanyShortName(c)}
                       </button>
                     ))}
                   </div>
@@ -4252,110 +4444,110 @@ export default function InvDashboard() {
         {!loading && salaryData.length > 0 && activeDashboard === "SALARY" && (
           <>
             {/* 2. KPI Summary Cards Row */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
               {/* Total In Hand */}
-              <div className="card bg-base-200 shadow-md p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
+              <div className="card bg-base-200 shadow-md p-2.5 sm:p-5 rounded-2xl sm:rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
                 {/* Light Background Watermark Icon */}
                 <div className="absolute -right-3 -bottom-3 text-emerald-500/10 dark:text-emerald-400/10 pointer-events-none group-hover:scale-110 group-hover:-rotate-6 transition-transform duration-500">
                   <Wallet className="w-14 h-14 sm:w-20 sm:h-20" strokeWidth={1.5} />
                 </div>
                 <div className="relative z-10">
                   <div className="flex items-center justify-between">
-                    <span className="text-[10.5px] sm:text-xs font-bold uppercase tracking-wider text-base-content/60">
+                    <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-base-content/60 whitespace-nowrap">
                       Total In Hand
                     </span>
                   </div>
-                  <div className="mt-2 sm:mt-3">
-                    <div className="text-lg sm:text-2xl lg:text-3xl font-black font-mono text-emerald-600 dark:text-emerald-400 truncate">
-                      ₹{formatCurrency2Dec(kpiSummary.totalInHand)}
+                  <div className="mt-1.5 sm:mt-3">
+                    <div className="text-[12.5px] sm:text-2xl lg:text-3xl font-black font-mono text-emerald-600 dark:text-emerald-400 whitespace-nowrap overflow-visible leading-tight">
+                      {hideNumbers ? "••••••" : `₹${formatCurrency2Dec(kpiSummary.totalInHand)}`}
                     </div>
-                    <div className="flex items-center gap-1.5 sm:gap-2 mt-1 sm:mt-1.5 text-[11px] sm:text-xs text-base-content/60 font-medium">
-                      <span className="badge badge-xs badge-success font-bold text-[9px] sm:text-[10px]">
+                    <div className="flex items-center gap-1 sm:gap-2 mt-1 sm:mt-1.5 text-[9.5px] sm:text-xs text-base-content/60 font-medium whitespace-nowrap overflow-hidden">
+                      <span className="badge badge-xs badge-success font-bold text-[8.5px] sm:text-[10px] shrink-0 whitespace-nowrap">
                         {((kpiSummary.overallTakeHomePct) || 0).toFixed(0)}% Net
                       </span>
-                      <span className="truncate">Take-Home</span>
+                      <span className="whitespace-nowrap">Take-Home</span>
                     </div>
                   </div>
                 </div>
               </div>
 
               {/* Total Deductions */}
-              <div className="card bg-base-200 shadow-md p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
+              <div className="card bg-base-200 shadow-md p-2.5 sm:p-5 rounded-2xl sm:rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
                 {/* Light Background Watermark Icon */}
                 <div className="absolute -right-3 -bottom-3 text-rose-500/10 dark:text-rose-400/10 pointer-events-none group-hover:scale-110 group-hover:-rotate-6 transition-transform duration-500">
                   <Receipt className="w-14 h-14 sm:w-20 sm:h-20" strokeWidth={1.5} />
                 </div>
                 <div className="relative z-10">
                   <div className="flex items-center justify-between">
-                    <span className="text-[10.5px] sm:text-xs font-bold uppercase tracking-wider text-base-content/60">
+                    <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-base-content/60 whitespace-nowrap">
                       Total Deductions
                     </span>
                   </div>
-                  <div className="mt-2 sm:mt-3">
-                    <div className="text-lg sm:text-2xl lg:text-3xl font-black font-mono text-rose-500 truncate">
-                      ₹{formatCurrency2Dec(kpiSummary.totalDeductions)}
+                  <div className="mt-1.5 sm:mt-3">
+                    <div className="text-[12.5px] sm:text-2xl lg:text-3xl font-black font-mono text-rose-500 whitespace-nowrap overflow-visible leading-tight">
+                      {hideNumbers ? "••••••" : `₹${formatCurrency2Dec(kpiSummary.totalDeductions)}`}
                     </div>
-                    <div className="flex items-center gap-1.5 sm:gap-2 mt-1 sm:mt-1.5 text-[11px] sm:text-xs text-base-content/60 font-medium">
-                      <span>PF: ₹{formatCurrencyCompact(kpiSummary.totalErPf)}</span>
+                    <div className="flex items-center gap-1 sm:gap-2 mt-1 sm:mt-1.5 text-[9.5px] sm:text-xs text-base-content/60 font-medium whitespace-nowrap overflow-hidden">
+                      <span className="whitespace-nowrap">PF: {formatCurrencyCompact(kpiSummary.totalErPf)}</span>
                       <span>•</span>
-                      <span>Tax: ₹{formatCurrencyCompact(kpiSummary.totalTaxes)}</span>
+                      <span className="whitespace-nowrap">Tax: {formatCurrencyCompact(kpiSummary.totalTaxes)}</span>
                     </div>
                   </div>
                 </div>
               </div>
 
               {/* Total Gross / Earnings */}
-              <div className="card bg-base-200 shadow-md p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
+              <div className="card bg-base-200 shadow-md p-2.5 sm:p-5 rounded-2xl sm:rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
                 {/* Light Background Watermark Icon */}
                 <div className="absolute -right-3 -bottom-3 text-primary/10 dark:text-primary/15 pointer-events-none group-hover:scale-110 group-hover:-rotate-6 transition-transform duration-500">
                   <Banknote className="w-14 h-14 sm:w-20 sm:h-20" strokeWidth={1.5} />
                 </div>
                 <div className="relative z-10">
                   <div className="flex items-center justify-between">
-                    <span className="text-[10.5px] sm:text-xs font-bold uppercase tracking-wider text-base-content/60">
+                    <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-base-content/60 whitespace-nowrap">
                       Gross Earnings
                     </span>
                   </div>
-                  <div className="mt-2 sm:mt-3">
-                    <div className="text-lg sm:text-2xl lg:text-3xl font-black font-mono text-primary truncate">
-                      ₹{formatCurrency2Dec(kpiSummary.totalGross)}
+                  <div className="mt-1.5 sm:mt-3">
+                    <div className="text-[12.5px] sm:text-2xl lg:text-3xl font-black font-mono text-primary whitespace-nowrap overflow-visible leading-tight">
+                      {hideNumbers ? "••••••" : `₹${formatCurrency2Dec(kpiSummary.totalGross)}`}
                     </div>
-                    <div className="flex items-center gap-1.5 sm:gap-2 mt-1 sm:mt-1.5 text-[11px] sm:text-xs text-base-content/60 font-medium truncate">
-                      <span>Avg: ₹{formatCurrencyCompact(kpiSummary.avgMonthlyGross)}/mo</span>
+                    <div className="flex items-center gap-1 sm:gap-2 mt-1 sm:mt-1.5 text-[9.5px] sm:text-xs text-base-content/60 font-medium whitespace-nowrap overflow-hidden">
+                      <span className="whitespace-nowrap">Avg: {formatCurrencyCompact(kpiSummary.avgMonthlyGross)}/mo</span>
                     </div>
                   </div>
                 </div>
               </div>
 
               {/* Total CTC & Experience */}
-              <div className="card bg-base-200 shadow-md p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
+              <div className="card bg-base-200 shadow-md p-2.5 sm:p-5 rounded-2xl sm:rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
                 {/* Light Background Watermark Icon */}
                 <div className="absolute -right-3 -bottom-3 text-sky-500/10 dark:text-sky-400/10 pointer-events-none group-hover:scale-110 group-hover:-rotate-6 transition-transform duration-500">
                   <TrendingUp className="w-14 h-14 sm:w-20 sm:h-20" strokeWidth={1.5} />
                 </div>
                 <div className="relative z-10">
                   <div className="flex items-center justify-between">
-                    <span className="text-[10.5px] sm:text-xs font-bold uppercase tracking-wider text-base-content/60">
+                    <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-base-content/60 whitespace-nowrap">
                       Total CTC Logged
                     </span>
                   </div>
-                  <div className="mt-2 sm:mt-3">
-                    <div className="text-lg sm:text-2xl lg:text-3xl font-black font-mono text-sky-500 truncate">
-                      ₹{formatCurrency2Dec(kpiSummary.totalCtc)}
+                  <div className="mt-1.5 sm:mt-3">
+                    <div className="text-[12.5px] sm:text-2xl lg:text-3xl font-black font-mono text-sky-500 whitespace-nowrap overflow-visible leading-tight">
+                      {hideNumbers ? "••••••" : `₹${formatCurrency2Dec(kpiSummary.totalCtc)}`}
                     </div>
-                    <div className="flex items-center gap-1.5 sm:gap-2 mt-1 sm:mt-1.5 text-[11px] sm:text-xs text-base-content/60 font-medium truncate">
-                      <span className="badge badge-xs badge-info font-bold text-[9px] sm:text-[10px]">
+                    <div className="flex items-center gap-1 sm:gap-2 mt-1 sm:mt-1.5 text-[9.5px] sm:text-xs text-base-content/60 font-medium whitespace-nowrap overflow-hidden">
+                      <span className="badge badge-xs badge-info font-bold text-[8.5px] sm:text-[10px] shrink-0 whitespace-nowrap">
                         {kpiSummary.expText}
                       </span>
-                      <span>({kpiSummary.monthsCount} mos)</span>
+                      <span className="whitespace-nowrap">({kpiSummary.monthsCount} mos)</span>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* 3. Main Data Showcase Card: Graph View or Collapsible Table View */}
-            <div className="card bg-base-200 shadow-md rounded-3xl p-4 sm:p-6 border border-base-300/40">
+            {/* 3. Main Data Showcase Card: Graph View or Collapsible Table View (Desktop Only) */}
+            <div className="hidden md:block card bg-base-200 shadow-md rounded-3xl p-4 sm:p-6 border border-base-300/40">
               <div className="space-y-4">
                 {/* Card Title & Top Controls Header */}
                 <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 border-b border-base-300/60 pb-4">
@@ -4470,32 +4662,6 @@ export default function InvDashboard() {
                     )}
                   </div>
                 )}
-
-                {/* PHONE VIEW: Always show the Vertical Trend Graph (No Table View on Phone) */}
-                <div className="block md:hidden space-y-3">
-                  {monthlyPlotData.length > 0 ? (
-                    <div className="w-full max-w-full space-y-2">
-                      <StickyChartLegend
-                        title={salaryComponentView === "earnings" ? "Earnings" : salaryComponentView === "deductions" ? "Deductions" : "In-Hand & Deductions"}
-                        items={salaryLegendItems}
-                        countText={`${monthlyPlotData.length} mos`}
-                      />
-                      <div className="w-full max-w-full overflow-x-clip [&_.apexcharts-tooltip]:!bg-transparent [&_.apexcharts-tooltip]:!border-none [&_.apexcharts-tooltip]:!shadow-none [&_.apexcharts-tooltip]:!p-0">
-                        <Chart
-                          options={salaryVerticalApexOptions}
-                          series={salaryVerticalSeries}
-                          type="bar"
-                          width="100%"
-                          height={Math.max(380, monthlyPlotData.length * 44)}
-                        />
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="p-8 text-center text-xs opacity-50 italic">
-                      No salary records match the selected company or date filter range.
-                    </div>
-                  )}
-                </div>
 
                 {/* DESKTOP: TAB 2: Collapsible Table View (Hidden on Phone View Only) */}
                 {viewTab === "table" && (
@@ -4669,6 +4835,198 @@ export default function InvDashboard() {
                 )}
               </div>
             </div>
+
+            {/* ============================================================ */}
+            {/* 3. PHONE VIEW ONLY: Salary & Income Section (block md:hidden) */}
+            {/* ============================================================ */}
+            <div className="block md:hidden space-y-2.5">
+              {/* Row A: Single line header with one line subtitle below it */}
+              <div className="space-y-0.5 pt-1">
+                <h2 className="text-sm font-extrabold flex items-center gap-1.5 whitespace-nowrap truncate text-base-content">
+                  <BarChart3 size={16} className="text-emerald-500 shrink-0" />
+                  <span className="truncate">Salary & Compensation Breakdown</span>
+                </h2>
+                <p className="text-[10px] text-base-content/60 whitespace-nowrap truncate">
+                  {salaryComponentView === "earnings"
+                    ? "Monthly distribution of earnings components (Basic, HRA, Flexi, Bonus)"
+                    : salaryComponentView === "deductions"
+                    ? "Monthly distribution of deductions (Employer PF, Taxes & Statutory)"
+                    : "Stacked monthly distribution of In-Hand Salary and Total Deductions"}
+                </p>
+              </div>
+
+              {/* Row B & C: Sticky Container (Company & Component Filter + All Legends) */}
+              <div className="sticky top-[108px] z-30 bg-base-100/95 dark:bg-base-900/95 backdrop-blur-md -mx-3 px-3 py-2 border-y border-base-300/70 shadow-xs space-y-1.5">
+                {/* Next line: Company and Component Filter in a single line that is sticky */}
+                <div className="flex items-center gap-1.5 w-full">
+                  {/* Company Filter */}
+                  <div className="flex-1 min-w-0 flex items-center gap-1 bg-base-200/90 dark:bg-base-800/90 px-2 py-1 rounded-xl border border-base-300/80 shadow-2xs">
+                    <Building2 size={12} className="text-primary shrink-0" />
+                    <select
+                      className="select select-ghost select-xs p-0 h-6 min-h-0 text-[11px] font-bold w-full focus:outline-none bg-transparent truncate"
+                      value={selectedCompany}
+                      onChange={(e) => setSelectedCompany(e.target.value)}
+                    >
+                      <option value="all">All Companies</option>
+                      {companiesList.map((c) => (
+                        <option key={`m-comp-${c}`} value={c}>
+                          {formatCompanyShortName(c)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Component Filter */}
+                  <div className="flex-1 min-w-0 flex items-center gap-1 bg-base-200/90 dark:bg-base-800/90 px-2 py-1 rounded-xl border border-base-300/80 shadow-2xs">
+                    <Layers size={12} className="text-primary shrink-0" />
+                    <select
+                      className="select select-ghost select-xs p-0 h-6 min-h-0 text-[11px] font-bold w-full focus:outline-none bg-transparent truncate"
+                      value={salaryComponentView}
+                      onChange={(e) => setSalaryComponentView(e.target.value)}
+                    >
+                      <option value="overview">In-Hand & Deductions</option>
+                      <option value="earnings">Total Earnings</option>
+                      <option value="deductions">Total Deductions</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Next line: All Legends in a single line and must be sticky (interactive multiselect) */}
+                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar flex-nowrap py-0.5">
+                  <span className="text-[10px] font-bold text-base-content/50 uppercase tracking-wider shrink-0 flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary inline-block"></span>
+                    Legends:
+                  </span>
+                  {activeSalaryLegendDefs.map((leg) => {
+                    const isExcluded = mobileDisabledLegends.has(leg.id);
+                    return (
+                      <button
+                        key={leg.id}
+                        type="button"
+                        onClick={() => toggleMobileLegend(leg.id)}
+                        className={`flex items-center gap-1 text-[10.5px] font-bold px-2 py-0.5 rounded-lg border transition-all cursor-pointer shrink-0 select-none active:scale-95 ${
+                          isExcluded
+                            ? "border-dashed border-base-300 bg-base-200/40 text-base-content/40 opacity-50"
+                            : "border-base-300 bg-base-100 dark:bg-base-800 text-base-content shadow-2xs hover:border-primary/40"
+                        }`}
+                        title={isExcluded ? `Click to show ${leg.label}` : `Click to hide ${leg.label}`}
+                      >
+                        <span
+                          className={`w-2 h-2 rounded-full shrink-0 shadow-2xs transition-opacity ${
+                            isExcluded ? "opacity-30" : "opacity-100 ring-1 ring-base-content/10"
+                          }`}
+                          style={{ backgroundColor: leg.color }}
+                        />
+                        <span className={isExcluded ? "line-through text-base-content/40" : ""}>
+                          {leg.label}
+                        </span>
+                      </button>
+                    );
+                  })}
+                  <span className="text-[9.5px] font-mono font-bold text-base-content/40 shrink-0 ml-auto bg-base-200/60 px-1.5 py-0.5 rounded-md">
+                    {monthlyPlotData.length} mos
+                  </span>
+                </div>
+              </div>
+
+              {/* Row D: Month-by-month horizontal multi-stacked rectangular visualization */}
+              {monthlyPlotData.length > 0 ? (
+                <div className="space-y-2 pt-1">
+                  {tableDataDescending.map((m) => {
+                    // Extract active components for this month
+                    const segs = activeSalaryLegendDefs
+                      .filter((def) => !mobileDisabledLegends.has(def.id))
+                      .map((def) => ({
+                        id: def.id,
+                        label: def.label,
+                        color: def.color,
+                        value: Math.max(0, Number(def.getValue(m)) || 0),
+                      }));
+
+                    const monthVisibleTotal = segs.reduce((sum, s) => sum + s.value, 0);
+                    const segmentsWithPct = segs.map((s) => ({
+                      ...s,
+                      percentage: monthVisibleTotal > 0 ? (s.value / monthVisibleTotal) * 100 : 0,
+                    }));
+
+                    return (
+                      <div
+                        key={m.rawMonth}
+                        className="bg-base-200/70 dark:bg-base-800/60 border border-base-300/60 rounded-2xl p-2.5 space-y-1.5 shadow-2xs"
+                      >
+                        {/* Month Header: Label, Company, and Total */}
+                        <div className="flex items-center justify-between text-xs font-bold">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <span className="text-base-content font-extrabold text-xs whitespace-nowrap">
+                              {m.monthLabel}
+                            </span>
+                            {m.companies && m.companies.length > 0 && (
+                              <span className="text-[10px] text-base-content/50 font-semibold truncate max-w-[120px] whitespace-nowrap">
+                                • {m.companies.map(formatCompanyShortName).join(", ")}
+                              </span>
+                            )}
+                          </div>
+                          <div className="font-mono font-black text-xs text-base-content shrink-0 whitespace-nowrap">
+                            {hideNumbers ? "••••••" : `₹${monthVisibleTotal.toLocaleString("en-IN")}`}
+                          </div>
+                        </div>
+
+                        {/* Horizontal Multi-stacked Rectangular Bar */}
+                        {monthVisibleTotal > 0 ? (
+                          <div className="h-4 sm:h-5 w-full bg-base-300/50 dark:bg-base-700/50 rounded-lg overflow-hidden flex gap-0.5 p-0.5">
+                            {segmentsWithPct.map((seg) => (
+                              <div
+                                key={seg.id}
+                                style={{
+                                  width: `${seg.percentage}%`,
+                                  backgroundColor: seg.color,
+                                }}
+                                className="h-full rounded-sm transition-all duration-300 relative group flex items-center justify-center overflow-hidden"
+                                title={`${seg.label}: ₹${seg.value.toLocaleString("en-IN")} (${seg.percentage.toFixed(1)}%)`}
+                              >
+                                {seg.percentage > 18 && (
+                                  <span className="text-[8.5px] font-black text-white drop-shadow-xs px-0.5 truncate leading-none select-none">
+                                    {seg.percentage.toFixed(0)}%
+                                  </span>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="h-4 w-full bg-base-300/30 rounded-lg flex items-center justify-center text-[10px] text-base-content/40 italic">
+                            All components hidden • Tap legend above
+                          </div>
+                        )}
+
+                        {/* Itemized Chips Underneath */}
+                        {segs.length > 0 && (
+                          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar text-[10px] font-mono pt-0.5">
+                            {segs.map((seg) => (
+                              <div key={seg.id} className="flex items-center gap-1 shrink-0">
+                                <span
+                                  className="w-1.5 h-1.5 rounded-full shrink-0"
+                                  style={{ backgroundColor: seg.color }}
+                                />
+                                <span className="text-base-content/60 font-sans font-medium whitespace-nowrap">
+                                  {seg.label}:
+                                </span>
+                                <span className="font-bold text-base-content whitespace-nowrap">
+                                  {hideNumbers ? "•••" : formatCurrencyCompact(seg.value)}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="p-8 text-center text-xs opacity-50 italic">
+                  No salary records match the selected company or date filter range.
+                </div>
+              )}
+            </div>
           </>
         )}
 
@@ -4678,81 +5036,81 @@ export default function InvDashboard() {
         {!loading && (salaryData.length > 0 || pfWithdrawals.length > 0) && activeDashboard === "PF" && (
           <>
             {/* 1. PF KPI Summary Cards Row */}
-            <div className="grid grid-cols-2 lg:grid-cols-5 gap-2.5 sm:gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-4">
               {/* Net Available Balance */}
-              <div className="col-span-2 lg:col-span-1 card bg-base-200 shadow-md p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
+              <div className="col-span-2 lg:col-span-1 card bg-base-200 shadow-md p-2.5 sm:p-5 rounded-2xl sm:rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
                 {/* Light Background Watermark Icon */}
                 <div className="absolute -right-3 -bottom-3 text-teal-500/10 dark:text-teal-400/10 pointer-events-none group-hover:scale-110 group-hover:-rotate-6 transition-transform duration-500">
                   <ShieldCheck className="w-14 h-14 sm:w-20 sm:h-20" strokeWidth={1.5} />
                 </div>
                 <div className="relative z-10">
                   <div className="flex items-center justify-between">
-                    <span className="text-[10.5px] sm:text-xs font-bold uppercase tracking-wider text-base-content/60">
+                    <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-base-content/60 whitespace-nowrap">
                       Net Available Balance
                     </span>
                   </div>
-                  <div className="mt-2 sm:mt-3">
-                    <div className="text-xl sm:text-2xl lg:text-3xl font-black font-mono text-teal-600 dark:text-teal-400 truncate">
-                      ₹{formatCurrency2Dec(pfKpiSummary.allTimeAvailablePfBalance)}
+                  <div className="mt-1.5 sm:mt-3">
+                    <div className="text-[13px] sm:text-2xl lg:text-3xl font-black font-mono text-teal-600 dark:text-teal-400 whitespace-nowrap overflow-visible leading-tight">
+                      {hideNumbers ? "••••••" : `₹${formatCurrency2Dec(pfKpiSummary.allTimeAvailablePfBalance)}`}
                     </div>
-                    <div className="flex items-center gap-1.5 sm:gap-2 mt-1 sm:mt-1.5 text-[11px] sm:text-xs text-base-content/60 font-medium">
-                      <span className="badge badge-xs badge-success font-bold text-[9px] sm:text-[10px]">
+                    <div className="flex items-center gap-1 sm:gap-2 mt-1 sm:mt-1.5 text-[9.5px] sm:text-xs text-base-content/60 font-medium whitespace-nowrap overflow-hidden">
+                      <span className="badge badge-xs badge-success font-bold text-[8.5px] sm:text-[10px] shrink-0 whitespace-nowrap">
                         EPF Balance
                       </span>
-                      <span className="truncate">Available to withdraw</span>
+                      <span className="whitespace-nowrap">Available to withdraw</span>
                     </div>
                   </div>
                 </div>
               </div>
 
               {/* Total Deposited in Period */}
-              <div className="card bg-base-200 shadow-md p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
+              <div className="card bg-base-200 shadow-md p-2.5 sm:p-5 rounded-2xl sm:rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
                 {/* Light Background Watermark Icon */}
                 <div className="absolute -right-3 -bottom-3 text-primary/10 dark:text-primary/15 pointer-events-none group-hover:scale-110 group-hover:-rotate-6 transition-transform duration-500">
                   <PiggyBank className="w-14 h-14 sm:w-20 sm:h-20" strokeWidth={1.5} />
                 </div>
                 <div className="relative z-10">
                   <div className="flex items-center justify-between">
-                    <span className="text-[10.5px] sm:text-xs font-bold uppercase tracking-wider text-base-content/60">
+                    <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-base-content/60 whitespace-nowrap">
                       Period Deposits
                     </span>
                   </div>
-                  <div className="mt-2 sm:mt-3">
-                    <div className="text-lg sm:text-2xl lg:text-3xl font-black font-mono text-primary truncate">
-                      ₹{formatCurrency2Dec(pfKpiSummary.periodTotalDeposit)}
+                  <div className="mt-1.5 sm:mt-3">
+                    <div className="text-[12.5px] sm:text-2xl lg:text-3xl font-black font-mono text-primary whitespace-nowrap overflow-visible leading-tight">
+                      {hideNumbers ? "••••••" : `₹${formatCurrency2Dec(pfKpiSummary.periodTotalDeposit)}`}
                     </div>
-                    <div className="flex items-center gap-1.5 sm:gap-2 mt-1 sm:mt-1.5 text-[11px] sm:text-xs text-base-content/60 font-medium truncate">
-                      <span>Avg: ₹{formatCurrencyCompact(pfKpiSummary.avgMonthlyDeposit)}/mo</span>
+                    <div className="flex items-center gap-1 sm:gap-2 mt-1 sm:mt-1.5 text-[9.5px] sm:text-xs text-base-content/60 font-medium whitespace-nowrap overflow-hidden">
+                      <span className="whitespace-nowrap">Avg: {formatCurrencyCompact(pfKpiSummary.avgMonthlyDeposit)}/mo</span>
                       <span>•</span>
-                      <span>{pfKpiSummary.activeMonths} mos</span>
+                      <span className="whitespace-nowrap">{pfKpiSummary.activeMonths} mos</span>
                     </div>
                   </div>
                 </div>
               </div>
 
               {/* Total Withdrawn */}
-              <div className="card bg-base-200 shadow-md p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
+              <div className="card bg-base-200 shadow-md p-2.5 sm:p-5 rounded-2xl sm:rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
                 {/* Light Background Watermark Icon */}
                 <div className="absolute -right-3 -bottom-3 text-amber-500/10 dark:text-amber-400/10 pointer-events-none group-hover:scale-110 group-hover:-rotate-6 transition-transform duration-500">
                   <ArrowUpRight className="w-14 h-14 sm:w-20 sm:h-20" strokeWidth={1.5} />
                 </div>
                 <div className="relative z-10">
                   <div className="flex items-center justify-between">
-                    <span className="text-[10.5px] sm:text-xs font-bold uppercase tracking-wider text-base-content/60">
+                    <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-base-content/60 whitespace-nowrap">
                       Total Withdrawn
                     </span>
                   </div>
-                  <div className="mt-2 sm:mt-3">
-                    <div className="text-lg sm:text-2xl lg:text-3xl font-black font-mono text-amber-500 truncate">
-                      ₹{formatCurrency2Dec(pfKpiSummary.allTimePfWithdrawn)}
+                  <div className="mt-1.5 sm:mt-3">
+                    <div className="text-[12.5px] sm:text-2xl lg:text-3xl font-black font-mono text-amber-500 whitespace-nowrap overflow-visible leading-tight">
+                      {hideNumbers ? "••••••" : `₹${formatCurrency2Dec(pfKpiSummary.allTimePfWithdrawn)}`}
                     </div>
-                    <div className="flex items-center gap-1.5 sm:gap-2 mt-1 sm:mt-1.5 text-[11px] sm:text-xs text-base-content/60 font-medium truncate">
-                      <span className="badge badge-xs badge-warning font-bold text-[9px] sm:text-[10px]">
+                    <div className="flex items-center gap-1 sm:gap-2 mt-1 sm:mt-1.5 text-[9.5px] sm:text-xs text-base-content/60 font-medium whitespace-nowrap overflow-hidden">
+                      <span className="badge badge-xs badge-warning font-bold text-[8.5px] sm:text-[10px] shrink-0 whitespace-nowrap">
                         {pfKpiSummary.totalWithdrawalCount} {pfKpiSummary.totalWithdrawalCount === 1 ? "Txn" : "Txns"}
                       </span>
-                      <span>
+                      <span className="whitespace-nowrap">
                         {pfKpiSummary.periodWithdrawn > 0
-                          ? `Period: ₹${formatCurrencyCompact(pfKpiSummary.periodWithdrawn)}`
+                          ? `Period: ${formatCurrencyCompact(pfKpiSummary.periodWithdrawn)}`
                           : "All-time"}
                       </span>
                     </div>
@@ -4761,54 +5119,54 @@ export default function InvDashboard() {
               </div>
 
               {/* Employer Share (ER) */}
-              <div className="card bg-base-200 shadow-md p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
+              <div className="card bg-base-200 shadow-md p-2.5 sm:p-5 rounded-2xl sm:rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
                 {/* Light Background Watermark Icon */}
                 <div className="absolute -right-3 -bottom-3 text-sky-500/10 dark:text-sky-400/10 pointer-events-none group-hover:scale-110 group-hover:-rotate-6 transition-transform duration-500">
                   <Building2 className="w-14 h-14 sm:w-20 sm:h-20" strokeWidth={1.5} />
                 </div>
                 <div className="relative z-10">
                   <div className="flex items-center justify-between">
-                    <span className="text-[10.5px] sm:text-xs font-bold uppercase tracking-wider text-base-content/60">
+                    <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-base-content/60 whitespace-nowrap">
                       Employer Share (ER)
                     </span>
                   </div>
-                  <div className="mt-2 sm:mt-3">
-                    <div className="text-lg sm:text-2xl lg:text-3xl font-black font-mono text-sky-500 truncate">
-                      ₹{formatCurrency2Dec(pfKpiSummary.periodErPf)}
+                  <div className="mt-1.5 sm:mt-3">
+                    <div className="text-[12.5px] sm:text-2xl lg:text-3xl font-black font-mono text-sky-500 whitespace-nowrap overflow-visible leading-tight">
+                      {hideNumbers ? "••••••" : `₹${formatCurrency2Dec(pfKpiSummary.periodErPf)}`}
                     </div>
-                    <div className="flex items-center gap-1.5 sm:gap-2 mt-1 sm:mt-1.5 text-[11px] sm:text-xs text-base-content/60 font-medium truncate">
-                      <span>Company match</span>
+                    <div className="flex items-center gap-1 sm:gap-2 mt-1 sm:mt-1.5 text-[9.5px] sm:text-xs text-base-content/60 font-medium whitespace-nowrap overflow-hidden">
+                      <span className="whitespace-nowrap">Company match</span>
                     </div>
                   </div>
                 </div>
               </div>
 
               {/* Employee Share (EE) */}
-              <div className="card bg-base-200 shadow-md p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
+              <div className="card bg-base-200 shadow-md p-2.5 sm:p-5 rounded-2xl sm:rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
                 {/* Light Background Watermark Icon */}
                 <div className="absolute -right-3 -bottom-3 text-purple-500/10 dark:text-purple-400/10 pointer-events-none group-hover:scale-110 group-hover:-rotate-6 transition-transform duration-500">
                   <Wallet className="w-14 h-14 sm:w-20 sm:h-20" strokeWidth={1.5} />
                 </div>
                 <div className="relative z-10">
                   <div className="flex items-center justify-between">
-                    <span className="text-[10.5px] sm:text-xs font-bold uppercase tracking-wider text-base-content/60">
+                    <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-base-content/60 whitespace-nowrap">
                       Employee Share (EE)
                     </span>
                   </div>
-                  <div className="mt-2 sm:mt-3">
-                    <div className="text-lg sm:text-2xl lg:text-3xl font-black font-mono text-purple-500 truncate">
-                      ₹{formatCurrency2Dec(pfKpiSummary.periodEePf)}
+                  <div className="mt-1.5 sm:mt-3">
+                    <div className="text-[12.5px] sm:text-2xl lg:text-3xl font-black font-mono text-purple-500 whitespace-nowrap overflow-visible leading-tight">
+                      {hideNumbers ? "••••••" : `₹${formatCurrency2Dec(pfKpiSummary.periodEePf)}`}
                     </div>
-                    <div className="flex items-center gap-1.5 sm:gap-2 mt-1 sm:mt-1.5 text-[11px] sm:text-xs text-base-content/60 font-medium truncate">
-                      <span>Salary deduction</span>
+                    <div className="flex items-center gap-1 sm:gap-2 mt-1 sm:mt-1.5 text-[9.5px] sm:text-xs text-base-content/60 font-medium whitespace-nowrap overflow-hidden">
+                      <span className="whitespace-nowrap">Salary deduction</span>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* 2. Main PF Analysis Interactive Section */}
-            <section className="card bg-base-200 shadow-md rounded-3xl overflow-x-clip">
+            {/* 2. Main PF Analysis Interactive Section (Desktop Only) */}
+            <section className="hidden md:block card bg-base-200 shadow-md rounded-3xl overflow-x-clip">
               <div className="card-body p-4 sm:p-6 space-y-4 sm:space-y-6">
                 {/* Section Header & View Switcher */}
                 <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 border-b border-base-300 pb-4">
@@ -4921,31 +5279,6 @@ export default function InvDashboard() {
                   </div>
                 )}
 
-                {/* PHONE VIEW: Always show the Vertical Trend Graph (No Table View on Phone) */}
-                <div className="block md:hidden space-y-3">
-                  {pfMonthlyPlotData.length > 0 ? (
-                    <div className="w-full max-w-full space-y-2">
-                      <StickyChartLegend
-                        title="Contributions"
-                        items={pfLegendItems}
-                        countText={`${pfMonthlyPlotData.length} mos`}
-                      />
-                      <div className="w-full max-w-full overflow-x-clip [&_.apexcharts-tooltip]:!bg-transparent [&_.apexcharts-tooltip]:!border-none [&_.apexcharts-tooltip]:!shadow-none [&_.apexcharts-tooltip]:!p-0">
-                        <Chart
-                          options={pfVerticalApexOptions}
-                          series={pfVerticalSeries}
-                          type="bar"
-                          width="100%"
-                          height={Math.max(380, pfMonthlyPlotData.length * 44)}
-                        />
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="p-8 text-center text-xs opacity-50 italic">
-                      No Provident Fund records match the selected company or date filter range.
-                    </div>
-                  )}
-                </div>
 
                 {/* DESKTOP: TAB 2: Table View (Hidden on Phone View Only) */}
                 {viewTab === "table" && (
@@ -5225,6 +5558,215 @@ export default function InvDashboard() {
                 )}
               </div>
             </section>
+
+            {/* ============================================================ */}
+            {/* 3. PHONE VIEW ONLY: Provident Fund (PF) Section (block md:hidden) */}
+            {/* ============================================================ */}
+            <div className="block md:hidden space-y-2.5">
+              {/* Row A: Single line header with one line subtitle below it */}
+              <div className="space-y-0.5 pt-1">
+                <h2 className="text-sm font-extrabold flex items-center gap-1.5 whitespace-nowrap truncate text-base-content">
+                  <ShieldCheck size={16} className="text-teal-500 shrink-0" />
+                  <span className="truncate">Provident Fund (EPF) Growth & Contributions</span>
+                </h2>
+                <p className="text-[10px] text-base-content/60 whitespace-nowrap truncate">
+                  Stacked monthly distribution of Employee (EE) and Employer (ER) shares with cumulative balance
+                </p>
+              </div>
+
+              {/* Row B & C: Sticky Container (Company Filter & Theme + All Legends) */}
+              <div className="sticky top-[108px] z-30 bg-base-100/95 dark:bg-base-900/95 backdrop-blur-md -mx-3 px-3 py-2 border-y border-base-300/70 shadow-xs space-y-1.5">
+                {/* Next line: Company and Theme Filter in a single line that is sticky */}
+                <div className="flex items-center gap-1.5 w-full">
+                  {/* Company Filter */}
+                  <div className="flex-1 min-w-0 flex items-center gap-1 bg-base-200/90 dark:bg-base-800/90 px-2 py-1 rounded-xl border border-base-300/80 shadow-2xs">
+                    <Building2 size={12} className="text-teal-500 shrink-0" />
+                    <select
+                      className="select select-ghost select-xs p-0 h-6 min-h-0 text-[11px] font-bold w-full focus:outline-none bg-transparent truncate"
+                      value={selectedCompany}
+                      onChange={(e) => setSelectedCompany(e.target.value)}
+                    >
+                      <option value="all">All Companies</option>
+                      {companiesList.map((c) => (
+                        <option key={`m-comp-pf-${c}`} value={c}>
+                          {formatCompanyShortName(c)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Theme Color Selector */}
+                  <div className="flex items-center gap-1 bg-base-200/90 dark:bg-base-800/90 px-2 py-1 rounded-xl border border-base-300/80 shadow-2xs shrink-0">
+                    <Palette size={12} className="text-base-content/50 shrink-0" />
+                    <div className="flex items-center gap-1">
+                      {SALARY_COLOR_THEMES.map((theme) => (
+                        <button
+                          key={`pf-m-theme-${theme.id}`}
+                          type="button"
+                          onClick={() => setSelectedTheme(theme.id)}
+                          className={`w-4 h-4 rounded-md transition-all cursor-pointer ${
+                            selectedTheme === theme.id
+                              ? "ring-2 ring-primary scale-110 shadow-xs"
+                              : "opacity-60 hover:opacity-100"
+                          }`}
+                          style={{ backgroundColor: theme.hex }}
+                          title={theme.label}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Next line: All Legends in a single line and must be sticky (interactive multiselect) */}
+                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar flex-nowrap py-0.5">
+                  <span className="text-[10px] font-bold text-base-content/50 uppercase tracking-wider shrink-0 flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-teal-500 inline-block"></span>
+                    Legends:
+                  </span>
+                  {activePfLegendDefs.map((leg) => {
+                    const isExcluded = mobilePfDisabledLegends.has(leg.id);
+                    return (
+                      <button
+                        key={leg.id}
+                        type="button"
+                        onClick={() => toggleMobilePfLegend(leg.id)}
+                        className={`flex items-center gap-1 text-[10.5px] font-bold px-2 py-0.5 rounded-lg border transition-all cursor-pointer shrink-0 select-none active:scale-95 ${
+                          isExcluded
+                            ? "border-dashed border-base-300 bg-base-200/40 text-base-content/40 opacity-50"
+                            : "border-base-300 bg-base-100 dark:bg-base-800 text-base-content shadow-2xs hover:border-teal-500/40"
+                        }`}
+                        title={isExcluded ? `Click to show ${leg.label}` : `Click to hide ${leg.label}`}
+                      >
+                        <span
+                          className={`w-2 h-2 rounded-full shrink-0 shadow-2xs transition-opacity ${
+                            isExcluded ? "opacity-30" : "opacity-100 ring-1 ring-base-content/10"
+                          }`}
+                          style={{ backgroundColor: leg.color }}
+                        />
+                        <span className={isExcluded ? "line-through text-base-content/40" : ""}>
+                          {leg.label}
+                        </span>
+                      </button>
+                    );
+                  })}
+                  <span className="text-[9.5px] font-mono font-bold text-base-content/40 shrink-0 ml-auto bg-base-200/60 px-1.5 py-0.5 rounded-md">
+                    {pfMonthlyPlotData.length} mos
+                  </span>
+                </div>
+              </div>
+
+              {/* Row D: Month-by-month horizontal multi-stacked rectangular visualization */}
+              {pfMonthlyPlotData.length > 0 ? (
+                <div className="space-y-2 pt-1">
+                  {pfTableDataDescending.map((m) => {
+                    // Extract active components for this month
+                    const segs = activePfLegendDefs
+                      .filter((def) => !mobilePfDisabledLegends.has(def.id))
+                      .map((def) => ({
+                        id: def.id,
+                        label: def.label,
+                        color: def.color,
+                        value: Math.max(0, Number(def.getValue(m)) || 0),
+                      }));
+
+                    const monthVisibleTotal = segs.reduce((sum, s) => sum + s.value, 0);
+                    const segmentsWithPct = segs
+                      .filter((s) => s.value > 0)
+                      .map((s) => ({
+                        ...s,
+                        percentage: monthVisibleTotal > 0 ? (s.value / monthVisibleTotal) * 100 : 0,
+                      }));
+
+                    return (
+                      <div
+                        key={m.rawMonth}
+                        className="bg-base-200/70 dark:bg-base-800/60 border border-base-300/60 rounded-2xl p-2.5 space-y-1.5 shadow-2xs"
+                      >
+                        {/* Month Header: Label, Company, Cumulative Balance, and Total */}
+                        <div className="flex items-center justify-between text-xs font-bold">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <span className="text-base-content font-extrabold text-xs whitespace-nowrap">
+                              {m.monthLabel}
+                            </span>
+                            {m.companies && m.companies.length > 0 && (
+                              <span className="text-[10px] text-base-content/50 font-semibold truncate max-w-[110px] whitespace-nowrap">
+                                • {m.companies.map(formatCompanyShortName).join(", ")}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <span className="badge badge-xs font-mono font-bold bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/20 text-[9.5px]">
+                              Bal: {hideNumbers ? "•••" : formatCurrencyCompact(m.cumulativeBalance)}
+                            </span>
+                            <div className="font-mono font-black text-xs text-base-content shrink-0 whitespace-nowrap">
+                              {hideNumbers ? "••••••" : `₹${monthVisibleTotal.toLocaleString("en-IN")}`}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Horizontal Multi-stacked Rectangular Bar */}
+                        {monthVisibleTotal > 0 ? (
+                          <div className="h-4 sm:h-5 w-full bg-base-300/50 dark:bg-base-700/50 rounded-lg overflow-hidden flex gap-0.5 p-0.5">
+                            {segmentsWithPct.map((seg) => (
+                              <div
+                                key={seg.id}
+                                style={{
+                                  width: `${seg.percentage}%`,
+                                  backgroundColor: seg.color,
+                                }}
+                                className="h-full rounded-sm transition-all duration-300 relative group flex items-center justify-center overflow-hidden"
+                                title={`${seg.label}: ₹${seg.value.toLocaleString("en-IN")} (${seg.percentage.toFixed(1)}%)`}
+                              >
+                                {seg.percentage > 18 && (
+                                  <span className="text-[8.5px] font-black text-white drop-shadow-xs px-0.5 truncate leading-none select-none">
+                                    {seg.percentage.toFixed(0)}%
+                                  </span>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="h-4 w-full bg-base-300/30 rounded-lg flex items-center justify-center text-[10px] text-base-content/40 italic">
+                            All components hidden • Tap legend above
+                          </div>
+                        )}
+
+                        {/* Itemized Chips Underneath */}
+                        {segs.length > 0 && (
+                          <div className="flex items-center justify-between gap-2 overflow-x-auto no-scrollbar text-[10px] font-mono pt-0.5">
+                            <div className="flex items-center gap-2 shrink-0">
+                              {segs.map((seg) => (
+                                <div key={seg.id} className="flex items-center gap-1 shrink-0">
+                                  <span
+                                    className="w-1.5 h-1.5 rounded-full shrink-0"
+                                    style={{ backgroundColor: seg.color }}
+                                  />
+                                  <span className="text-base-content/60 font-sans font-medium whitespace-nowrap">
+                                    {seg.label}:
+                                  </span>
+                                  <span className="font-bold text-base-content whitespace-nowrap">
+                                    {hideNumbers ? "•••" : formatCurrencyCompact(seg.value)}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                            {m.basicSalary > 0 && (
+                              <span className="text-[9px] font-bold text-teal-600 dark:text-teal-400 bg-teal-500/10 px-1.5 py-0.5 rounded-md whitespace-nowrap shrink-0">
+                                {((m.totalDeposit / m.basicSalary) * 100).toFixed(1)}% Basic
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="p-8 text-center text-xs opacity-50 italic">
+                  No Provident Fund records match the selected company or date filter range.
+                </div>
+              )}
+            </div>
           </>
         )}
 
@@ -5234,28 +5776,28 @@ export default function InvDashboard() {
         {!loading && mfData.length > 0 && activeDashboard === "MF" && (
           <>
             {/* 1. MF KPI Summary Cards Row */}
-            <div className="grid grid-cols-2 lg:grid-cols-5 gap-2.5 sm:gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-4">
               {/* Card 1: Net Capital Invested */}
-              <div className="col-span-2 lg:col-span-1 card bg-base-200 shadow-md p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
+              <div className="col-span-2 lg:col-span-1 card bg-base-200 shadow-md p-2.5 sm:p-5 rounded-2xl sm:rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
                 {/* Light Background Watermark Icon */}
                 <div className="absolute -right-3 -bottom-3 text-purple-500/10 dark:text-purple-400/10 pointer-events-none group-hover:scale-110 group-hover:-rotate-6 transition-transform duration-500">
                   <Wallet className="w-14 h-14 sm:w-20 sm:h-20" strokeWidth={1.5} />
                 </div>
                 <div className="relative z-10">
                   <div className="flex items-center justify-between">
-                    <span className="text-[10.5px] sm:text-xs font-bold uppercase tracking-wider text-base-content/60">
+                    <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-base-content/60 whitespace-nowrap">
                       Net Capital Invested
                     </span>
                   </div>
-                  <div className="mt-2 sm:mt-3">
-                    <div className="text-xl sm:text-2xl lg:text-3xl font-black font-mono text-purple-600 dark:text-purple-400 truncate">
-                      ₹{formatCurrency2Dec(mfKpiSummary.allTimeNetInvested)}
+                  <div className="mt-1.5 sm:mt-3">
+                    <div className="text-[12.5px] sm:text-2xl lg:text-3xl font-black font-mono text-purple-600 dark:text-purple-400 whitespace-nowrap overflow-visible leading-tight">
+                      {hideNumbers ? "••••••" : `₹${formatCurrency2Dec(mfKpiSummary.allTimeNetInvested)}`}
                     </div>
-                    <div className="flex items-center gap-1.5 sm:gap-2 mt-1 sm:mt-1.5 text-[11px] sm:text-xs text-base-content/60 font-medium">
-                      <span className="badge badge-xs badge-secondary font-bold text-[9px] sm:text-[10px]">
+                    <div className="flex items-center gap-1 sm:gap-2 mt-1 sm:mt-1.5 text-[9.5px] sm:text-xs text-base-content/60 font-medium whitespace-nowrap overflow-hidden">
+                      <span className="badge badge-xs badge-secondary font-bold text-[8.5px] sm:text-[10px] shrink-0 whitespace-nowrap">
                         Portfolio Cost
                       </span>
-                      <span className="truncate">
+                      <span className="whitespace-nowrap">
                         {selectedMfFund === "all"
                           ? `${activeMfFunds.length} Funds`
                           : selectedGroupObj
@@ -5268,54 +5810,54 @@ export default function InvDashboard() {
               </div>
 
               {/* Card 2: Period Deposits */}
-              <div className="card bg-base-200 shadow-md p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
+              <div className="card bg-base-200 shadow-md p-2.5 sm:p-5 rounded-2xl sm:rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
                 {/* Light Background Watermark Icon */}
                 <div className="absolute -right-3 -bottom-3 text-emerald-500/10 dark:text-emerald-400/10 pointer-events-none group-hover:scale-110 group-hover:-rotate-6 transition-transform duration-500">
                   <PiggyBank className="w-14 h-14 sm:w-20 sm:h-20" strokeWidth={1.5} />
                 </div>
                 <div className="relative z-10">
                   <div className="flex items-center justify-between">
-                    <span className="text-[10.5px] sm:text-xs font-bold uppercase tracking-wider text-base-content/60">
+                    <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-base-content/60 whitespace-nowrap">
                       Period Deposits
                     </span>
                   </div>
-                  <div className="mt-2 sm:mt-3">
-                    <div className="text-lg sm:text-2xl lg:text-3xl font-black font-mono text-emerald-600 dark:text-emerald-400 truncate">
-                      ₹{formatCurrency2Dec(mfKpiSummary.periodDeposited)}
+                  <div className="mt-1.5 sm:mt-3">
+                    <div className="text-[12.5px] sm:text-2xl lg:text-3xl font-black font-mono text-emerald-600 dark:text-emerald-400 whitespace-nowrap overflow-visible leading-tight">
+                      {hideNumbers ? "••••••" : `₹${formatCurrency2Dec(mfKpiSummary.periodDeposited)}`}
                     </div>
-                    <div className="flex items-center gap-1.5 sm:gap-2 mt-1 sm:mt-1.5 text-[11px] sm:text-xs text-base-content/60 font-medium truncate">
-                      <span className="badge badge-xs badge-success font-bold text-[9px] sm:text-[10px]">
+                    <div className="flex items-center gap-1 sm:gap-2 mt-1 sm:mt-1.5 text-[9.5px] sm:text-xs text-base-content/60 font-medium whitespace-nowrap overflow-hidden">
+                      <span className="badge badge-xs badge-success font-bold text-[8.5px] sm:text-[10px] shrink-0 whitespace-nowrap">
                         {mfKpiSummary.totalSipCount} SIP • {mfKpiSummary.totalLsCount} LS
                       </span>
-                      <span>All: ₹{formatCurrencyCompact(mfKpiSummary.allTimeDeposited)}</span>
+                      <span className="whitespace-nowrap">All: {formatCurrencyCompact(mfKpiSummary.allTimeDeposited)}</span>
                     </div>
                   </div>
                 </div>
               </div>
 
               {/* Card 3: Total Withdrawn / Redeemed */}
-              <div className="card bg-base-200 shadow-md p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
+              <div className="card bg-base-200 shadow-md p-2.5 sm:p-5 rounded-2xl sm:rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
                 {/* Light Background Watermark Icon */}
                 <div className="absolute -right-3 -bottom-3 text-amber-500/10 dark:text-amber-400/10 pointer-events-none group-hover:scale-110 group-hover:-rotate-6 transition-transform duration-500">
                   <ArrowUpRight className="w-14 h-14 sm:w-20 sm:h-20" strokeWidth={1.5} />
                 </div>
                 <div className="relative z-10">
                   <div className="flex items-center justify-between">
-                    <span className="text-[10.5px] sm:text-xs font-bold uppercase tracking-wider text-base-content/60">
+                    <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-base-content/60 whitespace-nowrap">
                       Total Withdrawn
                     </span>
                   </div>
-                  <div className="mt-2 sm:mt-3">
-                    <div className="text-lg sm:text-2xl lg:text-3xl font-black font-mono text-amber-500 truncate">
-                      ₹{formatCurrency2Dec(mfKpiSummary.allTimeWithdrawn)}
+                  <div className="mt-1.5 sm:mt-3">
+                    <div className="text-[12.5px] sm:text-2xl lg:text-3xl font-black font-mono text-amber-500 whitespace-nowrap overflow-visible leading-tight">
+                      {hideNumbers ? "••••••" : `₹${formatCurrency2Dec(mfKpiSummary.allTimeWithdrawn)}`}
                     </div>
-                    <div className="flex items-center gap-1.5 sm:gap-2 mt-1 sm:mt-1.5 text-[11px] sm:text-xs text-base-content/60 font-medium truncate">
-                      <span className="badge badge-xs badge-warning font-bold text-[9px] sm:text-[10px]">
+                    <div className="flex items-center gap-1 sm:gap-2 mt-1 sm:mt-1.5 text-[9.5px] sm:text-xs text-base-content/60 font-medium whitespace-nowrap overflow-hidden">
+                      <span className="badge badge-xs badge-warning font-bold text-[8.5px] sm:text-[10px] shrink-0 whitespace-nowrap">
                         {mfKpiSummary.totalWithdrawalCount} {mfKpiSummary.totalWithdrawalCount === 1 ? "Redemption" : "Redemptions"}
                       </span>
-                      <span>
+                      <span className="whitespace-nowrap">
                         {mfKpiSummary.periodWithdrawn > 0
-                          ? `Period: ₹${formatCurrencyCompact(mfKpiSummary.periodWithdrawn)}`
+                          ? `Period: ${formatCurrencyCompact(mfKpiSummary.periodWithdrawn)}`
                           : "All-time"}
                       </span>
                     </div>
@@ -5324,59 +5866,61 @@ export default function InvDashboard() {
               </div>
 
               {/* Card 4: Total Units Held */}
-              <div className="card bg-base-200 shadow-md p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
+              <div className="card bg-base-200 shadow-md p-2.5 sm:p-5 rounded-2xl sm:rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
                 {/* Light Background Watermark Icon */}
                 <div className="absolute -right-3 -bottom-3 text-sky-500/10 dark:text-sky-400/10 pointer-events-none group-hover:scale-110 group-hover:-rotate-6 transition-transform duration-500">
                   <Layers className="w-14 h-14 sm:w-20 sm:h-20" strokeWidth={1.5} />
                 </div>
                 <div className="relative z-10">
                   <div className="flex items-center justify-between">
-                    <span className="text-[10.5px] sm:text-xs font-bold uppercase tracking-wider text-base-content/60">
+                    <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-base-content/60 whitespace-nowrap">
                       Total Units Held
                     </span>
                   </div>
-                  <div className="mt-2 sm:mt-3">
-                    <div className="text-lg sm:text-2xl lg:text-3xl font-black font-mono text-sky-500 truncate">
-                      {mfKpiSummary.allTimeUnitsHeld.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  <div className="mt-1.5 sm:mt-3">
+                    <div className="text-[12.5px] sm:text-2xl lg:text-3xl font-black font-mono text-sky-500 whitespace-nowrap overflow-visible leading-tight">
+                      {hideNumbers
+                        ? "••••••"
+                        : mfKpiSummary.allTimeUnitsHeld.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </div>
-                    <div className="flex items-center gap-1.5 sm:gap-2 mt-1 sm:mt-1.5 text-[11px] sm:text-xs text-base-content/60 font-medium truncate">
-                      <span>+{(mfKpiSummary.periodUnitsAdded || 0).toFixed(1)} u</span>
+                    <div className="flex items-center gap-1 sm:gap-2 mt-1 sm:mt-1.5 text-[9.5px] sm:text-xs text-base-content/60 font-medium whitespace-nowrap overflow-hidden">
+                      <span className="whitespace-nowrap">+{(mfKpiSummary.periodUnitsAdded || 0).toFixed(1)} u</span>
                       <span>•</span>
-                      <span>-{(mfKpiSummary.periodUnitsWithdrawn || 0).toFixed(1)} u</span>
+                      <span className="whitespace-nowrap">-{(mfKpiSummary.periodUnitsWithdrawn || 0).toFixed(1)} u</span>
                     </div>
                   </div>
                 </div>
               </div>
 
               {/* Card 5: Expense Ratio & Avg NAV */}
-              <div className="card bg-base-200 shadow-md p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
+              <div className="card bg-base-200 shadow-md p-2.5 sm:p-5 rounded-2xl sm:rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
                 {/* Light Background Watermark Icon */}
                 <div className="absolute -right-3 -bottom-3 text-rose-500/10 dark:text-rose-400/10 pointer-events-none group-hover:scale-110 group-hover:-rotate-6 transition-transform duration-500">
                   <Percent className="w-14 h-14 sm:w-20 sm:h-20" strokeWidth={1.5} />
                 </div>
                 <div className="relative z-10">
                   <div className="flex items-center justify-between">
-                    <span className="text-[10.5px] sm:text-xs font-bold uppercase tracking-wider text-base-content/60">
+                    <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-base-content/60 whitespace-nowrap">
                       Total ER Incurred
                     </span>
                   </div>
-                  <div className="mt-2 sm:mt-3">
-                    <div className="text-lg sm:text-2xl lg:text-3xl font-black font-mono text-rose-500 truncate">
-                      ₹{formatCurrency2Dec(mfKpiSummary.allTimeEr)}
+                  <div className="mt-1.5 sm:mt-3">
+                    <div className="text-[12.5px] sm:text-2xl lg:text-3xl font-black font-mono text-rose-500 whitespace-nowrap overflow-visible leading-tight">
+                      {hideNumbers ? "••••••" : `₹${formatCurrency2Dec(mfKpiSummary.allTimeEr)}`}
                     </div>
-                    <div className="flex items-center gap-1.5 sm:gap-2 mt-1 sm:mt-1.5 text-[11px] sm:text-xs text-base-content/60 font-medium truncate">
-                      <span className="badge badge-xs badge-info font-bold text-[9px] sm:text-[10px]">
+                    <div className="flex items-center gap-1 sm:gap-2 mt-1 sm:mt-1.5 text-[9.5px] sm:text-xs text-base-content/60 font-medium whitespace-nowrap overflow-hidden">
+                      <span className="badge badge-xs badge-info font-bold text-[8.5px] sm:text-[10px] shrink-0 whitespace-nowrap">
                         Avg NAV: ₹{(mfKpiSummary.avgAcquisitionNav || 0).toFixed(1)}
                       </span>
-                      <span>Period: ₹{formatCurrencyCompact(mfKpiSummary.periodEr)}</span>
+                      <span className="whitespace-nowrap">Period: {formatCurrencyCompact(mfKpiSummary.periodEr)}</span>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* 2. Main Mutual Fund Section Card */}
-            <section className="card bg-base-200 shadow-md rounded-3xl overflow-x-clip">
+            {/* 2. Main Mutual Fund Section Card (Desktop Only) */}
+            <section className="hidden md:block card bg-base-200 shadow-md rounded-3xl overflow-x-clip">
               <div className="card-body p-4 sm:p-6 space-y-6">
                 {/* Header Row */}
                 <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 border-b border-base-300 pb-5">
@@ -5705,137 +6249,6 @@ export default function InvDashboard() {
                   </div>
                 )}
 
-                {/* PHONE VIEW: Always show the Vertical Trend Graph (No Table View on Phone) */}
-                <div className="block md:hidden space-y-3">
-                  {mfMonthlyPlotData.length > 0 ? (
-                    <div>
-                      {mfMetricMode === "all" ? (
-                        <div className="space-y-4">
-                          {/* 1. Deposits & Withdrawals */}
-                          <div className="card bg-base-100 shadow-sm border border-base-300 p-3.5 rounded-2xl space-y-2">
-                            <div className="flex items-center justify-between">
-                              <h3 className="font-bold text-sm flex items-center gap-1.5 text-base-content">
-                                <PiggyBank size={15} className="text-primary" />
-                                Deposits & Withdrawals Flow
-                              </h3>
-                              <span className="badge badge-xs badge-primary font-bold">Cashflow</span>
-                            </div>
-                            <StickyChartLegend
-                              title="Cashflow"
-                              items={mfCashflowLegendItems}
-                              countText={`${mfMonthlyPlotData.length} mos`}
-                            />
-                            <div className="w-full max-w-full overflow-x-clip">
-                              <Chart
-                                options={mfCashflowVerticalOptions}
-                                series={mfCashflowVerticalSeries}
-                                type="bar"
-                                width="100%"
-                                height={Math.max(280, mfMonthlyPlotData.length * 36)}
-                              />
-                            </div>
-                          </div>
-
-                          {/* 2. Purchase NAV History */}
-                          <div className="card bg-base-100 shadow-sm border border-base-300 p-3.5 rounded-2xl space-y-2">
-                            <div className="flex items-center justify-between">
-                              <h3 className="font-bold text-sm flex items-center gap-1.5 text-base-content">
-                                <TrendingUp size={15} className="text-sky-500" />
-                                Purchase NAV Trajectory
-                              </h3>
-                              <span className="badge badge-xs badge-info font-bold">NAV (₹)</span>
-                            </div>
-                            <StickyChartLegend
-                              title="NAV"
-                              items={mfNavLegendItems}
-                              countText={`${mfMonthlyPlotData.length} mos`}
-                            />
-                            <div className="w-full max-w-full overflow-x-clip">
-                              <Chart
-                                options={mfNavVerticalOptions}
-                                series={mfNavVerticalSeries}
-                                type="bar"
-                                width="100%"
-                                height={Math.max(280, mfMonthlyPlotData.length * 36)}
-                              />
-                            </div>
-                          </div>
-
-                          {/* 3. Units Allocated & Held */}
-                          <div className="card bg-base-100 shadow-sm border border-base-300 p-3.5 rounded-2xl space-y-2">
-                            <div className="flex items-center justify-between">
-                              <h3 className="font-bold text-sm flex items-center gap-1.5 text-base-content">
-                                <Layers size={15} className="text-indigo-500" />
-                                Units Allocated & Cumulative Balance
-                              </h3>
-                              <span className="badge badge-xs badge-ghost font-mono">Units (u)</span>
-                            </div>
-                            <StickyChartLegend
-                              title="Units"
-                              items={mfUnitsLegendItems}
-                              countText={`${mfMonthlyPlotData.length} mos`}
-                            />
-                            <div className="w-full max-w-full overflow-x-clip">
-                              <Chart
-                                options={mfUnitsVerticalOptions}
-                                series={mfUnitsVerticalSeries}
-                                type="bar"
-                                width="100%"
-                                height={Math.max(280, mfMonthlyPlotData.length * 36)}
-                              />
-                            </div>
-                          </div>
-
-                          {/* 4. Expense Ratio Incurred */}
-                          <div className="card bg-base-100 shadow-sm border border-base-300 p-3.5 rounded-2xl space-y-2">
-                            <div className="flex items-center justify-between">
-                              <h3 className="font-bold text-sm flex items-center gap-1.5 text-base-content">
-                                <Percent size={15} className="text-rose-500" />
-                                Expense Ratio (ER) Deducted
-                              </h3>
-                              <span className="badge badge-xs badge-error font-bold">ER Cost (₹)</span>
-                            </div>
-                            <StickyChartLegend
-                              title="Expense Ratio"
-                              items={mfErLegendItems}
-                              countText={`${mfMonthlyPlotData.length} mos`}
-                            />
-                            <div className="w-full max-w-full overflow-x-clip">
-                              <Chart
-                                options={mfErVerticalOptions}
-                                series={mfErVerticalSeries}
-                                type="bar"
-                                width="100%"
-                                height={Math.max(280, mfMonthlyPlotData.length * 36)}
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="w-full max-w-full space-y-2">
-                          <StickyChartLegend
-                            title={mfMetricMode.toUpperCase()}
-                            items={mfActiveLegendItems}
-                            countText={`${mfMonthlyPlotData.length} mos`}
-                          />
-                          <div className="w-full max-w-full overflow-x-clip [&_.apexcharts-tooltip]:!bg-transparent [&_.apexcharts-tooltip]:!border-none [&_.apexcharts-tooltip]:!shadow-none [&_.apexcharts-tooltip]:!p-0">
-                            <Chart
-                              options={mfApexVerticalOptions}
-                              series={mfApexVerticalSeries}
-                              type="bar"
-                              width="100%"
-                              height={Math.max(380, mfMonthlyPlotData.length * 44)}
-                            />
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="p-8 text-center text-xs opacity-50 italic">
-                      No Mutual Fund transactions match the selected scheme or date filter range.
-                    </div>
-                  )}
-                </div>
 
                 {/* DESKTOP: TAB 2: Table View (Hidden on Phone View Only) */}
                 {viewTab === "table" && (
@@ -6180,6 +6593,225 @@ export default function InvDashboard() {
                 )}
               </div>
             </section>
+
+            {/* ============================================================ */}
+            {/* 3. PHONE VIEW ONLY: Mutual Funds (MF) Section (block md:hidden) */}
+            {/* ============================================================ */}
+            <div className="block md:hidden space-y-2.5">
+              {/* Row A: Single line header with one line subtitle below it */}
+              <div className="space-y-0.5 pt-1">
+                <h2 className="text-sm font-extrabold flex items-center gap-1.5 whitespace-nowrap truncate text-base-content">
+                  <PieChart size={16} className="text-purple-500 shrink-0" />
+                  <span className="truncate">Mutual Funds (MF) Portfolio Analytics</span>
+                </h2>
+                <p className="text-[10px] text-base-content/60 whitespace-nowrap truncate">
+                  Stacked monthly cashflow of Deposits, Withdrawals, and Net Invested Capital
+                </p>
+              </div>
+
+              {/* Row B & C: Sticky Container (Fund Filter & Theme + All Legends) */}
+              <div className="sticky top-[108px] z-30 bg-base-100/95 dark:bg-base-900/95 backdrop-blur-md -mx-3 px-3 py-2 border-y border-base-300/70 shadow-xs space-y-1.5">
+                {/* Next line: Fund Filter and Theme in a single line that is sticky */}
+                <div className="flex items-center gap-1.5 w-full">
+                  {/* Fund Selection Modal Trigger Button */}
+                  <button
+                    type="button"
+                    onClick={() => setIsMfModalOpen(true)}
+                    className="flex-1 min-w-0 flex items-center justify-between gap-1.5 bg-base-200/90 dark:bg-base-800/90 px-2.5 py-1 rounded-xl border border-base-300/80 shadow-2xs text-left cursor-pointer active:scale-98 transition-transform"
+                    title="Choose Mutual Fund or Group"
+                  >
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <PieChart size={12} className="text-purple-500 shrink-0" />
+                      <span className="text-[11px] font-bold truncate text-base-content">
+                        {selectedMfFund === "all"
+                          ? "All Mutual Funds"
+                          : selectedGroupObj
+                          ? `Group: ${selectedGroupObj.name}`
+                          : selectedFundObj?.schemeName || selectedFundObj?.amc || "Select Scheme"}
+                      </span>
+                    </div>
+                    <ChevronDown size={11} className="text-base-content/40 shrink-0" />
+                  </button>
+
+                  {/* Theme Color Selector */}
+                  <div className="flex items-center gap-1 bg-base-200/90 dark:bg-base-800/90 px-2 py-1 rounded-xl border border-base-300/80 shadow-2xs shrink-0">
+                    <Palette size={12} className="text-base-content/50 shrink-0" />
+                    <div className="flex items-center gap-1">
+                      {SALARY_COLOR_THEMES.map((theme) => (
+                        <button
+                          key={`mf-m-theme-${theme.id}`}
+                          type="button"
+                          onClick={() => setSelectedTheme(theme.id)}
+                          className={`w-4 h-4 rounded-md transition-all cursor-pointer ${
+                            selectedTheme === theme.id
+                              ? "ring-2 ring-primary scale-110 shadow-xs"
+                              : "opacity-60 hover:opacity-100"
+                          }`}
+                          style={{ backgroundColor: theme.hex }}
+                          title={theme.label}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Next line: All Legends in a single line and must be sticky (interactive multiselect) */}
+                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar flex-nowrap py-0.5">
+                  <span className="text-[10px] font-bold text-base-content/50 uppercase tracking-wider shrink-0 flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-purple-500 inline-block"></span>
+                    Legends:
+                  </span>
+                  {activeMfLegendDefs.map((leg) => {
+                    const isExcluded = mobileMfDisabledLegends.has(leg.id);
+                    return (
+                      <button
+                        key={leg.id}
+                        type="button"
+                        onClick={() => toggleMobileMfLegend(leg.id)}
+                        className={`flex items-center gap-1 text-[10.5px] font-bold px-2 py-0.5 rounded-lg border transition-all cursor-pointer shrink-0 select-none active:scale-95 ${
+                          isExcluded
+                            ? "border-dashed border-base-300 bg-base-200/40 text-base-content/40 opacity-50"
+                            : "border-base-300 bg-base-100 dark:bg-base-800 text-base-content shadow-2xs hover:border-purple-500/40"
+                        }`}
+                        title={isExcluded ? `Click to show ${leg.label}` : `Click to hide ${leg.label}`}
+                      >
+                        <span
+                          className={`w-2 h-2 rounded-full shrink-0 shadow-2xs transition-opacity ${
+                            isExcluded ? "opacity-30" : "opacity-100 ring-1 ring-base-content/10"
+                          }`}
+                          style={{ backgroundColor: leg.color }}
+                        />
+                        <span className={isExcluded ? "line-through text-base-content/40" : ""}>
+                          {leg.label}
+                        </span>
+                      </button>
+                    );
+                  })}
+                  <span className="text-[9.5px] font-mono font-bold text-base-content/40 shrink-0 ml-auto bg-base-200/60 px-1.5 py-0.5 rounded-md">
+                    {mfMonthlyPlotData.length} mos
+                  </span>
+                </div>
+              </div>
+
+              {/* Row D: Month-by-month horizontal multi-stacked rectangular visualization */}
+              {mfMonthlyPlotData.length > 0 ? (
+                <div className="space-y-2 pt-1">
+                  {mfTableDataDescending.map((m) => {
+                    // Extract active components for this month
+                    const segs = activeMfLegendDefs
+                      .filter((def) => !mobileMfDisabledLegends.has(def.id))
+                      .map((def) => ({
+                        id: def.id,
+                        label: def.label,
+                        color: def.color,
+                        value: Math.max(0, Number(def.getValue(m)) || 0),
+                      }));
+
+                    const monthVisibleTotal = segs.reduce((sum, s) => sum + s.value, 0);
+                    const segmentsWithPct = segs
+                      .filter((s) => s.value > 0)
+                      .map((s) => ({
+                        ...s,
+                        percentage: monthVisibleTotal > 0 ? (s.value / monthVisibleTotal) * 100 : 0,
+                      }));
+
+                    return (
+                      <div
+                        key={m.rawMonth}
+                        className="bg-base-200/70 dark:bg-base-800/60 border border-base-300/60 rounded-2xl p-2.5 space-y-1.5 shadow-2xs"
+                      >
+                        {/* Month Header: Label, Funds (acronyms), Cumulative Invested, and Total */}
+                        <div className="flex items-center justify-between text-xs font-bold">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <span className="text-base-content font-extrabold text-xs whitespace-nowrap">
+                              {m.monthLabel}
+                            </span>
+                            {m.funds && m.funds.length > 0 && (
+                              <span className="text-[10px] text-base-content/50 font-semibold truncate max-w-[110px] whitespace-nowrap">
+                                • {m.funds.map(formatCompanyShortName).join(", ")}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <span className="badge badge-xs font-mono font-bold bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20 text-[9.5px]">
+                              Net: {hideNumbers ? "•••" : formatCurrencyCompact(m.cumulativeInvested)}
+                            </span>
+                            <div className="font-mono font-black text-xs text-base-content shrink-0 whitespace-nowrap">
+                              {hideNumbers ? "••••••" : `₹${monthVisibleTotal.toLocaleString("en-IN")}`}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Horizontal Multi-stacked Rectangular Bar */}
+                        {monthVisibleTotal > 0 ? (
+                          <div className="h-4 sm:h-5 w-full bg-base-300/50 dark:bg-base-700/50 rounded-lg overflow-hidden flex gap-0.5 p-0.5">
+                            {segmentsWithPct.map((seg) => (
+                              <div
+                                key={seg.id}
+                                style={{
+                                  width: `${seg.percentage}%`,
+                                  backgroundColor: seg.color,
+                                }}
+                                className="h-full rounded-sm transition-all duration-300 relative group flex items-center justify-center overflow-hidden"
+                                title={`${seg.label}: ₹${seg.value.toLocaleString("en-IN")} (${seg.percentage.toFixed(1)}%)`}
+                              >
+                                {seg.percentage > 18 && (
+                                  <span className="text-[8.5px] font-black text-white drop-shadow-xs px-0.5 truncate leading-none select-none">
+                                    {seg.percentage.toFixed(0)}%
+                                  </span>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="h-4 w-full bg-base-300/30 rounded-lg flex items-center justify-center text-[10px] text-base-content/40 italic">
+                            All components hidden • Tap legend above
+                          </div>
+                        )}
+
+                        {/* Itemized Chips Underneath */}
+                        {segs.length > 0 && (
+                          <div className="flex items-center justify-between gap-2 overflow-x-auto no-scrollbar text-[10px] font-mono pt-0.5">
+                            <div className="flex items-center gap-2 shrink-0">
+                              {segs.map((seg) => (
+                                <div key={seg.id} className="flex items-center gap-1 shrink-0">
+                                  <span
+                                    className="w-1.5 h-1.5 rounded-full shrink-0"
+                                    style={{ backgroundColor: seg.color }}
+                                  />
+                                  <span className="text-base-content/60 font-sans font-medium whitespace-nowrap">
+                                    {seg.label}:
+                                  </span>
+                                  <span className="font-bold text-base-content whitespace-nowrap">
+                                    {hideNumbers ? "•••" : formatCurrencyCompact(seg.value)}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                            <div className="flex items-center gap-1.5 shrink-0 text-[9px] font-bold">
+                              {m.unitsAdded > 0 && (
+                                <span className="text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 px-1.5 py-0.5 rounded-md whitespace-nowrap">
+                                  +{m.unitsAdded.toFixed(2)} u
+                                </span>
+                              )}
+                              {m.avgNav > 0 && (
+                                <span className="text-sky-600 dark:text-sky-400 bg-sky-500/10 px-1.5 py-0.5 rounded-md whitespace-nowrap">
+                                  NAV ₹{m.avgNav.toFixed(1)}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="p-8 text-center text-xs opacity-50 italic">
+                  No Mutual Fund transactions match the selected scheme or date filter range.
+                </div>
+              )}
+            </div>
           </>
         )}
 
@@ -6203,6 +6835,7 @@ export default function InvDashboard() {
             onSearchChange={setStockSearchQuery}
             activeMainTab={stockMainTab}
             onMainTabChange={setStockMainTab}
+            hideNumbers={hideNumbers}
           />
         )}
 

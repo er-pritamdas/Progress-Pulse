@@ -16,7 +16,7 @@ import {
 export const DASHBOARDS_LIST = [
   {
     id: "SALARY",
-    title: "Salary & Income",
+    title: "Income",
     subtitle: "Compensation & Earnings",
     description:
       "Track monthly salary slips, in-hand earnings, tax deductions, basic pay, and annual compensation trends.",
@@ -30,7 +30,7 @@ export const DASHBOARDS_LIST = [
   },
   {
     id: "PF",
-    title: "Provident Fund (PF)",
+    title: "PF",
     subtitle: "EPF & PPF Retirement",
     description:
       "Monitor EPF corpus balance, employer & employee contributions, cumulative compound interest, and withdrawals.",
@@ -44,7 +44,7 @@ export const DASHBOARDS_LIST = [
   },
   {
     id: "MF",
-    title: "Mutual Funds",
+    title: "MF",
     subtitle: "SIP & Lumpsum Portfolios",
     description:
       "Multi-folio intelligence, automated SIPs, scheme allocations, NAV performance, and asset diversification.",

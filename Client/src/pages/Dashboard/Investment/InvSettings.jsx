@@ -3256,6 +3256,41 @@ export default function InvSettings() {
                               <span>Sources</span>
                             </button>
                           </div>
+
+                          {/* Row 5: Completely Attached Sticky Sources & Projection Tabs */}
+                          {!isCollapsed && (
+                            <div
+                              className="pt-2 border-t border-base-content/8"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <div className="join w-full bg-base-200/90 dark:bg-base-900/80 p-0.5 rounded-xl border border-base-content/8 text-xs">
+                                <button
+                                  type="button"
+                                  onClick={() => setGoalTab(goal.id, "sources")}
+                                  className={`join-item flex-1 btn btn-xs border-0 rounded-lg font-bold transition-all ${
+                                    activeTab === "sources"
+                                      ? "btn-primary shadow-xs"
+                                      : "btn-ghost text-base-content/70"
+                                  }`}
+                                >
+                                  <Layers size={12} />
+                                  <span>Sources ({metrics.itemCount})</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setGoalTab(goal.id, "projection")}
+                                  className={`join-item flex-1 btn btn-xs border-0 rounded-lg font-bold transition-all ${
+                                    activeTab === "projection"
+                                      ? "btn-primary shadow-xs"
+                                      : "btn-ghost text-base-content/70"
+                                  }`}
+                                >
+                                  <TrendingUp size={12} />
+                                  <span>Projection</span>
+                                </button>
+                              </div>
+                            </div>
+                          )}
                         </div>
 
                         {/* Goal Expanded Body */}
@@ -3332,36 +3367,6 @@ export default function InvSettings() {
                                   </div>
                                 </div>
                               ))}
-                            </div>
-
-                            {/* Tabs Toggle: Allocated Sources / Projection (Sticky while scrolling) */}
-                            <div className="sticky top-[226px] z-10 bg-base-100/95 dark:bg-base-900/95 backdrop-blur-md py-1.5 -mx-3 px-3 border-y border-base-content/8 shadow-xs">
-                              <div className="join w-full bg-base-200/90 dark:bg-base-800/80 p-0.5 rounded-xl border border-base-content/8 text-xs">
-                                <button
-                                  type="button"
-                                  onClick={() => setGoalTab(goal.id, "sources")}
-                                  className={`join-item flex-1 btn btn-xs border-0 rounded-lg font-bold transition-all ${
-                                    activeTab === "sources"
-                                      ? "btn-primary shadow-xs"
-                                      : "btn-ghost text-base-content/70"
-                                  }`}
-                                >
-                                  <Layers size={12} />
-                                  <span>Sources ({metrics.itemCount})</span>
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => setGoalTab(goal.id, "projection")}
-                                  className={`join-item flex-1 btn btn-xs border-0 rounded-lg font-bold transition-all ${
-                                    activeTab === "projection"
-                                      ? "btn-primary shadow-xs"
-                                      : "btn-ghost text-base-content/70"
-                                  }`}
-                                >
-                                  <TrendingUp size={12} />
-                                  <span>Projection</span>
-                                </button>
-                              </div>
                             </div>
 
                             {/* 1. SOURCES TAB */}

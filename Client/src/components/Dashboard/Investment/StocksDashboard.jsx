@@ -25,6 +25,7 @@ import {
   ExternalLink,
   ChevronUp,
   ChevronsUpDown,
+  X,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -90,6 +91,7 @@ export default function StocksDashboard({
   onSearchChange,
   activeMainTab: externalMainTab,
   onMainTabChange,
+  hideNumbers = false,
 }) {
   // Derive subView directly from activeSubView prop or fallback to internal state
   const [internalSubView, setInternalSubView] = useState(() => {
@@ -530,9 +532,9 @@ export default function StocksDashboard({
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
       {/* -------------------------------------------------------------------- */}
-      {/* 1. KPI Summary Cards Row */}
+      {/* 1. KPI Summary Cards Row - Desktop (hidden on mobile) */}
       {/* -------------------------------------------------------------------- */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-2.5 sm:gap-4">
+      <div className="hidden md:grid grid-cols-2 lg:grid-cols-5 gap-2.5 sm:gap-4">
         {/* Card 1: Total Capital / Investment */}
         <div className="col-span-2 lg:col-span-1 card bg-base-200 shadow-md p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl relative overflow-hidden group hover:shadow-lg transition-all">
           {/* Light Background Watermark Icon */}
@@ -547,7 +549,7 @@ export default function StocksDashboard({
             </div>
             <div className="mt-2 sm:mt-3">
               <div className="text-xl sm:text-2xl lg:text-3xl font-black font-mono text-blue-600 dark:text-blue-400 truncate">
-                ₹{formatCurrency2Dec(kpiData.totalInvestedCapital)}
+                {hideNumbers ? "••••••" : `₹${formatCurrency2Dec(kpiData.totalInvestedCapital)}`}
               </div>
               <div className="flex items-center gap-1.5 sm:gap-2 mt-1 sm:mt-1.5 text-[11px] sm:text-xs text-base-content/60 font-medium truncate">
                 <span className="badge badge-xs badge-info font-bold text-[9px] sm:text-[10px]">
@@ -575,7 +577,7 @@ export default function StocksDashboard({
             </div>
             <div className="mt-2 sm:mt-3">
               <div className="text-xl sm:text-2xl lg:text-3xl font-black font-mono text-indigo-600 dark:text-indigo-400 truncate">
-                {kpiData.totalQuantity.toLocaleString()}
+                {hideNumbers ? "••••••" : kpiData.totalQuantity.toLocaleString()}
               </div>
               <div className="flex items-center gap-1.5 sm:gap-2 mt-1 sm:mt-1.5 text-[11px] sm:text-xs text-base-content/60 font-medium truncate">
                 <span className="badge badge-xs badge-primary font-bold text-[9px] sm:text-[10px]">
@@ -665,7 +667,7 @@ export default function StocksDashboard({
                       : "text-rose-600 dark:text-rose-400"
                   }`}
                 >
-                  {kpiData.totalRealizedGain >= 0 ? "+" : ""}₹{formatCurrency2Dec(kpiData.totalRealizedGain)}
+                  {hideNumbers ? "••••••" : `${kpiData.totalRealizedGain >= 0 ? "+" : ""}₹${formatCurrency2Dec(kpiData.totalRealizedGain)}`}
                 </div>
                 <div className="flex items-center gap-1.5 sm:gap-2 mt-1 sm:mt-1.5 text-[11px] sm:text-xs text-base-content/60 font-medium truncate">
                   <span
@@ -713,7 +715,7 @@ export default function StocksDashboard({
       {/* 3. TAB 2: Interactive Pie Chart (Left Side: Pie Chart, Right Side: Stack of Names, Dropdown: Total Capital / Total Qty) */}
       {/* -------------------------------------------------------------------- */}
       {activeMainTab === "chart" && (
-        <div className="space-y-6 animate-in fade-in duration-300">
+        <div className="hidden md:block space-y-6 animate-in fade-in duration-300">
           {/* Header Row with Title, Metric Dropdown, Dimension & Donut/Pie Controls */}
           <div className="card bg-base-200 p-5 rounded-3xl shadow-md flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
@@ -824,7 +826,7 @@ export default function StocksDashboard({
                   </div>
                   <span className="badge badge-sm badge-info font-mono font-bold">
                     {pieMetric === "capital"
-                      ? `Total: ₹${formatCurrencyCompact(unifiedChartData.totalVal)}`
+                      ? `Total: ${formatCurrencyCompact(unifiedChartData.totalVal)}`
                       : `Total: ${unifiedChartData.totalVal.toLocaleString()} Shares`}
                   </span>
                 </div>
@@ -977,7 +979,7 @@ export default function StocksDashboard({
       {/* 4. TAB 1: Detailed Stock Data Table (User Requested: Keep Only Table) */}
       {/* -------------------------------------------------------------------- */}
       {activeMainTab === "table" && (
-        <div className="card bg-base-200 shadow-md rounded-3xl overflow-hidden space-y-4 p-6">
+        <div className="hidden md:block card bg-base-200 shadow-md rounded-3xl overflow-hidden space-y-4 p-6">
           {/* Table Header Row */}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-base-300 pb-4">
             <div>
@@ -1328,6 +1330,664 @@ export default function StocksDashboard({
           </div>
         </div>
       )}
+
+      {/* ==================================================================== */}
+      {/* 5. PHONE VIEW ONLY (block md:hidden) */}
+      {/* ==================================================================== */}
+      <div className="block md:hidden space-y-2.5">
+        {/* 1. Phone View Compact KPI Summary Cards */}
+        <div className="grid grid-cols-2 gap-2">
+          {/* Card 1: Total Capital (Span 2 cols) */}
+          <div className="col-span-2 card bg-base-200/90 dark:bg-base-800/80 shadow-2xs border border-base-300/60 p-2.5 rounded-2xl relative overflow-hidden">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-base-content/60 flex items-center gap-1">
+                <Wallet size={12} className="text-blue-500" />
+                {subView === "demat" ? "Total Demat Capital" : "Capital Deployed"}
+              </span>
+              <span className="badge badge-xs font-mono font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[9.5px]">
+                {kpiData.count} {kpiData.count === 1 ? "Stock" : "Stocks"}
+              </span>
+            </div>
+            <div className="mt-1 flex items-baseline justify-between gap-2">
+              <div className="text-base sm:text-lg font-black font-mono tracking-tight text-blue-600 dark:text-blue-400 whitespace-nowrap truncate">
+                {hideNumbers ? "••••••" : `₹${formatCurrency2Dec(kpiData.totalInvestedCapital)}`}
+              </div>
+              <span className="text-[10px] text-base-content/60 font-medium whitespace-nowrap shrink-0">
+                {subView === "demat" ? "Holding In Demat" : "Total Traded"}
+              </span>
+            </div>
+          </div>
+
+          {/* Card 2: Quantity */}
+          <div className="card bg-base-200/90 dark:bg-base-800/80 shadow-2xs border border-base-300/60 p-2.5 rounded-2xl relative overflow-hidden">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-base-content/60 flex items-center gap-1">
+              <Layers size={12} className="text-indigo-500" />
+              {subView === "demat" ? "Quantity Left" : "Quantity Traded"}
+            </span>
+            <div className="mt-1">
+              <div className="text-sm font-black font-mono tracking-tight text-indigo-600 dark:text-indigo-400 whitespace-nowrap truncate">
+                {hideNumbers ? "••••••" : kpiData.totalQuantity.toLocaleString()}
+              </div>
+              <div className="flex items-center gap-1 mt-0.5 text-[9.5px] text-base-content/60 font-medium whitespace-nowrap truncate">
+                <span className="badge badge-xs badge-primary font-bold text-[8.5px]">
+                  {subView === "demat" ? "Left" : "Sold"}
+                </span>
+                <span>Across {kpiData.count} items</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Card 3: Avg Holding Days */}
+          <div className="card bg-base-200/90 dark:bg-base-800/80 shadow-2xs border border-base-300/60 p-2.5 rounded-2xl relative overflow-hidden">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-base-content/60 flex items-center gap-1">
+              <Clock size={12} className="text-amber-500" />
+              {subView === "demat" ? "Avg Holding" : "Holding Period"}
+            </span>
+            <div className="mt-1">
+              <div className="text-sm font-black font-mono tracking-tight text-amber-600 dark:text-amber-400 whitespace-nowrap truncate">
+                {kpiData.avgHoldingDays} <span className="text-[10px] font-bold opacity-80">Days</span>
+              </div>
+              <div className="flex items-center gap-1 mt-0.5 text-[9.5px] text-base-content/60 font-medium whitespace-nowrap truncate">
+                <span className="badge badge-xs badge-warning font-bold text-[8.5px]">Tenure</span>
+                <span>Days since buy</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Card 4: Cap Allocation or Realized P&L */}
+          <div className="card bg-base-200/90 dark:bg-base-800/80 shadow-2xs border border-base-300/60 p-2.5 rounded-2xl relative overflow-hidden">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-base-content/60 flex items-center gap-1">
+              {subView === "demat" ? <PieChart size={12} className="text-emerald-500" /> : <TrendingUp size={12} className="text-emerald-500" />}
+              {subView === "demat" ? "Cap Split" : "Net Realized P&L"}
+            </span>
+            <div className="mt-1">
+              {subView === "demat" ? (
+                <>
+                  <div className="text-xs font-black font-mono text-emerald-600 dark:text-emerald-400 flex items-center gap-1 whitespace-nowrap truncate">
+                    <span>{kpiData.capDistribution.Large}L</span>
+                    <span className="text-base-content/30">•</span>
+                    <span className="text-indigo-500">{kpiData.capDistribution.Mid}M</span>
+                    <span className="text-base-content/30">•</span>
+                    <span className="text-amber-500">{kpiData.capDistribution.Small}S</span>
+                  </div>
+                  <div className="flex items-center gap-1 mt-0.5 text-[9.5px] text-base-content/60 font-medium whitespace-nowrap truncate">
+                    <span className="badge badge-xs badge-success font-bold text-[8.5px]">L/M/S</span>
+                    <span>Cap distribution</span>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className={`text-sm font-black font-mono tracking-tight whitespace-nowrap truncate ${
+                    kpiData.totalRealizedGain >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"
+                  }`}>
+                    {hideNumbers ? "••••••" : `${kpiData.totalRealizedGain >= 0 ? "+" : ""}₹${formatCurrency2Dec(kpiData.totalRealizedGain)}`}
+                  </div>
+                  <div className="flex items-center gap-1 mt-0.5 text-[9.5px] text-base-content/60 font-medium whitespace-nowrap truncate">
+                    <span className={`badge badge-xs font-bold text-[8.5px] ${
+                      kpiData.totalRealizedGain >= 0 ? "badge-success" : "badge-error"
+                    }`}>
+                      {kpiData.totalRealizedGain >= 0 ? "+" : ""}{kpiData.gainPctOverall}%
+                    </span>
+                    <span>Return</span>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Card 5: Demat Status or Win Rate */}
+          <div className="card bg-base-200/90 dark:bg-base-800/80 shadow-2xs border border-base-300/60 p-2.5 rounded-2xl relative overflow-hidden">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-base-content/60 flex items-center gap-1">
+              <Sparkles size={12} className="text-teal-500" />
+              {subView === "demat" ? "Demat Status" : "Win Ratio"}
+            </span>
+            <div className="mt-1">
+              <div className="text-sm font-black font-mono tracking-tight text-teal-600 dark:text-teal-400 whitespace-nowrap truncate">
+                {subView === "demat" ? "100% Active" : `${kpiData.winRate}%`}
+              </div>
+              <div className="flex items-center gap-1 mt-0.5 text-[9.5px] text-base-content/60 font-medium whitespace-nowrap truncate">
+                <span className="badge badge-xs badge-secondary font-bold text-[8.5px]">
+                  {subView === "demat" ? "In Demat" : `${kpiData.profitableCount}W / ${kpiData.lossCount}L`}
+                </span>
+                <span>Active status</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* 2. Single line header with one line subtitle below it */}
+        <div className="space-y-0.5 pt-1">
+          <h2 className="text-sm font-extrabold flex items-center gap-1.5 whitespace-nowrap truncate text-base-content">
+            <TrendingUp size={16} className="text-blue-500 shrink-0" />
+            <span className="truncate">
+              {subView === "demat"
+                ? "Demat Stock Holdings"
+                : subView === "delivery"
+                ? "Delivery Completed Trades"
+                : "Intraday Orders Ledger"}
+            </span>
+            <span className="badge badge-xs font-mono font-bold bg-blue-500/15 text-blue-600 dark:text-blue-400">
+              {sortedStocks.length}
+            </span>
+          </h2>
+          <p className="text-[10px] text-base-content/60 whitespace-nowrap truncate">
+            {subView === "demat"
+              ? "Active stock holdings with remaining quantity in Demat ledger"
+              : subView === "delivery"
+              ? "Closed delivery positions held greater than 1 day with realized returns"
+              : "Same-day intraday positions, execution prices, and net P&L"}
+          </p>
+        </div>
+
+        {/* 3. Sticky Filters (Sub-view, View Toggle, Size Dropdown) - All in One Line */}
+        <div className="sticky top-[108px] z-30 bg-base-100/95 dark:bg-base-900/95 backdrop-blur-md -mx-3 px-3 py-1.5 border-y border-base-300/70 shadow-xs">
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar w-full">
+            {/* Sub-view toggle (Demat / Delivery / Intraday) */}
+            <div className="flex items-center gap-0.5 bg-base-200/90 dark:bg-base-800/90 p-0.5 rounded-xl border border-base-300/80 shadow-2xs shrink-0">
+              <button
+                type="button"
+                onClick={() => handleSwitchSubView("demat")}
+                className={`px-1.5 py-0.5 rounded-lg text-[10px] font-bold transition-all cursor-pointer whitespace-nowrap ${
+                  subView === "demat"
+                    ? "bg-primary text-primary-content shadow-xs"
+                    : "text-base-content/70 hover:text-base-content"
+                }`}
+              >
+                Demat
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSwitchSubView("delivery")}
+                className={`px-1.5 py-0.5 rounded-lg text-[10px] font-bold transition-all cursor-pointer whitespace-nowrap ${
+                  subView === "delivery"
+                    ? "bg-primary text-primary-content shadow-xs"
+                    : "text-base-content/70 hover:text-base-content"
+                }`}
+              >
+                Delivery
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSwitchSubView("intraday")}
+                className={`px-1.5 py-0.5 rounded-lg text-[10px] font-bold transition-all cursor-pointer whitespace-nowrap ${
+                  subView === "intraday"
+                    ? "bg-primary text-primary-content shadow-xs"
+                    : "text-base-content/70 hover:text-base-content"
+                }`}
+              >
+                Intraday
+              </button>
+            </div>
+
+            {/* View toggle (Table / Chart) */}
+            <div className="flex items-center gap-0.5 bg-base-200/90 dark:bg-base-800/90 p-0.5 rounded-xl border border-base-300/80 shadow-2xs shrink-0">
+              <button
+                type="button"
+                onClick={() => handleTabChange("table")}
+                className={`p-0.5 px-1.5 rounded-lg text-[10px] font-bold flex items-center gap-1 transition-all cursor-pointer whitespace-nowrap ${
+                  activeMainTab === "table"
+                    ? "bg-primary text-primary-content shadow-xs"
+                    : "text-base-content/70 hover:text-base-content"
+                }`}
+                title="Table View"
+              >
+                <TableProperties size={11} />
+                <span>Table</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleTabChange("chart")}
+                className={`p-0.5 px-1.5 rounded-lg text-[10px] font-bold flex items-center gap-1 transition-all cursor-pointer whitespace-nowrap ${
+                  activeMainTab === "chart"
+                    ? "bg-primary text-primary-content shadow-xs"
+                    : "text-base-content/70 hover:text-base-content"
+                }`}
+                title="Chart View"
+              >
+                <PieChart size={11} />
+                <span>Chart</span>
+              </button>
+            </div>
+
+            {/* Size Dropdown */}
+            <div className="flex-1 min-w-[76px] flex items-center gap-1 bg-base-200/90 dark:bg-base-800/90 px-1.5 py-0.5 rounded-xl border border-base-300/80 shadow-2xs shrink-0">
+              <Filter size={10} className="text-primary shrink-0" />
+              <select
+                className="select select-ghost select-xs p-0 h-6 min-h-0 text-[10px] font-bold w-full focus:outline-none bg-transparent truncate cursor-pointer text-base-content"
+                value={selectedCap}
+                onChange={(e) => setSelectedCap(e.target.value)}
+              >
+                <option value="all">All ({currentPool.length})</option>
+                <option value="Large">Large ({currentPool.filter((s) => s.cap === "Large").length})</option>
+                <option value="Mid">Mid ({currentPool.filter((s) => s.cap === "Mid").length})</option>
+                <option value="Small">Small ({currentPool.filter((s) => s.cap === "Small").length})</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* 4. Phone View Content: Table View OR Chart View */}
+        {activeMainTab === "table" ? (
+          <div className="space-y-3 pt-1">
+            {/* Stock Cards List */}
+            {sortedStocks.length > 0 ? (
+              <div className="space-y-2">
+                {sortedStocks.map((stock, idx) => {
+                  const qty = subView === "demat" ? (Number(stock.qLeft) || 0) : (Number(stock.bQty) || 0);
+                  const price = Number(stock.bShare) || Number(stock.bFShare) || 0;
+                  const capital = qty * price;
+                  const periodDays = subView === "demat"
+                    ? (stock.bDate ? dayjs().diff(dayjs(stock.bDate), "day") : 0)
+                    : (Number(stock.period) || (stock.sDate && stock.sDate !== "-" && stock.bDate ? dayjs(stock.sDate).diff(dayjs(stock.bDate), "day") : 0));
+                  const gainRs = Number(stock.gainRs) || 0;
+                  const gainPct = Number(stock.gainPct) || 0;
+
+                  return (
+                    <div
+                      key={`phone-stock-${stock._id || stock.id || idx}`}
+                      className="bg-base-200/70 dark:bg-base-800/60 border border-base-300/60 rounded-2xl p-2.5 space-y-1.5 shadow-2xs"
+                    >
+                      {/* Row 1: Stock Name, Cap Badge, and Capital Value */}
+                      <div className="flex items-center justify-between text-xs font-bold gap-1.5">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <span className="font-mono text-[10px] font-bold text-base-content/40 shrink-0">
+                            #{idx + 1}
+                          </span>
+                          <span className="text-base-content font-extrabold text-xs truncate">
+                            {stock.name}
+                          </span>
+                          {stock.cap && (
+                            <span
+                              className={`text-[8.5px] font-black uppercase px-1.5 py-0.5 rounded-md shrink-0 ${
+                                stock.cap === "Large"
+                                  ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+                                  : stock.cap === "Mid"
+                                  ? "bg-indigo-500/15 text-indigo-600 dark:text-indigo-400"
+                                  : "bg-amber-500/15 text-amber-600 dark:text-amber-400"
+                              }`}
+                            >
+                              {stock.cap}
+                            </span>
+                          )}
+                        </div>
+                        <div className="font-mono font-black text-xs text-base-content shrink-0 whitespace-nowrap">
+                          {hideNumbers ? "••••••" : `₹${formatCurrency2Dec(capital)}`}
+                        </div>
+                      </div>
+
+                      {/* Row 2: Qty, Share Price, Period, and Realized P&L */}
+                      <div className="flex items-center justify-between text-[10.5px] font-mono pt-0.5 border-t border-base-300/40 text-base-content/70">
+                        <div className="flex items-center gap-1.5">
+                          <span>
+                            <span className="opacity-50 font-sans">Qty:</span>{" "}
+                            <strong className="text-base-content">{qty}</strong>
+                          </span>
+                          <span>•</span>
+                          <span>
+                            <span className="opacity-50 font-sans">@</span> ₹
+                            <strong className="text-base-content">{price.toFixed(1)}</strong>
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-amber-600 dark:text-amber-400 font-bold">
+                            {periodDays}d
+                          </span>
+                          {subView !== "demat" && (
+                            <span
+                              className={`font-black ${
+                                gainRs >= 0
+                                  ? "text-emerald-600 dark:text-emerald-400"
+                                  : "text-rose-600 dark:text-rose-400"
+                              }`}
+                            >
+                              {gainRs >= 0 ? "+" : ""}{hideNumbers ? "•••" : formatCurrencyCompact(gainRs)} ({gainPct}%)
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Row 3: Platform / Exchange & Dates */}
+                      <div className="flex items-center justify-between text-[9.5px] text-base-content/50 pt-0.5">
+                        <div className="flex items-center gap-1">
+                          {stock.exchange && (
+                            <span className="bg-base-300/60 px-1 py-0.2 rounded font-bold uppercase text-[8.5px]">
+                              {stock.exchange}
+                            </span>
+                          )}
+                          {stock.platform && (
+                            <span className="truncate max-w-[80px]">
+                              {stock.platform}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1 font-mono text-[9px]">
+                          {stock.bDate && <span>Buy: {dayjs(stock.bDate).format("DD MMM 'YY")}</span>}
+                          {stock.sDate && stock.sDate !== "-" && (
+                            <span>• Sell: {dayjs(stock.sDate).format("DD MMM 'YY")}</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="p-8 text-center text-xs opacity-50 italic bg-base-200/50 rounded-2xl border border-base-300/60">
+                No stocks match the selected criteria.
+              </div>
+            )}
+
+            {/* Horizontal Scrollable Full Ledger Table for Deep Mobile Inspection */}
+            <div className="pt-2">
+              <div className="flex items-center justify-between pb-1.5 px-0.5">
+                <span className="text-[10px] font-bold text-base-content/50 uppercase tracking-wider flex items-center gap-1">
+                  <TableProperties size={11} className="text-primary" /> Full Ledger Table
+                </span>
+                <Link
+                  to="/dashboard/investment/table-entry?tab=stocks"
+                  className="text-[10px] text-primary font-bold hover:underline flex items-center gap-0.5"
+                >
+                  <ExternalLink size={10} /> Manage Entries
+                </Link>
+              </div>
+              <div className="overflow-x-auto rounded-2xl border border-base-300 max-h-[400px] [scrollbar-width:thin] bg-base-100 shadow-2xs">
+                <table className="table table-zebra table-xs w-full text-[11px]">
+                  <thead className="bg-base-200 text-base-content/70 sticky top-0 z-10 backdrop-blur-md">
+                    <tr>
+                      <th className="font-extrabold uppercase text-[9px] w-8 text-center">#</th>
+                      <th
+                        className="font-extrabold uppercase text-[9px] cursor-pointer"
+                        onClick={() => handleSort("name")}
+                      >
+                        Stock Name
+                      </th>
+                      <th
+                        className="font-extrabold uppercase text-[9px] cursor-pointer"
+                        onClick={() => handleSort("cap")}
+                      >
+                        Size
+                      </th>
+                      <th
+                        className="font-extrabold uppercase text-[9px] text-right cursor-pointer"
+                        onClick={() => handleSort(subView === "demat" ? "qLeft" : "bQty")}
+                      >
+                        {subView === "demat" ? "Qty Left" : "Qty"}
+                      </th>
+                      <th
+                        className="font-extrabold uppercase text-[9px] text-right cursor-pointer"
+                        onClick={() => handleSort("bShare")}
+                      >
+                        Price
+                      </th>
+                      <th
+                        className="font-extrabold uppercase text-[9px] text-right cursor-pointer"
+                        onClick={() => handleSort("holdingCapital")}
+                      >
+                        Capital
+                      </th>
+                      {subView !== "demat" && (
+                        <th
+                          className="font-extrabold uppercase text-[9px] text-right cursor-pointer"
+                          onClick={() => handleSort("gainRs")}
+                        >
+                          P&L
+                        </th>
+                      )}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sortedStocks.map((stock, idx) => {
+                      const qty = subView === "demat" ? (Number(stock.qLeft) || 0) : (Number(stock.bQty) || 0);
+                      const price = Number(stock.bShare) || Number(stock.bFShare) || 0;
+                      const capital = qty * price;
+                      const gainRs = Number(stock.gainRs) || 0;
+
+                      return (
+                        <tr key={`phone-tbl-${stock._id || stock.id || idx}`} className="hover">
+                          <td className="font-mono text-[9px] opacity-40 text-center">{idx + 1}</td>
+                          <td className="font-bold truncate max-w-[110px]">{stock.name}</td>
+                          <td>
+                            {stock.cap && (
+                              <span
+                                className={`text-[8px] font-black uppercase px-1 py-0.2 rounded ${
+                                  stock.cap === "Large"
+                                    ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+                                    : stock.cap === "Mid"
+                                    ? "bg-indigo-500/15 text-indigo-600 dark:text-indigo-400"
+                                    : "bg-amber-500/15 text-amber-600 dark:text-amber-400"
+                                }`}
+                              >
+                                {stock.cap}
+                              </span>
+                            )}
+                          </td>
+                          <td className="font-mono font-bold text-right">{qty}</td>
+                          <td className="font-mono text-right">₹{price.toFixed(1)}</td>
+                          <td className="font-mono font-black text-right">
+                            {hideNumbers ? "••••" : `₹${formatCurrency2Dec(capital)}`}
+                          </td>
+                          {subView !== "demat" && (
+                            <td className="font-mono font-black text-right">
+                              <span className={gainRs >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}>
+                                {gainRs >= 0 ? "+" : ""}{hideNumbers ? "••" : formatCurrencyCompact(gainRs)}
+                              </span>
+                            </td>
+                          )}
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        ) : (
+          /* Chart View for Phone */
+          <div className="space-y-3 pt-1">
+            {/* Donut/Pie Chart Card */}
+            <div className="bg-base-200/70 dark:bg-base-800/60 border border-base-300/60 rounded-2xl p-3 shadow-2xs">
+              <div className="flex items-center justify-between pb-2 mb-2 border-b border-base-300/40 text-xs font-bold">
+                <span className="text-base-content flex items-center gap-1.5">
+                  <PieChart size={14} className="text-blue-500" />
+                  {chartDimension === "stock" ? "Distribution by Stock" : "Distribution by Cap Size"}
+                </span>
+                <span className="badge badge-xs font-mono font-bold bg-blue-500/15 text-blue-600 dark:text-blue-400 text-[9.5px]">
+                  {pieMetric === "capital" ? "Capital" : "Quantity"}
+                </span>
+              </div>
+
+              {/* Chart Sub-Controls (Metric, Group, and Chart Type) */}
+              <div className="flex items-center justify-between gap-1 text-[10px] overflow-x-auto no-scrollbar pb-2">
+                <div className="flex items-center gap-1 shrink-0">
+                  <span className="text-base-content/50 font-bold uppercase text-[9px]">Metric:</span>
+                  <div className="join p-0.5 bg-base-100 dark:bg-base-900 rounded-lg border border-base-300/60 shadow-2xs">
+                    <button
+                      type="button"
+                      onClick={() => setPieMetric("capital")}
+                      className={`join-item px-1.5 py-0.5 font-bold rounded-md transition-all cursor-pointer ${
+                        pieMetric === "capital" ? "bg-primary text-primary-content text-[9.5px] shadow-xs" : "text-base-content/60 text-[9.5px]"
+                      }`}
+                    >
+                      Capital
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPieMetric("quantity")}
+                      className={`join-item px-1.5 py-0.5 font-bold rounded-md transition-all cursor-pointer ${
+                        pieMetric === "quantity" ? "bg-primary text-primary-content text-[9.5px] shadow-xs" : "text-base-content/60 text-[9.5px]"
+                      }`}
+                    >
+                      Qty
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1 shrink-0">
+                  <span className="text-base-content/50 font-bold uppercase text-[9px]">Group:</span>
+                  <div className="join p-0.5 bg-base-100 dark:bg-base-900 rounded-lg border border-base-300/60 shadow-2xs">
+                    <button
+                      type="button"
+                      onClick={() => setChartDimension("stock")}
+                      className={`join-item px-1.5 py-0.5 font-bold rounded-md transition-all cursor-pointer ${
+                        chartDimension === "stock" ? "bg-primary text-primary-content text-[9.5px] shadow-xs" : "text-base-content/60 text-[9.5px]"
+                      }`}
+                    >
+                      Stock
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setChartDimension("cap")}
+                      className={`join-item px-1.5 py-0.5 font-bold rounded-md transition-all cursor-pointer ${
+                        chartDimension === "cap" ? "bg-primary text-primary-content text-[9.5px] shadow-xs" : "text-base-content/60 text-[9.5px]"
+                      }`}
+                    >
+                      Size
+                    </button>
+                  </div>
+                </div>
+
+                <div className="join p-0.5 bg-base-100 dark:bg-base-900 rounded-lg border border-base-300/60 shadow-2xs shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setChartType("donut")}
+                    className={`join-item px-1.5 py-0.5 font-bold rounded-md transition-all cursor-pointer ${
+                      chartType === "donut" ? "bg-primary text-primary-content text-[9.5px] shadow-xs" : "text-base-content/60 text-[9.5px]"
+                    }`}
+                  >
+                    Donut
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setChartType("pie")}
+                    className={`join-item px-1.5 py-0.5 font-bold rounded-md transition-all cursor-pointer ${
+                      chartType === "pie" ? "bg-primary text-primary-content text-[9.5px] shadow-xs" : "text-base-content/60 text-[9.5px]"
+                    }`}
+                  >
+                    Pie
+                  </button>
+                </div>
+              </div>
+
+              <div className="w-full h-[280px] flex items-center justify-center [&_.apexcharts-canvas]:!mx-auto">
+                {unifiedChartData.series.length > 0 ? (
+                  <Chart
+                    key={`phone-chart-${subView}-${pieMetric}-${chartDimension}-${chartType}-${unifiedChartData.labels.join(",")}-${unifiedChartData.series.join(",")}`}
+                    options={chartOptions}
+                    series={unifiedChartData.series}
+                    type={chartType}
+                    width="100%"
+                    height="100%"
+                  />
+                ) : (
+                  <div className="p-8 text-center text-xs opacity-50 italic">
+                    No chart data available for the selected filters.
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Price Breakdown in Normal Document Flow (No nested scrollbar) */}
+            <div className="space-y-2 pt-1">
+              <div className="flex items-center justify-between gap-2 px-0.5">
+                <h4 className="text-xs font-black tracking-tight text-base-content flex items-center gap-1.5">
+                  <span>Price Breakdown</span>
+                  <span className="badge badge-xs badge-neutral font-mono font-bold">
+                    {unifiedChartData.items.length}
+                  </span>
+                </h4>
+                {/* Search names in breakdown */}
+                {unifiedChartData.items.length > 5 && (
+                  <div className="relative min-w-[120px] max-w-[160px]">
+                    <Search size={10} className="absolute left-2 top-1/2 -translate-y-1/2 opacity-40" />
+                    <input
+                      type="text"
+                      placeholder="Search items..."
+                      value={stackSearchQuery}
+                      onChange={(e) => setStackSearchQuery(e.target.value)}
+                      className="input input-xs input-bordered w-full pl-5 pr-4 text-[10.5px] rounded-lg focus:input-primary bg-base-100 dark:bg-base-800 h-6"
+                    />
+                    {stackSearchQuery && (
+                      <button
+                        type="button"
+                        onClick={() => setStackSearchQuery("")}
+                        className="absolute right-1 top-1/2 -translate-y-1/2 opacity-50 hover:opacity-100 cursor-pointer"
+                      >
+                        <X size={9} />
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Breakdown items in normal flow (NO max-h, NO overflow-y-auto, NO extra scrollbar!) */}
+              <div className="space-y-1.5">
+                {displayedStackItems.length === 0 ? (
+                  <div className="p-4 text-center text-xs opacity-50 italic bg-base-200/50 rounded-2xl border border-base-300/60">
+                    No matches found in breakdown.
+                  </div>
+                ) : (
+                  displayedStackItems.map((item, idx) => (
+                    <div
+                      key={`phone-stack-${item.name}-${idx}`}
+                      className="p-2.5 rounded-xl bg-base-200/80 dark:bg-base-800/80 border border-base-300/70 space-y-1.5 shadow-2xs"
+                    >
+                      <div className="flex items-center justify-between text-xs gap-1.5">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <span className="font-mono text-[9px] text-base-content/40 font-bold shrink-0">
+                            #{idx + 1}
+                          </span>
+                          <span
+                            className="w-2 h-2 rounded-full shrink-0 shadow-2xs"
+                            style={{ backgroundColor: item.color }}
+                          />
+                          <span className="font-extrabold text-[11px] truncate text-base-content" title={item.name}>
+                            {item.name}
+                          </span>
+                          {item.cap && chartDimension === "stock" && (
+                            <span
+                              className={`text-[8px] font-black uppercase px-1 py-0.2 rounded shrink-0 ${
+                                item.cap === "Large"
+                                  ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+                                  : item.cap === "Mid"
+                                  ? "bg-indigo-500/15 text-indigo-600 dark:text-indigo-400"
+                                  : "bg-amber-500/15 text-amber-600 dark:text-amber-400"
+                              }`}
+                            >
+                              {item.cap}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <span className="font-mono font-bold text-[10.5px] text-base-content">
+                            {hideNumbers
+                              ? "••••"
+                              : unifiedChartData.isCapital
+                              ? `₹${formatCurrency2Dec(item.value)}`
+                              : `${item.value.toLocaleString()} shs`}
+                          </span>
+                          <span className="badge badge-xs badge-neutral font-mono font-black text-[9px]">
+                            {item.pct}%
+                          </span>
+                        </div>
+                      </div>
+                      {/* Progress bar */}
+                      <div className="w-full bg-base-300/70 dark:bg-base-700/60 h-1 rounded-full overflow-hidden">
+                        <div
+                          className="h-full rounded-full transition-all duration-300"
+                          style={{
+                            width: `${Math.min(100, Math.max(1, Number(item.pct)))}%`,
+                            backgroundColor: item.color,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
