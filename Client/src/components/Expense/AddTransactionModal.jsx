@@ -30,6 +30,7 @@ import { evaluateMathExpression } from "../../utils/mathExpression";
 const AddTransactionModal = ({ isOpen, onClose }) => {
   const dispatch = useDispatch();
   const { categories, sources, currentMonth, transactions } = useSelector((state) => state.expense);
+  const [messageApi, contextHolder] = message.useMessage();
 
   // Form State
   const [transactionType, setTransactionType] = useState("Debit"); // "Debit" | "DebitMoney" | "Credit" | "Transfer"
@@ -43,6 +44,7 @@ const AddTransactionModal = ({ isOpen, onClose }) => {
   const [subCategoryId, setSubCategoryId] = useState("");
   const [isReimbursable, setIsReimbursable] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const prevMonthRef = useRef(null);
 
   // Mobile Single Popup Wizard State
   const [activeMobileTab, setActiveMobileTab] = useState("type");
@@ -69,13 +71,22 @@ const AddTransactionModal = ({ isOpen, onClose }) => {
     }
   }, [mobileTabs, activeMobileTab]);
 
-  // Reset / Sync viewMonth and activeMobileTab when opening modal
+  // Reset / Sync viewMonth, form fields and activeMobileTab when opening modal
   useEffect(() => {
     if (isOpen) {
       const todayStr = dayjs().format("YYYY-MM-DD");
       setDate(todayStr);
       setViewMonth(todayStr);
       setActiveMobileTab("type");
+      setTransactionType("Debit");
+      setDescription("");
+      setAmount("");
+      setSourceId("");
+      setTargetSourceId("");
+      setCategoryId("");
+      setSubCategoryId("");
+      setIsReimbursable(false);
+      prevMonthRef.current = dayjs(todayStr).format("YYYY-MM");
     }
   }, [isOpen]);
 
@@ -85,6 +96,23 @@ const AddTransactionModal = ({ isOpen, onClose }) => {
   }, [mobileTabs, activeMobileTab]);
 
   const handleNextTab = () => {
+    const currentTabId = mobileTabs[currentTabIndex]?.id;
+    if (currentTabId === "source" && !sourceId) {
+      messageApi.warning("Please select an account first");
+      return;
+    }
+    if (currentTabId === "target" && !targetSourceId) {
+      messageApi.warning("Please select a target account first");
+      return;
+    }
+    if (currentTabId === "category" && transactionType === "Debit" && !categoryId) {
+      messageApi.warning("Please select a category first");
+      return;
+    }
+    if (currentTabId === "subcategory" && transactionType === "Debit" && !subCategoryId) {
+      messageApi.warning("Please select a sub-category first");
+      return;
+    }
     if (currentTabIndex < mobileTabs.length - 1) {
       setActiveMobileTab(mobileTabs[currentTabIndex + 1].id);
     }
@@ -143,6 +171,15 @@ const AddTransactionModal = ({ isOpen, onClose }) => {
     return date ? dayjs(date).format("YYYY-MM") : (currentMonth || dayjs().format("YYYY-MM"));
   }, [date, currentMonth]);
 
+  // When date is changed to a different month, automatically deselect category and subcategory
+  useEffect(() => {
+    if (isOpen && prevMonthRef.current && prevMonthRef.current !== selectedMonth) {
+      setCategoryId("");
+      setSubCategoryId("");
+    }
+    prevMonthRef.current = selectedMonth;
+  }, [selectedMonth, isOpen]);
+
   // Filter Categories for the Selected Month
   const selectedMonthCategories = useMemo(() => {
     return categories.filter(c => !c.month || c.month === selectedMonth);
@@ -190,19 +227,11 @@ const AddTransactionModal = ({ isOpen, onClose }) => {
     return due > 0 ? due : 0;
   };
 
-  // Get selected Category Object in selectedMonthCategories or matching by name
+  // Get selected Category Object strictly within selectedMonthCategories
   const selectedCategoryObj = useMemo(() => {
     if (!categoryId) return null;
-    const directMatch = selectedMonthCategories.find(c => String(c._id) === String(categoryId));
-    if (directMatch) return directMatch;
-    const anyCat = categories.find(c => String(c._id) === String(categoryId));
-    if (anyCat) {
-      const nameMatch = selectedMonthCategories.find(c => c.name === anyCat.name);
-      if (nameMatch) return nameMatch;
-      return anyCat;
-    }
-    return null;
-  }, [categoryId, selectedMonthCategories, categories]);
+    return selectedMonthCategories.find(c => String(c._id) === String(categoryId)) || null;
+  }, [categoryId, selectedMonthCategories]);
 
   // Get Category Tag Style for subcategories
   const selectedCategoryStyle = selectedCategoryObj ? getCategoryTagStyle(selectedCategoryObj, selectedMonthCategories) : null;
@@ -356,39 +385,69 @@ const AddTransactionModal = ({ isOpen, onClose }) => {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!description.trim()) {
-      message.error("Please enter a transaction description");
-      return;
-    }
-    if (!sourceId) {
-      message.error("Please select a From Payment Source / Bank");
-      return;
-    }
-    const finalAmount = evaluateMathExpression(amount) ?? (Number(amount) || 0);
-    if (!amount || finalAmount <= 0) {
-      message.error("Please enter a valid positive amount");
+    if (e && e.preventDefault) e.preventDefault();
+
+    // 1. Description validation
+    if (!description || !description.trim()) {
+      messageApi.error("Please enter a transaction description");
+      setActiveMobileTab("details");
       return;
     }
 
+    // 2. Amount validation
+    const finalAmount = evaluateMathExpression(amount) ?? (Number(amount) || 0);
+    if (!amount || isNaN(finalAmount) || finalAmount <= 0) {
+      messageApi.error("Please enter a valid positive amount");
+      setActiveMobileTab("details");
+      return;
+    }
+
+    // 3. From Payment Source validation
+    if (!sourceId) {
+      messageApi.error("Please select a From Payment Source / Bank");
+      setActiveMobileTab("source");
+      return;
+    }
+
+    // 4. Transfer validation
     if (transactionType === "Transfer") {
       if (!targetSourceId) {
-        message.error("Please select a Target Account (Bank or Card) to transfer money to");
+        messageApi.error("Please select a Target Account (Bank or Card) to transfer money to");
+        setActiveMobileTab("target");
         return;
       }
       if (sourceId === targetSourceId) {
-        message.error("Source account and Target account cannot be the same account");
+        messageApi.error("Source account and Target account cannot be the same account");
+        setActiveMobileTab("target");
         return;
       }
     }
 
+    // 5. Expense (Debit) validation - Mandatory Category and Sub Category
     if (transactionType === "Debit") {
       if (!categoryId) {
-        message.error("Please select a Category for this expense");
+        messageApi.error("Please select a Category for this expense");
+        setActiveMobileTab("category");
+        return;
+      }
+      const matchedCat = selectedMonthCategories.find(c => String(c._id) === String(categoryId));
+      if (!matchedCat) {
+        messageApi.error(`Please select a Category for ${dayjs(date).format("MMMM YYYY")}`);
+        setCategoryId("");
+        setSubCategoryId("");
+        setActiveMobileTab("category");
         return;
       }
       if (!subCategoryId) {
-        message.error("Please select a Sub Category for the selected category");
+        messageApi.error("Please select a Sub Category for the selected category");
+        setActiveMobileTab("subcategory");
+        return;
+      }
+      const matchedSub = (matchedCat.subCategories || []).find(s => String(s._id) === String(subCategoryId));
+      if (!matchedSub) {
+        messageApi.error(`Please select a valid Sub Category for ${matchedCat.name}`);
+        setSubCategoryId("");
+        setActiveMobileTab("subcategory");
         return;
       }
     }
@@ -407,11 +466,13 @@ const AddTransactionModal = ({ isOpen, onClose }) => {
         isReimbursable
       })).unwrap();
 
-      message.success("Transaction logged successfully!");
-      onClose();
+      messageApi.success("Transaction logged successfully!");
+      setTimeout(() => {
+        onClose();
+      }, 200);
     } catch (err) {
       console.error(err);
-      message.error("Failed to add transaction");
+      messageApi.error(typeof err === "string" ? err : (err?.message || "Failed to add transaction"));
     } finally {
       setIsSubmitting(false);
     }
@@ -986,7 +1047,7 @@ const AddTransactionModal = ({ isOpen, onClose }) => {
 
   return (
     <div className="fixed inset-0 z-[99999] bg-black/70 backdrop-blur-md overflow-y-auto overflow-x-hidden flex items-center justify-center p-3 sm:p-5 animate-in fade-in duration-200">
-      
+      {contextHolder}
       <div className="w-full max-w-[1540px] my-auto flex flex-col items-center justify-center">
         
         {/* Top Floating Control Bar (Desktop Only) */}

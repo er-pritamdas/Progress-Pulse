@@ -1048,115 +1048,260 @@ function UserSettings() {
       {/* Portal buttons to extreme right of Breadcrumbs Navigation Bar */}
       {renderBreadcrumbActions()}
 
-      {/* Toast Alerts */}
-      <div className="max-w-6xl mx-auto mb-3">
+      {/* Top Tabs & Actions Fixed Header - Pinned firmly at top-0 with zero negative offset */}
+      <div className="sticky top-0 z-40 bg-base-100/98 dark:bg-base-900/98 border-b border-base-300 shadow-sm backdrop-blur-xl w-full px-3 sm:px-4 py-2 sm:py-2.5 transition-colors">
+        <div className="max-w-6xl mx-auto space-y-2 sm:space-y-0">
+          
+          {/* Row 1: Mobile Header Title + Prominent Save & Reset Buttons (md:hidden) */}
+          <div className="flex md:hidden items-center justify-between gap-2 pb-1 border-b border-base-content/8">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className="text-xs font-black text-base-content uppercase tracking-wider truncate">
+                {activeTab === "profile" && "Profile Details"}
+                {activeTab === "appearance" && "Preferences"}
+                {activeTab === "security" && "Account Security"}
+                {activeTab === "reminders" && "Reminders"}
+                {activeTab === "exports" && "Data Exports"}
+                {activeTab === "danger" && "Danger Zone"}
+              </span>
+              {isDirty && (
+                <span className="badge badge-warning badge-xs font-bold gap-1 animate-pulse shrink-0">
+                  <span className="w-1.5 h-1.5 rounded-full bg-warning"></span>
+                  Unsaved
+                </span>
+              )}
+            </div>
+
+            {/* Mobile Prominent Save & Reset Controls */}
+            <div className="flex items-center gap-1.5 shrink-0">
+              {isDirty && (
+                <button
+                  type="button"
+                  onClick={handleReset}
+                  disabled={isSaving}
+                  className="btn btn-ghost btn-xs rounded-xl font-bold text-xs text-base-content/70 hover:text-base-content px-2.5 h-8 min-h-0"
+                  title="Reset unsaved changes"
+                >
+                  <RotateCcw size={12} />
+                  <span>Reset</span>
+                </button>
+              )}
+
+              {activeTab !== "danger" && activeTab !== "reminders" && activeTab !== "exports" && (
+                <button
+                  type="button"
+                  onClick={handleSave}
+                  disabled={isSaving || (activeTab === "security" && !passwords.newPassword)}
+                  className={`btn btn-xs rounded-xl font-bold px-3.5 h-8 min-h-0 gap-1.5 shadow-sm text-xs transition-all ${
+                    isDirty
+                      ? "btn-primary shadow-primary/30 ring-1 ring-primary/40 animate-pulse"
+                      : "btn-primary"
+                  }`}
+                >
+                  {isSaving ? (
+                    <>
+                      <span className="loading loading-spinner loading-xs"></span>
+                      <span>Saving...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Save size={13} />
+                      <span>{activeTab === "security" ? "Update" : "Save Changes"}</span>
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Row 2: Tabs Row (Full width on mobile, inline with actions on desktop) */}
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1 sm:gap-1.5 overflow-x-auto no-scrollbar flex-1 min-w-0">
+              <button
+                type="button"
+                onClick={() => switchTab("profile")}
+                className={`btn btn-xs sm:btn-sm rounded-xl gap-1.5 sm:gap-2 font-bold transition-all shrink-0 ${
+                  activeTab === "profile"
+                    ? "btn-primary shadow-xs"
+                    : "btn-ghost text-base-content/70 hover:text-base-content hover:bg-base-300/60"
+                }`}
+              >
+                <User size={14} className="shrink-0" />
+                <span className="hidden sm:inline">Profile & Picture</span>
+                <span className="inline sm:hidden">Profile</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => switchTab("appearance")}
+                className={`btn btn-xs sm:btn-sm rounded-xl gap-1.5 sm:gap-2 font-bold transition-all shrink-0 ${
+                  activeTab === "appearance"
+                    ? "btn-primary shadow-xs"
+                    : "btn-ghost text-base-content/70 hover:text-base-content hover:bg-base-300/60"
+                }`}
+              >
+                <Palette size={14} className="shrink-0" />
+                <span className="hidden sm:inline">Theme & Preferences</span>
+                <span className="inline sm:hidden">Themes</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => switchTab("security")}
+                className={`btn btn-xs sm:btn-sm rounded-xl gap-1.5 sm:gap-2 font-bold transition-all shrink-0 ${
+                  activeTab === "security"
+                    ? "btn-primary shadow-xs"
+                    : "btn-ghost text-base-content/70 hover:text-base-content hover:bg-base-300/60"
+                }`}
+              >
+                <ShieldCheck size={14} className="shrink-0" />
+                <span className="hidden sm:inline">Security & Password</span>
+                <span className="inline sm:hidden">Security</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => switchTab("reminders")}
+                className={`btn btn-xs sm:btn-sm rounded-xl gap-1.5 sm:gap-2 font-bold transition-all shrink-0 ${
+                  activeTab === "reminders"
+                    ? "btn-primary shadow-xs"
+                    : "btn-ghost text-base-content/70 hover:text-base-content hover:bg-base-300/60"
+                }`}
+              >
+                <Bell size={14} className="shrink-0" />
+                <span>Reminders</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => switchTab("exports")}
+                className={`btn btn-xs sm:btn-sm rounded-xl gap-1.5 sm:gap-2 font-bold transition-all shrink-0 ${
+                  activeTab === "exports"
+                    ? "btn-primary shadow-xs"
+                    : "btn-ghost text-base-content/70 hover:text-base-content hover:bg-base-300/60"
+                }`}
+              >
+                <Download size={14} className="shrink-0" />
+                <span>Exports</span>
+                <span className={`badge badge-xs ${activeTab === "exports" ? "badge-neutral" : "badge-outline"} hidden xs:inline-flex`}>
+                  New
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => switchTab("danger")}
+                className={`btn btn-xs sm:btn-sm rounded-xl gap-1.5 sm:gap-2 font-bold transition-all shrink-0 ${
+                  activeTab === "danger"
+                    ? "btn-error text-error-content shadow-xs"
+                    : "btn-ghost text-error hover:bg-error/15"
+                }`}
+              >
+                <AlertTriangle size={14} className="shrink-0" />
+                <span className="hidden sm:inline">Danger Zone</span>
+                <span className="inline sm:hidden">Danger</span>
+                <span className={`badge badge-xs ${activeTab === "danger" ? "badge-neutral" : "badge-error"} hidden xs:inline-flex`}>
+                  Reset
+                </span>
+              </button>
+            </div>
+
+            {/* Desktop Quick Actions (shown on md+ inside the bar) */}
+            <div className="hidden md:flex items-center gap-2 shrink-0">
+              {isDirty && (
+                <button
+                  type="button"
+                  onClick={handleReset}
+                  disabled={isSaving}
+                  className="btn btn-ghost btn-xs sm:btn-sm rounded-xl gap-1.5 font-semibold text-base-content/70 hover:text-base-content border border-base-content/10"
+                  title="Reset unsaved changes"
+                >
+                  <RotateCcw size={13} />
+                  <span>Reset</span>
+                </button>
+              )}
+              {activeTab !== "danger" && activeTab !== "reminders" && activeTab !== "exports" && (
+                <button
+                  type="button"
+                  onClick={handleSave}
+                  disabled={isSaving || (activeTab === "security" && !passwords.newPassword)}
+                  className={`btn btn-xs sm:btn-sm rounded-xl font-bold px-3 sm:px-4 gap-1.5 sm:gap-2 shadow-xs shrink-0 ${
+                    isDirty ? "btn-primary" : "btn-primary/90"
+                  }`}
+                >
+                  {isSaving ? (
+                    <>
+                      <span className="loading loading-spinner loading-xs"></span>
+                      <span>Saving...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Save size={14} />
+                      <span>{activeTab === "security" ? "Update Password" : "Save Changes"}</span>
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Toast Alerts - Located right below the fixed header */}
+      <div className="max-w-6xl mx-auto px-3 sm:px-4 mt-3 mb-1">
         {alertSuccess && <SuccessAlert message={alertSuccess} onClose={() => setAlertSuccess("")} />}
         {alertError && <ErrorAlert message={alertError} onClose={() => setAlertError("")} />}
       </div>
 
-      {/* Top Tabs Navigation Bar - Sticky with ZERO gap to website nav bar */}
-      <div className="sticky top-[-16px] z-30 bg-base-200/98 border-b border-base-300 shadow-md backdrop-blur-lg mb-6 -mx-4 px-4 py-2 transition-all">
-        <div className="max-w-6xl mx-auto flex items-center gap-1.5 overflow-x-auto no-scrollbar">
-          <button
-            onClick={() => switchTab("profile")}
-            className={`btn btn-sm rounded-xl gap-2 font-bold transition-all shrink-0 ${
-              activeTab === "profile"
-                ? "btn-primary shadow-xs"
-                : "btn-ghost text-base-content/70 hover:text-base-content hover:bg-base-300/60"
-            }`}
-          >
-            <User size={15} />
-            Profile & Picture
-          </button>
-
-          <button
-            onClick={() => switchTab("appearance")}
-            className={`btn btn-sm rounded-xl gap-2 font-bold transition-all shrink-0 ${
-              activeTab === "appearance"
-                ? "btn-primary shadow-xs"
-                : "btn-ghost text-base-content/70 hover:text-base-content hover:bg-base-300/60"
-            }`}
-          >
-            <Palette size={15} />
-            Theme & Preferences
-          </button>
-
-          <button
-            onClick={() => switchTab("security")}
-            className={`btn btn-sm rounded-xl gap-2 font-bold transition-all shrink-0 ${
-              activeTab === "security"
-                ? "btn-primary shadow-xs"
-                : "btn-ghost text-base-content/70 hover:text-base-content hover:bg-base-300/60"
-            }`}
-          >
-            <ShieldCheck size={15} />
-            Security & Password
-          </button>
-
-          <button
-            onClick={() => switchTab("reminders")}
-            className={`btn btn-sm rounded-xl gap-2 font-bold transition-all shrink-0 ${
-              activeTab === "reminders"
-                ? "btn-primary shadow-xs"
-                : "btn-ghost text-base-content/70 hover:text-base-content hover:bg-base-300/60"
-            }`}
-          >
-            <Bell size={15} />
-            Reminders
-          </button>
-
-          <button
-            onClick={() => switchTab("exports")}
-            className={`btn btn-sm rounded-xl gap-2 font-bold transition-all shrink-0 ${
-              activeTab === "exports"
-                ? "btn-primary shadow-xs"
-                : "btn-ghost text-base-content/70 hover:text-base-content hover:bg-base-300/60"
-            }`}
-          >
-            <Download size={15} />
-            Exports
-            <span className={`badge badge-xs ${activeTab === "exports" ? "badge-neutral" : "badge-outline"}`}>
-              New
-            </span>
-          </button>
-
-          <button
-            onClick={() => switchTab("danger")}
-            className={`btn btn-sm rounded-xl gap-2 font-bold transition-all shrink-0 ${
-              activeTab === "danger"
-                ? "btn-error text-error-content shadow-xs"
-                : "btn-ghost text-error hover:bg-error/15"
-            }`}
-          >
-            <AlertTriangle size={15} />
-            Danger Zone
-            <span className={`badge badge-xs ${activeTab === "danger" ? "badge-neutral" : "badge-error"}`}>
+      {/* Mobile Floating Action Bar for Unsaved Changes (Positioned safely above 64px MobileBottomNav) */}
+      {isDirty && activeTab !== "danger" && (
+        <div className="md:hidden fixed bottom-[74px] left-3 right-3 z-50 bg-base-100/95 dark:bg-base-900/95 border border-primary/40 shadow-2xl backdrop-blur-md rounded-2xl p-2.5 flex items-center justify-between gap-2 animate-in slide-in-from-bottom duration-200">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <span className="w-2 h-2 rounded-full bg-warning animate-pulse shrink-0"></span>
+            <span className="text-[11px] font-bold text-base-content truncate">Unsaved Changes</span>
+          </div>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              type="button"
+              onClick={handleReset}
+              disabled={isSaving}
+              className="btn btn-ghost btn-xs rounded-xl font-bold text-xs"
+            >
               Reset
-            </span>
-          </button>
+            </button>
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={isSaving}
+              className="btn btn-primary btn-xs rounded-xl font-bold text-xs px-3.5 shadow-sm gap-1.5"
+            >
+              {isSaving ? <span className="loading loading-spinner loading-xs"></span> : <Save size={12} />}
+              <span>Save Changes</span>
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
-      <div className="max-w-6xl mx-auto space-y-5">
+      <div className="max-w-6xl mx-auto px-3 sm:px-4 pt-2 space-y-4 sm:space-y-5">
       {/* TAB 1: Profile & Avatar Upload */}
       {activeTab === "profile" && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
           {/* Avatar Upload Card (Left Column) */}
-          <div className="card bg-base-200 border border-base-300 shadow-sm rounded-3xl p-5 flex flex-col justify-between">
-            <div className="flex items-center justify-between mb-3">
-                <h3 className="text-lg font-black text-base-content flex items-center gap-2">
+          <div className="card bg-base-200 border border-base-300 shadow-sm rounded-2xl sm:rounded-3xl p-4 sm:p-5 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between mb-2 sm:mb-3">
+                <h3 className="text-base sm:text-lg font-black text-base-content flex items-center gap-2">
                   <Camera size={18} className="text-primary" />
                   Profile Picture
                 </h3>
-                <span className="badge badge-outline text-xs">
+                <span className="badge badge-outline text-[11px] sm:text-xs">
                   {profile.profilePic ? "Custom Photo" : "Initials"}
                 </span>
               </div>
 
               {/* Avatar Preview Display */}
-              <div className="flex flex-col items-center justify-center my-2.5">
+              <div className="flex flex-col items-center justify-center my-2 sm:my-2.5">
                 <div className="relative group">
-                  <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-base-100 shadow-xl ring-4 ring-primary/20 bg-neutral flex items-center justify-center">
+                  <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-full overflow-hidden border-4 border-base-100 shadow-xl ring-4 ring-primary/20 bg-neutral flex items-center justify-center">
                     {profile.profilePic ? (
                       <img
                         src={profile.profilePic}
@@ -1164,7 +1309,7 @@ function UserSettings() {
                         className="w-full h-full object-cover"
                       />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-neutral text-neutral-content text-4xl font-black">
+                      <div className="w-full h-full flex items-center justify-center bg-neutral text-neutral-content text-3xl sm:text-4xl font-black">
                         {getInitials()}
                       </div>
                     )}
@@ -1174,17 +1319,18 @@ function UserSettings() {
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="absolute bottom-1 right-1 p-2.5 rounded-full bg-primary text-primary-content shadow-lg hover:scale-110 active:scale-95 transition-all"
+                    className="absolute bottom-0 right-0 sm:bottom-1 sm:right-1 p-2 sm:p-2.5 rounded-full bg-primary text-primary-content shadow-lg hover:scale-110 active:scale-95 transition-all cursor-pointer"
                     title="Choose photo"
                   >
-                    <Camera size={16} />
+                    <Camera size={14} className="sm:hidden" />
+                    <Camera size={16} className="hidden sm:block" />
                   </button>
                 </div>
 
-                <p className="font-bold text-base mt-3 text-base-content">
+                <p className="font-bold text-sm sm:text-base mt-2.5 sm:mt-3 text-base-content">
                   {profile.fullName || profile.username || "User"}
                 </p>
-                <p className="text-xs text-base-content/60 font-mono">
+                <p className="text-[11px] sm:text-xs text-base-content/60 font-mono">
                   @{profile.username || "user"}
                 </p>
               </div>
@@ -1198,14 +1344,14 @@ function UserSettings() {
                 className="hidden"
               />
 
-              {/* Drag & Drop Upload Zone */}
+              {/* Drag & Drop Upload Zone (Desktop Only - touch devices use the buttons) */}
               <div
                 onDragEnter={handleDrag}
                 onDragLeave={handleDrag}
                 onDragOver={handleDrag}
                 onDrop={handleDrop}
                 onClick={() => fileInputRef.current?.click()}
-                className={`border-2 border-dashed rounded-2xl p-4 text-center cursor-pointer transition-all ${
+                className={`hidden sm:block border-2 border-dashed rounded-2xl p-4 text-center cursor-pointer transition-all ${
                   dragActive
                     ? "border-primary bg-primary/10"
                     : "border-base-300 hover:border-primary/50 bg-base-100/50 hover:bg-base-100"
@@ -1221,20 +1367,20 @@ function UserSettings() {
               </div>
 
               {/* Action Buttons */}
-              <div className="flex gap-2 mt-3">
+              <div className="flex gap-2 mt-2.5 sm:mt-3">
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="btn btn-sm btn-primary flex-1 rounded-xl gap-1.5 font-semibold"
+                  className="btn btn-sm btn-primary flex-1 rounded-xl gap-1.5 font-bold text-xs"
                 >
                   <Upload size={14} />
-                  Upload Photo
+                  Choose Photo
                 </button>
                 {profile.profilePic && (
                   <button
                     type="button"
                     onClick={handleRemovePhoto}
-                    className="btn btn-sm btn-error btn-soft rounded-xl gap-1.5 font-semibold"
+                    className="btn btn-sm btn-error btn-soft rounded-xl gap-1.5 font-bold text-xs"
                     title="Remove custom photo"
                   >
                     <Trash2 size={14} />
@@ -1243,46 +1389,47 @@ function UserSettings() {
                 )}
               </div>
 
-            {/* Avatar Presets Selection */}
-            <div className="mt-3">
-              <p className="text-xs font-bold text-base-content/70 mb-2 flex items-center gap-1.5">
-                <Sparkles size={13} className="text-warning" />
-                Or pick a preset avatar:
-              </p>
-              <div className="grid grid-cols-6 gap-2">
-                {PRESET_AVATARS.map((url, index) => (
-                  <button
-                    key={index}
-                    type="button"
-                    onClick={() => handleSelectPreset(url)}
-                    className={`aspect-square rounded-full overflow-hidden border-2 transition-all hover:scale-110 ${
-                      profile.profilePic === url
-                        ? "border-primary ring-2 ring-primary/40 scale-105"
-                        : "border-base-300 opacity-70 hover:opacity-100"
-                    }`}
-                  >
-                    <img
-                      src={url}
-                      alt={`Preset ${index + 1}`}
-                      className="w-full h-full object-cover"
-                    />
-                  </button>
-                ))}
+              {/* Avatar Presets Selection */}
+              <div className="mt-3 pt-3 border-t border-base-300/60">
+                <p className="text-xs font-bold text-base-content/70 mb-2 flex items-center gap-1.5">
+                  <Sparkles size={13} className="text-warning" />
+                  Or pick a preset avatar:
+                </p>
+                <div className="grid grid-cols-6 gap-1.5 sm:gap-2">
+                  {PRESET_AVATARS.map((url, index) => (
+                    <button
+                      key={index}
+                      type="button"
+                      onClick={() => handleSelectPreset(url)}
+                      className={`aspect-square rounded-full overflow-hidden border-2 transition-all hover:scale-110 cursor-pointer ${
+                        profile.profilePic === url
+                          ? "border-primary ring-2 ring-primary/40 scale-105"
+                          : "border-base-300 opacity-70 hover:opacity-100"
+                      }`}
+                    >
+                      <img
+                        src={url}
+                        alt={`Preset ${index + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
 
           {/* Personal Details Form (Right 2 Columns) */}
-          <div className="lg:col-span-2 card bg-base-200 border border-base-300 shadow-sm rounded-3xl p-5 sm:p-6">
-            <h3 className="text-lg font-black text-base-content flex items-center gap-2 mb-4">
+          <div className="lg:col-span-2 card bg-base-200 border border-base-300 shadow-sm rounded-2xl sm:rounded-3xl p-4 sm:p-6">
+            <h3 className="text-base sm:text-lg font-black text-base-content flex items-center gap-2 mb-3 sm:mb-4">
               <User size={18} className="text-primary" />
               Personal Information
             </h3>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               {/* Full Name */}
               <div className="form-control">
-                <label className="label text-xs font-bold uppercase tracking-wider text-base-content/70">
+                <label className="label text-xs font-bold uppercase tracking-wider text-base-content/70 py-1">
                   Full Name / Display Name
                 </label>
                 <div className="relative">
@@ -1291,9 +1438,9 @@ function UserSettings() {
                     value={profile.fullName}
                     onChange={(e) => setProfile({ ...profile, fullName: e.target.value })}
                     placeholder="Enter your full name"
-                    className="input input-bordered w-full rounded-xl pl-10 text-sm font-medium"
+                    className="input input-bordered input-sm sm:input-md w-full rounded-xl pl-9 sm:pl-10 text-xs sm:text-sm font-medium"
                   />
-                  <User size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-base-content/40" />
+                  <User size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-base-content/40" />
                 </div>
               </div>
 
@@ -1331,7 +1478,7 @@ function UserSettings() {
                     onChange={handleUsernameChange}
                     placeholder="Enter unique username"
                     maxLength={30}
-                    className={`input input-bordered w-full rounded-xl pl-10 pr-10 text-sm font-medium transition-all ${
+                    className={`input input-bordered input-sm sm:input-md w-full rounded-xl pl-8 sm:pl-10 pr-9 sm:pr-10 text-xs sm:text-sm font-medium transition-all ${
                       !usernameCheck.isCurrent && usernameCheck.available === true
                         ? "border-success focus:border-success ring-1 ring-success/30"
                         : !usernameCheck.isCurrent && usernameCheck.available === false
@@ -1339,21 +1486,21 @@ function UserSettings() {
                         : ""
                     }`}
                   />
-                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-bold text-base-content/40">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs sm:text-sm font-bold text-base-content/40">
                     @
                   </span>
                   {!usernameCheck.isCurrent && usernameCheck.available === true && (
-                    <CheckCircle2 size={16} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-success" />
+                    <CheckCircle2 size={15} className="absolute right-3 top-1/2 -translate-y-1/2 text-success" />
                   )}
                   {!usernameCheck.isCurrent && usernameCheck.available === false && (
-                    <AlertTriangle size={16} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-error" />
+                    <AlertTriangle size={15} className="absolute right-3 top-1/2 -translate-y-1/2 text-error" />
                   )}
                 </div>
               </div>
 
               {/* Email Address */}
               <div className="form-control">
-                <label className="label text-xs font-bold uppercase tracking-wider text-base-content/70">
+                <label className="label text-xs font-bold uppercase tracking-wider text-base-content/70 py-1">
                   Email Address
                 </label>
                 <div className="relative">
@@ -1362,11 +1509,11 @@ function UserSettings() {
                     value={profile.email || ""}
                     readOnly
                     placeholder="Loading registered email..."
-                    className="input input-bordered w-full rounded-xl pl-10 pr-24 text-sm font-medium bg-base-300/50 cursor-not-allowed opacity-90 text-base-content"
+                    className="input input-bordered input-sm sm:input-md w-full rounded-xl pl-9 sm:pl-10 pr-20 sm:pr-24 text-xs sm:text-sm font-medium bg-base-300/50 cursor-not-allowed opacity-90 text-base-content"
                   />
-                  <Mail size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-base-content/40" />
-                  <span className="badge badge-success badge-soft badge-xs font-bold absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
-                    <CheckCircle2 size={11} />
+                  <Mail size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-base-content/40" />
+                  <span className="badge badge-success badge-soft badge-xs font-bold absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1 text-[9.5px]">
+                    <CheckCircle2 size={10} />
                     Verified
                   </span>
                 </div>
@@ -1374,7 +1521,7 @@ function UserSettings() {
 
               {/* Phone */}
               <div className="form-control">
-                <label className="label text-xs font-bold uppercase tracking-wider text-base-content/70">
+                <label className="label text-xs font-bold uppercase tracking-wider text-base-content/70 py-1">
                   Phone Number
                 </label>
                 <div className="relative">
@@ -1383,9 +1530,9 @@ function UserSettings() {
                     value={profile.phone}
                     onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
                     placeholder="+91 98765 43210"
-                    className="input input-bordered w-full rounded-xl pl-10 text-sm font-medium"
+                    className="input input-bordered input-sm sm:input-md w-full rounded-xl pl-9 sm:pl-10 text-xs sm:text-sm font-medium"
                   />
-                  <Phone size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-base-content/40" />
+                  <Phone size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-base-content/40" />
                 </div>
               </div>
 
@@ -1397,13 +1544,13 @@ function UserSettings() {
                   </label>
                   {dobParts.day && dobParts.month && dobParts.year ? (
                     <div className="flex items-center gap-1.5">
-                      <span className="badge badge-primary badge-soft text-[11px] font-mono font-bold">
+                      <span className="badge badge-primary badge-soft text-[10px] sm:text-[11px] font-mono font-bold">
                         {dobParts.day}-{DOB_MONTHS.find((m) => m.value === dobParts.month)?.label}-{dobParts.year}
                       </span>
                       <button
                         type="button"
                         onClick={() => setProfile((prev) => ({ ...prev, dateOfBirth: "" }))}
-                        className="text-[10px] text-error hover:underline cursor-pointer font-semibold ml-1"
+                        className="text-[10px] text-error hover:underline cursor-pointer font-semibold ml-0.5"
                       >
                         Clear
                       </button>
@@ -1419,13 +1566,13 @@ function UserSettings() {
                   ) : null}
                 </div>
 
-                <div className="grid grid-cols-3 gap-2 sm:gap-2.5">
+                <div className="grid grid-cols-3 gap-1.5 sm:gap-2.5">
                   {/* Date (Day) Dropdown */}
                   <div className="relative">
                     <select
                       value={dobParts.day}
                       onChange={(e) => handleDobPartChange("day", e.target.value)}
-                      className="select select-bordered w-full rounded-xl text-sm font-medium focus:border-primary/50"
+                      className="select select-bordered select-sm sm:select-md w-full rounded-xl text-xs sm:text-sm font-medium focus:border-primary/50"
                     >
                       <option value="">Date</option>
                       {Array.from({ length: maxDays }, (_, i) => {
@@ -1444,7 +1591,7 @@ function UserSettings() {
                     <select
                       value={dobParts.month}
                       onChange={(e) => handleDobPartChange("month", e.target.value)}
-                      className="select select-bordered w-full rounded-xl text-sm font-medium focus:border-primary/50"
+                      className="select select-bordered select-sm sm:select-md w-full rounded-xl text-xs sm:text-sm font-medium focus:border-primary/50"
                     >
                       <option value="">MMM</option>
                       {DOB_MONTHS.map((m) => (
@@ -1460,7 +1607,7 @@ function UserSettings() {
                     <select
                       value={dobParts.year}
                       onChange={(e) => handleDobPartChange("year", e.target.value)}
-                      className="select select-bordered w-full rounded-xl text-sm font-medium focus:border-primary/50"
+                      className="select select-bordered select-sm sm:select-md w-full rounded-xl text-xs sm:text-sm font-medium focus:border-primary/50"
                     >
                       <option value="">Year</option>
                       {DOB_YEARS.map((yr) => (
@@ -1475,7 +1622,7 @@ function UserSettings() {
 
               {/* Occupation / Role (Right of Date of Birth) */}
               <div className="form-control">
-                <label className="label text-xs font-bold uppercase tracking-wider text-base-content/70">
+                <label className="label text-xs font-bold uppercase tracking-wider text-base-content/70 py-1">
                   Occupation / Professional Title
                 </label>
                 <div className="relative">
@@ -1483,16 +1630,16 @@ function UserSettings() {
                     type="text"
                     value={profile.occupation}
                     onChange={(e) => setProfile({ ...profile, occupation: e.target.value })}
-                    placeholder="Software Engineer / Analyst / Entrepreneur"
-                    className="input input-bordered w-full rounded-xl pl-10 text-sm font-medium"
+                    placeholder="Software Engineer / Analyst"
+                    className="input input-bordered input-sm sm:input-md w-full rounded-xl pl-9 sm:pl-10 text-xs sm:text-sm font-medium"
                   />
-                  <Briefcase size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-base-content/40" />
+                  <Briefcase size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-base-content/40" />
                 </div>
               </div>
 
               {/* Bio */}
               <div className="form-control sm:col-span-2">
-                <label className="label text-xs font-bold uppercase tracking-wider text-base-content/70">
+                <label className="label text-xs font-bold uppercase tracking-wider text-base-content/70 py-1">
                   Bio / Personal Motto
                 </label>
                 <div className="relative">
@@ -1501,10 +1648,27 @@ function UserSettings() {
                     value={profile.bio}
                     onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
                     placeholder="Tell us a little bit about yourself or your productivity & financial goals..."
-                    className="textarea textarea-bordered w-full rounded-xl p-3 text-sm font-medium resize-none"
+                    className="textarea textarea-bordered w-full rounded-xl p-2.5 sm:p-3 text-xs sm:text-sm font-medium resize-none"
                   />
                 </div>
               </div>
+            </div>
+
+            {/* Mobile explicit Save Button */}
+            <div className="mt-4 pt-3 border-t border-base-300 md:hidden flex justify-end">
+              <button
+                type="button"
+                onClick={handleSave}
+                disabled={isSaving}
+                className="btn btn-primary btn-sm rounded-xl font-bold w-full gap-1.5 shadow-xs"
+              >
+                {isSaving ? (
+                  <span className="loading loading-spinner loading-xs"></span>
+                ) : (
+                  <Save size={14} />
+                )}
+                <span>Save Profile Changes</span>
+              </button>
             </div>
           </div>
         </div>
@@ -1512,26 +1676,26 @@ function UserSettings() {
 
       {/* TAB 2: Appearance & Preferences */}
       {activeTab === "appearance" && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
           {/* Theme & Geographic Location Card */}
-          <div className="card bg-base-200 border border-base-300 shadow-sm rounded-3xl p-6 sm:p-8 flex flex-col justify-between">
+          <div className="card bg-base-200 border border-base-300 shadow-sm rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8 flex flex-col justify-between">
             <div>
               {/* Application Theme Section */}
-              <h3 className="text-lg font-black text-base-content flex items-center gap-2 mb-2">
+              <h3 className="text-base sm:text-lg font-black text-base-content flex items-center gap-2 mb-1.5 sm:mb-2">
                 <Palette size={18} className="text-primary" />
                 Application Theme
               </h3>
-              <p className="text-xs text-base-content/70 mb-4">
+              <p className="text-xs text-base-content/70 mb-3.5 sm:mb-4">
                 Choose your favorite theme colors for Progress Pulse. Changes take effect instantly.
               </p>
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 mb-6">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-2.5 mb-5 sm:mb-6">
                 {AVAILABLE_THEMES.map(({ name, label, emoji }) => (
                   <button
                     key={name}
                     type="button"
                     onClick={() => handleThemeChange(name)}
-                    className={`p-3 rounded-2xl border text-left transition-all flex items-center justify-between ${
+                    className={`p-2.5 sm:p-3 rounded-xl sm:rounded-2xl border text-left transition-all flex items-center justify-between cursor-pointer ${
                       profile.theme === name
                         ? "border-primary bg-primary/10 shadow-sm font-bold ring-2 ring-primary/30"
                         : "border-base-300 bg-base-100/60 hover:bg-base-100 hover:border-base-content/20"
@@ -1548,15 +1712,15 @@ function UserSettings() {
                 ))}
               </div>
 
-              {/* Geographic Location & Live Clock (Utilizing Space in Application Theme Card) */}
-              <div className="pt-5 border-t border-base-300">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
+              {/* Geographic Location & Live Clock */}
+              <div className="pt-4 sm:pt-5 border-t border-base-300">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-3 mb-3">
                   <div>
-                    <h3 className="text-base font-black text-base-content flex items-center gap-2">
-                      <Globe size={17} className="text-primary" />
+                    <h3 className="text-sm sm:text-base font-black text-base-content flex items-center gap-2">
+                      <Globe size={16} className="text-primary" />
                       Geographic Location & Live Clock
                     </h3>
-                    <p className="text-xs text-base-content/70 mt-0.5">
+                    <p className="text-[11px] sm:text-xs text-base-content/70 mt-0.5">
                       Display date and time dynamically based on your physical location.
                     </p>
                   </div>
@@ -1570,7 +1734,7 @@ function UserSettings() {
                   </div>
                 </div>
 
-                <div className="space-y-3">
+                <div className="space-y-2.5 sm:space-y-3">
                   {/* Select Timezone */}
                   <div className="form-control">
                     <label className="label text-xs font-bold uppercase tracking-wider text-base-content/70 py-1">
@@ -1579,10 +1743,10 @@ function UserSettings() {
                     <select
                       value={profile.timezone || "auto"}
                       onChange={(e) => handleTimezoneChange(e.target.value)}
-                      className="select select-bordered w-full rounded-xl text-sm font-medium"
+                      className="select select-bordered select-sm sm:select-md w-full rounded-xl text-xs sm:text-sm font-medium"
                     >
                       <option value="auto">
-                        🌐 Auto-Detect via Geographic Location (Currently {getSystemGeoTimeZone()})
+                        🌐 Auto-Detect via Location ({getSystemGeoTimeZone()})
                       </option>
                       {COMMON_TIMEZONES.filter((tz) => tz.value !== "auto").map((tz) => (
                         <option key={tz.value} value={tz.value}>
@@ -1593,9 +1757,9 @@ function UserSettings() {
                   </div>
 
                   {/* Live Clock Preview Box */}
-                  <div className="p-3.5 rounded-2xl bg-base-100 border border-base-300 flex flex-col justify-center gap-1.5">
+                  <div className="p-3 sm:p-3.5 rounded-xl sm:rounded-2xl bg-base-100 border border-base-300 flex flex-col justify-center gap-1.5">
                     <div className="flex items-center justify-between text-xs font-bold text-base-content/70">
-                      <span className="flex items-center gap-1.5">
+                      <span className="flex items-center gap-1.5 text-[11px] sm:text-xs">
                         <Clock size={13} className="text-primary" />
                         Live Geographic Preview
                       </span>
@@ -1604,7 +1768,7 @@ function UserSettings() {
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-2 text-base sm:text-lg font-black font-mono text-base-content">
+                    <div className="flex items-center gap-2 text-sm sm:text-lg font-black font-mono text-base-content flex-wrap">
                       <span className="text-primary">{previewDateTime.formattedTime}</span>
                       <span className="text-base-content/30">•</span>
                       <span>{previewDateTime.formattedDate}</span>
@@ -1620,34 +1784,34 @@ function UserSettings() {
           </div>
 
           {/* Regional & Financial Preferences Card */}
-          <div className="card bg-base-200 border border-base-300 shadow-sm rounded-3xl p-6 sm:p-8 flex flex-col justify-between">
+          <div className="card bg-base-200 border border-base-300 shadow-sm rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8 flex flex-col justify-between">
             <div>
-              <h3 className="text-lg font-black text-base-content flex items-center gap-2 mb-2">
+              <h3 className="text-base sm:text-lg font-black text-base-content flex items-center gap-2 mb-1.5 sm:mb-2">
                 <Coins size={18} className="text-primary" />
                 Regional & Financial Currency
               </h3>
-              <p className="text-xs text-base-content/70 mb-5">
+              <p className="text-xs text-base-content/70 mb-4 sm:mb-5">
                 Set your primary currency unit across your Investment and Expense tracking modules.
               </p>
 
               {/* Currency Radio Options */}
-              <div className="space-y-3">
+              <div className="space-y-2.5 sm:space-y-3">
                 {CURRENCIES.map((curr) => (
                   <label
                     key={curr.code}
-                    className={`flex items-center justify-between p-3.5 rounded-2xl border cursor-pointer transition-all ${
+                    className={`flex items-center justify-between p-2.5 sm:p-3.5 rounded-xl sm:rounded-2xl border cursor-pointer transition-all ${
                       profile.currency === curr.code
                         ? "border-primary bg-primary/10 ring-2 ring-primary/30 font-bold"
                         : "border-base-300 bg-base-100/60 hover:bg-base-100"
                     }`}
                   >
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-xl bg-base-300 flex items-center justify-center font-mono font-black text-primary">
+                    <div className="flex items-center gap-2.5 sm:gap-3">
+                      <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-base-300 flex items-center justify-center font-mono font-black text-primary text-sm sm:text-base">
                         {curr.symbol}
                       </div>
                       <div>
-                        <p className="text-sm font-bold text-base-content">{curr.name}</p>
-                        <p className="text-xs text-base-content/60 font-mono">{curr.code}</p>
+                        <p className="text-xs sm:text-sm font-bold text-base-content">{curr.name}</p>
+                        <p className="text-[10px] sm:text-xs text-base-content/60 font-mono">{curr.code}</p>
                       </div>
                     </div>
                     <input
@@ -1656,21 +1820,21 @@ function UserSettings() {
                       value={curr.code}
                       checked={profile.currency === curr.code}
                       onChange={(e) => setProfile({ ...profile, currency: e.target.value })}
-                      className="radio radio-primary"
+                      className="radio radio-primary radio-sm sm:radio-md"
                     />
                   </label>
                 ))}
               </div>
 
               {/* Active Preference Summary */}
-              <div className="mt-6 p-4 rounded-2xl bg-base-100 border border-base-300 flex items-center justify-between gap-3">
+              <div className="mt-4 sm:mt-6 p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-base-100 border border-base-300 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2.5 min-w-0">
                   <Coins size={18} className="text-primary shrink-0" />
                   <div className="min-w-0">
                     <p className="text-xs font-bold text-base-content truncate">
                       Active Currency: {CURRENCIES.find((c) => c.code === profile.currency)?.name || profile.currency}
                     </p>
-                    <p className="text-[11px] text-base-content/60 font-mono">
+                    <p className="text-[10.5px] sm:text-[11px] text-base-content/60 font-mono">
                       Applied across Investments, Expenses & Budgets
                     </p>
                   </div>
@@ -1681,12 +1845,12 @@ function UserSettings() {
               </div>
             </div>
 
-            <div className="mt-8 pt-6 border-t border-base-300 flex justify-end">
+            <div className="mt-6 pt-4 border-t border-base-300 flex justify-end">
               <button
                 type="button"
                 onClick={handleSave}
                 disabled={isSaving}
-                className="btn btn-primary rounded-xl px-6 font-bold gap-2 shadow-sm"
+                className="btn btn-primary btn-sm sm:btn-md rounded-xl px-6 font-bold gap-2 shadow-sm w-full sm:w-auto"
               >
                 {isSaving ? (
                   <span className="loading loading-spinner loading-sm"></span>
@@ -1702,27 +1866,27 @@ function UserSettings() {
 
       {/* TAB 3: Security & Password */}
       {activeTab === "security" && (
-        <div className="max-w-2xl mx-auto card bg-base-200 border border-base-300 shadow-sm rounded-3xl p-6 sm:p-8">
-          <div className="flex items-center justify-between mb-6">
+        <div className="max-w-2xl mx-auto card bg-base-200 border border-base-300 shadow-sm rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8">
+          <div className="flex items-center justify-between mb-4 sm:mb-6">
             <div>
-              <h3 className="text-lg font-black text-base-content flex items-center gap-2">
+              <h3 className="text-base sm:text-lg font-black text-base-content flex items-center gap-2">
                 <ShieldCheck size={20} className="text-primary" />
                 Password & Account Security
               </h3>
-              <p className="text-xs text-base-content/70 mt-0.5">
+              <p className="text-[11px] sm:text-xs text-base-content/70 mt-0.5">
                 Ensure your Progress Pulse account is protected with a strong password.
               </p>
             </div>
-            <span className="badge badge-success badge-soft font-bold gap-1 text-xs">
+            <span className="badge badge-success badge-soft font-bold gap-1 text-[11px] sm:text-xs">
               <CheckCircle2 size={12} />
               Protected
             </span>
           </div>
 
-          <form onSubmit={handleSave} className="space-y-4">
+          <form onSubmit={handleSave} className="space-y-3.5 sm:space-y-4">
             {/* Current Password */}
             <div className="form-control">
-              <label className="label text-xs font-bold uppercase tracking-wider text-base-content/70">
+              <label className="label text-xs font-bold uppercase tracking-wider text-base-content/70 py-1">
                 Current Password
               </label>
               <div className="relative">
@@ -1733,22 +1897,22 @@ function UserSettings() {
                     setPasswords({ ...passwords, currentPassword: e.target.value })
                   }
                   placeholder="••••••••••••"
-                  className="input input-bordered w-full rounded-xl pl-10 pr-10 text-sm font-medium"
+                  className="input input-bordered input-sm sm:input-md w-full rounded-xl pl-9 sm:pl-10 pr-9 sm:pr-10 text-xs sm:text-sm font-medium"
                 />
-                <Lock size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-base-content/40" />
+                <Lock size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-base-content/40" />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-base-content/40 hover:text-base-content"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-base-content/40 hover:text-base-content cursor-pointer"
                 >
-                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
                 </button>
               </div>
             </div>
 
             {/* New Password */}
             <div className="form-control">
-              <label className="label text-xs font-bold uppercase tracking-wider text-base-content/70">
+              <label className="label text-xs font-bold uppercase tracking-wider text-base-content/70 py-1">
                 New Password
               </label>
               <div className="relative">
@@ -1759,15 +1923,15 @@ function UserSettings() {
                     setPasswords({ ...passwords, newPassword: e.target.value })
                   }
                   placeholder="Minimum 6 characters"
-                  className="input input-bordered w-full rounded-xl pl-10 pr-10 text-sm font-medium"
+                  className="input input-bordered input-sm sm:input-md w-full rounded-xl pl-9 sm:pl-10 pr-9 sm:pr-10 text-xs sm:text-sm font-medium"
                 />
-                <Lock size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-base-content/40" />
+                <Lock size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-base-content/40" />
               </div>
             </div>
 
             {/* Confirm New Password */}
             <div className="form-control">
-              <label className="label text-xs font-bold uppercase tracking-wider text-base-content/70">
+              <label className="label text-xs font-bold uppercase tracking-wider text-base-content/70 py-1">
                 Confirm New Password
               </label>
               <div className="relative">
@@ -1778,33 +1942,42 @@ function UserSettings() {
                     setPasswords({ ...passwords, confirmPassword: e.target.value })
                   }
                   placeholder="Re-enter new password"
-                  className="input input-bordered w-full rounded-xl pl-10 pr-10 text-sm font-medium"
+                  className="input input-bordered input-sm sm:input-md w-full rounded-xl pl-9 sm:pl-10 pr-9 sm:pr-10 text-xs sm:text-sm font-medium"
                 />
-                <Lock size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-base-content/40" />
+                <Lock size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-base-content/40" />
               </div>
             </div>
 
-            <div className="p-4 rounded-2xl bg-base-100/70 border border-base-300 text-xs space-y-1 text-base-content/70 mt-4">
+            <div className="p-3.5 sm:p-4 rounded-2xl bg-base-100/70 border border-base-300 text-xs space-y-1.5 text-base-content/70 mt-4">
               <p className="font-bold text-base-content">Password Security Requirements:</p>
-              <p>• At least 6 characters in length</p>
-              <p>• Include numbers and symbols for enhanced security</p>
-              <p>• Avoid using easily guessable personal info or names</p>
+              <p className={`flex items-center gap-1.5 ${passwords.newPassword.length >= 6 ? "text-success font-bold" : ""}`}>
+                {passwords.newPassword.length >= 6 ? <CheckCircle2 size={13} className="text-success shrink-0" /> : <span className="opacity-40 shrink-0">•</span>}
+                <span>At least 6 characters in length</span>
+              </p>
+              <p className={`flex items-center gap-1.5 ${passwords.confirmPassword && passwords.newPassword === passwords.confirmPassword ? "text-success font-bold" : ""}`}>
+                {passwords.confirmPassword && passwords.newPassword === passwords.confirmPassword ? <CheckCircle2 size={13} className="text-success shrink-0" /> : <span className="opacity-40 shrink-0">•</span>}
+                <span>New password and confirmation must match</span>
+              </p>
+              <p className="flex items-center gap-1.5">
+                <span className="opacity-40 shrink-0">•</span>
+                <span>Include numbers and symbols for enhanced security</span>
+              </p>
             </div>
 
-            <div className="pt-4 flex justify-end gap-3">
+            <div className="pt-4 flex flex-col-reverse sm:flex-row justify-end gap-2.5 sm:gap-3">
               <button
                 type="button"
                 onClick={() =>
                   setPasswords({ currentPassword: "", newPassword: "", confirmPassword: "" })
                 }
-                className="btn btn-ghost rounded-xl font-semibold text-base-content/70"
+                className="btn btn-ghost btn-sm sm:btn-md rounded-xl font-semibold text-base-content/70 w-full sm:w-auto"
               >
                 Clear
               </button>
               <button
                 type="submit"
                 disabled={isSaving || !passwords.newPassword}
-                className="btn btn-primary rounded-xl px-6 font-bold gap-2"
+                className="btn btn-primary btn-sm sm:btn-md rounded-xl px-6 font-bold gap-2 w-full sm:w-auto shadow-sm"
               >
                 {isSaving ? (
                   <span className="loading loading-spinner loading-sm"></span>
@@ -1820,20 +1993,20 @@ function UserSettings() {
 
       {/* TAB 4: Reminders */}
       {activeTab === "reminders" && (
-        <div className="space-y-5">
+        <div className="space-y-4 sm:space-y-5">
           {/* Header Banner */}
-          <div className="card bg-base-200 border border-base-300 shadow-sm rounded-3xl p-5 sm:p-6 relative overflow-hidden">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10">
-              <div className="flex items-start gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-primary/15 border border-primary/30 flex items-center justify-center text-primary shrink-0 mt-0.5">
-                  <Bell size={24} />
+          <div className="card bg-base-200 border border-base-300 shadow-sm rounded-2xl sm:rounded-3xl p-4 sm:p-6 relative overflow-hidden">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4 relative z-10">
+              <div className="flex items-start gap-3 sm:gap-4">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-primary/15 border border-primary/30 flex items-center justify-center text-primary shrink-0 mt-0.5">
+                  <Bell size={20} className="sm:w-6 sm:h-6" />
                 </div>
                 <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-xl font-black text-base-content">
+                  <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                    <h3 className="text-lg sm:text-xl font-black text-base-content">
                       Reminders
                     </h3>
-                    <span className="badge badge-primary badge-soft text-xs font-bold">
+                    <span className="badge badge-primary badge-soft text-[10px] sm:text-xs font-bold">
                       Upcoming Automation
                     </span>
                   </div>
@@ -1846,132 +2019,132 @@ function UserSettings() {
           </div>
 
           {/* 2-Column Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5">
             {/* Left Card: Reminder Alert Channels & Preferences */}
-            <div className="card bg-base-200 border border-base-300 shadow-sm rounded-3xl p-5 sm:p-6 flex flex-col justify-between">
+            <div className="card bg-base-200 border border-base-300 shadow-sm rounded-2xl sm:rounded-3xl p-4 sm:p-6 flex flex-col justify-between">
               <div>
-                <h4 className="text-base font-black text-base-content flex items-center gap-2 mb-1">
-                  <Sparkles size={18} className="text-warning" />
+                <h4 className="text-sm sm:text-base font-black text-base-content flex items-center gap-2 mb-1">
+                  <Sparkles size={16} className="text-warning sm:w-4.5 sm:h-4.5" />
                   Notification Preferences
                 </h4>
-                <p className="text-xs text-base-content/70 mb-4">
+                <p className="text-[11px] sm:text-xs text-base-content/70 mb-3.5 sm:mb-4">
                   Control which pulse categories trigger automated reminders and alerts.
                 </p>
 
-                <div className="space-y-3">
+                <div className="space-y-2.5 sm:space-y-3">
                   {/* Item 1: Habits */}
-                  <div className="flex items-center justify-between p-3.5 rounded-2xl bg-base-100/70 border border-base-300">
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                        <Activity size={18} />
+                  <div className="flex items-center justify-between p-3 sm:p-3.5 rounded-xl sm:rounded-2xl bg-base-100/70 border border-base-300 gap-2">
+                    <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+                      <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                        <Activity size={16} className="sm:w-4.5 sm:h-4.5" />
                       </div>
-                      <div>
-                        <p className="text-xs font-bold text-base-content">Habit Streak Nudges</p>
-                        <p className="text-[11px] text-base-content/60">Daily alerts for scheduled morning and evening habits</p>
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold text-base-content truncate">Habit Streak Nudges</p>
+                        <p className="text-[10px] sm:text-[11px] text-base-content/60 leading-tight">Daily alerts for scheduled morning and evening habits</p>
                       </div>
                     </div>
-                    <input type="checkbox" defaultChecked className="toggle toggle-primary toggle-sm" />
+                    <input type="checkbox" defaultChecked className="toggle toggle-primary toggle-xs sm:toggle-sm shrink-0" />
                   </div>
 
                   {/* Item 2: Budget Thresholds */}
-                  <div className="flex items-center justify-between p-3.5 rounded-2xl bg-base-100/70 border border-base-300">
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-xl bg-error/10 text-error flex items-center justify-center shrink-0">
-                        <Wallet size={18} />
+                  <div className="flex items-center justify-between p-3 sm:p-3.5 rounded-xl sm:rounded-2xl bg-base-100/70 border border-base-300 gap-2">
+                    <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+                      <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-error/10 text-error flex items-center justify-center shrink-0">
+                        <Wallet size={16} className="sm:w-4.5 sm:h-4.5" />
                       </div>
-                      <div>
-                        <p className="text-xs font-bold text-base-content">Budget Threshold Alerts</p>
-                        <p className="text-[11px] text-base-content/60">Notify when spending exceeds 80% and 100% of limits</p>
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold text-base-content truncate">Budget Threshold Alerts</p>
+                        <p className="text-[10px] sm:text-[11px] text-base-content/60 leading-tight">Notify when spending exceeds 80% and 100% of limits</p>
                       </div>
                     </div>
-                    <input type="checkbox" defaultChecked className="toggle toggle-error toggle-sm" />
+                    <input type="checkbox" defaultChecked className="toggle toggle-error toggle-xs sm:toggle-sm shrink-0" />
                   </div>
 
                   {/* Item 3: Bill & Recurring Payments */}
-                  <div className="flex items-center justify-between p-3.5 rounded-2xl bg-base-100/70 border border-base-300">
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-xl bg-warning/10 text-warning flex items-center justify-center shrink-0">
-                        <Calendar size={18} />
+                  <div className="flex items-center justify-between p-3 sm:p-3.5 rounded-xl sm:rounded-2xl bg-base-100/70 border border-base-300 gap-2">
+                    <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+                      <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-warning/10 text-warning flex items-center justify-center shrink-0">
+                        <Calendar size={16} className="sm:w-4.5 sm:h-4.5" />
                       </div>
-                      <div>
-                        <p className="text-xs font-bold text-base-content">Bill Due Dates & Subscriptions</p>
-                        <p className="text-[11px] text-base-content/60">Advance reminders 48 hours before upcoming renewals</p>
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold text-base-content truncate">Bill Due Dates & Subscriptions</p>
+                        <p className="text-[10px] sm:text-[11px] text-base-content/60 leading-tight">Advance reminders 48 hours before upcoming renewals</p>
                       </div>
                     </div>
-                    <input type="checkbox" defaultChecked className="toggle toggle-warning toggle-sm" />
+                    <input type="checkbox" defaultChecked className="toggle toggle-warning toggle-xs sm:toggle-sm shrink-0" />
                   </div>
 
                   {/* Item 4: Investment & Financial Milestones */}
-                  <div className="flex items-center justify-between p-3.5 rounded-2xl bg-base-100/70 border border-base-300">
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-xl bg-success/10 text-success flex items-center justify-center shrink-0">
-                        <TrendingUp size={18} />
+                  <div className="flex items-center justify-between p-3 sm:p-3.5 rounded-xl sm:rounded-2xl bg-base-100/70 border border-base-300 gap-2">
+                    <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+                      <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-success/10 text-success flex items-center justify-center shrink-0">
+                        <TrendingUp size={16} className="sm:w-4.5 sm:h-4.5" />
                       </div>
-                      <div>
-                        <p className="text-xs font-bold text-base-content">Portfolio & Goal Milestones</p>
-                        <p className="text-[11px] text-base-content/60">Celebrate achieved net-worth and saving targets</p>
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold text-base-content truncate">Portfolio & Goal Milestones</p>
+                        <p className="text-[10px] sm:text-[11px] text-base-content/60 leading-tight">Celebrate achieved net-worth and saving targets</p>
                       </div>
                     </div>
-                    <input type="checkbox" defaultChecked className="toggle toggle-success toggle-sm" />
+                    <input type="checkbox" defaultChecked className="toggle toggle-success toggle-xs sm:toggle-sm shrink-0" />
                   </div>
                 </div>
               </div>
 
-              <div className="mt-5 pt-4 border-t border-base-300 flex items-center justify-between">
-                <span className="text-xs text-base-content/60">Automated delivery via In-App Alerts & Navbar</span>
-                <span className="badge badge-sm badge-success badge-soft font-bold">Active Engine</span>
+              <div className="mt-4 sm:mt-5 pt-3.5 sm:pt-4 border-t border-base-300 flex flex-wrap items-center justify-between gap-2">
+                <span className="text-[11px] sm:text-xs text-base-content/60">Automated delivery via In-App Alerts & Navbar</span>
+                <span className="badge badge-xs sm:badge-sm badge-success badge-soft font-bold">Active Engine</span>
               </div>
             </div>
 
             {/* Right Card: Scheduled Reminders Preview & Engine Status */}
-            <div className="card bg-base-200 border border-base-300 shadow-sm rounded-3xl p-5 sm:p-6 flex flex-col justify-between">
+            <div className="card bg-base-200 border border-base-300 shadow-sm rounded-2xl sm:rounded-3xl p-4 sm:p-6 flex flex-col justify-between">
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <h4 className="text-base font-black text-base-content flex items-center gap-2">
-                    <Clock size={18} className="text-primary" />
+                  <h4 className="text-sm sm:text-base font-black text-base-content flex items-center gap-2">
+                    <Clock size={16} className="text-primary sm:w-4.5 sm:h-4.5" />
                     Scheduled Reminders Queue
                   </h4>
                   <span className="badge badge-xs badge-outline font-mono">Live Preview</span>
                 </div>
-                <p className="text-xs text-base-content/70 mb-4">
+                <p className="text-[11px] sm:text-xs text-base-content/70 mb-3.5 sm:mb-4">
                   Upcoming reminders generated from your habits, budgets, and bills.
                 </p>
 
-                <div className="space-y-3">
-                  <div className="p-3.5 rounded-2xl bg-base-100/70 border border-base-300 flex items-start gap-3">
-                    <div className="w-2.5 h-2.5 rounded-full bg-primary mt-1.5 shrink-0 animate-pulse"></div>
+                <div className="space-y-2.5 sm:space-y-3">
+                  <div className="p-3 sm:p-3.5 rounded-xl sm:rounded-2xl bg-base-100/70 border border-base-300 flex items-start gap-2.5 sm:gap-3">
+                    <div className="w-2.5 h-2.5 rounded-full bg-primary mt-1 shrink-0 animate-pulse"></div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-2">
                         <p className="text-xs font-bold text-base-content truncate">Daily Habit Check-in</p>
-                        <span className="text-[10px] font-mono font-bold text-primary shrink-0">08:00 PM Today</span>
+                        <span className="text-[9px] sm:text-[10px] font-mono font-bold text-primary shrink-0">08:00 PM Today</span>
                       </div>
-                      <p className="text-[11px] text-base-content/60 mt-0.5">
+                      <p className="text-[10px] sm:text-[11px] text-base-content/60 mt-0.5 leading-tight">
                         Log your daily progress for Reading and Workout habits.
                       </p>
                     </div>
                   </div>
 
-                  <div className="p-3.5 rounded-2xl bg-base-100/70 border border-base-300 flex items-start gap-3">
-                    <div className="w-2.5 h-2.5 rounded-full bg-warning mt-1.5 shrink-0"></div>
+                  <div className="p-3 sm:p-3.5 rounded-xl sm:rounded-2xl bg-base-100/70 border border-base-300 flex items-start gap-2.5 sm:gap-3">
+                    <div className="w-2.5 h-2.5 rounded-full bg-warning mt-1 shrink-0"></div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-2">
                         <p className="text-xs font-bold text-base-content truncate">Monthly Expense Review</p>
-                        <span className="text-[10px] font-mono font-bold text-warning shrink-0">In 2 Days</span>
+                        <span className="text-[9px] sm:text-[10px] font-mono font-bold text-warning shrink-0">In 2 Days</span>
                       </div>
-                      <p className="text-[11px] text-base-content/60 mt-0.5">
+                      <p className="text-[10px] sm:text-[11px] text-base-content/60 mt-0.5 leading-tight">
                         Compare your monthly spendings with set financial budgets.
                       </p>
                     </div>
                   </div>
 
-                  <div className="p-3.5 rounded-2xl bg-base-100/70 border border-base-300 flex items-start gap-3">
-                    <div className="w-2.5 h-2.5 rounded-full bg-success mt-1.5 shrink-0"></div>
+                  <div className="p-3 sm:p-3.5 rounded-xl sm:rounded-2xl bg-base-100/70 border border-base-300 flex items-start gap-2.5 sm:gap-3">
+                    <div className="w-2.5 h-2.5 rounded-full bg-success mt-1 shrink-0"></div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-2">
                         <p className="text-xs font-bold text-base-content truncate">Emergency Fund Contribution</p>
-                        <span className="text-[10px] font-mono font-bold text-success shrink-0">1st of next month</span>
+                        <span className="text-[9px] sm:text-[10px] font-mono font-bold text-success shrink-0">1st of month</span>
                       </div>
-                      <p className="text-[11px] text-base-content/60 mt-0.5">
+                      <p className="text-[10px] sm:text-[11px] text-base-content/60 mt-0.5 leading-tight">
                         Scheduled monthly transfer for savings target.
                       </p>
                     </div>
@@ -1979,9 +2152,9 @@ function UserSettings() {
                 </div>
               </div>
 
-              <div className="mt-5 p-3.5 rounded-2xl bg-primary/10 border border-primary/20 flex items-center gap-3">
-                <ShieldCheck size={20} className="text-primary shrink-0" />
-                <p className="text-xs text-base-content/80 leading-relaxed">
+              <div className="mt-4 sm:mt-5 p-3 sm:p-3.5 rounded-xl sm:rounded-2xl bg-primary/10 border border-primary/20 flex items-center gap-2.5 sm:gap-3">
+                <ShieldCheck size={18} className="text-primary shrink-0 sm:w-5 sm:h-5" />
+                <p className="text-[11px] sm:text-xs text-base-content/80 leading-relaxed">
                   <strong className="text-base-content">Reminder Engine Ready:</strong> As you configure custom alerts and milestones in each tracker module, live notifications will trigger here automatically.
                 </p>
               </div>
@@ -1992,39 +2165,39 @@ function UserSettings() {
 
       {/* TAB 5: Exports */}
       {activeTab === "exports" && (
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
           {/* Header Banner */}
-          <div className="card bg-base-200 border border-base-300 shadow-sm rounded-3xl p-6 sm:p-7 relative overflow-hidden">
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
-              <div className="flex items-start gap-4">
-                <div className="w-14 h-14 rounded-2xl bg-info/15 border border-info/30 flex items-center justify-center text-info shrink-0 mt-1 shadow-inner">
-                  <Download size={28} />
+          <div className="card bg-base-200 border border-base-300 shadow-sm rounded-2xl sm:rounded-3xl p-4 sm:p-7 relative overflow-hidden">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 sm:gap-6 relative z-10">
+              <div className="flex items-start gap-3 sm:gap-4">
+                <div className="w-11 h-11 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-info/15 border border-info/30 flex items-center justify-center text-info shrink-0 mt-0.5 sm:mt-1 shadow-inner">
+                  <Download size={22} className="sm:w-7 sm:h-7" />
                 </div>
                 <div>
-                  <div className="flex flex-wrap items-center gap-2.5">
-                    <h3 className="text-xl sm:text-2xl font-black text-base-content tracking-tight">
+                  <div className="flex flex-wrap items-center gap-1.5 sm:gap-2.5">
+                    <h3 className="text-lg sm:text-2xl font-black text-base-content tracking-tight">
                       Data & Report Exports
                     </h3>
-                    <span className="badge badge-info badge-soft text-xs font-bold px-2.5 py-1">
+                    <span className="badge badge-info badge-soft text-[10px] sm:text-xs font-bold px-2 sm:px-2.5 py-0.5 sm:py-1">
                       Direct Email Delivery
                     </span>
                   </div>
-                  <p className="text-xs sm:text-sm text-base-content/70 mt-1.5 max-w-2xl leading-relaxed">
+                  <p className="text-xs sm:text-sm text-base-content/70 mt-1 sm:mt-1.5 max-w-2xl leading-relaxed">
                     Generate multi-sheet Microsoft Excel (<span className="font-semibold text-base-content">.xlsx</span>) spreadsheets for your tracker modules and have them delivered directly to your registered inbox.
                   </p>
                 </div>
               </div>
 
               {/* Destination Email Pill */}
-              <div className="bg-base-100/80 border border-base-300/80 rounded-2xl p-3.5 sm:px-4 flex items-center gap-3 shrink-0">
-                <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                  <Mail size={18} />
+              <div className="bg-base-100/80 border border-base-300/80 rounded-xl sm:rounded-2xl p-2.5 sm:p-3.5 sm:px-4 flex items-center gap-2.5 sm:gap-3 shrink-0 w-full sm:w-auto">
+                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                  <Mail size={16} className="sm:w-4.5 sm:h-4.5" />
                 </div>
-                <div>
+                <div className="min-w-0 flex-1">
                   <div className="text-[10px] font-bold uppercase tracking-wider text-base-content/50">
                     Recipient Email
                   </div>
-                  <div className="text-xs sm:text-sm font-semibold text-base-content font-mono truncate max-w-[200px] sm:max-w-[240px]">
+                  <div className="text-xs sm:text-sm font-semibold text-base-content font-mono truncate max-w-full sm:max-w-[240px]">
                     {profile.email || "Your Registered Email"}
                   </div>
                 </div>
@@ -2032,10 +2205,78 @@ function UserSettings() {
             </div>
           </div>
 
+          {/* Mobile Horizontal Tracker Selector (Phone view only) */}
+          <div className="flex lg:hidden items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 w-full -mt-1">
+            <button
+              type="button"
+              onClick={() => setSelectedExportTracker("habit")}
+              className={`btn btn-xs rounded-xl font-bold whitespace-nowrap gap-1.5 shrink-0 ${
+                selectedExportTracker === "habit"
+                  ? "btn-primary text-primary-content shadow-xs"
+                  : "btn-ghost bg-base-200/90 border border-base-300 text-base-content/80"
+              }`}
+            >
+              <Activity size={13} />
+              <span>Habits</span>
+              <span className={`badge badge-xs text-[9px] px-1 py-0 ${selectedExportTracker === "habit" ? "badge-neutral" : "badge-outline"}`}>3</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedExportTracker("food")}
+              className={`btn btn-xs rounded-xl font-bold whitespace-nowrap gap-1.5 shrink-0 ${
+                selectedExportTracker === "food"
+                  ? "btn-warning text-warning-content shadow-xs"
+                  : "btn-ghost bg-base-200/90 border border-base-300 text-base-content/80"
+              }`}
+            >
+              <Utensils size={13} />
+              <span>Food</span>
+              <span className={`badge badge-xs text-[9px] px-1 py-0 ${selectedExportTracker === "food" ? "badge-neutral" : "badge-outline"}`}>4</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedExportTracker("health")}
+              className={`btn btn-xs rounded-xl font-bold whitespace-nowrap gap-1.5 shrink-0 ${
+                selectedExportTracker === "health"
+                  ? "btn-info text-info-content shadow-xs"
+                  : "btn-ghost bg-base-200/90 border border-base-300 text-base-content/80"
+              }`}
+            >
+              <FileSpreadsheet size={13} />
+              <span>Health</span>
+              <span className={`badge badge-xs text-[9px] px-1 py-0 ${selectedExportTracker === "health" ? "badge-neutral" : "badge-outline"}`}>5</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedExportTracker("journal")}
+              className={`btn btn-xs rounded-xl font-bold whitespace-nowrap gap-1.5 shrink-0 ${
+                selectedExportTracker === "journal"
+                  ? "btn-secondary text-secondary-content shadow-xs"
+                  : "btn-ghost bg-base-200/90 border border-base-300 text-base-content/80"
+              }`}
+            >
+              <BookOpen size={13} />
+              <span>Journal</span>
+              <span className={`badge badge-xs text-[9px] px-1 py-0 ${selectedExportTracker === "journal" ? "badge-neutral" : "badge-outline"}`}>3</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedExportTracker("all")}
+              className={`btn btn-xs rounded-xl font-bold whitespace-nowrap gap-1.5 shrink-0 ${
+                selectedExportTracker === "all"
+                  ? "bg-base-content text-base-100 shadow-xs"
+                  : "btn-ghost bg-base-200/90 border border-base-300 text-base-content/80"
+              }`}
+            >
+              <Sparkles size={13} />
+              <span>All Grid</span>
+            </button>
+          </div>
+
           {/* Two-Column Layout: Vertical Stacked Sticky Sidebar + Exports Display */}
-          <div className="flex flex-col lg:flex-row items-start gap-6 relative">
-            {/* SIDEBAR: Vertical Stacked Sticky Section */}
-            <aside className="w-full lg:w-72 xl:w-80 shrink-0 lg:sticky lg:top-14 self-start space-y-3">
+          <div className="flex flex-col lg:flex-row items-start gap-5 sm:gap-6 relative">
+            {/* SIDEBAR: Vertical Stacked Sticky Section (Hidden on phone view, desktop only) */}
+            <aside className="hidden lg:block w-72 xl:w-80 shrink-0 lg:sticky lg:top-14 self-start space-y-3">
               <div className="card bg-base-200 border border-base-300 shadow-sm rounded-3xl p-4 sm:p-5">
                 <div className="flex items-center justify-between mb-3.5 pb-3 border-b border-base-300">
                   <div>
@@ -2191,32 +2432,32 @@ function UserSettings() {
 
             {/* MAIN CONTENT AREA: Selected Tracker Export or All Grid */}
             <div className="flex-1 min-w-0 w-full">
-              <div className={selectedExportTracker === "all" ? "grid grid-cols-1 xl:grid-cols-2 gap-6" : "space-y-6"}>
+              <div className={selectedExportTracker === "all" ? "grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6" : "space-y-4 sm:space-y-6"}>
                 {(selectedExportTracker === "all" || selectedExportTracker === "habit") && (
                   /* CARD 1: Habit Logging Export */
-                  <div className="card bg-base-200 border border-base-300 shadow-sm rounded-3xl p-5 sm:p-6 flex flex-col justify-between hover:border-primary/40 transition-colors">
+                  <div className="card bg-base-200 border border-base-300 shadow-sm rounded-2xl sm:rounded-3xl p-4 sm:p-6 flex flex-col justify-between hover:border-primary/40 transition-colors">
               <div>
                 {/* Header */}
-                <div className="flex items-start justify-between gap-3 mb-4">
-                  <div className="w-12 h-12 rounded-2xl bg-primary/15 border border-primary/30 text-primary flex items-center justify-center shrink-0">
-                    <Activity size={24} />
+                <div className="flex items-start justify-between gap-3 mb-3 sm:mb-4">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-primary/15 border border-primary/30 text-primary flex items-center justify-center shrink-0">
+                    <Activity size={20} className="sm:w-6 sm:h-6" />
                   </div>
-                  <span className="badge badge-primary badge-soft text-[11px] font-bold">
+                  <span className="badge badge-primary badge-soft text-[10px] sm:text-[11px] font-bold">
                     Habit Tracker
                   </span>
                 </div>
 
-                <h4 className="text-lg font-black text-base-content tracking-tight">
+                <h4 className="text-base sm:text-lg font-black text-base-content tracking-tight">
                   Habit Logging Data
                 </h4>
-                <p className="text-xs text-base-content/70 mt-1 mb-5 leading-relaxed min-h-[36px]">
+                <p className="text-xs text-base-content/70 mt-1 mb-4 sm:mb-5 leading-relaxed min-h-0 sm:min-h-[36px]">
                   Daily check-in logs, completion streaks, tracker settings, and logged physical workout sessions.
                 </p>
 
                 {/* Date Range Selector */}
-                <div className="bg-base-100/60 border border-base-300 rounded-2xl p-3.5 mb-5 space-y-3">
+                <div className="bg-base-100/60 border border-base-300 rounded-xl sm:rounded-2xl p-3 sm:p-3.5 mb-4 sm:mb-5 space-y-2.5 sm:space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-base-content/60 flex items-center gap-1.5">
+                    <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-base-content/60 flex items-center gap-1.5">
                       <Calendar size={13} /> Date Range
                     </span>
                     {/* Presets */}
@@ -2224,7 +2465,7 @@ function UserSettings() {
                       <button
                         type="button"
                         onClick={() => handlePresetRange("habit", 7)}
-                        className={`btn btn-xs rounded-lg text-[10px] font-semibold ${
+                        className={`btn btn-xs rounded-lg text-[10px] font-semibold px-2 h-6 min-h-0 ${
                           isPresetActive("habit", 7)
                             ? "btn-primary text-primary-content"
                             : "btn-ghost text-base-content/70 hover:bg-base-300"
@@ -2235,7 +2476,7 @@ function UserSettings() {
                       <button
                         type="button"
                         onClick={() => handlePresetRange("habit", 30)}
-                        className={`btn btn-xs rounded-lg text-[10px] font-semibold ${
+                        className={`btn btn-xs rounded-lg text-[10px] font-semibold px-2 h-6 min-h-0 ${
                           isPresetActive("habit", 30)
                             ? "btn-primary text-primary-content"
                             : "btn-ghost text-base-content/70 hover:bg-base-300"
@@ -2246,7 +2487,7 @@ function UserSettings() {
                       <button
                         type="button"
                         onClick={() => handlePresetRange("habit", 0)}
-                        className={`btn btn-xs rounded-lg text-[10px] font-semibold ${
+                        className={`btn btn-xs rounded-lg text-[10px] font-semibold px-2 h-6 min-h-0 ${
                           isPresetActive("habit", 0)
                             ? "btn-primary text-primary-content"
                             : "btn-ghost text-base-content/70 hover:bg-base-300"
@@ -2259,40 +2500,40 @@ function UserSettings() {
 
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <label className="text-[10px] text-base-content/50 block mb-1">Start Date</label>
+                      <label className="text-[10px] text-base-content/50 block mb-0.5 sm:mb-1">Start Date</label>
                       <input
                         type="date"
                         value={exportRanges.habit.startDate}
                         onChange={(e) => handleExportDateChange("habit", "startDate", e.target.value)}
-                        className="input input-xs input-bordered w-full rounded-lg bg-base-200/80 text-xs font-mono"
+                        className="input input-xs input-bordered w-full rounded-lg bg-base-200/80 text-[11px] sm:text-xs font-mono py-1"
                       />
                     </div>
                     <div>
-                      <label className="text-[10px] text-base-content/50 block mb-1">End Date</label>
+                      <label className="text-[10px] text-base-content/50 block mb-0.5 sm:mb-1">End Date</label>
                       <input
                         type="date"
                         value={exportRanges.habit.endDate}
                         onChange={(e) => handleExportDateChange("habit", "endDate", e.target.value)}
-                        className="input input-xs input-bordered w-full rounded-lg bg-base-200/80 text-xs font-mono"
+                        className="input input-xs input-bordered w-full rounded-lg bg-base-200/80 text-[11px] sm:text-xs font-mono py-1"
                       />
                     </div>
                   </div>
                 </div>
 
                 {/* Included Sheets */}
-                <div className="mb-5 space-y-1.5">
-                  <div className="text-[10px] font-bold uppercase tracking-wider text-base-content/50 mb-1.5">
+                <div className="mb-4 sm:mb-5 space-y-1 sm:space-y-1.5">
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-base-content/50 mb-1">
                     Included Worksheets
                   </div>
-                  <div className="text-xs text-base-content/80 flex items-center gap-2">
+                  <div className="text-[11px] sm:text-xs text-base-content/80 flex items-center gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-primary shrink-0"></span>
                     <span><strong>Table Entries:</strong> Check-ins & daily status</span>
                   </div>
-                  <div className="text-xs text-base-content/80 flex items-center gap-2">
+                  <div className="text-[11px] sm:text-xs text-base-content/80 flex items-center gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-primary shrink-0"></span>
                     <span><strong>Habit Settings:</strong> Targets, rules & frequencies</span>
                   </div>
-                  <div className="text-xs text-base-content/80 flex items-center gap-2">
+                  <div className="text-[11px] sm:text-xs text-base-content/80 flex items-center gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-primary shrink-0"></span>
                     <span><strong>Physical Logs:</strong> Exercises, sets & reps</span>
                   </div>
@@ -2305,7 +2546,7 @@ function UserSettings() {
                   type="button"
                   onClick={() => handleTriggerExport("habit")}
                   disabled={exportLoading.habit}
-                  className="btn btn-primary w-full rounded-2xl gap-2 font-bold shadow-md shadow-primary/20"
+                  className="btn btn-primary btn-sm sm:btn-md w-full rounded-xl sm:rounded-2xl gap-2 font-bold shadow-md shadow-primary/20 text-xs sm:text-sm"
                 >
                   {exportLoading.habit ? (
                     <>
@@ -2319,8 +2560,8 @@ function UserSettings() {
                     </>
                   )}
                 </button>
-                <p className="text-[11px] text-center text-base-content/50 mt-2">
-                  Delivered as formatted <code className="text-xs">.xlsx</code> to your inbox
+                <p className="text-[10px] sm:text-[11px] text-center text-base-content/50 mt-1.5 sm:mt-2">
+                  Delivered as formatted <code className="text-[10px] sm:text-xs font-bold">.xlsx</code> to your inbox
                 </p>
               </div>
             </div>
@@ -2328,29 +2569,29 @@ function UserSettings() {
 
           {(selectedExportTracker === "all" || selectedExportTracker === "food") && (
             /* CARD 2: Food Logged Export */
-            <div className="card bg-base-200 border border-base-300 shadow-sm rounded-3xl p-5 sm:p-6 flex flex-col justify-between hover:border-warning/40 transition-colors">
+            <div className="card bg-base-200 border border-base-300 shadow-sm rounded-2xl sm:rounded-3xl p-4 sm:p-6 flex flex-col justify-between hover:border-warning/40 transition-colors">
               <div>
                 {/* Header */}
-                <div className="flex items-start justify-between gap-3 mb-4">
-                  <div className="w-12 h-12 rounded-2xl bg-warning/15 border border-warning/30 text-warning flex items-center justify-center shrink-0">
-                    <Utensils size={24} />
+                <div className="flex items-start justify-between gap-3 mb-3 sm:mb-4">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-warning/15 border border-warning/30 text-warning flex items-center justify-center shrink-0">
+                    <Utensils size={20} className="sm:w-6 sm:h-6" />
                   </div>
-                  <span className="badge badge-warning badge-soft text-[11px] font-bold">
+                  <span className="badge badge-warning badge-soft text-[10px] sm:text-[11px] font-bold">
                     Food Logging
                   </span>
                 </div>
 
-                <h4 className="text-lg font-black text-base-content tracking-tight">
+                <h4 className="text-base sm:text-lg font-black text-base-content tracking-tight">
                   Food Logged Data
                 </h4>
-                <p className="text-xs text-base-content/70 mt-1 mb-5 leading-relaxed min-h-[36px]">
+                <p className="text-xs text-base-content/70 mt-1 mb-4 sm:mb-5 leading-relaxed min-h-0 sm:min-h-[36px]">
                   All recorded meals, food item quantities, calorie distributions, macro splits, and daily nutrition totals.
                 </p>
 
                 {/* Date Range Selector */}
-                <div className="bg-base-100/60 border border-base-300 rounded-2xl p-3.5 mb-5 space-y-3">
+                <div className="bg-base-100/60 border border-base-300 rounded-xl sm:rounded-2xl p-3 sm:p-3.5 mb-4 sm:mb-5 space-y-2.5 sm:space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-base-content/60 flex items-center gap-1.5">
+                    <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-base-content/60 flex items-center gap-1.5">
                       <Calendar size={13} /> Date Range
                     </span>
                     {/* Presets */}
@@ -2358,7 +2599,7 @@ function UserSettings() {
                       <button
                         type="button"
                         onClick={() => handlePresetRange("food", 7)}
-                        className={`btn btn-xs rounded-lg text-[10px] font-semibold ${
+                        className={`btn btn-xs rounded-lg text-[10px] font-semibold px-2 h-6 min-h-0 ${
                           isPresetActive("food", 7)
                             ? "btn-warning text-warning-content"
                             : "btn-ghost text-base-content/70 hover:bg-base-300"
@@ -2369,7 +2610,7 @@ function UserSettings() {
                       <button
                         type="button"
                         onClick={() => handlePresetRange("food", 30)}
-                        className={`btn btn-xs rounded-lg text-[10px] font-semibold ${
+                        className={`btn btn-xs rounded-lg text-[10px] font-semibold px-2 h-6 min-h-0 ${
                           isPresetActive("food", 30)
                             ? "btn-warning text-warning-content"
                             : "btn-ghost text-base-content/70 hover:bg-base-300"
@@ -2380,7 +2621,7 @@ function UserSettings() {
                       <button
                         type="button"
                         onClick={() => handlePresetRange("food", 0)}
-                        className={`btn btn-xs rounded-lg text-[10px] font-semibold ${
+                        className={`btn btn-xs rounded-lg text-[10px] font-semibold px-2 h-6 min-h-0 ${
                           isPresetActive("food", 0)
                             ? "btn-warning text-warning-content"
                             : "btn-ghost text-base-content/70 hover:bg-base-300"
@@ -2393,40 +2634,40 @@ function UserSettings() {
 
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <label className="text-[10px] text-base-content/50 block mb-1">Start Date</label>
+                      <label className="text-[10px] text-base-content/50 block mb-0.5 sm:mb-1">Start Date</label>
                       <input
                         type="date"
                         value={exportRanges.food.startDate}
                         onChange={(e) => handleExportDateChange("food", "startDate", e.target.value)}
-                        className="input input-xs input-bordered w-full rounded-lg bg-base-200/80 text-xs font-mono"
+                        className="input input-xs input-bordered w-full rounded-lg bg-base-200/80 text-[11px] sm:text-xs font-mono py-1"
                       />
                     </div>
                     <div>
-                      <label className="text-[10px] text-base-content/50 block mb-1">End Date</label>
+                      <label className="text-[10px] text-base-content/50 block mb-0.5 sm:mb-1">End Date</label>
                       <input
                         type="date"
                         value={exportRanges.food.endDate}
                         onChange={(e) => handleExportDateChange("food", "endDate", e.target.value)}
-                        className="input input-xs input-bordered w-full rounded-lg bg-base-200/80 text-xs font-mono"
+                        className="input input-xs input-bordered w-full rounded-lg bg-base-200/80 text-[11px] sm:text-xs font-mono py-1"
                       />
                     </div>
                   </div>
                 </div>
 
                 {/* Included Sheets */}
-                <div className="mb-5 space-y-1.5">
-                  <div className="text-[10px] font-bold uppercase tracking-wider text-base-content/50 mb-1.5">
+                <div className="mb-4 sm:mb-5 space-y-1 sm:space-y-1.5">
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-base-content/50 mb-1">
                     Included Worksheets
                   </div>
-                  <div className="text-xs text-base-content/80 flex items-center gap-2">
+                  <div className="text-[11px] sm:text-xs text-base-content/80 flex items-center gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-warning shrink-0"></span>
                     <span><strong>Meal Entries:</strong> Meals, foods, grams & macros</span>
                   </div>
-                  <div className="text-xs text-base-content/80 flex items-center gap-2">
+                  <div className="text-[11px] sm:text-xs text-base-content/80 flex items-center gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-warning shrink-0"></span>
                     <span><strong>Daily Nutrition:</strong> Daily calories & totals</span>
                   </div>
-                  <div className="text-xs text-base-content/80 flex items-center gap-2">
+                  <div className="text-[11px] sm:text-xs text-base-content/80 flex items-center gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-warning shrink-0"></span>
                     <span><strong>Food Breakdown & Targets:</strong> Goals vs intake</span>
                   </div>
@@ -2439,7 +2680,7 @@ function UserSettings() {
                   type="button"
                   onClick={() => handleTriggerExport("food")}
                   disabled={exportLoading.food}
-                  className="btn btn-warning w-full rounded-2xl gap-2 font-bold shadow-md shadow-warning/20 text-warning-content"
+                  className="btn btn-warning btn-sm sm:btn-md w-full rounded-xl sm:rounded-2xl gap-2 font-bold shadow-md shadow-warning/20 text-warning-content text-xs sm:text-sm"
                 >
                   {exportLoading.food ? (
                     <>
@@ -2453,8 +2694,8 @@ function UserSettings() {
                     </>
                   )}
                 </button>
-                <p className="text-[11px] text-center text-base-content/50 mt-2">
-                  Delivered as formatted <code className="text-xs">.xlsx</code> to your inbox
+                <p className="text-[10px] sm:text-[11px] text-center text-base-content/50 mt-1.5 sm:mt-2">
+                  Delivered as formatted <code className="text-[10px] sm:text-xs font-bold">.xlsx</code> to your inbox
                 </p>
               </div>
             </div>
@@ -2462,29 +2703,29 @@ function UserSettings() {
 
           {(selectedExportTracker === "all" || selectedExportTracker === "health") && (
             /* CARD 3: Health Report (Macros & Micros) */
-            <div className="card bg-base-200 border border-base-300 shadow-sm rounded-3xl p-5 sm:p-6 flex flex-col justify-between hover:border-info/40 transition-colors">
+            <div className="card bg-base-200 border border-base-300 shadow-sm rounded-2xl sm:rounded-3xl p-4 sm:p-6 flex flex-col justify-between hover:border-info/40 transition-colors">
               <div>
                 {/* Header */}
-                <div className="flex items-start justify-between gap-3 mb-4">
-                  <div className="w-12 h-12 rounded-2xl bg-info/15 border border-info/30 text-info flex items-center justify-center shrink-0">
-                    <FileSpreadsheet size={24} />
+                <div className="flex items-start justify-between gap-3 mb-3 sm:mb-4">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-info/15 border border-info/30 text-info flex items-center justify-center shrink-0">
+                    <FileSpreadsheet size={20} className="sm:w-6 sm:h-6" />
                   </div>
-                  <span className="badge badge-info badge-soft text-[11px] font-bold">
+                  <span className="badge badge-info badge-soft text-[10px] sm:text-[11px] font-bold">
                     Health Report
                   </span>
                 </div>
 
-                <h4 className="text-lg font-black text-base-content tracking-tight">
+                <h4 className="text-base sm:text-lg font-black text-base-content tracking-tight">
                   Macros & Micros Report
                 </h4>
-                <p className="text-xs text-base-content/70 mt-1 mb-5 leading-relaxed min-h-[36px]">
+                <p className="text-xs text-base-content/70 mt-1 mb-4 sm:mb-5 leading-relaxed min-h-0 sm:min-h-[36px]">
                   Clinical nutritional audit comparing daily macro averages, 13 vitamins, and 11 minerals against your personal RDA targets.
                 </p>
 
                 {/* Date Range Selector */}
-                <div className="bg-base-100/60 border border-base-300 rounded-2xl p-3.5 mb-5 space-y-3">
+                <div className="bg-base-100/60 border border-base-300 rounded-xl sm:rounded-2xl p-3 sm:p-3.5 mb-4 sm:mb-5 space-y-2.5 sm:space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-base-content/60 flex items-center gap-1.5">
+                    <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-base-content/60 flex items-center gap-1.5">
                       <Calendar size={13} /> Date Range
                     </span>
                     {/* Presets */}
@@ -2492,7 +2733,7 @@ function UserSettings() {
                       <button
                         type="button"
                         onClick={() => handlePresetRange("health", 7)}
-                        className={`btn btn-xs rounded-lg text-[10px] font-semibold ${
+                        className={`btn btn-xs rounded-lg text-[10px] font-semibold px-2 h-6 min-h-0 ${
                           isPresetActive("health", 7)
                             ? "btn-info text-info-content"
                             : "btn-ghost text-base-content/70 hover:bg-base-300"
@@ -2503,7 +2744,7 @@ function UserSettings() {
                       <button
                         type="button"
                         onClick={() => handlePresetRange("health", 30)}
-                        className={`btn btn-xs rounded-lg text-[10px] font-semibold ${
+                        className={`btn btn-xs rounded-lg text-[10px] font-semibold px-2 h-6 min-h-0 ${
                           isPresetActive("health", 30)
                             ? "btn-info text-info-content"
                             : "btn-ghost text-base-content/70 hover:bg-base-300"
@@ -2514,7 +2755,7 @@ function UserSettings() {
                       <button
                         type="button"
                         onClick={() => handlePresetRange("health", 0)}
-                        className={`btn btn-xs rounded-lg text-[10px] font-semibold ${
+                        className={`btn btn-xs rounded-lg text-[10px] font-semibold px-2 h-6 min-h-0 ${
                           isPresetActive("health", 0)
                             ? "btn-info text-info-content"
                             : "btn-ghost text-base-content/70 hover:bg-base-300"
@@ -2527,44 +2768,44 @@ function UserSettings() {
 
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <label className="text-[10px] text-base-content/50 block mb-1">Start Date</label>
+                      <label className="text-[10px] text-base-content/50 block mb-0.5 sm:mb-1">Start Date</label>
                       <input
                         type="date"
                         value={exportRanges.health.startDate}
                         onChange={(e) => handleExportDateChange("health", "startDate", e.target.value)}
-                        className="input input-xs input-bordered w-full rounded-lg bg-base-200/80 text-xs font-mono"
+                        className="input input-xs input-bordered w-full rounded-lg bg-base-200/80 text-[11px] sm:text-xs font-mono py-1"
                       />
                     </div>
                     <div>
-                      <label className="text-[10px] text-base-content/50 block mb-1">End Date</label>
+                      <label className="text-[10px] text-base-content/50 block mb-0.5 sm:mb-1">End Date</label>
                       <input
                         type="date"
                         value={exportRanges.health.endDate}
                         onChange={(e) => handleExportDateChange("health", "endDate", e.target.value)}
-                        className="input input-xs input-bordered w-full rounded-lg bg-base-200/80 text-xs font-mono"
+                        className="input input-xs input-bordered w-full rounded-lg bg-base-200/80 text-[11px] sm:text-xs font-mono py-1"
                       />
                     </div>
                   </div>
                 </div>
 
                 {/* Included Sheets */}
-                <div className="mb-5 space-y-1.5">
-                  <div className="text-[10px] font-bold uppercase tracking-wider text-base-content/50 mb-1.5">
+                <div className="mb-4 sm:mb-5 space-y-1 sm:space-y-1.5">
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-base-content/50 mb-1">
                     Included Worksheets (5 Sheets)
                   </div>
-                  <div className="text-xs text-base-content/80 flex items-center gap-2">
+                  <div className="text-[11px] sm:text-xs text-base-content/80 flex items-center gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-info shrink-0"></span>
                     <span><strong>Macros Overview:</strong> Avg macros vs target status</span>
                   </div>
-                  <div className="text-xs text-base-content/80 flex items-center gap-2">
+                  <div className="text-[11px] sm:text-xs text-base-content/80 flex items-center gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-info shrink-0"></span>
                     <span><strong>Vitamins Analysis:</strong> 13 vitamins vs RDA benchmarks</span>
                   </div>
-                  <div className="text-xs text-base-content/80 flex items-center gap-2">
+                  <div className="text-[11px] sm:text-xs text-base-content/80 flex items-center gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-info shrink-0"></span>
                     <span><strong>Minerals & Lipids:</strong> 11 minerals, fatty acids & fluids</span>
                   </div>
-                  <div className="text-xs text-base-content/80 flex items-center gap-2">
+                  <div className="text-[11px] sm:text-xs text-base-content/80 flex items-center gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-info shrink-0"></span>
                     <span><strong>Daily Log Timeline:</strong> Day-by-day complete metrics</span>
                   </div>
@@ -2577,7 +2818,7 @@ function UserSettings() {
                   type="button"
                   onClick={() => handleTriggerExport("health")}
                   disabled={exportLoading.health}
-                  className="btn btn-info w-full rounded-2xl gap-2 font-bold shadow-md shadow-info/20 text-info-content"
+                  className="btn btn-info btn-sm sm:btn-md w-full rounded-xl sm:rounded-2xl gap-2 font-bold shadow-md shadow-info/20 text-info-content text-xs sm:text-sm"
                 >
                   {exportLoading.health ? (
                     <>
@@ -2591,8 +2832,8 @@ function UserSettings() {
                     </>
                   )}
                 </button>
-                <p className="text-[11px] text-center text-base-content/50 mt-2">
-                  Delivered as formatted <code className="text-xs">.xlsx</code> to your inbox
+                <p className="text-[10px] sm:text-[11px] text-center text-base-content/50 mt-1.5 sm:mt-2">
+                  Delivered as formatted <code className="text-[10px] sm:text-xs font-bold">.xlsx</code> to your inbox
                 </p>
               </div>
             </div>
@@ -2600,29 +2841,29 @@ function UserSettings() {
 
           {(selectedExportTracker === "all" || selectedExportTracker === "journal") && (
             /* CARD 4: Journal & Reflections Export */
-            <div className="card bg-base-200 border border-base-300 shadow-sm rounded-3xl p-5 sm:p-6 flex flex-col justify-between hover:border-secondary/40 transition-colors">
+            <div className="card bg-base-200 border border-base-300 shadow-sm rounded-2xl sm:rounded-3xl p-4 sm:p-6 flex flex-col justify-between hover:border-secondary/40 transition-colors">
               <div>
                 {/* Header */}
-                <div className="flex items-start justify-between gap-3 mb-4">
-                  <div className="w-12 h-12 rounded-2xl bg-secondary/15 border border-secondary/30 text-secondary flex items-center justify-center shrink-0">
-                    <BookOpen size={24} />
+                <div className="flex items-start justify-between gap-3 mb-3 sm:mb-4">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-secondary/15 border border-secondary/30 text-secondary flex items-center justify-center shrink-0">
+                    <BookOpen size={20} className="sm:w-6 sm:h-6" />
                   </div>
-                  <span className="badge badge-secondary badge-soft text-[11px] font-bold">
+                  <span className="badge badge-secondary badge-soft text-[10px] sm:text-[11px] font-bold">
                     Personal Journal
                   </span>
                 </div>
 
-                <h4 className="text-lg font-black text-base-content tracking-tight">
+                <h4 className="text-base sm:text-lg font-black text-base-content tracking-tight">
                   Journal & Reflection Logs
                 </h4>
-                <p className="text-xs text-base-content/70 mt-1 mb-5 leading-relaxed min-h-[36px]">
+                <p className="text-xs text-base-content/70 mt-1 mb-4 sm:mb-5 leading-relaxed min-h-0 sm:min-h-[36px]">
                   Daily reflection notes, thoughts, moods recorded, word counts, and emotional tracking trends.
                 </p>
 
                 {/* Date Range Selector */}
-                <div className="bg-base-100/60 border border-base-300 rounded-2xl p-3.5 mb-5 space-y-3">
+                <div className="bg-base-100/60 border border-base-300 rounded-xl sm:rounded-2xl p-3 sm:p-3.5 mb-4 sm:mb-5 space-y-2.5 sm:space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-base-content/60 flex items-center gap-1.5">
+                    <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-base-content/60 flex items-center gap-1.5">
                       <Calendar size={13} /> Date Range
                     </span>
                     {/* Presets */}
@@ -2630,7 +2871,7 @@ function UserSettings() {
                       <button
                         type="button"
                         onClick={() => handlePresetRange("journal", 7)}
-                        className={`btn btn-xs rounded-lg text-[10px] font-semibold ${
+                        className={`btn btn-xs rounded-lg text-[10px] font-semibold px-2 h-6 min-h-0 ${
                           isPresetActive("journal", 7)
                             ? "btn-secondary text-secondary-content"
                             : "btn-ghost text-base-content/70 hover:bg-base-300"
@@ -2641,7 +2882,7 @@ function UserSettings() {
                       <button
                         type="button"
                         onClick={() => handlePresetRange("journal", 30)}
-                        className={`btn btn-xs rounded-lg text-[10px] font-semibold ${
+                        className={`btn btn-xs rounded-lg text-[10px] font-semibold px-2 h-6 min-h-0 ${
                           isPresetActive("journal", 30)
                             ? "btn-secondary text-secondary-content"
                             : "btn-ghost text-base-content/70 hover:bg-base-300"
@@ -2652,7 +2893,7 @@ function UserSettings() {
                       <button
                         type="button"
                         onClick={() => handlePresetRange("journal", 0)}
-                        className={`btn btn-xs rounded-lg text-[10px] font-semibold ${
+                        className={`btn btn-xs rounded-lg text-[10px] font-semibold px-2 h-6 min-h-0 ${
                           isPresetActive("journal", 0)
                             ? "btn-secondary text-secondary-content"
                             : "btn-ghost text-base-content/70 hover:bg-base-300"
@@ -2665,40 +2906,40 @@ function UserSettings() {
 
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <label className="text-[10px] text-base-content/50 block mb-1">Start Date</label>
+                      <label className="text-[10px] text-base-content/50 block mb-0.5 sm:mb-1">Start Date</label>
                       <input
                         type="date"
                         value={exportRanges.journal.startDate}
                         onChange={(e) => handleExportDateChange("journal", "startDate", e.target.value)}
-                        className="input input-xs input-bordered w-full rounded-lg bg-base-200/80 text-xs font-mono"
+                        className="input input-xs input-bordered w-full rounded-lg bg-base-200/80 text-[11px] sm:text-xs font-mono py-1"
                       />
                     </div>
                     <div>
-                      <label className="text-[10px] text-base-content/50 block mb-1">End Date</label>
+                      <label className="text-[10px] text-base-content/50 block mb-0.5 sm:mb-1">End Date</label>
                       <input
                         type="date"
                         value={exportRanges.journal.endDate}
                         onChange={(e) => handleExportDateChange("journal", "endDate", e.target.value)}
-                        className="input input-xs input-bordered w-full rounded-lg bg-base-200/80 text-xs font-mono"
+                        className="input input-xs input-bordered w-full rounded-lg bg-base-200/80 text-[11px] sm:text-xs font-mono py-1"
                       />
                     </div>
                   </div>
                 </div>
 
                 {/* Included Sheets */}
-                <div className="mb-5 space-y-1.5">
-                  <div className="text-[10px] font-bold uppercase tracking-wider text-base-content/50 mb-1.5">
+                <div className="mb-4 sm:mb-5 space-y-1 sm:space-y-1.5">
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-base-content/50 mb-1">
                     Included Worksheets (3 Sheets)
                   </div>
-                  <div className="text-xs text-base-content/80 flex items-center gap-2">
+                  <div className="text-[11px] sm:text-xs text-base-content/80 flex items-center gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-secondary shrink-0"></span>
                     <span><strong>Journal Entries:</strong> Day-by-day notes, mood & words</span>
                   </div>
-                  <div className="text-xs text-base-content/80 flex items-center gap-2">
+                  <div className="text-[11px] sm:text-xs text-base-content/80 flex items-center gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-secondary shrink-0"></span>
                     <span><strong>Journal Summary:</strong> Writing stats, streaks & averages</span>
                   </div>
-                  <div className="text-xs text-base-content/80 flex items-center gap-2">
+                  <div className="text-[11px] sm:text-xs text-base-content/80 flex items-center gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-secondary shrink-0"></span>
                     <span><strong>Mood Analytics:</strong> Mood distributions & emotional trends</span>
                   </div>
@@ -2711,7 +2952,7 @@ function UserSettings() {
                   type="button"
                   onClick={() => handleTriggerExport("journal")}
                   disabled={exportLoading.journal}
-                  className="btn btn-secondary w-full rounded-2xl gap-2 font-bold shadow-md shadow-secondary/20 text-secondary-content"
+                  className="btn btn-secondary btn-sm sm:btn-md w-full rounded-xl sm:rounded-2xl gap-2 font-bold shadow-md shadow-secondary/20 text-secondary-content text-xs sm:text-sm"
                 >
                   {exportLoading.journal ? (
                     <>
@@ -2725,8 +2966,8 @@ function UserSettings() {
                     </>
                   )}
                 </button>
-                <p className="text-[11px] text-center text-base-content/50 mt-2">
-                  Delivered as formatted <code className="text-xs">.xlsx</code> to your inbox
+                <p className="text-[10px] sm:text-[11px] text-center text-base-content/50 mt-1.5 sm:mt-2">
+                  Delivered as formatted <code className="text-[10px] sm:text-xs font-bold">.xlsx</code> to your inbox
                 </p>
               </div>
             </div>
@@ -2736,12 +2977,12 @@ function UserSettings() {
     </div>
 
           {/* Email Info Notice Footer */}
-          <div className="card bg-base-200/60 border border-base-300/80 rounded-3xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="card bg-base-200/60 border border-base-300/80 rounded-2xl sm:rounded-3xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-base-300 flex items-center justify-center text-base-content/70 shrink-0">
-                <ShieldCheck size={20} />
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-base-300 flex items-center justify-center text-base-content/70 shrink-0">
+                <ShieldCheck size={18} className="sm:w-5 sm:h-5" />
               </div>
-              <p className="text-xs text-base-content/70 leading-relaxed">
+              <p className="text-[11px] sm:text-xs text-base-content/70 leading-relaxed">
                 Export generation takes 1–3 seconds depending on the date range. If you do not see the email in your inbox within a couple minutes, please check your spam or promotions tab.
               </p>
             </div>
@@ -2751,15 +2992,15 @@ function UserSettings() {
 
       {/* TAB 6: Danger Zone */}
       {activeTab === "danger" && (
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
           {/* Warning Banner */}
-          <div className="alert alert-error/15 border border-error/30 rounded-3xl p-5 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="flex items-start gap-3.5">
-              <div className="w-10 h-10 rounded-xl bg-error/20 flex items-center justify-center text-error shrink-0 mt-0.5">
-                <AlertOctagon size={22} />
+          <div className="alert alert-error/15 border border-error/30 rounded-2xl sm:rounded-3xl p-4 sm:p-5 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
+            <div className="flex items-start gap-3 sm:gap-3.5">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-error/20 flex items-center justify-center text-error shrink-0 mt-0.5">
+                <AlertOctagon size={20} className="sm:w-5.5 sm:h-5.5" />
               </div>
               <div>
-                <h4 className="text-sm font-black text-error uppercase tracking-wider">
+                <h4 className="text-xs sm:text-sm font-black text-error uppercase tracking-wider">
                   Caution: Irreversible Actions
                 </h4>
                 <p className="text-xs text-base-content/80 mt-0.5 max-w-2xl leading-relaxed">
@@ -2767,19 +3008,19 @@ function UserSettings() {
                 </p>
               </div>
             </div>
-            <span className="badge badge-error badge-outline font-bold text-xs shrink-0 self-start sm:self-auto">
+            <span className="badge badge-error badge-outline font-bold text-[10px] sm:text-xs shrink-0 self-start sm:self-auto">
               Destructive Operations
             </span>
           </div>
 
           {/* Individual Trackers Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 sm:gap-5">
             {/* Habit Tracker Reset Card */}
-            <div className="card bg-base-200 border border-base-300 shadow-sm rounded-3xl p-6 flex flex-col justify-between hover:border-error/40 transition-colors">
-              <div className="space-y-3">
+            <div className="card bg-base-200 border border-base-300 shadow-sm rounded-2xl sm:rounded-3xl p-4 sm:p-6 flex flex-col justify-between hover:border-error/40 transition-colors">
+              <div className="space-y-2.5 sm:space-y-3">
                 <div className="flex items-center justify-between">
-                  <div className="w-11 h-11 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-500">
-                    <Activity size={22} />
+                  <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-500">
+                    <Activity size={20} className="sm:w-5.5 sm:h-5.5" />
                   </div>
                   <span className="badge badge-xs badge-neutral font-semibold">Module</span>
                 </div>
@@ -2791,27 +3032,27 @@ function UserSettings() {
                 </div>
               </div>
 
-              <div className="pt-6 mt-4 border-t border-base-content/10 flex items-center justify-between">
-                <span className="text-[11px] font-bold text-error/80 uppercase tracking-wide">
+              <div className="pt-4 sm:pt-6 mt-3 sm:mt-4 border-t border-base-content/10 flex items-center justify-between gap-2">
+                <span className="text-[10px] sm:text-[11px] font-bold text-error/80 uppercase tracking-wide">
                   Irreversible
                 </span>
                 <button
                   type="button"
                   onClick={() => openResetModal("habit")}
-                  className="btn btn-outline btn-error btn-sm rounded-xl font-bold gap-1.5 hover:shadow-xs"
+                  className="btn btn-outline btn-error btn-xs sm:btn-sm rounded-xl font-bold gap-1.5 hover:shadow-xs"
                 >
-                  <Trash2 size={14} />
+                  <Trash2 size={13} />
                   Reset Habits
                 </button>
               </div>
             </div>
 
             {/* Expense Tracker Reset Card */}
-            <div className="card bg-base-200 border border-base-300 shadow-sm rounded-3xl p-6 flex flex-col justify-between hover:border-error/40 transition-colors">
-              <div className="space-y-3">
+            <div className="card bg-base-200 border border-base-300 shadow-sm rounded-2xl sm:rounded-3xl p-4 sm:p-6 flex flex-col justify-between hover:border-error/40 transition-colors">
+              <div className="space-y-2.5 sm:space-y-3">
                 <div className="flex items-center justify-between">
-                  <div className="w-11 h-11 rounded-2xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-500">
-                    <Wallet size={22} />
+                  <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-500">
+                    <Wallet size={20} className="sm:w-5.5 sm:h-5.5" />
                   </div>
                   <span className="badge badge-xs badge-neutral font-semibold">Module</span>
                 </div>
@@ -2823,27 +3064,27 @@ function UserSettings() {
                 </div>
               </div>
 
-              <div className="pt-6 mt-4 border-t border-base-content/10 flex items-center justify-between">
-                <span className="text-[11px] font-bold text-error/80 uppercase tracking-wide">
+              <div className="pt-4 sm:pt-6 mt-3 sm:mt-4 border-t border-base-content/10 flex items-center justify-between gap-2">
+                <span className="text-[10px] sm:text-[11px] font-bold text-error/80 uppercase tracking-wide">
                   Irreversible
                 </span>
                 <button
                   type="button"
                   onClick={() => openResetModal("expense")}
-                  className="btn btn-outline btn-error btn-sm rounded-xl font-bold gap-1.5 hover:shadow-xs"
+                  className="btn btn-outline btn-error btn-xs sm:btn-sm rounded-xl font-bold gap-1.5 hover:shadow-xs"
                 >
-                  <Trash2 size={14} />
+                  <Trash2 size={13} />
                   Reset Expenses
                 </button>
               </div>
             </div>
 
             {/* Investment Tracker Reset Card */}
-            <div className="card bg-base-200 border border-base-300 shadow-sm rounded-3xl p-6 flex flex-col justify-between hover:border-error/40 transition-colors">
-              <div className="space-y-3">
+            <div className="card bg-base-200 border border-base-300 shadow-sm rounded-2xl sm:rounded-3xl p-4 sm:p-6 flex flex-col justify-between hover:border-error/40 transition-colors">
+              <div className="space-y-2.5 sm:space-y-3">
                 <div className="flex items-center justify-between">
-                  <div className="w-11 h-11 rounded-2xl bg-primary/15 border border-primary/30 flex items-center justify-center text-primary">
-                    <TrendingUp size={22} />
+                  <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl bg-primary/15 border border-primary/30 flex items-center justify-center text-primary">
+                    <TrendingUp size={20} className="sm:w-5.5 sm:h-5.5" />
                   </div>
                   <span className="badge badge-xs badge-neutral font-semibold">Module</span>
                 </div>
@@ -2855,16 +3096,16 @@ function UserSettings() {
                 </div>
               </div>
 
-              <div className="pt-6 mt-4 border-t border-base-content/10 flex items-center justify-between">
-                <span className="text-[11px] font-bold text-error/80 uppercase tracking-wide">
+              <div className="pt-4 sm:pt-6 mt-3 sm:mt-4 border-t border-base-content/10 flex items-center justify-between gap-2">
+                <span className="text-[10px] sm:text-[11px] font-bold text-error/80 uppercase tracking-wide">
                   Irreversible
                 </span>
                 <button
                   type="button"
                   onClick={() => openResetModal("investment")}
-                  className="btn btn-outline btn-error btn-sm rounded-xl font-bold gap-1.5 hover:shadow-xs"
+                  className="btn btn-outline btn-error btn-xs sm:btn-sm rounded-xl font-bold gap-1.5 hover:shadow-xs"
                 >
-                  <Trash2 size={14} />
+                  <Trash2 size={13} />
                   Reset Investments
                 </button>
               </div>
@@ -2872,22 +3113,22 @@ function UserSettings() {
           </div>
 
           {/* Master Factory Reset Banner Card */}
-          <div className="card bg-linear-to-r from-error/10 via-base-200 to-base-300 border-2 border-error/40 shadow-md rounded-3xl p-6 sm:p-8">
-            <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
+          <div className="card bg-linear-to-r from-error/10 via-base-200 to-base-300 border-2 border-error/40 shadow-md rounded-2xl sm:rounded-3xl p-4 sm:p-8">
+            <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 sm:gap-6">
               <div className="space-y-2 max-w-2xl">
-                <div className="flex items-center gap-2">
-                  <ShieldAlert size={20} className="text-error" />
-                  <h3 className="text-lg sm:text-xl font-black text-error">
+                <div className="flex flex-wrap items-center gap-2">
+                  <ShieldAlert size={18} className="text-error sm:w-5 sm:h-5" />
+                  <h3 className="text-base sm:text-xl font-black text-error">
                     Factory Reset All Trackers
                   </h3>
-                  <span className="badge badge-error font-black text-[10px] tracking-wider uppercase">
+                  <span className="badge badge-error font-black text-[9px] sm:text-[10px] tracking-wider uppercase">
                     All-in-One
                   </span>
                 </div>
                 <p className="text-xs sm:text-sm text-base-content/80 leading-relaxed">
                   Completely wipes all data across <strong>Habit Tracker</strong>, <strong>Expense Tracker</strong>, and <strong>Investment Tracker</strong> at once. Your user account credentials, theme preferences, and profile details will remain preserved.
                 </p>
-                <div className="flex flex-wrap items-center gap-2 pt-1 text-[11px] text-base-content/60 font-mono">
+                <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 pt-1 text-[10px] sm:text-[11px] text-base-content/60 font-mono">
                   <span className="px-2 py-0.5 rounded-md bg-base-100 border border-base-300">✓ Habits & Logs Cleared</span>
                   <span className="px-2 py-0.5 rounded-md bg-base-100 border border-base-300">✓ Expenses & Budgets Cleared</span>
                   <span className="px-2 py-0.5 rounded-md bg-base-100 border border-base-300">✓ Portfolios & Planners Cleared</span>
@@ -2897,9 +3138,9 @@ function UserSettings() {
               <button
                 type="button"
                 onClick={() => openResetModal("all")}
-                className="btn btn-error rounded-2xl px-6 py-3 font-black text-sm shadow-md hover:shadow-xl transition-all gap-2 self-stretch lg:self-auto shrink-0"
+                className="btn btn-error btn-sm sm:btn-md rounded-xl sm:rounded-2xl px-5 sm:px-6 py-2.5 sm:py-3 font-black text-xs sm:text-sm shadow-md hover:shadow-xl transition-all gap-2 w-full lg:w-auto shrink-0"
               >
-                <AlertOctagon size={18} />
+                <AlertOctagon size={16} />
                 Wipe All Tracker Data
               </button>
             </div>
@@ -2910,22 +3151,22 @@ function UserSettings() {
       {/* Danger Zone Type-to-Confirm Modal */}
       {resetModal && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/65 backdrop-blur-xs animate-in fade-in duration-200">
-          <div className="bg-base-100 border border-error/40 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl space-y-5 relative">
+          <div className="bg-base-100 border border-error/40 rounded-2xl sm:rounded-3xl p-5 sm:p-8 max-w-md w-full shadow-2xl space-y-4 sm:space-y-5 relative">
             <button
               type="button"
               onClick={closeResetModal}
               disabled={isResetting}
-              className="btn btn-ghost btn-circle btn-sm absolute right-4 top-4 text-base-content/60 hover:text-base-content"
+              className="btn btn-ghost btn-circle btn-xs sm:btn-sm absolute right-3.5 top-3.5 sm:right-4 sm:top-4 text-base-content/60 hover:text-base-content"
             >
-              <X size={18} />
+              <X size={16} />
             </button>
 
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-error/15 border border-error/30 flex items-center justify-center text-error shrink-0">
-                <AlertOctagon size={24} />
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-error/15 border border-error/30 flex items-center justify-center text-error shrink-0">
+                <AlertOctagon size={20} className="sm:w-6 sm:h-6" />
               </div>
               <div>
-                <h4 className="text-lg font-black text-base-content">
+                <h4 className="text-base sm:text-lg font-black text-base-content">
                   {resetModal === "habit"
                     ? "Reset Habit Tracker"
                     : resetModal === "expense"
@@ -2934,7 +3175,7 @@ function UserSettings() {
                     ? "Reset Investment Tracker"
                     : "Wipe All Tracker Data"}
                 </h4>
-                <p className="text-xs text-error font-semibold flex items-center gap-1">
+                <p className="text-[11px] sm:text-xs text-error font-semibold flex items-center gap-1">
                   <AlertTriangle size={12} />
                   Irreversible Destructive Action
                 </p>
@@ -2949,8 +3190,8 @@ function UserSettings() {
               will be permanently deleted.
             </p>
 
-            <div className="space-y-2">
-              <label className="text-xs font-bold uppercase tracking-wider text-base-content/70 block">
+            <div className="space-y-1.5 sm:space-y-2">
+              <label className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-base-content/70 block">
                 Type{" "}
                 <span className="font-mono text-error font-black px-1.5 py-0.5 rounded bg-error/10 select-all">
                   {resetModal === "habit"
@@ -2977,16 +3218,16 @@ function UserSettings() {
                     ? "RESET INVESTMENTS"
                     : "WIPE EVERYTHING"
                 }
-                className="input input-bordered input-error w-full rounded-xl font-mono text-center font-bold tracking-widest text-sm uppercase"
+                className="input input-sm sm:input-md input-bordered input-error w-full rounded-xl font-mono text-center font-bold tracking-widest text-xs sm:text-sm uppercase"
               />
             </div>
 
-            <div className="pt-2 flex items-center justify-end gap-3">
+            <div className="pt-2 flex items-center justify-end gap-2 sm:gap-3">
               <button
                 type="button"
                 onClick={closeResetModal}
                 disabled={isResetting}
-                className="btn btn-ghost rounded-xl font-semibold"
+                className="btn btn-ghost btn-sm sm:btn-md rounded-xl font-semibold"
               >
                 Cancel
               </button>
@@ -3004,16 +3245,16 @@ function UserSettings() {
                       ? "RESET INVESTMENTS"
                       : "WIPE EVERYTHING")
                 }
-                className="btn btn-error rounded-xl px-5 font-bold shadow-md hover:shadow-lg transition-all gap-2"
+                className="btn btn-error btn-sm sm:btn-md rounded-xl px-4 sm:px-5 font-bold shadow-md hover:shadow-lg transition-all gap-1.5 sm:gap-2"
               >
                 {isResetting ? (
                   <>
-                    <span className="loading loading-spinner loading-sm"></span>
+                    <span className="loading loading-spinner loading-xs"></span>
                     Resetting...
                   </>
                 ) : (
                   <>
-                    <Trash2 size={16} />
+                    <Trash2 size={15} />
                     Confirm Reset
                   </>
                 )}

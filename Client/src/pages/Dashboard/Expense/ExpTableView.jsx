@@ -19,7 +19,6 @@ const ExpTableView = () => {
   const [initialLoading, setInitialLoading] = useState(true);
   const [showAddCategoryModal, setShowAddCategoryModal] = useState(false);
   const [showReorderModal, setShowReorderModal] = useState(false);
-  const [isAllCollapsed, setIsAllCollapsed] = useState(false);
 
   // Privacy State (synced with localStorage & across views)
   const [hideNumbers, setHideNumbers] = useState(() => {
@@ -76,13 +75,12 @@ const ExpTableView = () => {
     };
   }, [isMonthPickerOpen]);
 
-  // Always default to current month on page mount
+  // Default to current month if not yet set
   useEffect(() => {
-    const actualCurrentMonth = dayjs().format("YYYY-MM");
-    if (currentMonth !== actualCurrentMonth) {
-      dispatch(setMonth(actualCurrentMonth));
+    if (!currentMonth) {
+      dispatch(setMonth(dayjs().format("YYYY-MM")));
     }
-  }, [dispatch]);
+  }, [dispatch, currentMonth]);
 
   useEffect(() => {
     let isMounted = true;
@@ -196,16 +194,6 @@ const ExpTableView = () => {
 
             {/* Right Tools & Add Button */}
             <div className="flex items-center gap-1.5">
-              {/* Collapse / Expand All Subcategories Button */}
-              <button
-                type="button"
-                onClick={() => setIsAllCollapsed(prev => !prev)}
-                className="btn btn-xs btn-square h-7.5 w-7.5 rounded-xl bg-base-200/70 hover:bg-base-200 border border-base-300 text-base-content/70 cursor-pointer shrink-0"
-                title={isAllCollapsed ? "Expand All Subcategories" : "Collapse All Subcategories"}
-              >
-                <Layers size={14} className={isAllCollapsed ? "text-base-content/60" : "text-primary"} />
-              </button>
-
               {/* Reorder Categories */}
               {monthCategories.length > 1 && (
                 <button
@@ -353,7 +341,7 @@ const ExpTableView = () => {
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-3.5 md:gap-6 pb-4">
               {monthCategories.map((cat) => (
                 <div key={cat._id} className="min-w-0">
-                  <CategoryCard category={cat} isAllCollapsed={isAllCollapsed} />
+                  <CategoryCard category={cat} />
                 </div>
               ))}
 

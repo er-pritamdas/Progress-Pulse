@@ -475,6 +475,32 @@ export const addTransaction = async (req, res) => {
         const transactionType = type || "Debit";
         const numAmount = Number(amount || 0);
 
+        if (!description || !description.trim()) {
+            return res.status(400).json({ success: false, message: "Transaction description is required" });
+        }
+        if (!cleanSourceId) {
+            return res.status(400).json({ success: false, message: "Payment source is required" });
+        }
+        if (numAmount <= 0) {
+            return res.status(400).json({ success: false, message: "Amount must be greater than 0" });
+        }
+        if (transactionType === "Debit") {
+            if (!cleanCatId) {
+                return res.status(400).json({ success: false, message: "Category is required for Expense" });
+            }
+            if (!cleanSubCatId) {
+                return res.status(400).json({ success: false, message: "Subcategory is required for Expense" });
+            }
+        }
+        if (transactionType === "Transfer") {
+            if (!cleanTargetId) {
+                return res.status(400).json({ success: false, message: "Target account is required for Transfer" });
+            }
+            if (String(cleanSourceId) === String(cleanTargetId)) {
+                return res.status(400).json({ success: false, message: "Source and Target accounts cannot be the same" });
+            }
+        }
+
         const transaction = await ExpenseTransaction.create({
             userId,
             date: date || new Date(),
@@ -531,6 +557,34 @@ export const updateTransaction = async (req, res) => {
         const oldTransaction = await ExpenseTransaction.findById(id);
         if (!oldTransaction) {
             return res.status(404).json({ success: false, message: "Transaction not found" });
+        }
+
+        if (description !== undefined && !description.trim()) {
+            return res.status(400).json({ success: false, message: "Transaction description cannot be empty" });
+        }
+        if (amount !== undefined && Number(amount) <= 0) {
+            return res.status(400).json({ success: false, message: "Amount must be greater than 0" });
+        }
+        const effectiveType = type || oldTransaction.type || "Debit";
+        if (effectiveType === "Debit") {
+            const finalCatId = categoryId !== undefined ? cleanCatId : oldTransaction.categoryId;
+            const finalSubCatId = subCategoryId !== undefined ? cleanSubCatId : oldTransaction.subCategoryId;
+            if (!finalCatId) {
+                return res.status(400).json({ success: false, message: "Category is required for Expense" });
+            }
+            if (!finalSubCatId) {
+                return res.status(400).json({ success: false, message: "Subcategory is required for Expense" });
+            }
+        }
+        if (effectiveType === "Transfer") {
+            const finalSrcId = sourceId !== undefined ? cleanSourceId : oldTransaction.sourceId;
+            const finalTrgId = targetSourceId !== undefined ? cleanTargetId : oldTransaction.targetSourceId;
+            if (!finalTrgId) {
+                return res.status(400).json({ success: false, message: "Target account is required for Transfer" });
+            }
+            if (String(finalSrcId) === String(finalTrgId)) {
+                return res.status(400).json({ success: false, message: "Source and Target accounts cannot be the same" });
+            }
         }
 
         // 1. Revert old transaction balance changes

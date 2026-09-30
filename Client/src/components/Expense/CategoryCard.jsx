@@ -66,7 +66,7 @@ const getUsedPercentageColor = (pct) => {
     };
 };
 
-const CategoryCard = ({ category, isAllCollapsed }) => {
+const CategoryCard = ({ category }) => {
     const dispatch = useDispatch();
     const { transactions, categories, sources, currentMonth } = useSelector((state) => state.expense);
 
@@ -82,13 +82,6 @@ const CategoryCard = ({ category, isAllCollapsed }) => {
     const [isAddingSub, setIsAddingSub] = useState(false);
     const [newSubName, setNewSubName] = useState("");
     const [newSubBudget, setNewSubBudget] = useState("");
-    const [isMobileCollapsed, setIsMobileCollapsed] = useState(false);
-
-    useEffect(() => {
-        if (typeof isAllCollapsed === "boolean") {
-            setIsMobileCollapsed(isAllCollapsed);
-        }
-    }, [isAllCollapsed]);
 
     // History Modal State & Mobile Drawer Animation
     const [historySubId, setHistorySubId] = useState(null);
@@ -448,7 +441,6 @@ const CategoryCard = ({ category, isAllCollapsed }) => {
                             <button
                                 type="button"
                                 onClick={() => {
-                                    setIsMobileCollapsed(false);
                                     setIsAddingSub(true);
                                 }}
                                 className="btn btn-xs btn-primary rounded-lg font-bold h-7 px-2 ml-1 shadow-2xs gap-0.5"
@@ -461,39 +453,63 @@ const CategoryCard = ({ category, isAllCollapsed }) => {
                     )}
                 </div>
 
-                {/* Mobile Under-Header Summary Strip (Replaces Card Footer, Clickable to Collapse/Expand) */}
-                <div
-                    onClick={() => setIsMobileCollapsed(prev => !prev)}
-                    className="md:hidden px-3.5 py-2.5 bg-base-200/40 hover:bg-base-200/60 active:bg-base-200/80 transition-colors border-b border-base-200 flex items-center justify-between cursor-pointer select-none"
-                    title={isMobileCollapsed ? "Expand Subcategories" : "Collapse Subcategories"}
-                >
-                    <div className="flex flex-col">
-                        <span className="text-[9.5px] uppercase font-bold tracking-wider text-base-content/50">Budget Allotted</span>
-                        <span className="font-mono text-xs font-black text-base-content/80">
-                            {hideNumbers ? "••••••" : `₹${totalBudget.toLocaleString()}`}
-                        </span>
-                    </div>
-
-                    {/* Center Collapse Indicator */}
-                    <div className="flex items-center gap-1 text-[10px] font-bold text-base-content/50 bg-base-100/60 px-2 py-0.5 rounded-lg border border-base-200/80 shadow-2xs">
-                        <span>{isMobileCollapsed ? "Expand" : "Collapse"}</span>
-                        <ChevronDown size={13} className={`transition-transform duration-200 ${isMobileCollapsed ? '-rotate-90 text-primary' : 'rotate-0'}`} />
-                    </div>
-
-                    <div className="flex flex-col items-end">
-                        <span className="text-[9.5px] uppercase font-bold tracking-wider text-base-content/50">Total Remaining</span>
+                {/* Mobile Under-Header Progress Strip (Replaces Collapsible) */}
+                <div className="md:hidden px-3.5 pt-2.5 pb-2.5 bg-base-200/35 border-b border-base-200/80 space-y-1.5 select-none">
+                    {/* Top Stats: Utilized on Left, Remaining on Right */}
+                    <div className="flex items-center justify-between text-xs">
                         <div className="flex items-center gap-1.5">
+                            <span className="text-[9.5px] uppercase font-bold tracking-wider text-base-content/50">Utilized</span>
+                            <span className="font-mono text-xs font-black text-rose-500 dark:text-rose-400">
+                                {hideNumbers ? "••••••" : `₹${totalUsed.toLocaleString()}`}
+                            </span>
+                            <span className={`text-[9.5px] font-mono font-black px-1.5 py-0.5 rounded-md ${
+                                totalPercentage > 100
+                                    ? 'bg-error/15 text-error'
+                                    : totalPercentage > 75
+                                    ? 'bg-warning/15 text-warning'
+                                    : 'bg-primary/15 text-primary'
+                            }`}>
+                                {hideNumbers ? "••%" : `${totalPercentage.toFixed(1)}%`}
+                            </span>
+                        </div>
+
+                        <div className="flex items-center gap-1.5">
+                            <span className="text-[9.5px] uppercase font-bold tracking-wider text-base-content/50">Remaining</span>
                             <span className={`font-mono text-xs font-black ${totalRemaining < 0 ? 'text-error' : 'text-success'}`}>
                                 {hideNumbers ? "••••••" : (totalRemaining >= 0 ? `+₹${totalRemaining.toLocaleString()}` : `-₹${Math.abs(totalRemaining).toLocaleString()}`)}
                             </span>
-                            <span className={`text-[9.5px] font-mono font-bold px-1.5 py-0.5 rounded-md ${
-                                totalRemaining < 0 
-                                    ? 'bg-error/15 text-error' 
-                                    : 'bg-success/15 text-success'
-                            }`}>
-                                {hideNumbers ? "••%" : (totalBudget > 0 ? `${Math.max(0, Math.min(100, Math.round((totalRemaining / totalBudget) * 100)))}%` : '0%')}
-                            </span>
                         </div>
+                    </div>
+
+                    {/* Thin Progress Line from 0 to Budget Allotted */}
+                    <div className="relative py-1">
+                        {/* Background Track */}
+                        <div className="h-1 w-full bg-base-300/50 dark:bg-base-700/50 rounded-full overflow-hidden">
+                            {/* Utilized Fill Bar */}
+                            <div
+                                className={`h-full rounded-full transition-all duration-300 ${
+                                    totalRemaining < 0
+                                        ? 'bg-rose-500/70 dark:bg-rose-400/70'
+                                        : totalPercentage > 75
+                                        ? 'bg-amber-500/70 dark:bg-amber-400/70'
+                                        : 'bg-primary/70'
+                                }`}
+                                style={{
+                                    width: `${Math.min(100, Math.max(0, totalBudget > 0 ? (totalUsed / totalBudget) * 100 : 0))}%`
+                                }}
+                            />
+                        </div>
+                    </div>
+
+                    {/* Scale Boundaries: 0 on start, Budget Allotted on end */}
+                    <div className="flex items-center justify-between text-[10px] font-mono text-base-content/50">
+                        <span className="font-bold">0</span>
+                        <span className="font-bold flex items-center gap-1">
+                            <span className="text-[9px] uppercase font-bold text-base-content/40 tracking-wider">Budget:</span>
+                            <span className="font-extrabold text-base-content/80">
+                                {hideNumbers ? "••••••" : `₹${totalBudget.toLocaleString()}`}
+                            </span>
+                        </span>
                     </div>
                 </div>
 
@@ -700,8 +716,7 @@ const CategoryCard = ({ category, isAllCollapsed }) => {
                 {/* ========================================================================= */}
                 {/* 2. PHONE VIEW (< md) - PIGGY BANK SUB-CATEGORIES FEED                      */}
                 {/* ========================================================================= */}
-                {!isMobileCollapsed && (
-                    <div className="md:hidden flex-1 p-3 space-y-2.5 w-full">
+                <div className="md:hidden flex-1 p-3 space-y-2.5 w-full">
                         <div className="space-y-2.5">
                             {/* Subcategories List */}
                             {subCategoryStats.map((sub) => {
@@ -1027,7 +1042,6 @@ const CategoryCard = ({ category, isAllCollapsed }) => {
                         )}
                     </div>
                 </div>
-            )}
 
                 {/* Card Footer Summary - Desktop Only */}
                 <div className="hidden md:flex bg-base-200/70 p-3 text-xs justify-between items-center border-t border-base-200 font-semibold rounded-b-xl">
@@ -1047,7 +1061,7 @@ const CategoryCard = ({ category, isAllCollapsed }) => {
                     </div>
 
                     <div className="flex flex-col items-end">
-                        <span className="opacity-50 text-[10px] uppercase font-bold">Overall Progress</span>
+                        <span className="opacity-50 text-[10px] uppercase font-bold">Utilized %</span>
                         <span className={`font-mono text-sm ${getUsedPercentageColor(totalPercentage).text}`}>
                             {totalPercentage.toFixed(2)}%
                         </span>

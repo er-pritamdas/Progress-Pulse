@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import dayjs from "dayjs";
+import { message } from "antd";
 import { addTransaction, updateTransaction, deleteTransaction, setMonth, performUndo, performRedo } from "../../services/redux/slice/ExpenseSlice";
 import { getSourceTagStyle, getCategoryTagStyle } from "../../utils/expenseTheme";
 import { Trash2, Save, X, Edit2, Plus, PlusCircle, Handshake, AlertTriangle, Wallet, CreditCard, Tag, Folder, TrendingUp, TrendingDown, ArrowUp, ArrowDown, Calendar, ArrowRightLeft, Sparkles, ChevronDown, ChevronLeft, ChevronRight, Filter, Search, Undo2, Redo2, Eye, EyeOff, SlidersHorizontal, Info, ArrowUpRight, Zap, Layers } from "lucide-react";
@@ -155,6 +156,7 @@ const ExpenseTable = ({
 }) => {
     const dispatch = useDispatch();
     const { transactions, categories, sources, loading, currentMonth, undoStack = [], redoStack = [] } = useSelector((state) => state.expense);
+    const [messageApi, contextHolder] = message.useMessage();
 
     const [hideNumbers, setHideNumbers] = useState(() => {
         try {
@@ -768,74 +770,88 @@ const ExpenseTable = ({
     // Add Transaction
     const handleAdd = () => {
         const parsedAmount = evaluateMathExpression(newData.amount) ?? (Number(newData.amount) || 0);
-        if (!newData.description || !newData.amount || parsedAmount <= 0) {
-            alert("Please fill required fields (Description and valid positive Amount)");
+
+        if (!newData.description || !newData.description.trim()) {
+            messageApi.error("Please enter a transaction description");
+            return;
+        }
+
+        if (!newData.amount || isNaN(parsedAmount) || parsedAmount <= 0) {
+            messageApi.error("Please enter a valid positive amount");
             return;
         }
 
         if (newData.isTransfer) {
             if (!newData.sourceId || !newData.targetSourceId) {
-                alert("Please select both From Bank and Target Bank for transfer");
+                messageApi.error("Please select both From Bank and Target Bank for transfer");
                 return;
             }
             if (newData.sourceId === newData.targetSourceId) {
-                alert("From Bank and To Bank cannot be the same account");
+                messageApi.error("From Bank and To Bank cannot be the same account");
                 return;
             }
             dispatch(addTransaction({
                 date: newData.date || new Date(),
-                description: newData.description,
+                description: newData.description.trim(),
                 sourceId: newData.sourceId,
                 targetSourceId: newData.targetSourceId,
                 amount: parsedAmount,
                 type: "Transfer",
                 isReimbursable: newData.isReimbursable
             }));
+            messageApi.success("Transfer logged successfully!");
         } else if (newData.isAddMoney) {
             if (!newData.sourceId) {
-                alert("Please select a target bank account to add money to");
+                messageApi.error("Please select a target bank account to add money to");
                 return;
             }
             dispatch(addTransaction({
                 date: newData.date || new Date(),
-                description: newData.description,
+                description: newData.description.trim(),
                 sourceId: newData.sourceId,
                 amount: parsedAmount,
                 type: "Credit",
                 isReimbursable: newData.isReimbursable
             }));
+            messageApi.success("Income logged successfully!");
         } else if (newData.isManualDebit) {
             if (!newData.sourceId) {
-                alert("Please select a bank account to debit from");
+                messageApi.error("Please select a bank account to debit from");
                 return;
             }
             dispatch(addTransaction({
                 date: newData.date || new Date(),
-                description: newData.description,
+                description: newData.description.trim(),
                 sourceId: newData.sourceId,
                 amount: parsedAmount,
                 type: "Debit",
                 isReimbursable: newData.isReimbursable
             }));
+            messageApi.success("Debit logged successfully!");
         } else {
             if (!newData.sourceId) {
-                alert("Please select a From payment source");
+                messageApi.error("Please select a From payment source");
                 return;
             }
             if (!newData.categoryId) {
-                alert("Please select a Category or Bank");
+                messageApi.error("Please select a Category for this expense");
+                return;
+            }
+            if (!newData.subCategoryId) {
+                messageApi.error("Please select a Sub Category for the selected category");
                 return;
             }
             dispatch(addTransaction({
                 date: newData.date || new Date(),
-                description: newData.description,
+                description: newData.description.trim(),
                 sourceId: newData.sourceId,
                 categoryId: newData.categoryId,
-                subCategoryId: newData.subCategoryId || undefined,
+                subCategoryId: newData.subCategoryId,
                 amount: parsedAmount,
                 type: "Debit",
                 isReimbursable: newData.isReimbursable
             }));
+            messageApi.success("Expense logged successfully!");
         }
 
         // Reset form
@@ -890,21 +906,26 @@ const ExpenseTable = ({
         const catId = typeof editData.categoryId === 'object' && editData.categoryId !== null ? editData.categoryId._id : editData.categoryId;
         const subId = typeof editData.subCategoryId === 'object' && editData.subCategoryId !== null ? editData.subCategoryId._id : editData.subCategoryId;
 
-        if (!editData.description || !editData.amount || parsedAmount <= 0) {
-            alert("Please fill required fields (Description and valid positive Amount)");
+        if (!editData.description || !editData.description.trim()) {
+            messageApi.error("Please enter a transaction description");
+            return;
+        }
+
+        if (!editData.amount || isNaN(parsedAmount) || parsedAmount <= 0) {
+            messageApi.error("Please enter a valid positive amount");
             return;
         }
 
         if (isAdd) {
             if (!srcId) {
-                alert("Please select a target bank account to add money to");
+                messageApi.error("Please select a target bank account to add money to");
                 return;
             }
             dispatch(updateTransaction({
                 id: editingId,
                 data: {
                     date: editData.date,
-                    description: editData.description,
+                    description: editData.description.trim(),
                     sourceId: srcId,
                     targetSourceId: null,
                     categoryId: null,
@@ -914,16 +935,17 @@ const ExpenseTable = ({
                     isReimbursable: editData.isReimbursable
                 }
             }));
+            messageApi.success("Transaction updated successfully!");
         } else if (isManDebit) {
             if (!srcId) {
-                alert("Please select a bank account to debit from");
+                messageApi.error("Please select a bank account to debit from");
                 return;
             }
             dispatch(updateTransaction({
                 id: editingId,
                 data: {
                     date: editData.date,
-                    description: editData.description,
+                    description: editData.description.trim(),
                     sourceId: srcId,
                     targetSourceId: null,
                     categoryId: null,
@@ -933,20 +955,21 @@ const ExpenseTable = ({
                     isReimbursable: editData.isReimbursable
                 }
             }));
+            messageApi.success("Transaction updated successfully!");
         } else if (isTrf) {
             if (!srcId || !trgId) {
-                alert("Please select both From Bank and Target Bank for transfer");
+                messageApi.error("Please select both From Bank and Target Bank for transfer");
                 return;
             }
             if (srcId === trgId) {
-                alert("From Bank and To Bank cannot be the same account");
+                messageApi.error("From Bank and To Bank cannot be the same account");
                 return;
             }
             dispatch(updateTransaction({
                 id: editingId,
                 data: {
                     date: editData.date,
-                    description: editData.description,
+                    description: editData.description.trim(),
                     sourceId: srcId,
                     targetSourceId: trgId,
                     categoryId: null,
@@ -956,29 +979,35 @@ const ExpenseTable = ({
                     isReimbursable: editData.isReimbursable
                 }
             }));
+            messageApi.success("Transaction updated successfully!");
         } else {
             if (!srcId) {
-                alert("Please select a From payment source");
+                messageApi.error("Please select a From payment source");
                 return;
             }
             if (!catId) {
-                alert("Please select a Category or Bank");
+                messageApi.error("Please select a Category for this expense");
+                return;
+            }
+            if (!subId) {
+                messageApi.error("Please select a Sub Category for the selected category");
                 return;
             }
             dispatch(updateTransaction({
                 id: editingId,
                 data: {
                     date: editData.date,
-                    description: editData.description,
+                    description: editData.description.trim(),
                     sourceId: srcId,
                     targetSourceId: null,
                     categoryId: catId,
-                    subCategoryId: subId || null,
+                    subCategoryId: subId,
                     amount: parsedAmount,
                     type: "Debit",
                     isReimbursable: editData.isReimbursable
                 }
             }));
+            messageApi.success("Transaction updated successfully!");
         }
         setEditingId(null);
     };
@@ -1012,6 +1041,7 @@ const ExpenseTable = ({
 
     return (
         <div className="w-full bg-base-100 rounded-none sm:rounded-2xl shadow-none sm:shadow-lg border-y sm:border border-base-200 flex flex-col min-h-[500px]">
+            {contextHolder}
 
             {/* Unified Sticky Glass Header Section: Month Selector Banner + Table Column Headers */}
             <div ref={upperHeaderRef} className="sticky top-[-17px] -mt-5 pt-5 z-40 bg-base-100/90 dark:bg-base-900/90 backdrop-blur-2xl border-b border-base-200/80 shadow-md rounded-t-none sm:rounded-t-2xl transition-all">
@@ -2179,7 +2209,7 @@ const ExpenseTable = ({
                                             <DaisySelect
                                                 options={getSubCatOptions(newData.categoryId)}
                                                 value={newData.subCategoryId}
-                                                placeholder="SubCategory (optional)"
+                                                placeholder="SubCategory (required)"
                                                 onChange={(val) => setNewData({ ...newData, subCategoryId: val })}
                                             />
                                         )}

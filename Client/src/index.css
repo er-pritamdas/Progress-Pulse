@@ -301,4 +301,12 @@ input[type="number"] {
   cursor: pointer;
 }
 
+/* -------------------------------------------------------------------------- */
+/* Ant Design Message Popups over high z-index modals                         */
+/* -------------------------------------------------------------------------- */
+.ant-message {
+  z-index: 1000000 !important;
+}
+
+
 
