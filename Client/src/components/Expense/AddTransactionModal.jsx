@@ -96,23 +96,6 @@ const AddTransactionModal = ({ isOpen, onClose }) => {
   }, [mobileTabs, activeMobileTab]);
 
   const handleNextTab = () => {
-    const currentTabId = mobileTabs[currentTabIndex]?.id;
-    if (currentTabId === "source" && !sourceId) {
-      messageApi.warning("Please select an account first");
-      return;
-    }
-    if (currentTabId === "target" && !targetSourceId) {
-      messageApi.warning("Please select a target account first");
-      return;
-    }
-    if (currentTabId === "category" && transactionType === "Debit" && !categoryId) {
-      messageApi.warning("Please select a category first");
-      return;
-    }
-    if (currentTabId === "subcategory" && transactionType === "Debit" && !subCategoryId) {
-      messageApi.warning("Please select a sub-category first");
-      return;
-    }
     if (currentTabIndex < mobileTabs.length - 1) {
       setActiveMobileTab(mobileTabs[currentTabIndex + 1].id);
     }
@@ -463,6 +446,9 @@ const AddTransactionModal = ({ isOpen, onClose }) => {
         subCategoryId: (transactionType === "Debit" && subCategoryId) ? subCategoryId : undefined,
         amount: finalAmount,
         type: (transactionType === "DebitMoney" || transactionType === "Debit") ? "Debit" : transactionType,
+        isDebitMoney: transactionType === "DebitMoney",
+        isManualDebit: transactionType === "DebitMoney",
+        isExpense: transactionType === "Debit",
         isReimbursable
       })).unwrap();
 

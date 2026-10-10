@@ -825,6 +825,8 @@ const ExpenseTable = ({
                 sourceId: newData.sourceId,
                 amount: parsedAmount,
                 type: "Debit",
+                isDebitMoney: true,
+                isManualDebit: true,
                 isReimbursable: newData.isReimbursable
             }));
             messageApi.success("Debit logged successfully!");
@@ -849,6 +851,7 @@ const ExpenseTable = ({
                 subCategoryId: newData.subCategoryId,
                 amount: parsedAmount,
                 type: "Debit",
+                isExpense: true,
                 isReimbursable: newData.isReimbursable
             }));
             messageApi.success("Expense logged successfully!");
@@ -952,6 +955,8 @@ const ExpenseTable = ({
                     subCategoryId: null,
                     amount: parsedAmount,
                     type: "Debit",
+                    isDebitMoney: true,
+                    isManualDebit: true,
                     isReimbursable: editData.isReimbursable
                 }
             }));
@@ -1004,6 +1009,7 @@ const ExpenseTable = ({
                     subCategoryId: subId,
                     amount: parsedAmount,
                     type: "Debit",
+                    isExpense: true,
                     isReimbursable: editData.isReimbursable
                 }
             }));

@@ -484,12 +484,19 @@ export const addTransaction = async (req, res) => {
         if (numAmount <= 0) {
             return res.status(400).json({ success: false, message: "Amount must be greater than 0" });
         }
+        const isDebitMoney = Boolean(req.body.isDebitMoney || req.body.isManualDebit);
+        const isExplicitExpense = req.body.isExpense === true;
+
         if (transactionType === "Debit") {
-            if (!cleanCatId) {
-                return res.status(400).json({ success: false, message: "Category is required for Expense" });
-            }
-            if (!cleanSubCatId) {
-                return res.status(400).json({ success: false, message: "Subcategory is required for Expense" });
+            if (isDebitMoney) {
+                // Debit Money: account deduction without category
+            } else if (cleanCatId || isExplicitExpense) {
+                if (!cleanCatId) {
+                    return res.status(400).json({ success: false, message: "Category is required for Expense" });
+                }
+                if (!cleanSubCatId) {
+                    return res.status(400).json({ success: false, message: "Subcategory is required for Expense" });
+                }
             }
         }
         if (transactionType === "Transfer") {
@@ -566,14 +573,22 @@ export const updateTransaction = async (req, res) => {
             return res.status(400).json({ success: false, message: "Amount must be greater than 0" });
         }
         const effectiveType = type || oldTransaction.type || "Debit";
+        const isDebitMoney = Boolean(req.body.isDebitMoney || req.body.isManualDebit || (categoryId === null && subCategoryId === null));
+        const isExplicitExpense = req.body.isExpense === true;
+
         if (effectiveType === "Debit") {
             const finalCatId = categoryId !== undefined ? cleanCatId : oldTransaction.categoryId;
             const finalSubCatId = subCategoryId !== undefined ? cleanSubCatId : oldTransaction.subCategoryId;
-            if (!finalCatId) {
-                return res.status(400).json({ success: false, message: "Category is required for Expense" });
-            }
-            if (!finalSubCatId) {
-                return res.status(400).json({ success: false, message: "Subcategory is required for Expense" });
+
+            if (isDebitMoney) {
+                // Debit Money: account deduction without category
+            } else if (finalCatId || isExplicitExpense) {
+                if (!finalCatId) {
+                    return res.status(400).json({ success: false, message: "Category is required for Expense" });
+                }
+                if (!finalSubCatId) {
+                    return res.status(400).json({ success: false, message: "Subcategory is required for Expense" });
+                }
             }
         }
         if (effectiveType === "Transfer") {

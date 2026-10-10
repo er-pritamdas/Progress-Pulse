@@ -306,6 +306,7 @@ input[type="number"] {
 /* -------------------------------------------------------------------------- */
 .ant-message {
   z-index: 1000000 !important;
+  top: 16px !important;
 }
 
 
