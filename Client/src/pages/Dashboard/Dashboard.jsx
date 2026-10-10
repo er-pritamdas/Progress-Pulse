@@ -49,6 +49,8 @@ import {
   Lock,
   Settings,
   Building2,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
@@ -99,7 +101,7 @@ const CARD_METADATA = {
     icon: Wallet,
   },
   investment: {
-    name: "Portfolio & Net Worth",
+    name: "Net Worth",
     desc: "Consolidated Net Worth, Stocks held, active MFs, FDs & RDs",
     icon: TrendingUp,
   },
@@ -235,6 +237,19 @@ const Dashboard = () => {
   const [isHabitDropdownOpen, setIsHabitDropdownOpen] = useState(false);
   const [launchpadTab, setLaunchpadTab] = useState("all");
   const [expandedTrackers, setExpandedTrackers] = useState({});
+
+  // Privacy Eye Masking (persisted in localStorage)
+  const [hideNumbers, setHideNumbers] = useState(() => {
+    return localStorage.getItem("pulse_portfolio_hide_numbers") === "true";
+  });
+
+  const toggleHideNumbers = () => {
+    setHideNumbers((prev) => {
+      const next = !prev;
+      localStorage.setItem("pulse_portfolio_hide_numbers", String(next));
+      return next;
+    });
+  };
 
   // Custom Vital Entry Modal
   const [vitalEditModal, setVitalEditModal] = useState({
@@ -581,7 +596,6 @@ const Dashboard = () => {
       return {
         badge: "Morning Fuel & Kickoff",
         icon: Sunrise,
-        message: "Start the day with clean fuel, morning hydration, and core habits.",
         targetMeal: "Breakfast",
         actionText: "+ Log Breakfast",
       };
@@ -589,7 +603,6 @@ const Dashboard = () => {
       return {
         badge: "Midday Sprint & Momentum",
         icon: Sun,
-        message: "Keep the momentum going. Record lunch, hit water goals, and track outlays.",
         targetMeal: "Lunch",
         actionText: "+ Log Lunch",
       };
@@ -597,7 +610,6 @@ const Dashboard = () => {
       return {
         badge: "Evening Wind-Down & Review",
         icon: Moon,
-        message: "Wrap up the day. Log dinner, review transactions, and complete evening wind-down.",
         targetMeal: "Dinner",
         actionText: "+ Log Dinner",
       };
@@ -947,10 +959,12 @@ const Dashboard = () => {
         <div className="flex items-center gap-2 text-xs font-mono font-bold text-base-content/60">
           <span>{isSelectedDateToday ? "Today:" : `${dayjs(selectedDate).format("ddd")}:`}</span>
           <span className="text-primary font-black">
-            {doneHabitsCount}/{totalHabits} Habits ({habitCompletionPct}%)
+            {hideNumbers ? "••/•• Habits" : `${doneHabitsCount}/${totalHabits} Habits (${habitCompletionPct}%)`}
           </span>
           <span>•</span>
-          <span className="text-emerald-500 font-black">{loggedCalories} kcal</span>
+          <span className="text-emerald-500 font-black">
+            {hideNumbers ? "•••• kcal" : `${loggedCalories} kcal`}
+          </span>
           {!isSelectedDateToday && (
             <button
               type="button"
@@ -1028,9 +1042,6 @@ const Dashboard = () => {
               <span className="text-[10px] opacity-70">({dayjs(selectedDate).format("MMM D")})</span>
             )}
           </div>
-          <h2 className="text-base sm:text-xl font-extrabold text-base-content">
-            {timeContext.message}
-          </h2>
           <p className="text-xs text-base-content/50">
             Log fuel and review nutrition macros to keep your daily pulse active.
           </p>
@@ -1068,7 +1079,7 @@ const Dashboard = () => {
                   {meal}
                 </div>
                 <div className="text-xs font-black truncate">
-                  {isLogged ? `${mealCals} kcal` : "Pending"}
+                  {isLogged ? (hideNumbers ? "•••• kcal" : `${mealCals} kcal`) : "Pending"}
                 </div>
               </div>
               {isLogged ? (
@@ -1086,7 +1097,10 @@ const Dashboard = () => {
         <div className="flex justify-between items-center text-xs font-bold">
           <span className="text-base-content/70">Calories Consumed</span>
           <span className="font-mono text-primary font-black">
-            {loggedCalories} <span className="text-[10px] text-base-content/40">/ {calorieMax} kcal ({caloriePercent}%)</span>
+            {hideNumbers ? "••••" : loggedCalories}{" "}
+            <span className="text-[10px] text-base-content/40">
+              / {hideNumbers ? "•••• kcal" : `${calorieMax} kcal (${caloriePercent}%)`}
+            </span>
           </span>
         </div>
         <div className="w-full h-1.5 bg-base-300 rounded-full overflow-hidden">
@@ -1096,9 +1110,27 @@ const Dashboard = () => {
           />
         </div>
         <div className="flex items-center justify-between text-[10px] text-base-content/60 font-semibold font-mono">
-          <span>Protein: <strong className="text-base-content">{loggedProtein}g</strong>/{proteinMax}g</span>
-          <span>Carbs: <strong className="text-base-content">{loggedCarbs}g</strong>/{carbsMax}g</span>
-          <span>Fat: <strong className="text-base-content">{loggedFat}g</strong>/{fatMax}g</span>
+          <span>
+            Protein:{" "}
+            <strong className="text-base-content">
+              {hideNumbers ? "•••" : `${loggedProtein}g`}
+            </strong>
+            /{hideNumbers ? "•••" : `${proteinMax}g`}
+          </span>
+          <span>
+            Carbs:{" "}
+            <strong className="text-base-content">
+              {hideNumbers ? "•••" : `${loggedCarbs}g`}
+            </strong>
+            /{hideNumbers ? "•••" : `${carbsMax}g`}
+          </span>
+          <span>
+            Fat:{" "}
+            <strong className="text-base-content">
+              {hideNumbers ? "•••" : `${loggedFat}g`}
+            </strong>
+            /{hideNumbers ? "•••" : `${fatMax}g`}
+          </span>
         </div>
       </div>
     </section>
@@ -1126,7 +1158,7 @@ const Dashboard = () => {
         {/* Completion Indicator */}
         <div className="flex items-center gap-2">
           <span className="badge badge-sm font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-none">
-            {doneHabitsCount} of {totalHabits} Done ({habitCompletionPct}%)
+            {hideNumbers ? "•• of •• Done" : `${doneHabitsCount} of ${totalHabits} Done (${habitCompletionPct}%)`}
           </span>
         </div>
       </div>
@@ -1145,7 +1177,7 @@ const Dashboard = () => {
               </div>
               <div className="min-w-0">
                 <div className="text-xs sm:text-sm font-extrabold text-base-content truncate">
-                  Today's Habit Checklist ({doneHabitsCount}/{totalHabits} Completed)
+                  Today's Habit Checklist {hideNumbers ? "(••/•• Completed)" : `(${doneHabitsCount}/${totalHabits} Completed)`}
                 </div>
                 <div className="text-[10px] text-base-content/50 font-medium">
                   Click to open dropdown and check off habits
@@ -1154,7 +1186,7 @@ const Dashboard = () => {
             </div>
             <div className="flex items-center gap-2 shrink-0">
               <span className="badge badge-xs font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-none">
-                {habitCompletionPct}%
+                {hideNumbers ? "••%" : `${habitCompletionPct}%`}
               </span>
               <ChevronDown
                 size={16}
@@ -1271,7 +1303,7 @@ const Dashboard = () => {
             </button>
           </div>
           <div className="text-base sm:text-lg font-black text-base-content font-mono">
-            {water} L
+            {hideNumbers ? "••• L" : `${water} L`}
           </div>
           <button
             type="button"
@@ -1299,7 +1331,7 @@ const Dashboard = () => {
             </button>
           </div>
           <div className="text-base sm:text-lg font-black text-base-content font-mono">
-            {sleep > 0 ? `${sleep} hrs` : "0 hrs"}
+            {hideNumbers ? "••• hrs" : (sleep > 0 ? `${sleep} hrs` : "0 hrs")}
           </div>
           <button
             type="button"
@@ -1327,7 +1359,7 @@ const Dashboard = () => {
             </button>
           </div>
           <div className="text-base sm:text-lg font-black text-base-content font-mono">
-            {burned > 0 ? `${burned} kcal` : "0 kcal"}
+            {hideNumbers ? "•••• kcal" : (burned > 0 ? `${burned} kcal` : "0 kcal")}
           </div>
           <button
             type="button"
@@ -1355,7 +1387,7 @@ const Dashboard = () => {
             </button>
           </div>
           <div className="text-base sm:text-lg font-black text-base-content font-mono">
-            {read > 0 ? `${read} hrs` : "0 hrs"}
+            {hideNumbers ? "••• hrs" : (read > 0 ? `${read} hrs` : "0 hrs")}
           </div>
           <button
             type="button"
@@ -1469,10 +1501,10 @@ const Dashboard = () => {
                     Total Salary
                   </span>
                   <span className="text-base sm:text-xl font-black font-mono text-base-content tracking-tight mt-0.5">
-                    ₹{totalSal.toLocaleString("en-IN")}
+                    {hideNumbers ? "••••••" : `₹${totalSal.toLocaleString("en-IN")}`}
                   </span>
                   <span className="text-[9.5px] font-bold font-mono text-base-content/40 mt-0.5">
-                    {baseCap > 0 ? `${usedSharePct}% Spent` : "Monthly"}
+                    {hideNumbers ? "••% Spent" : (baseCap > 0 ? `${usedSharePct}% Spent` : "Monthly")}
                   </span>
                 </div>
               </div>
@@ -1490,10 +1522,10 @@ const Dashboard = () => {
                   </div>
                   <div className="text-right">
                     <div className="text-xs sm:text-sm font-black font-mono text-base-content">
-                      ₹{usedAmt.toLocaleString("en-IN")}
+                      {hideNumbers ? "••••••" : `₹${usedAmt.toLocaleString("en-IN")}`}
                     </div>
                     <div className="text-[10px] font-bold text-[#6366f1] font-mono">
-                      {usedSharePct}%
+                      {hideNumbers ? "••%" : `${usedSharePct}%`}
                     </div>
                   </div>
                 </div>
@@ -1509,12 +1541,14 @@ const Dashboard = () => {
                   </div>
                   <div className="text-right">
                     <div className="text-xs sm:text-sm font-black font-mono text-base-content">
-                      {actualRemaining < 0
+                      {hideNumbers
+                        ? "••••••"
+                        : actualRemaining < 0
                         ? `-₹${Math.abs(actualRemaining).toLocaleString("en-IN")}`
                         : `₹${remAmt.toLocaleString("en-IN")}`}
                     </div>
                     <div className="text-[10px] font-bold text-base-content/50 font-mono">
-                      {remSharePct}%
+                      {hideNumbers ? "••%" : `${remSharePct}%`}
                     </div>
                   </div>
                 </div>
@@ -1533,20 +1567,26 @@ const Dashboard = () => {
                   : `Transactions for ${dayjs(selectedDate).format("MMM D")}`}
               </span>
               <span className="badge badge-xs font-mono font-bold bg-base-200 text-base-content/70 border-none">
-                {selectedDateTransactions.length}
+                {hideNumbers ? "••" : selectedDateTransactions.length}
               </span>
             </div>
 
             {selectedDateTransactions.length > 0 && (
               <div className="text-[10px] font-mono font-bold text-base-content/50 flex items-center gap-1.5">
                 {selectedDateTotals.debitSum > 0 && (
-                  <span className="text-rose-500">-₹{selectedDateTotals.debitSum.toLocaleString("en-IN")}</span>
+                  <span className="text-rose-500">
+                    {hideNumbers ? "-••••" : `-₹${selectedDateTotals.debitSum.toLocaleString("en-IN")}`}
+                  </span>
                 )}
                 {selectedDateTotals.creditSum > 0 && (
-                  <span className="text-emerald-500">+₹{selectedDateTotals.creditSum.toLocaleString("en-IN")}</span>
+                  <span className="text-emerald-500">
+                    {hideNumbers ? "+••••" : `+₹${selectedDateTotals.creditSum.toLocaleString("en-IN")}`}
+                  </span>
                 )}
                 {selectedDateTotals.transferSum > 0 && (
-                  <span className="text-sky-500">⇄ ₹{selectedDateTotals.transferSum.toLocaleString("en-IN")}</span>
+                  <span className="text-sky-500">
+                    {hideNumbers ? "⇄ ••••" : `⇄ ₹${selectedDateTotals.transferSum.toLocaleString("en-IN")}`}
+                  </span>
                 )}
               </div>
             )}
@@ -1640,7 +1680,9 @@ const Dashboard = () => {
                             : "text-rose-600 dark:text-rose-400"
                         }`}
                       >
-                        {isCredit
+                        {hideNumbers
+                          ? "••••"
+                          : isCredit
                           ? `+₹${amt.toLocaleString("en-IN")}`
                           : isTransfer
                           ? `⇄ ₹${amt.toLocaleString("en-IN")}`
@@ -1782,7 +1824,7 @@ const Dashboard = () => {
               </div>
               <div>
                 <h3 className="font-extrabold text-base text-base-content flex items-center gap-2">
-                  <span>Investment & Net Worth</span>
+                  <span>Net Worth</span>
                 </h3>
                 <p className="text-[11px] text-base-content/50">
                   Consolidated Wealth Pulse across 6 Asset Classes
@@ -1791,9 +1833,6 @@ const Dashboard = () => {
             </div>
 
             <div className="flex items-center gap-2">
-              <span className="badge badge-sm font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border-none">
-                {totalHoldingsCount} Active Assets
-              </span>
               <button
                 type="button"
                 onClick={() => navigate("/dashboard/investment/table-view")}
@@ -1814,17 +1853,17 @@ const Dashboard = () => {
                   Consolidated Net Worth
                 </span>
                 <div className="text-2xl sm:text-3xl lg:text-4xl font-black text-amber-500 font-mono tracking-tight mt-0.5">
-                  ₹{netWorth.toLocaleString("en-IN")}
+                  {hideNumbers ? "••••••" : `₹${netWorth.toLocaleString("en-IN")}`}
                 </div>
                 <div className="text-[10px] sm:text-xs text-base-content/50 mt-1 flex items-center gap-1.5 flex-wrap">
                   <span>Invested Capital:</span>
                   <span className="font-mono font-bold text-base-content/70">
-                    ₹{totalInvestedCapital.toLocaleString("en-IN")}
+                    {hideNumbers ? "••••••" : `₹${totalInvestedCapital.toLocaleString("en-IN")}`}
                   </span>
                   <span>•</span>
                   <span>Liquid & PF:</span>
                   <span className="font-mono font-bold text-base-content/70">
-                    ₹{((bankMetrics.total || 0) + (investmentData.pfVal || 0)).toLocaleString("en-IN")}
+                    {hideNumbers ? "••••••" : `₹${((bankMetrics.total || 0) + (investmentData.pfVal || 0)).toLocaleString("en-IN")}`}
                   </span>
                 </div>
               </div>
@@ -1850,42 +1889,42 @@ const Dashboard = () => {
                     <div
                       style={{ width: `${(investmentData.stocksVal / netWorth) * 100}%` }}
                       className="bg-blue-500 h-full"
-                      title={`Stocks: ₹${investmentData.stocksVal.toLocaleString("en-IN")}`}
+                      title={hideNumbers ? "Stocks" : `Stocks: ₹${investmentData.stocksVal.toLocaleString("en-IN")}`}
                     />
                   )}
                   {investmentData.mfVal > 0 && (
                     <div
                       style={{ width: `${(investmentData.mfVal / netWorth) * 100}%` }}
                       className="bg-purple-500 h-full"
-                      title={`MF: ₹${investmentData.mfVal.toLocaleString("en-IN")}`}
+                      title={hideNumbers ? "MF" : `MF: ₹${investmentData.mfVal.toLocaleString("en-IN")}`}
                     />
                   )}
                   {investmentData.fdVal > 0 && (
                     <div
                       style={{ width: `${(investmentData.fdVal / netWorth) * 100}%` }}
                       className="bg-emerald-500 h-full"
-                      title={`FD: ₹${investmentData.fdVal.toLocaleString("en-IN")}`}
+                      title={hideNumbers ? "FD" : `FD: ₹${investmentData.fdVal.toLocaleString("en-IN")}`}
                     />
                   )}
                   {investmentData.rdVal > 0 && (
                     <div
                       style={{ width: `${(investmentData.rdVal / netWorth) * 100}%` }}
                       className="bg-amber-500 h-full"
-                      title={`RD: ₹${investmentData.rdVal.toLocaleString("en-IN")}`}
+                      title={hideNumbers ? "RD" : `RD: ₹${investmentData.rdVal.toLocaleString("en-IN")}`}
                     />
                   )}
                   {(bankMetrics.total || 0) > 0 && (
                     <div
                       style={{ width: `${(bankMetrics.total / netWorth) * 100}%` }}
                       className="bg-cyan-500 h-full"
-                      title={`Bank: ₹${bankMetrics.total.toLocaleString("en-IN")}`}
+                      title={hideNumbers ? "Bank" : `Bank: ₹${bankMetrics.total.toLocaleString("en-IN")}`}
                     />
                   )}
                   {investmentData.pfVal > 0 && (
                     <div
                       style={{ width: `${(investmentData.pfVal / netWorth) * 100}%` }}
                       className="bg-teal-500 h-full"
-                      title={`PF: ₹${investmentData.pfVal.toLocaleString("en-IN")}`}
+                      title={hideNumbers ? "PF" : `PF: ₹${investmentData.pfVal.toLocaleString("en-IN")}`}
                     />
                   )}
                 </div>
@@ -1922,14 +1961,14 @@ const Dashboard = () => {
                   <div className="mt-2.5">
                     <div className="flex items-baseline gap-1.5">
                       <span className="text-lg sm:text-xl font-black font-mono text-base-content">
-                        {cat.count}
+                        {hideNumbers ? "••" : cat.count}
                       </span>
                       <span className="text-[10px] font-semibold text-base-content/50">
                         {cat.countUnit}
                       </span>
                     </div>
                     <div className="text-xs font-bold font-mono text-base-content/70 mt-0.5">
-                      ₹{cat.value.toLocaleString("en-IN")}
+                      {hideNumbers ? "••••••" : `₹${cat.value.toLocaleString("en-IN")}`}
                     </div>
                     <div className="text-[9.5px] text-base-content/40 font-medium truncate mt-0.5">
                       {cat.subLabel}
@@ -1954,13 +1993,13 @@ const Dashboard = () => {
                 <div>
                   <div className="text-xs font-bold text-base-content">Bank & Liquid Cash</div>
                   <div className="text-[10px] text-base-content/50">
-                    {bankMetrics.count} Tracked Payment {bankMetrics.count === 1 ? "Source" : "Sources"}
+                    {hideNumbers ? "••" : bankMetrics.count} Tracked Payment {bankMetrics.count === 1 ? "Source" : "Sources"}
                   </div>
                 </div>
               </div>
               <div className="text-right">
                 <div className="text-xs sm:text-sm font-black font-mono text-base-content">
-                  ₹{bankMetrics.total.toLocaleString("en-IN")}
+                  {hideNumbers ? "••••••" : `₹${bankMetrics.total.toLocaleString("en-IN")}`}
                 </div>
                 <div className="text-[9.5px] text-cyan-500 font-bold uppercase tracking-wider">
                   Liquid
@@ -1986,7 +2025,7 @@ const Dashboard = () => {
               </div>
               <div className="text-right">
                 <div className="text-xs sm:text-sm font-black font-mono text-base-content">
-                  ₹{investmentData.pfVal.toLocaleString("en-IN")}
+                  {hideNumbers ? "••••••" : `₹${investmentData.pfVal.toLocaleString("en-IN")}`}
                 </div>
                 <div className="text-[9.5px] text-teal-500 font-bold uppercase tracking-wider">
                   Retirement
@@ -2413,30 +2452,40 @@ const Dashboard = () => {
 
       <div className="relative z-10 max-w-6xl mx-auto px-3 sm:px-6 lg:px-8 pt-4 sm:pt-6 space-y-4 sm:space-y-5">
         {/* ========================================================================= */}
-        {/* 1. TOP HEADER (No Command Center tag, quote below greeting, customize button) */}
+        {/* 1. TOP HEADER (Date in middle -> Greeting -> Quote)                       */}
         {/* ========================================================================= */}
-        <header className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 pb-3 border-b border-base-content/10">
-          <div>
-            <div className="text-xs text-base-content/50 font-medium mb-0.5">
-              {dayjs(selectedDate).format("dddd, MMMM D, YYYY")}
+        <header className="pb-3 border-b border-base-content/10">
+          {/* Centered Date -> Greeting -> Quote */}
+          <div className="flex flex-col items-center justify-center text-center max-w-3xl mx-auto space-y-1 sm:space-y-1.5">
+            {/* 1. Date in the middle */}
+            <div className="text-xs sm:text-sm text-base-content/50 font-medium flex items-center justify-center gap-1.5">
+              <Calendar size={13} className="text-primary/70 shrink-0" />
+              <span>{dayjs(selectedDate).format("dddd, MMMM D, YYYY")}</span>
               {!isSelectedDateToday && (
-                <span className="ml-2 badge badge-xs font-bold bg-primary/15 text-primary border-none">
+                <span className="ml-1 badge badge-xs font-bold bg-primary/15 text-primary border-none">
                   Viewing Past Date
                 </span>
               )}
             </div>
+
+            {/* 2. Good morning user in next line */}
             <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-base-content tracking-tight">
               {greeting}, <span className="text-primary">{user}</span>.
             </h1>
-            {/* Focus Quote directly below the greeting */}
-            <p className="text-xs sm:text-sm text-base-content/60 font-medium italic mt-1.5 flex items-center gap-1.5">
+
+            {/* 3. Quote in next line */}
+            <p className="text-xs sm:text-sm text-base-content/60 font-medium italic flex items-center justify-center gap-1.5 flex-wrap px-2">
               <span>"{todayQuote.quote}"</span>
               <span className="text-base-content/40 not-italic font-semibold">— {todayQuote.author}</span>
             </p>
           </div>
+        </header>
 
-          {/* Top Controls: Reorder Cards & Live Sync */}
-          <div className="flex items-center gap-2 flex-wrap self-end md:self-auto">
+        {/* ========================================================================= */}
+        {/* 2. REORDER & REFRESH CONTROLS (After header, just above the week)         */}
+        {/* ========================================================================= */}
+        <div className="flex items-center justify-between gap-2 px-1">
+          <div>
             {!isSelectedDateToday && (
               <button
                 type="button"
@@ -2446,28 +2495,44 @@ const Dashboard = () => {
                 <RotateCcw size={12} /> Today
               </button>
             )}
+          </div>
 
+          <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={() => setIsReorderModalOpen(true)}
-              className="btn btn-xs sm:btn-sm btn-ghost border border-base-content/10 hover:bg-base-200 rounded-xl font-bold text-xs gap-1.5 cursor-pointer text-base-content/70"
-              title="Reorder dashboard sections"
+              className="btn btn-xs sm:btn-sm btn-ghost border border-base-content/10 hover:bg-base-200 rounded-xl font-bold text-xs gap-1.5 cursor-pointer text-base-content/70 shadow-2xs"
+              title="Reorder dashboard cards"
             >
               <SlidersHorizontal size={13} />
-              <span>Reorder Cards</span>
+              <span>Reorder</span>
             </button>
 
             <button
               type="button"
               onClick={handleRefreshAll}
-              className="btn btn-xs sm:btn-sm btn-ghost border border-base-content/10 hover:bg-base-200 rounded-xl font-bold text-xs gap-1.5 cursor-pointer text-base-content/70"
+              className="btn btn-xs sm:btn-sm btn-ghost border border-base-content/10 hover:bg-base-200 rounded-xl font-bold text-xs gap-1.5 cursor-pointer text-base-content/70 shadow-2xs"
               title="Refresh all metrics"
             >
               <RotateCcw size={13} />
-              <span className="hidden sm:inline">Sync</span>
+              <span>Refresh</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={toggleHideNumbers}
+              className={`btn btn-xs sm:btn-sm rounded-xl font-bold text-xs gap-1.5 cursor-pointer shadow-2xs transition-all ${
+                hideNumbers
+                  ? "bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 hover:bg-amber-500/25"
+                  : "btn-ghost border border-base-content/10 hover:bg-base-200 text-base-content/70"
+              }`}
+              title={hideNumbers ? "Show numbers" : "Hide numbers (Privacy Mode)"}
+            >
+              {hideNumbers ? <EyeOff size={13} /> : <Eye size={13} />}
+              <span className="hidden sm:inline">{hideNumbers ? "Show" : "Hide"}</span>
             </button>
           </div>
-        </header>
+        </div>
 
         {/* ========================================================================= */}
         {/* 2. DYNAMICALLY ORDERED DASHBOARD CARDS                                    */}
