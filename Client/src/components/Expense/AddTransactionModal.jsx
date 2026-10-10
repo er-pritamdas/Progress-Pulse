@@ -27,7 +27,7 @@ import {
 import { message } from "antd";
 import { evaluateMathExpression } from "../../utils/mathExpression";
 
-const AddTransactionModal = ({ isOpen, onClose }) => {
+const AddTransactionModal = ({ isOpen, onClose, initialDate }) => {
   const dispatch = useDispatch();
   const { categories, sources, currentMonth, transactions } = useSelector((state) => state.expense);
   const [messageApi, contextHolder] = message.useMessage();
@@ -74,7 +74,7 @@ const AddTransactionModal = ({ isOpen, onClose }) => {
   // Reset / Sync viewMonth, form fields and activeMobileTab when opening modal
   useEffect(() => {
     if (isOpen) {
-      const todayStr = dayjs().format("YYYY-MM-DD");
+      const todayStr = initialDate ? dayjs(initialDate).format("YYYY-MM-DD") : dayjs().format("YYYY-MM-DD");
       setDate(todayStr);
       setViewMonth(todayStr);
       setActiveMobileTab("type");
