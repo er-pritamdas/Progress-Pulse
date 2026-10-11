@@ -34,6 +34,7 @@ import {
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
+  ArrowLeft,
   ArrowUpRight,
   Home,
   User,
@@ -62,6 +63,19 @@ const formatINRCompact = (val) => {
   if (num >= 1000) return `₹${(num / 1000).toFixed(1)} K`;
   return `₹${num.toLocaleString("en-IN")}`;
 };
+
+// ----------------------------------------------------------------------
+// Category Metadata Registry (Short Names: MF, FD, RD, PF, Bank, Stocks)
+// ----------------------------------------------------------------------
+const ALL_CATEGORY_META = [
+  { id: "all", label: "All Classes", fullName: "All Assets", icon: Sparkles, color: "text-primary", bg: "bg-primary/10", border: "border-primary/20" },
+  { id: "bank", label: "Bank", fullName: "Bank Accounts", icon: Landmark, color: "text-emerald-500", bg: "bg-emerald-500/10", border: "border-emerald-500/20" },
+  { id: "stock", label: "Stocks", fullName: "Held Stocks", icon: TrendingUp, color: "text-blue-500", bg: "bg-blue-500/10", border: "border-blue-500/20" },
+  { id: "mf", label: "MF", fullName: "Mutual Funds", icon: PieChart, color: "text-purple-500", bg: "bg-purple-500/10", border: "border-purple-500/20" },
+  { id: "fd", label: "FD", fullName: "Fixed Deposit", icon: PiggyBank, color: "text-amber-500", bg: "bg-amber-500/10", border: "border-amber-500/20" },
+  { id: "rd", label: "RD", fullName: "Recurring Deposit", icon: RotateCcw, color: "text-orange-500", bg: "bg-orange-500/10", border: "border-orange-500/20" },
+  { id: "pf", label: "PF", fullName: "Provident Fund", icon: ShieldCheck, color: "text-teal-500", bg: "bg-teal-500/10", border: "border-teal-500/20" },
+];
 
 // ----------------------------------------------------------------------
 // Relative Date Distance Calculator (Shows how far target date is from today)
@@ -309,6 +323,10 @@ export default function InvSettings() {
 
   // 6. Unallocated Assets Breakdown by Source Type Modal
   const [isUnallocatedModalOpen, setIsUnallocatedModalOpen] = useState(false);
+
+  // 7. Category Itemized Breakdown Sub-Modal
+  const [categoryBreakdownModal, setCategoryBreakdownModal] = useState(null);
+  const [breakdownSearch, setBreakdownSearch] = useState("");
 
   // Emoji picker popup state for goal modal
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -976,6 +994,58 @@ export default function InvSettings() {
   };
 
   // ----------------------------------------------------------------------
+  // Compute Allotted Goals Breakdown for any source
+  // ----------------------------------------------------------------------
+  const getSourceGoalAllotments = (sourceItem) => {
+    if (!sourceItem) return [];
+    const allotments = [];
+    const totalVal = Number(sourceItem.holdingValue) || 0;
+
+    goals.forEach((g) => {
+      let allocAmt = 0;
+      let allocPct = 0;
+      if (g.allocations && sourceItem.id in g.allocations) {
+        const alloc = g.allocations[sourceItem.id];
+        allocPct =
+          alloc.percent !== undefined
+            ? Number(alloc.percent) || 0
+            : totalVal > 0
+            ? Math.round(((Number(alloc.amount) || 0) / totalVal) * 100)
+            : 0;
+        allocAmt = (totalVal * allocPct) / 100;
+      } else if (
+        (!g.allocations || Object.keys(g.allocations).length === 0) &&
+        ((sourceItem.sourceType === "bank" && (g.selectedBanks || []).includes(sourceItem.id)) ||
+          (sourceItem.sourceType === "stock" && (g.selectedStocks || []).includes(sourceItem.id)) ||
+          (sourceItem.sourceType === "mf" && (g.selectedMfs || []).includes(sourceItem.id)) ||
+          (sourceItem.sourceType === "fd" && (g.selectedFds || []).includes(sourceItem.id)) ||
+          (sourceItem.sourceType === "rd" && (g.selectedRds || []).includes(sourceItem.id)) ||
+          (sourceItem.sourceType === "pf" && g.includePf))
+      ) {
+        if (sourceItem.sourceType === "pf") {
+          allocPct = Number(g.pfAllocatedPercent) || 50;
+          allocAmt = (totalVal * allocPct) / 100;
+        } else {
+          allocPct = 100;
+          allocAmt = totalVal;
+        }
+      }
+
+      if (allocAmt > 0) {
+        allotments.push({
+          goalId: g.id || g._id,
+          goalName: g.name || "Untitled Goal",
+          category: g.category || "General",
+          amount: Math.round(allocAmt),
+          percent: allocPct,
+        });
+      }
+    });
+
+    return allotments;
+  };
+
+  // ----------------------------------------------------------------------
   // Helper: Calculate Metrics for Any Given Goal
   // ----------------------------------------------------------------------
   const calculateGoalMetrics = (goal) => {
@@ -1198,12 +1268,12 @@ export default function InvSettings() {
   // ----------------------------------------------------------------------
   const getGoalSourceTypeStats = (items) => {
     const types = [
-      { id: "bank", label: "Bank", count: 0, amount: 0, icon: Landmark, color: "text-emerald-500", bg: "bg-emerald-500/10", border: "border-emerald-500/20" },
-      { id: "stock", label: "Stocks", count: 0, amount: 0, icon: TrendingUp, color: "text-blue-500", bg: "bg-blue-500/10", border: "border-blue-500/20" },
-      { id: "mf", label: "Mutual Funds", count: 0, amount: 0, icon: PieChart, color: "text-purple-500", bg: "bg-purple-500/10", border: "border-purple-500/20" },
-      { id: "fd", label: "Fixed Deposit", count: 0, amount: 0, icon: PiggyBank, color: "text-amber-500", bg: "bg-amber-500/10", border: "border-amber-500/20" },
-      { id: "rd", label: "Recurring Deposit", count: 0, amount: 0, icon: RotateCcw, color: "text-orange-500", bg: "bg-orange-500/10", border: "border-orange-500/20" },
-      { id: "pf", label: "Provident Fund", count: 0, amount: 0, icon: ShieldCheck, color: "text-teal-500", bg: "bg-teal-500/10", border: "border-teal-500/20" },
+      { id: "bank", label: "Bank", fullName: "Bank Accounts", count: 0, amount: 0, icon: Landmark, color: "text-emerald-500", bg: "bg-emerald-500/10", border: "border-emerald-500/20" },
+      { id: "stock", label: "Stocks", fullName: "Held Stocks", count: 0, amount: 0, icon: TrendingUp, color: "text-blue-500", bg: "bg-blue-500/10", border: "border-blue-500/20" },
+      { id: "mf", label: "MF", fullName: "Mutual Funds", count: 0, amount: 0, icon: PieChart, color: "text-purple-500", bg: "bg-purple-500/10", border: "border-purple-500/20" },
+      { id: "fd", label: "FD", fullName: "Fixed Deposit", count: 0, amount: 0, icon: PiggyBank, color: "text-amber-500", bg: "bg-amber-500/10", border: "border-amber-500/20" },
+      { id: "rd", label: "RD", fullName: "Recurring Deposit", count: 0, amount: 0, icon: RotateCcw, color: "text-orange-500", bg: "bg-orange-500/10", border: "border-orange-500/20" },
+      { id: "pf", label: "PF", fullName: "Provident Fund", count: 0, amount: 0, icon: ShieldCheck, color: "text-teal-500", bg: "bg-teal-500/10", border: "border-teal-500/20" },
     ];
 
     (items || []).forEach((it) => {
@@ -1220,12 +1290,12 @@ export default function InvSettings() {
   // Overall Source Types stats across all goals for the top section
   const overallSourceTypeStats = useMemo(() => {
     const types = [
-      { id: "bank", label: "Bank", count: 0, amount: 0, icon: Landmark, color: "text-emerald-500", bg: "bg-emerald-500/10", border: "border-emerald-500/20" },
-      { id: "stock", label: "Stocks", count: 0, amount: 0, icon: TrendingUp, color: "text-blue-500", bg: "bg-blue-500/10", border: "border-blue-500/20" },
-      { id: "mf", label: "Mutual Funds", count: 0, amount: 0, icon: PieChart, color: "text-purple-500", bg: "bg-purple-500/10", border: "border-purple-500/20" },
-      { id: "fd", label: "Fixed Deposit", count: 0, amount: 0, icon: PiggyBank, color: "text-amber-500", bg: "bg-amber-500/10", border: "border-amber-500/20" },
-      { id: "rd", label: "Recurring Deposit", count: 0, amount: 0, icon: RotateCcw, color: "text-orange-500", bg: "bg-orange-500/10", border: "border-orange-500/20" },
-      { id: "pf", label: "Provident Fund", count: 0, amount: 0, icon: ShieldCheck, color: "text-teal-500", bg: "bg-teal-500/10", border: "border-teal-500/20" },
+      { id: "bank", label: "Bank", fullName: "Bank Accounts", count: 0, amount: 0, icon: Landmark, color: "text-emerald-500", bg: "bg-emerald-500/10", border: "border-emerald-500/20" },
+      { id: "stock", label: "Stocks", fullName: "Held Stocks", count: 0, amount: 0, icon: TrendingUp, color: "text-blue-500", bg: "bg-blue-500/10", border: "border-blue-500/20" },
+      { id: "mf", label: "MF", fullName: "Mutual Funds", count: 0, amount: 0, icon: PieChart, color: "text-purple-500", bg: "bg-purple-500/10", border: "border-purple-500/20" },
+      { id: "fd", label: "FD", fullName: "Fixed Deposit", count: 0, amount: 0, icon: PiggyBank, color: "text-amber-500", bg: "bg-amber-500/10", border: "border-amber-500/20" },
+      { id: "rd", label: "RD", fullName: "Recurring Deposit", count: 0, amount: 0, icon: RotateCcw, color: "text-orange-500", bg: "bg-orange-500/10", border: "border-orange-500/20" },
+      { id: "pf", label: "PF", fullName: "Provident Fund", count: 0, amount: 0, icon: ShieldCheck, color: "text-teal-500", bg: "bg-teal-500/10", border: "border-teal-500/20" },
     ];
 
     const uniqueIds = {
@@ -1258,12 +1328,12 @@ export default function InvSettings() {
   // Overall Unallocated Source Types stats across all holdings
   const overallUnallocatedSourceTypeStats = useMemo(() => {
     const types = [
-      { id: "bank", label: "Bank", count: 0, amount: 0, icon: Landmark, color: "text-emerald-500", bg: "bg-emerald-500/10", border: "border-emerald-500/20" },
-      { id: "stock", label: "Stocks", count: 0, amount: 0, icon: TrendingUp, color: "text-blue-500", bg: "bg-blue-500/10", border: "border-blue-500/20" },
-      { id: "mf", label: "Mutual Funds", count: 0, amount: 0, icon: PieChart, color: "text-purple-500", bg: "bg-purple-500/10", border: "border-purple-500/20" },
-      { id: "fd", label: "Fixed Deposit", count: 0, amount: 0, icon: PiggyBank, color: "text-amber-500", bg: "bg-amber-500/10", border: "border-amber-500/20" },
-      { id: "rd", label: "Recurring Deposit", count: 0, amount: 0, icon: RotateCcw, color: "text-orange-500", bg: "bg-orange-500/10", border: "border-orange-500/20" },
-      { id: "pf", label: "Provident Fund", count: 0, amount: 0, icon: ShieldCheck, color: "text-teal-500", bg: "bg-teal-500/10", border: "border-teal-500/20" },
+      { id: "bank", label: "Bank", fullName: "Bank Accounts", count: 0, amount: 0, icon: Landmark, color: "text-emerald-500", bg: "bg-emerald-500/10", border: "border-emerald-500/20" },
+      { id: "stock", label: "Stocks", fullName: "Held Stocks", count: 0, amount: 0, icon: TrendingUp, color: "text-blue-500", bg: "bg-blue-500/10", border: "border-blue-500/20" },
+      { id: "mf", label: "MF", fullName: "Mutual Funds", count: 0, amount: 0, icon: PieChart, color: "text-purple-500", bg: "bg-purple-500/10", border: "border-purple-500/20" },
+      { id: "fd", label: "FD", fullName: "Fixed Deposit", count: 0, amount: 0, icon: PiggyBank, color: "text-amber-500", bg: "bg-amber-500/10", border: "border-amber-500/20" },
+      { id: "rd", label: "RD", fullName: "Recurring Deposit", count: 0, amount: 0, icon: RotateCcw, color: "text-orange-500", bg: "bg-orange-500/10", border: "border-orange-500/20" },
+      { id: "pf", label: "PF", fullName: "Provident Fund", count: 0, amount: 0, icon: ShieldCheck, color: "text-teal-500", bg: "bg-teal-500/10", border: "border-teal-500/20" },
     ];
 
     allAvailableSources.forEach((s) => {
@@ -1279,6 +1349,66 @@ export default function InvSettings() {
 
     return types;
   }, [allAvailableSources, goals]);
+
+  // Active Category Breakdown Selected Meta
+  const activeCategoryMeta = useMemo(() => {
+    if (!categoryBreakdownModal) return null;
+    return (
+      ALL_CATEGORY_META.find((c) => c.id === categoryBreakdownModal.activeTypeId) ||
+      ALL_CATEGORY_META[0]
+    );
+  }, [categoryBreakdownModal]);
+
+  // Breakdown Items Computed for Selected Category and Mode
+  const breakdownItems = useMemo(() => {
+    if (!categoryBreakdownModal) return [];
+    const { mode, activeTypeId } = categoryBreakdownModal;
+    const q = breakdownSearch.trim().toLowerCase();
+
+    const items = allAvailableSources
+      .filter((s) => {
+        if (activeTypeId && activeTypeId !== "all" && s.sourceType !== activeTypeId) {
+          return false;
+        }
+        if (q) {
+          const name = String(s.displayName || s.name || "").toLowerCase();
+          const sub = String(s.amc || s.bankName || s.symbol || "").toLowerCase();
+          if (!name.includes(q) && !sub.includes(q)) return false;
+        }
+        return true;
+      })
+      .map((s) => {
+        const stats = getSourceUnallocatedStats(s);
+        const allotments = getSourceGoalAllotments(s);
+        return {
+          source: s,
+          stats,
+          allotments,
+        };
+      });
+
+    if (mode === "earmarked") {
+      return items
+        .filter((it) => it.stats.totalAllotted > 0)
+        .sort((a, b) => b.stats.totalAllotted - a.stats.totalAllotted);
+    } else {
+      return items
+        .filter((it) => it.stats.remainingAmt > 0)
+        .sort((a, b) => b.stats.remainingAmt - a.stats.remainingAmt);
+    }
+  }, [categoryBreakdownModal, allAvailableSources, goals, breakdownSearch]);
+
+  // Breakdown Summary Metrics
+  const breakdownSummary = useMemo(() => {
+    if (!categoryBreakdownModal) return { totalVal: 0, totalTargetModeVal: 0, count: 0 };
+    const { mode } = categoryBreakdownModal;
+    const count = breakdownItems.length;
+    const totalVal = breakdownItems.reduce((acc, it) => acc + it.stats.totalVal, 0);
+    const totalTargetModeVal = breakdownItems.reduce((acc, it) => {
+      return acc + (mode === "earmarked" ? it.stats.totalAllotted : it.stats.remainingAmt);
+    }, 0);
+    return { totalVal, totalTargetModeVal, count };
+  }, [categoryBreakdownModal, breakdownItems]);
 
   // ----------------------------------------------------------------------
   // Allocation Modifiers (Save & Remove from 3-Panel Modal)
@@ -4513,7 +4643,22 @@ export default function InvSettings() {
               {/* 6 Source Types Grid (Showing all 6, if 0 shows 0) */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-[11px] sm:text-xs font-bold text-base-content/70 px-0.5 sm:px-1 whitespace-nowrap">
-                  <span className="truncate">Asset Categories Breakdown</span>
+                  <span className="truncate flex items-center gap-1.5">
+                    <span>Asset Categories Breakdown</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCategoryBreakdownModal({
+                          mode: "earmarked",
+                          activeTypeId: "all",
+                        });
+                      }}
+                      className="btn btn-ghost btn-circle btn-xs text-base-content/40 hover:text-emerald-500 hover:bg-emerald-500/10 cursor-pointer p-0 w-4 h-4 min-h-0 shrink-0"
+                      title="View complete breakdown of all earmarked assets"
+                    >
+                      <Info size={11} />
+                    </button>
+                  </span>
                   <span className="font-mono text-[10px] sm:text-[11px] text-base-content/50 font-normal shrink-0">
                     All 6 Classes
                   </span>
@@ -4521,11 +4666,17 @@ export default function InvSettings() {
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-2.5">
                   {overallSourceTypeStats.map((st) => (
                     <div
-                      key={st.label}
+                      key={st.id || st.label}
+                      onClick={() => {
+                        setCategoryBreakdownModal({
+                          mode: "earmarked",
+                          activeTypeId: st.id,
+                        });
+                      }}
                       className={`p-2.5 sm:p-3 rounded-xl sm:rounded-2xl border flex flex-col justify-between transition-all ${
                         st.count > 0
-                          ? `${st.bg} ${st.border} shadow-xs`
-                          : "bg-base-200/30 border-base-300/40 opacity-60"
+                          ? `${st.bg} ${st.border} shadow-xs hover:border-emerald-500/50 hover:shadow-sm cursor-pointer`
+                          : "bg-base-200/30 border-base-300/40 opacity-60 cursor-pointer"
                       }`}
                     >
                       <div className="flex items-center justify-between gap-1 min-w-0 whitespace-nowrap">
@@ -4533,14 +4684,30 @@ export default function InvSettings() {
                           <st.icon size={13} className="shrink-0" />
                           <span className="truncate">{st.label}</span>
                         </span>
-                        <span
-                          className={`badge badge-xs font-mono font-bold shrink-0 px-1.5 py-0.5 whitespace-nowrap ${
-                            st.count > 0 ? "badge-primary badge-soft text-primary" : "badge-ghost opacity-60"
-                          }`}
-                        >
-                          <span className="hidden sm:inline">{st.count} {st.count === 1 ? "source" : "sources"}</span>
-                          <span className="sm:hidden">{st.count}</span>
-                        </span>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <span
+                            className={`badge badge-xs font-mono font-bold shrink-0 px-1.5 py-0.5 whitespace-nowrap ${
+                              st.count > 0 ? "badge-primary badge-soft text-primary" : "badge-ghost opacity-60"
+                            }`}
+                          >
+                            <span className="hidden sm:inline">{st.count} {st.count === 1 ? "source" : "sources"}</span>
+                            <span className="sm:hidden">{st.count}</span>
+                          </span>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setCategoryBreakdownModal({
+                                mode: "earmarked",
+                                activeTypeId: st.id,
+                              });
+                            }}
+                            className="btn btn-ghost btn-circle btn-xs text-base-content/40 hover:text-emerald-500 hover:bg-emerald-500/10 cursor-pointer p-0 w-4 h-4 min-h-0 shrink-0"
+                            title={`View itemized ${st.fullName || st.label} breakdown`}
+                          >
+                            <Info size={11} />
+                          </button>
+                        </div>
                       </div>
                       <div className="mt-2 sm:mt-2.5">
                         <div className="font-mono font-black text-xs sm:text-base text-base-content truncate whitespace-nowrap">
@@ -4661,7 +4828,22 @@ export default function InvSettings() {
               {/* 6 Source Types Grid (Showing all 6, if 0 shows 0) */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-[11px] sm:text-xs font-bold text-base-content/70 px-0.5 sm:px-1 whitespace-nowrap">
-                  <span className="truncate">Asset Categories Breakdown</span>
+                  <span className="truncate flex items-center gap-1.5">
+                    <span>Asset Categories Breakdown</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCategoryBreakdownModal({
+                          mode: "unallocated",
+                          activeTypeId: "all",
+                        });
+                      }}
+                      className="btn btn-ghost btn-circle btn-xs text-base-content/40 hover:text-amber-500 hover:bg-amber-500/10 cursor-pointer p-0 w-4 h-4 min-h-0 shrink-0"
+                      title="View complete breakdown of all unallocated assets"
+                    >
+                      <Info size={11} />
+                    </button>
+                  </span>
                   <span className="font-mono text-[10px] sm:text-[11px] text-base-content/50 font-normal shrink-0">
                     All 6 Classes
                   </span>
@@ -4669,11 +4851,17 @@ export default function InvSettings() {
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-2.5">
                   {overallUnallocatedSourceTypeStats.map((st) => (
                     <div
-                      key={st.label}
+                      key={st.id || st.label}
+                      onClick={() => {
+                        setCategoryBreakdownModal({
+                          mode: "unallocated",
+                          activeTypeId: st.id,
+                        });
+                      }}
                       className={`p-2.5 sm:p-3 rounded-xl sm:rounded-2xl border flex flex-col justify-between transition-all ${
                         st.count > 0
-                          ? `${st.bg} ${st.border} shadow-xs`
-                          : "bg-base-200/30 border-base-300/40 opacity-60"
+                          ? `${st.bg} ${st.border} shadow-xs hover:border-amber-500/50 hover:shadow-sm cursor-pointer`
+                          : "bg-base-200/30 border-base-300/40 opacity-60 cursor-pointer"
                       }`}
                     >
                       <div className="flex items-center justify-between gap-1 min-w-0 whitespace-nowrap">
@@ -4681,14 +4869,30 @@ export default function InvSettings() {
                           <st.icon size={13} className="shrink-0" />
                           <span className="truncate">{st.label}</span>
                         </span>
-                        <span
-                          className={`badge badge-xs font-mono font-bold shrink-0 px-1.5 py-0.5 whitespace-nowrap ${
-                            st.count > 0 ? "badge-warning badge-soft text-amber-600 dark:text-amber-400" : "badge-ghost opacity-60"
-                          }`}
-                        >
-                          <span className="hidden sm:inline">{st.count} {st.count === 1 ? "source" : "sources"}</span>
-                          <span className="sm:hidden">{st.count}</span>
-                        </span>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <span
+                            className={`badge badge-xs font-mono font-bold shrink-0 px-1.5 py-0.5 whitespace-nowrap ${
+                              st.count > 0 ? "badge-warning badge-soft text-amber-600 dark:text-amber-400" : "badge-ghost opacity-60"
+                            }`}
+                          >
+                            <span className="hidden sm:inline">{st.count} {st.count === 1 ? "source" : "sources"}</span>
+                            <span className="sm:hidden">{st.count}</span>
+                          </span>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setCategoryBreakdownModal({
+                                mode: "unallocated",
+                                activeTypeId: st.id,
+                              });
+                            }}
+                            className="btn btn-ghost btn-circle btn-xs text-base-content/40 hover:text-amber-500 hover:bg-amber-500/10 cursor-pointer p-0 w-4 h-4 min-h-0 shrink-0"
+                            title={`View itemized unallocated ${st.fullName || st.label} breakdown`}
+                          >
+                            <Info size={11} />
+                          </button>
+                        </div>
                       </div>
                       <div className="mt-2 sm:mt-2.5">
                         <div className="font-mono font-black text-xs sm:text-base text-base-content truncate whitespace-nowrap">
@@ -4714,10 +4918,379 @@ export default function InvSettings() {
               <button
                 type="button"
                 onClick={() => setIsUnallocatedModalOpen(false)}
-                className="btn btn-xs sm:btn-sm btn-primary rounded-xl font-bold px-4 sm:px-5 shrink-0 whitespace-nowrap"
+                className="btn btn-xs sm:btn-sm btn-primary rounded-xl font-bold px-4 sm:px-5 shrink-0 whitespace-nowrap cursor-pointer"
               >
                 Close
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* -------------------------------------------------------------------- */}
+      {/* 10. CATEGORY ITEMIZED BREAKDOWN SUB-MODAL                            */}
+      {/* -------------------------------------------------------------------- */}
+      {categoryBreakdownModal && (
+        <div
+          className="fixed inset-0 z-[100001] bg-black/75 backdrop-blur-md flex items-center justify-center p-2.5 sm:p-4 overflow-y-auto animate-in fade-in duration-150"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setCategoryBreakdownModal(null);
+              setBreakdownSearch("");
+            }
+          }}
+        >
+          <div
+            className="bg-base-100 rounded-2xl sm:rounded-3xl border border-base-300 shadow-2xl max-w-2xl w-full max-h-[92dvh] sm:max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Pinned Header */}
+            <div className="p-3.5 sm:p-5 border-b border-base-300 flex items-center justify-between shrink-0 bg-base-100">
+              <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1 mr-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCategoryBreakdownModal(null);
+                    setBreakdownSearch("");
+                  }}
+                  className="btn btn-xs sm:btn-sm btn-ghost btn-circle shrink-0 text-base-content/60 hover:text-base-content cursor-pointer"
+                  title="Back"
+                >
+                  <ArrowLeft size={17} />
+                </button>
+                <div
+                  className={`w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl flex items-center justify-center font-bold shrink-0 ${
+                    categoryBreakdownModal.mode === "earmarked"
+                      ? "bg-emerald-500/10 text-emerald-500"
+                      : "bg-amber-500/10 text-amber-500"
+                  }`}
+                >
+                  <Info size={18} className="sm:hidden" />
+                  <Info size={22} className="hidden sm:block" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-primary">
+                      {categoryBreakdownModal.mode === "earmarked"
+                        ? "Earmarked Assets Breakdown"
+                        : "Unallocated Assets Breakdown"}
+                    </span>
+                    <span className="badge badge-xs font-mono font-bold badge-ghost">
+                      {activeCategoryMeta?.label || "All"}
+                    </span>
+                  </div>
+                  <h3 className="font-extrabold text-sm sm:text-lg text-base-content leading-tight whitespace-nowrap truncate">
+                    {activeCategoryMeta?.fullName || "All Asset Classes"}
+                  </h3>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setCategoryBreakdownModal(null);
+                  setBreakdownSearch("");
+                }}
+                className="btn btn-xs sm:btn-sm btn-circle btn-ghost shrink-0 text-base-content/60 hover:text-base-content cursor-pointer"
+                title="Close"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Filter Tabs Bar (All 6 Classes + All) */}
+            <div className="px-3 sm:px-5 py-2.5 border-b border-base-300 bg-base-200/40 flex items-center gap-1.5 overflow-x-auto no-scrollbar scrollbar-none [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden shrink-0">
+              {ALL_CATEGORY_META.map((cat) => {
+                const isActive = categoryBreakdownModal.activeTypeId === cat.id;
+                const CatIcon = cat.icon;
+                return (
+                  <button
+                    key={cat.id}
+                    type="button"
+                    onClick={() => {
+                      setCategoryBreakdownModal((prev) => ({
+                        ...prev,
+                        activeTypeId: cat.id,
+                      }));
+                    }}
+                    className={`shrink-0 px-2.5 sm:px-3 py-1 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
+                      isActive
+                        ? "bg-primary text-primary-content shadow-xs scale-[1.02]"
+                        : "bg-base-100 hover:bg-base-200 text-base-content/70 hover:text-base-content border border-base-content/10"
+                    }`}
+                  >
+                    <CatIcon size={12} />
+                    <span>{cat.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Sub-header: Search & Summary Banner */}
+            <div className="p-3 sm:p-4 bg-base-200/20 border-b border-base-300/60 space-y-2.5 shrink-0">
+              {/* Summary Metrics Bar */}
+              <div className="flex items-center justify-between gap-2 text-xs bg-base-100 p-2.5 rounded-xl border border-base-300">
+                <div className="min-w-0">
+                  <span className="text-[9.5px] uppercase font-bold text-base-content/50 block">
+                    {categoryBreakdownModal.mode === "earmarked" ? "Total Earmarked" : "Total Unallocated"}
+                  </span>
+                  <span
+                    className={`font-mono font-black text-xs sm:text-sm ${
+                      categoryBreakdownModal.mode === "earmarked" ? "text-emerald-500" : "text-amber-500"
+                    }`}
+                  >
+                    {formatINRCompact(breakdownSummary.totalTargetModeVal)}{" "}
+                    <span className="text-[10px] text-base-content/50 font-normal">
+                      (of {formatINRCompact(breakdownSummary.totalVal)})
+                    </span>
+                  </span>
+                </div>
+                <div className="text-right shrink-0">
+                  <span className="text-[9.5px] uppercase font-bold text-base-content/50 block">
+                    Assets Listed
+                  </span>
+                  <span className="font-mono font-extrabold text-xs sm:text-sm text-base-content">
+                    {breakdownItems.length} {breakdownItems.length === 1 ? "source" : "sources"}
+                  </span>
+                </div>
+              </div>
+
+              {/* Search Bar */}
+              <div className="relative">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-base-content/40" />
+                <input
+                  type="text"
+                  placeholder="Filter by name, bank, AMC or symbol..."
+                  value={breakdownSearch}
+                  onChange={(e) => setBreakdownSearch(e.target.value)}
+                  className="input input-xs sm:input-sm w-full pl-8 pr-8 rounded-xl bg-base-100 border border-base-300 text-xs focus:outline-primary/40"
+                />
+                {breakdownSearch && (
+                  <button
+                    type="button"
+                    onClick={() => setBreakdownSearch("")}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-base-content/40 hover:text-base-content cursor-pointer"
+                  >
+                    <X size={13} />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Scrollable Item List */}
+            <div className="p-3 sm:p-5 space-y-2.5 sm:space-y-3 overflow-y-auto no-scrollbar scrollbar-none [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden flex-1 min-h-0 bg-base-200/30">
+              {breakdownItems.length === 0 ? (
+                <div className="p-8 text-center bg-base-100 rounded-2xl border border-base-300 space-y-2">
+                  <div className="w-12 h-12 rounded-2xl bg-base-200 text-base-content/40 flex items-center justify-center mx-auto">
+                    <Info size={24} />
+                  </div>
+                  <h4 className="font-extrabold text-sm text-base-content">
+                    {breakdownSearch ? "No Matching Sources Found" : "No Assets in this Category"}
+                  </h4>
+                  <p className="text-xs text-base-content/60 max-w-sm mx-auto">
+                    {breakdownSearch
+                      ? "Try searching for a different keyword or switch categories above."
+                      : categoryBreakdownModal.mode === "earmarked"
+                      ? "No sources in this category are currently earmarked to your goals."
+                      : "All sources in this category are either 100% committed or have no balance."}
+                  </p>
+                </div>
+              ) : (
+                breakdownItems.map((it) => (
+                  <div
+                    key={it.source.id}
+                    className="p-3 sm:p-4 rounded-2xl bg-base-100 border border-base-300/80 hover:border-primary/40 transition-all shadow-2xs space-y-2.5"
+                  >
+                    {/* Top Row: Logo + Identity + Total Holding Value */}
+                    <div className="flex items-start justify-between gap-2.5">
+                      <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                        <CompanyLogo
+                          name={it.source.displayName || it.source.name}
+                          type={it.source.sourceType}
+                          size="w-9 h-9 sm:w-10 sm:h-10"
+                          rounded="rounded-xl sm:rounded-2xl"
+                        />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="font-extrabold text-xs sm:text-sm text-base-content leading-snug break-words">
+                              {it.source.displayName || it.source.name}
+                            </span>
+                            <span className="badge badge-xs font-mono font-bold badge-ghost text-[9px] uppercase">
+                              {it.source.sourceType === "mf"
+                                ? "MF"
+                                : it.source.sourceType === "fd"
+                                ? "FD"
+                                : it.source.sourceType === "rd"
+                                ? "RD"
+                                : it.source.sourceType === "pf"
+                                ? "PF"
+                                : it.source.sourceType.toUpperCase()}
+                            </span>
+                          </div>
+                          <div className="text-[10px] sm:text-[11px] text-base-content/55 font-medium truncate mt-0.5">
+                            {it.source.sourceType === "mf" && (
+                              <span>
+                                {it.source.amc || "AMC"} • {it.source.category || "Mutual Fund"} •{" "}
+                                {typeof it.source.availableUnits === "number"
+                                  ? it.source.availableUnits.toFixed(3)
+                                  : it.source.availableUnits}{" "}
+                                units
+                              </span>
+                            )}
+                            {it.source.sourceType === "stock" && (
+                              <span>
+                                {it.source.symbol || it.source.name} •{" "}
+                                {it.source.holdingQty || it.source.shares || 0} shares
+                              </span>
+                            )}
+                            {it.source.sourceType === "fd" && (
+                              <span>
+                                {it.source.bankName || "Bank"} • {it.source.interestRate}% p.a. • Maturity: ₹
+                                {formatINR(it.source.maturityAmount)}
+                              </span>
+                            )}
+                            {it.source.sourceType === "rd" && (
+                              <span>
+                                {it.source.bankName || "Bank"} • ₹{formatINR(it.source.monthlyAmount)}/mo •{" "}
+                                {it.source.tenureMonths} months
+                              </span>
+                            )}
+                            {it.source.sourceType === "bank" && (
+                              <span>
+                                {it.source.bankName || "Bank"} • {it.source.accountType || "Savings"}
+                              </span>
+                            )}
+                            {it.source.sourceType === "pf" && (
+                              <span>
+                                {it.source.monthsCount || 0} months recorded •{" "}
+                                {it.source.withdrawalsCount || 0} withdrawals
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Right: Holding Valuation */}
+                      <div className="text-right shrink-0">
+                        <span className="text-[9px] uppercase font-bold text-base-content/50 block">
+                          Total Valuation
+                        </span>
+                        <span className="font-mono font-black text-xs sm:text-sm text-base-content">
+                          {formatINR(it.stats.totalVal)}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Metric Row: Earmarked vs Free Split */}
+                    <div className="bg-base-200/50 p-2 sm:p-2.5 rounded-xl border border-base-content/5 flex items-center justify-between gap-2 text-xs">
+                      {categoryBreakdownModal.mode === "earmarked" ? (
+                        <>
+                          <div className="space-y-0.5">
+                            <span className="text-[9.5px] uppercase font-bold text-emerald-600 dark:text-emerald-400 block">
+                              Earmarked
+                            </span>
+                            <span className="font-mono font-extrabold text-xs sm:text-sm text-emerald-600 dark:text-emerald-400">
+                              {formatINR(it.stats.totalAllotted)}
+                            </span>
+                          </div>
+                          <div className="text-center">
+                            <span className="badge badge-xs badge-success badge-soft font-bold font-mono">
+                              {100 - it.stats.remainingPct}% Committed
+                            </span>
+                          </div>
+                          <div className="text-right space-y-0.5">
+                            <span className="text-[9.5px] uppercase font-bold text-base-content/50 block">
+                              Free Left
+                            </span>
+                            <span className="font-mono font-bold text-xs text-base-content/70">
+                              {formatINR(it.stats.remainingAmt)} ({it.stats.remainingPct}%)
+                            </span>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="space-y-0.5">
+                            <span className="text-[9.5px] uppercase font-bold text-amber-600 dark:text-amber-400 block">
+                              Unallocated Free
+                            </span>
+                            <span className="font-mono font-extrabold text-xs sm:text-sm text-amber-600 dark:text-amber-400">
+                              {formatINR(it.stats.remainingAmt)}
+                            </span>
+                          </div>
+                          <div className="text-center">
+                            <span className="badge badge-xs badge-warning badge-soft font-bold font-mono">
+                              {it.stats.remainingPct}% Free
+                            </span>
+                          </div>
+                          <div className="text-right space-y-0.5">
+                            <span className="text-[9.5px] uppercase font-bold text-base-content/50 block">
+                              Earmarked
+                            </span>
+                            <span className="font-mono font-bold text-xs text-base-content/70">
+                              {formatINR(it.stats.totalAllotted)} ({100 - it.stats.remainingPct}%)
+                            </span>
+                          </div>
+                        </>
+                      )}
+                    </div>
+
+                    {/* If Earmarked, show list of allotted goals */}
+                    {categoryBreakdownModal.mode === "earmarked" && it.allotments.length > 0 && (
+                      <div className="space-y-1 pt-0.5">
+                        <span className="text-[9px] uppercase font-bold text-base-content/50 block">
+                          Allocated to Goals ({it.allotments.length})
+                        </span>
+                        <div className="flex flex-wrap gap-1.5">
+                          {it.allotments.map((a) => (
+                            <div
+                              key={a.goalId}
+                              className="px-2 py-0.5 rounded-lg bg-base-200 border border-base-content/8 text-[10px] font-medium flex items-center gap-1.5"
+                            >
+                              <span className="font-bold text-base-content truncate max-w-[140px]">
+                                {a.goalName}
+                              </span>
+                              <span className="font-mono font-extrabold text-primary">
+                                ₹{formatINR(a.amount)}
+                              </span>
+                              <span className="text-base-content/50 font-mono">({a.percent}%)</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Pinned Footer */}
+            <div className="p-3 sm:p-4 border-t border-base-300 flex items-center justify-between shrink-0 bg-base-100 gap-2">
+              <span className="text-[10px] sm:text-xs text-base-content/50 truncate">
+                Showing {breakdownItems.length} {activeCategoryMeta?.label || ""} assets
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCategoryBreakdownModal(null);
+                    setBreakdownSearch("");
+                  }}
+                  className="btn btn-xs sm:btn-sm btn-ghost rounded-xl font-bold px-3 sm:px-4 cursor-pointer"
+                >
+                  Back
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCategoryBreakdownModal(null);
+                    setBreakdownSearch("");
+                    setIsEarmarkedModalOpen(false);
+                    setIsUnallocatedModalOpen(false);
+                  }}
+                  className="btn btn-xs sm:btn-sm btn-primary rounded-xl font-bold px-4 sm:px-5 cursor-pointer shadow-xs"
+                >
+                  Close All
+                </button>
+              </div>
             </div>
           </div>
         </div>
