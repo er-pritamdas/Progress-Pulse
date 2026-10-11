@@ -342,11 +342,11 @@ export default function InvSettings() {
   const [isYearOpen, setIsYearOpen] = useState(false);
   // Responsive screen detector for mobile drawer vs desktop modal
   const [isMobileScreen, setIsMobileScreen] = useState(
-    typeof window !== "undefined" ? window.innerWidth < 640 : false
+    typeof window !== "undefined" ? window.innerWidth < 768 : false
   );
   useEffect(() => {
     const handleResize = () => {
-      setIsMobileScreen(window.innerWidth < 640);
+      setIsMobileScreen(window.innerWidth < 768);
     };
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
@@ -4817,8 +4817,7 @@ export default function InvSettings() {
 
                   {isYearOpen && (
                     <div className="absolute top-full right-0 mt-1.5 z-50 p-2 bg-base-100 rounded-2xl border border-base-300 shadow-xl w-52 max-w-[calc(100vw-32px)] max-h-56 overflow-y-auto grid grid-cols-2 gap-1 animate-in fade-in zoom-in-95 duration-150 custom-scrollbar">
-                      {Array.from({ length: MAX_GOAL_YEAR - MIN_GOAL_YEAR + 1 }, (_, i) => {
-                        const yr = MIN_GOAL_YEAR + i;
+                      {availableYears.map((yr) => {
                         const isSel = currentYearVal === yr;
                         return (
                           <button
@@ -4854,8 +4853,10 @@ export default function InvSettings() {
                       Age at Target:
                     </span>
                     <span className="text-xs font-bold text-base-content truncate block">
-                      {calculatedAgeAtTarget !== null ? (
-                        <span className="font-mono text-primary font-extrabold">{calculatedAgeAtTarget} Years Old</span>
+                      {userAgeOnTargetDate ? (
+                        <span className="font-mono text-primary font-extrabold">
+                          {userAgeOnTargetDate.years} Years Old{userAgeOnTargetDate.months > 0 ? `, ${userAgeOnTargetDate.months} Mos` : ""}
+                        </span>
                       ) : (
                         <span className="text-warning text-[11px] font-semibold">DOB not configured</span>
                       )}

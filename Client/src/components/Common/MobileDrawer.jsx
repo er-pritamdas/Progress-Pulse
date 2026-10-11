@@ -267,12 +267,12 @@ export default function MobileDrawer({
 
   return createPortal(
     <div
-      className={`fixed inset-0 ${zIndex} flex flex-col justify-end select-none md:hidden overflow-hidden`}
+      className={`fixed inset-0 ${zIndex} flex flex-col justify-end md:hidden overflow-hidden`}
       style={{ touchAction: "none" }}
     >
       {/* 1. Backdrop (Click outside to dismiss) */}
       <div
-        className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity duration-240"
+        className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity duration-240 select-none"
         style={{ opacity: backdropOpacity }}
         onClick={handleRequestClose}
       />
@@ -296,7 +296,7 @@ export default function MobileDrawer({
         {showHandle && (
           <div
             onMouseDown={handleHandleMouseDown}
-            className="pt-2.5 pb-1 px-4 flex justify-center items-center shrink-0 cursor-grab active:cursor-grabbing touch-none"
+            className="pt-2.5 pb-1 px-4 flex justify-center items-center shrink-0 cursor-grab active:cursor-grabbing touch-none select-none"
           >
             <div
               className={`h-1.5 rounded-full transition-all duration-150 ${
@@ -312,7 +312,7 @@ export default function MobileDrawer({
         {customHeader ? (
           <div className="shrink-0">{customHeader}</div>
         ) : (title || subtitle || icon || rightAction || showCloseButton) ? (
-          <div className="px-4 py-2 border-b border-base-200/80 flex items-center justify-between gap-2.5 shrink-0 bg-base-200/30">
+          <div className="px-4 py-2 border-b border-base-200/80 flex items-center justify-between gap-2.5 shrink-0 bg-base-200/30 select-none">
             <div className="flex items-center gap-2.5 min-w-0 flex-1">
               {icon && <div className="shrink-0">{icon}</div>}
               {(title || subtitle) && (
@@ -350,7 +350,7 @@ export default function MobileDrawer({
         {/* 3. Scrollable Body Content (Pull down when scrollTop === 0 closes drawer) */}
         <div
           ref={contentRef}
-          className={`flex-1 overflow-y-auto overscroll-contain min-h-0 ${bodyClassName}`}
+          className={`flex-1 overflow-y-auto overscroll-contain min-h-0 touch-pan-y ${bodyClassName}`}
           style={{
             WebkitOverflowScrolling: "touch",
             overscrollBehaviorY: "contain",

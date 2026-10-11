@@ -516,9 +516,9 @@ export default function PortfolioSettingsModal({
 
   return (
     <>
-      {/* Desktop Container (hidden sm:flex: 100% original & untouched) */}
+      {/* Desktop Container (hidden md:flex: 100% original & untouched) */}
       <div
-        className="hidden sm:flex fixed inset-0 z-[99999] bg-black/75 backdrop-blur-md items-center justify-center p-5 overflow-y-auto"
+        className="hidden md:flex fixed inset-0 z-[99999] bg-black/75 backdrop-blur-md items-center justify-center p-5 overflow-y-auto"
         onClick={(e) => {
           if (e.target === e.currentTarget) onClose();
         }}

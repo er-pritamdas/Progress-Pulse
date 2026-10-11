@@ -76,16 +76,18 @@ export default function AllocateSourceModal({
   onSaveAllocation,
   onRemoveAllocation,
 }) {
-  // Planner/Goal selection state - defaults to activePlan?.id
-  const [selectedPlanId, setSelectedPlanId] = useState(activePlan?.id || "");
+  // Planner/Goal selection state - defaults to activePlan?.id || activePlan?._id
+  const [selectedPlanId, setSelectedPlanId] = useState(
+    activePlan?.id || activePlan?._id || ""
+  );
 
   // Responsive screen detector for phone view drawer vs desktop modal
   const [isMobileScreen, setIsMobileScreen] = useState(
-    typeof window !== "undefined" ? window.innerWidth < 640 : false
+    typeof window !== "undefined" ? window.innerWidth < 768 : false
   );
   useEffect(() => {
     const handleResize = () => {
-      setIsMobileScreen(window.innerWidth < 640);
+      setIsMobileScreen(window.innerWidth < 768);
     };
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
@@ -93,14 +95,20 @@ export default function AllocateSourceModal({
 
   // Update selectedPlanId whenever modal opens or activePlan changes
   useEffect(() => {
-    if (isOpen && activePlan?.id) {
-      setSelectedPlanId(activePlan.id);
+    if (isOpen && (activePlan?.id || activePlan?._id)) {
+      setSelectedPlanId(activePlan.id || activePlan._id);
     }
-  }, [isOpen, activePlan?.id]);
+  }, [isOpen, activePlan?.id, activePlan?._id]);
 
   // Derived currentPlan matching selectedPlanId or activePlan
   const currentPlan = useMemo(() => {
-    return goals.find((g) => g.id === selectedPlanId) || activePlan;
+    return (
+      goals.find(
+        (g) =>
+          (g.id && g.id === selectedPlanId) ||
+          (g._id && g._id === selectedPlanId)
+      ) || activePlan
+    );
   }, [goals, selectedPlanId, activePlan]);
 
   // Master List of All Available Sources
@@ -346,7 +354,7 @@ export default function AllocateSourceModal({
 
       if (hasAlloc) {
         const alloc = g.allocations[sourceItem.id];
-        const pct = Math.max(0, Math.min(100, Math.round((Number(alloc.percent) ?? 0) * 10) / 10));
+        const pct = Math.max(0, Math.min(100, Math.round(((Number(alloc.percent) || 0)) * 10) / 10));
         // Autocalculated: Total Valuation x Allotment %
         const amt = (totalVal * pct) / 100;
         const shares = alloc.shares !== undefined ? Number(alloc.shares) : Math.round(totalShares * (pct / 100));
