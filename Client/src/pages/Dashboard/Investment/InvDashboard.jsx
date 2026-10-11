@@ -10,6 +10,7 @@ import FixedDepositDashboard from "../../../components/Dashboard/Investment/Fixe
 import SelectDashboardModal, {
   DASHBOARDS_LIST,
 } from "../../../components/Dashboard/Investment/SelectDashboardModal";
+import MobileDrawer from "../../../components/Common/MobileDrawer";
 import {
   Banknote,
   TrendingUp,
@@ -4123,44 +4124,40 @@ export default function InvDashboard() {
 
       {/* Mobile Date Filter Bottom Sheet (Phone View Only - Desktop View Untouched) */}
       {isMobileFilterOpen && (
-        <div
-          className="fixed inset-0 z-[100] flex items-end justify-center bg-black/60 backdrop-blur-md transition-opacity duration-200 animate-in fade-in"
-          onClick={(e) => { if (e.target === e.currentTarget) setIsMobileFilterOpen(false); }}
-        >
-          <div
-            className="bg-base-100 rounded-t-3xl shadow-2xl w-full max-h-[92vh] flex flex-col overflow-hidden border-t border-x border-base-300 mobile-drawer-slide-up"
-            style={{ paddingBottom: "env(safe-area-inset-bottom, 16px)" }}
-          >
-            {/* Drag Handle & Sheet Header */}
-            <div className="border-b border-base-200 bg-base-200/60 select-none touch-none">
-              {/* Grab Pill */}
-              <div className="pt-3 pb-1.5 px-4 flex justify-center items-center">
-                <div className="h-1.5 w-12 rounded-full bg-base-content/30" />
-              </div>
-
-              {/* Header row */}
-              <div className="px-3.5 pb-3.5 flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="p-2 rounded-xl bg-base-100 border border-base-300 text-primary shrink-0">
-                    <Calendar size={16} />
-                  </div>
-                  <div className="min-w-0">
-                    <h3 className="font-extrabold text-sm text-base-content truncate">Filter Date Range</h3>
-                    <span className="text-[10px] opacity-60 font-medium block truncate">Quick presets or choose custom months</span>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setIsMobileFilterOpen(false)}
-                  className="btn btn-xs btn-ghost btn-circle rounded-full shrink-0 text-base-content/60 cursor-pointer"
-                >
-                  <X size={16} />
-                </button>
-              </div>
+        <MobileDrawer
+          isOpen={isMobileFilterOpen}
+          onClose={() => setIsMobileFilterOpen(false)}
+          maxHeight="max-h-[92vh]"
+          showHandle={true}
+          title="Filter Date Range"
+          subtitle="Quick presets or choose custom months"
+          icon={
+            <div className="p-2 rounded-xl bg-base-100 border border-base-300 text-primary shrink-0">
+              <Calendar size={16} />
             </div>
-
-            {/* Scrollable content */}
-            <div className="overflow-y-auto flex-1 p-4 space-y-4">
+          }
+          footer={
+            <div className="flex items-center justify-between gap-3 p-3 border-t border-base-300 bg-base-200/50">
+              <button
+                type="button"
+                onClick={resetMobileFilter}
+                className="btn btn-sm btn-ghost border border-base-300 rounded-xl px-4 cursor-pointer text-xs"
+              >
+                Reset
+              </button>
+              <button
+                type="button"
+                disabled={`${tempFromYear}-${tempFromMonth}` > `${tempToYear}-${tempToMonth}`}
+                onClick={applyMobileFilter}
+                className="btn btn-sm btn-primary rounded-xl px-6 font-bold shadow-sm cursor-pointer text-xs disabled:opacity-50"
+              >
+                Apply Filter
+              </button>
+            </div>
+          }
+        >
+          {/* Scrollable content */}
+          <div className="p-4 space-y-4">
               {/* Company / Employer Selector (Visible when SALARY or PF is active) */}
               {(activeDashboard === "SALARY" || activeDashboard === "PF") && companiesList.length > 0 && (
                 <div className="space-y-2">
@@ -4314,27 +4311,8 @@ export default function InvDashboard() {
                 </div>
               </div>
 
-              {/* Action Buttons */}
-              <div className="flex items-center justify-between gap-3 pt-3 border-t border-base-300">
-                <button
-                  type="button"
-                  onClick={resetMobileFilter}
-                  className="btn btn-sm btn-ghost border border-base-300 rounded-xl px-4 cursor-pointer text-xs"
-                >
-                  Reset
-                </button>
-                <button
-                  type="button"
-                  disabled={`${tempFromYear}-${tempFromMonth}` > `${tempToYear}-${tempToMonth}`}
-                  onClick={applyMobileFilter}
-                  className="btn btn-sm btn-primary rounded-xl px-6 font-bold shadow-sm cursor-pointer text-xs disabled:opacity-50"
-                >
-                  Apply Filter
-                </button>
-              </div>
-            </div>
           </div>
-        </div>
+        </MobileDrawer>
       )}
 
       <div className="px-2.5 sm:px-4 md:px-6 w-full max-w-[1600px] mx-auto space-y-3.5 sm:space-y-4 md:space-y-6 mt-4">

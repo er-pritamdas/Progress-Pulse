@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { setHabitFilters, resetHabitFilters, setHabitYearAndMonth } from "../../../services/redux/slice/habitSlice";
 import HabitDateQuickSelect from "../../../components/Dashboard/Habit/HabitDateQuickSelect.jsx";
+import MobileDrawer from "../../../components/Common/MobileDrawer.jsx";
 import { TitleChanger } from "../../../utils/TitleChanger";
 import LongestStreakCard from "../../../components/Dashboard/Habit/HabitDashboardPage/LongestStreakCard";
 import GoalProgressCard from "../../../components/Dashboard/Habit/HabitDashboardPage/GoalProgressCard";
@@ -528,37 +529,46 @@ function HabitDashboard() {
         </div>
       </div>
 
-      {/* Mobile Date Filter Modal Popup (Phone View Only - Desktop View Untouched) */}
+      {/* Mobile Date Filter Drawer (Phone View Only - Desktop View Untouched) */}
       {isMobileFilterOpen && (
-        <div 
-          className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-xs p-0 sm:p-4 animate-fade-in"
-          onClick={() => setIsMobileFilterOpen(false)}
-        >
-          <div
-            className="bg-base-100 rounded-t-3xl sm:rounded-2xl border border-base-300 shadow-2xl w-full max-w-md p-5 space-y-4 max-h-[90vh] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Modal Header */}
-            <div className="flex items-center justify-between border-b border-base-300 pb-3">
-              <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-xl bg-primary/10 text-primary">
-                  <Calendar className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-base text-base-content leading-tight">Filter Date Range</h3>
-                  <p className="text-[11px] text-base-content/60 font-medium">Quick select or pick custom dates</p>
-                </div>
-              </div>
+        <MobileDrawer
+          isOpen={isMobileFilterOpen}
+          onClose={() => setIsMobileFilterOpen(false)}
+          maxHeight="max-h-[90vh]"
+          showHandle={true}
+          title="Filter Date Range"
+          subtitle="Quick select or pick custom dates"
+          icon={
+            <div className="p-2 rounded-xl bg-primary/10 text-primary">
+              <Calendar className="w-5 h-5" />
+            </div>
+          }
+          footer={
+            <div className="flex items-center justify-between gap-3 p-3 border-t border-base-300 bg-base-200/50">
               <button
                 type="button"
-                onClick={() => setIsMobileFilterOpen(false)}
-                className="btn btn-sm btn-circle btn-ghost text-base-content/70 hover:text-base-content cursor-pointer"
-                title="Close"
+                onClick={() => {
+                  resetFilters();
+                  setMobileCalendarView("from");
+                }}
+                className="btn btn-sm btn-ghost border border-base-300 rounded-xl px-4 cursor-pointer text-xs"
               >
-                <X size={18} />
+                Reset
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  fetchData();
+                  setIsMobileFilterOpen(false);
+                }}
+                className="btn btn-sm btn-primary rounded-xl px-6 font-bold shadow-sm cursor-pointer text-xs"
+              >
+                Apply Filter
               </button>
             </div>
-
+          }
+        >
+          <div className="p-4 space-y-4">
             {/* Quick Select Section */}
             <div className="space-y-2">
               <span className="text-[11px] font-bold text-base-content/70 uppercase tracking-wider block">
@@ -707,32 +717,8 @@ function HabitDashboard() {
                 </div>
               )}
             </div>
-
-            {/* Action Buttons */}
-            <div className="flex items-center justify-between gap-3 pt-3 border-t border-base-300">
-              <button
-                type="button"
-                onClick={() => {
-                  resetFilters();
-                  setMobileCalendarView("from");
-                }}
-                className="btn btn-sm btn-ghost border border-base-300 rounded-xl px-4 cursor-pointer text-xs"
-              >
-                Reset
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  fetchData();
-                  setIsMobileFilterOpen(false);
-                }}
-                className="btn btn-sm btn-primary rounded-xl px-6 font-bold shadow-sm cursor-pointer text-xs"
-              >
-                Apply Filter
-              </button>
-            </div>
           </div>
-        </div>
+        </MobileDrawer>
       )}
 
       <div className="px-2 sm:px-4 md:px-6 w-full max-w-[1600px] mx-auto space-y-3.5 sm:space-y-4 md:space-y-6 mt-4">

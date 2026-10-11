@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import dayjs from "dayjs";
+import MobileDrawer from "../../Common/MobileDrawer";
 import {
   X,
   Settings2,
@@ -204,49 +205,66 @@ export default function PortfolioSettingsModal({
 
   if (!isOpen) return null;
 
-  return (
-    <div
-      className="fixed inset-0 z-[99999] bg-black/75 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-5 overflow-y-auto"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-    >
-      <div
-        className="bg-base-100 w-full sm:max-w-2xl max-h-[94vh] sm:max-h-[90vh] rounded-t-3xl sm:rounded-3xl shadow-2xl border border-base-300/80 flex flex-col overflow-hidden my-0 sm:my-auto animate-in slide-in-from-bottom-8 sm:zoom-in-95 duration-200"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="px-4 py-3 sm:px-6 sm:py-5 border-b border-base-200/80 bg-base-100/90 backdrop-blur-md shrink-0">
-          {/* Mobile drag handle */}
-          <div className="w-10 h-1 bg-base-content/20 rounded-full mx-auto mb-2.5 sm:hidden" />
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-primary/10 text-primary flex items-center justify-center shadow-xs shrink-0">
-                <SlidersHorizontal size={17} className="sm:w-5 sm:h-5" />
-              </div>
-              <div className="min-w-0">
-                <h2 className="text-base sm:text-xl font-black tracking-tight text-base-content truncate">
-                  Portfolio & Goal Settings
-                </h2>
-                <p className="text-[10.5px] sm:text-xs text-base-content/60 font-medium truncate">
-                  Upper limit & milestone targets
-                </p>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={onClose}
-              className="btn btn-ghost btn-circle btn-xs sm:btn-sm text-base-content/60 hover:text-base-content hover:bg-base-200 shrink-0"
-              title="Close (Esc)"
-            >
-              <X size={17} />
-            </button>
-          </div>
+  const headerContent = (
+    <div className="flex items-center justify-between">
+      <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-primary/10 text-primary flex items-center justify-center shadow-xs shrink-0">
+          <SlidersHorizontal size={17} className="sm:w-5 sm:h-5" />
         </div>
+        <div className="min-w-0">
+          <h2 className="text-base sm:text-xl font-black tracking-tight text-base-content truncate">
+            Portfolio & Goal Settings
+          </h2>
+          <p className="text-[10.5px] sm:text-xs text-base-content/60 font-medium truncate">
+            Upper limit & milestone targets
+          </p>
+        </div>
+      </div>
+      <button
+        type="button"
+        onClick={onClose}
+        className="btn btn-ghost btn-circle btn-xs sm:btn-sm text-base-content/60 hover:text-base-content hover:bg-base-200 shrink-0 cursor-pointer"
+        title="Close (Esc)"
+      >
+        <X size={17} />
+      </button>
+    </div>
+  );
 
-        {/* Modal Body */}
-        <div className="p-3.5 sm:p-6 overflow-y-auto space-y-3 sm:space-y-6 max-h-[calc(94vh-125px)] sm:max-h-[calc(90vh-140px)] [scrollbar-width:thin]">
-          {/* 1. User Profile & Age from Settings */}
+  const footerContent = (
+    <div className="px-4 py-3 sm:px-6 sm:py-4 bg-base-200/50 border-t border-base-200/80 flex items-center justify-between gap-2 shrink-0">
+      <button
+        type="button"
+        onClick={handleResetDefaults}
+        className="btn btn-ghost btn-xs text-base-content/60 hover:text-base-content gap-1 font-bold px-1.5 sm:px-3 cursor-pointer"
+      >
+        <RotateCcw size={12} />
+        <span className="hidden sm:inline">Reset Defaults</span>
+        <span className="sm:hidden">Reset</span>
+      </button>
+
+      <div className="flex items-center gap-1.5 sm:gap-2">
+        <button
+          type="button"
+          onClick={onClose}
+          className="btn btn-ghost btn-xs sm:btn-sm text-base-content/70 hover:bg-base-200 rounded-xl font-bold px-2.5 sm:px-3 cursor-pointer"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          onClick={handleSave}
+          className="btn btn-primary btn-xs sm:btn-sm rounded-xl gap-1.5 font-bold shadow-md shadow-primary/20 px-3 cursor-pointer"
+        >
+          <CheckCircle2 size={13} className="sm:w-3.5 sm:h-3.5" /> Save
+        </button>
+      </div>
+    </div>
+  );
+
+  const bodyContent = (
+    <>
+      {/* 1. User Profile & Age from Settings */}
           <div className="bg-base-200/50 rounded-2xl p-3 sm:p-4 border border-base-300/50 space-y-2 sm:space-y-3">
             <div className="flex items-center justify-between gap-2">
               <label className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-base-content/70 flex items-center gap-1.5 sm:gap-2">
@@ -493,38 +511,49 @@ export default function PortfolioSettingsModal({
               </div>
             </div>
           </div>
-        </div>
+    </>
+  );
 
-        {/* Footer */}
-        <div className="px-4 py-3 sm:px-6 sm:py-4 bg-base-200/50 border-t border-base-200/80 flex items-center justify-between gap-2 shrink-0">
-          <button
-            type="button"
-            onClick={handleResetDefaults}
-            className="btn btn-ghost btn-xs text-base-content/60 hover:text-base-content gap-1 font-bold px-1.5 sm:px-3"
-          >
-            <RotateCcw size={12} />
-            <span className="hidden sm:inline">Reset Defaults</span>
-            <span className="sm:hidden">Reset</span>
-          </button>
-
-          <div className="flex items-center gap-1.5 sm:gap-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="btn btn-ghost btn-xs sm:btn-sm text-base-content/70 hover:bg-base-200 rounded-xl font-bold px-2.5 sm:px-3"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={handleSave}
-              className="btn btn-primary btn-xs sm:btn-sm rounded-xl gap-1.5 font-bold shadow-md shadow-primary/20 px-3"
-            >
-              <CheckCircle2 size={13} className="sm:w-3.5 sm:h-3.5" /> Save
-            </button>
+  return (
+    <>
+      {/* Desktop Container (hidden sm:flex: 100% original & untouched) */}
+      <div
+        className="hidden sm:flex fixed inset-0 z-[99999] bg-black/75 backdrop-blur-md items-center justify-center p-5 overflow-y-auto"
+        onClick={(e) => {
+          if (e.target === e.currentTarget) onClose();
+        }}
+      >
+        <div
+          className="bg-base-100 w-full max-w-2xl max-h-[90vh] rounded-3xl shadow-2xl border border-base-300/80 flex flex-col overflow-hidden my-auto animate-in zoom-in-95 duration-200"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="px-6 py-5 border-b border-base-200/80 bg-base-100/90 backdrop-blur-md shrink-0">
+            {headerContent}
           </div>
+          <div className="p-6 overflow-y-auto space-y-6 max-h-[calc(90vh-140px)] [scrollbar-width:thin]">
+            {bodyContent}
+          </div>
+          {footerContent}
         </div>
       </div>
-    </div>
+
+      {/* Mobile Drawer (sm:hidden: Instagram / iOS style pull-down drawer) */}
+      <MobileDrawer
+        isOpen={isOpen}
+        onClose={onClose}
+        maxHeight="max-h-[94vh]"
+        showHandle={true}
+        customHeader={
+          <div className="px-4 pb-2.5 border-b border-base-200/80 bg-base-100/90 backdrop-blur-md shrink-0">
+            {headerContent}
+          </div>
+        }
+        footer={footerContent}
+      >
+        <div className="p-3.5 space-y-3.5">
+          {bodyContent}
+        </div>
+      </MobileDrawer>
+    </>
   );
 }

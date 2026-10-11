@@ -26,6 +26,7 @@ import {
   Target,
 } from "lucide-react";
 import CompanyLogo from "./CompanyLogo";
+import MobileDrawer from "../../Common/MobileDrawer";
 
 // ----------------------------------------------------------------------
 // Currency Formatting Helpers
@@ -77,6 +78,18 @@ export default function AllocateSourceModal({
 }) {
   // Planner/Goal selection state - defaults to activePlan?.id
   const [selectedPlanId, setSelectedPlanId] = useState(activePlan?.id || "");
+
+  // Responsive screen detector for phone view drawer vs desktop modal
+  const [isMobileScreen, setIsMobileScreen] = useState(
+    typeof window !== "undefined" ? window.innerWidth < 640 : false
+  );
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobileScreen(window.innerWidth < 640);
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   // Update selectedPlanId whenever modal opens or activePlan changes
   useEffect(() => {
@@ -525,208 +538,7 @@ export default function AllocateSourceModal({
 
   if (!isOpen || !currentPlan) return null;
 
-  return (
-    <div
-      className="fixed inset-0 z-[99999] bg-black/60 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-y-auto"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) {
-          onClose();
-        }
-      }}
-    >
-      <div className="flex items-stretch justify-center gap-3 sm:gap-4 max-w-[1440px] w-full h-[92dvh] sm:h-[680px]">
-        {/* ================================================================ */}
-        {/* 1. LEFT POPUP: ASSET CATEGORIES (Exact replica of Food Logging)  */}
-        {/* ================================================================ */}
-        <div className="hidden md:flex bg-base-100 rounded-3xl border border-base-300 shadow-2xl h-full w-60 sm:w-68 flex-col overflow-hidden shrink-0 animate-in fade-in zoom-in-95 duration-200">
-          {/* Header */}
-          <div className="p-4 border-b border-base-300 flex items-center justify-between shrink-0">
-            <div className="flex items-center gap-2">
-              <Layers size={17} className="text-primary" />
-              <h4 className="font-bold text-sm text-base-content leading-tight">Categories</h4>
-            </div>
-            <span className="badge badge-sm badge-ghost font-mono opacity-70">
-              {allSources.length} Sources
-            </span>
-          </div>
-
-          {/* Search inside Categories */}
-          <div className="p-2.5 border-b border-base-200 shrink-0">
-            <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 opacity-40" size={13} />
-              <input
-                type="text"
-                className="input input-xs input-bordered w-full pl-8 rounded-lg text-xs bg-transparent"
-                placeholder="Filter categories..."
-                value={categorySearchQuery}
-                onChange={(e) => setCategorySearchQuery(e.target.value)}
-              />
-              {categorySearchQuery && (
-                <button
-                  type="button"
-                  onClick={() => setCategorySearchQuery("")}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-xs opacity-50 hover:opacity-100"
-                >
-                  ✕
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Categories List */}
-          <div className="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar">
-            {filteredCategories.map((cat) => {
-              const IconComp = cat.icon;
-              const isSelected = selectedCategory === cat.id;
-              const count =
-                cat.id === "all"
-                  ? allSources.length
-                  : cat.id === "in_plan"
-                  ? allSources.filter((s) => isSourceInCurrentPlan(s)).length
-                  : cat.id === "bank"
-                  ? bankAccounts.length
-                  : cat.id === "stock"
-                  ? heldStocks.length
-                  : cat.id === "mf"
-                  ? (holdingMutualFunds || []).filter((m) => (m.availableUnits ?? m.activeUnits ?? 0) > 0.0001 && Number(m.holdingValue) > 0).length
-                  : cat.id === "fd"
-                  ? activeFixedDeposits.length
-                  : cat.id === "rd"
-                  ? activeRecurringDeposits.length
-                  : pfSource?.balance > 0
-                  ? 1
-                  : 0;
-
-              return (
-                <button
-                  key={cat.id}
-                  type="button"
-                  onClick={() => handleCategoryClick(cat.id)}
-                  className={`w-full px-3 py-2 rounded-xl text-left transition-all flex items-center justify-between group cursor-pointer ${
-                    isSelected
-                      ? "bg-primary/10 text-primary font-bold shadow-xs border border-primary/20"
-                      : "text-base-content/70 hover:text-base-content hover:bg-base-200/50 font-medium"
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5 truncate min-w-0">
-                    <span className={`shrink-0 ${cat.color}`}>
-                      <IconComp size={15} />
-                    </span>
-                    <span className="truncate text-xs">{cat.label}</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <span className="badge badge-xs font-mono font-bold bg-base-200">
-                      {count}
-                    </span>
-                    {isSelected && <Check size={14} className="text-primary" />}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Bottom Status Footer */}
-          <div className="p-3 border-t border-base-200 text-[11px] text-base-content/70 flex items-center justify-between shrink-0 bg-base-200/40">
-            <span className="truncate max-w-[160px]">
-              Active:{" "}
-              <span className="font-bold text-primary">
-                {selectedCategory === "in_plan"
-                  ? `In Plan (${currentPlan?.title || "Active"})`
-                  : ASSET_CATEGORIES.find((c) => c.id === selectedCategory)?.label}
-              </span>
-            </span>
-            {selectedCategory !== "all" && (
-              <button
-                type="button"
-                onClick={() => handleCategoryClick("all")}
-                className="btn btn-ghost btn-xs text-[10px] text-primary hover:underline px-1 h-5 min-h-0"
-              >
-                Reset
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* ================================================================ */}
-        {/* 2. MAIN POPUP: MIDDLE (LIST) & RIGHT (ALLOTMENT CONTROLS)        */}
-        {/* ================================================================ */}
-        <div className="bg-base-200 rounded-t-3xl sm:rounded-3xl flex-1 h-full border border-base-300 shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-6 sm:zoom-in-95 duration-200 min-w-0 max-w-5xl">
-          {/* Mobile Drag Pill */}
-          <div className="sm:hidden w-full flex items-center justify-center pt-2.5 pb-1 shrink-0 bg-base-100">
-            <div className="w-10 h-1 rounded-full bg-base-content/20" />
-          </div>
-
-          {/* Main Modal Header */}
-          <div className="p-2.5 sm:p-4 border-b border-base-300 flex justify-between items-center shrink-0 bg-base-100 gap-2 sm:gap-3">
-            <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-              <span className="text-xl sm:text-2xl shrink-0">{currentPlan.icon || "🎯"}</span>
-              <div className="min-w-0">
-                {/* Line 1: Heading */}
-                <h3 className="font-extrabold text-sm sm:text-base text-base-content truncate leading-tight whitespace-nowrap">
-                  Add Sources to {currentPlan.title}
-                </h3>
-                {/* Line 2: Target Badge + Guidance */}
-                <div className="flex items-center gap-1.5 text-[11px] sm:text-xs text-base-content/60 mt-1 whitespace-nowrap truncate">
-                  <span className="badge badge-xs sm:badge-sm font-bold bg-primary text-primary-content shrink-0 font-mono whitespace-nowrap">
-                    Target: {formatINRCompact(currentPlan.targetAmount)}
-                  </span>
-                  <span className="text-base-content/30 text-[10px] hidden xs:inline">•</span>
-                  <span className="text-[10.5px] sm:text-xs text-base-content/60 font-medium truncate hidden xs:inline whitespace-nowrap">
-                    Choose an asset to allocate funds
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Right side of Header: In-header Notification Banner + Close Button */}
-            <div className="flex items-center gap-2.5 shrink-0">
-              {topNotification && (
-                <div
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-bold shadow-xs animate-in fade-in slide-in-from-right-4 duration-250 ${
-                    topNotification.type === "info"
-                      ? "bg-base-200 text-base-content border-base-300"
-                      : topNotification.type === "error"
-                      ? "bg-error/15 text-error border-error/30"
-                      : "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30"
-                  }`}
-                >
-                  {topNotification.type === "info" ? (
-                    <Info size={15} className="shrink-0 text-primary" />
-                  ) : topNotification.type === "error" ? (
-                    <AlertCircle size={15} className="shrink-0 text-error" />
-                  ) : (
-                    <CheckCircle2 size={15} className="shrink-0 text-emerald-500" />
-                  )}
-                  <span className="font-semibold max-w-[120px] xs:max-w-[200px] sm:max-w-[340px] truncate">
-                    {topNotification.message}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (notificationTimerRef.current) clearTimeout(notificationTimerRef.current);
-                      setTopNotification(null);
-                    }}
-                    className="ml-1 hover:opacity-75 cursor-pointer text-xs p-0.5 text-base-content/50 hover:text-base-content"
-                    title="Dismiss"
-                  >
-                    ✕
-                  </button>
-                </div>
-              )}
-
-              <button
-                type="button"
-                className="btn btn-sm btn-circle btn-ghost"
-                onClick={onClose}
-                title="Close modal"
-              >
-                ✕
-              </button>
-            </div>
-          </div>
-
-          {/* Main Body Grid */}
-          <div className="p-2.5 sm:p-4 flex-1 min-h-0 flex flex-col overflow-hidden">
+  const renderMainColumns = () => (
             <div className="grid grid-cols-1 md:grid-cols-12 gap-3 sm:gap-4 flex-1 min-h-0 overflow-hidden">
               {/* ---------------------------------------------------------- */}
               {/* MIDDLE COLUMN: SEARCH & ASSETS LIST (6 cols)               */}
@@ -1413,9 +1225,281 @@ export default function AllocateSourceModal({
                 )}
               </div>
             </div>
+  );
+
+  if (!isMobileScreen) {
+    return (
+      <div
+        className="fixed inset-0 z-[99999] bg-black/60 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto"
+        onClick={(e) => {
+          if (e.target === e.currentTarget) {
+            onClose();
+          }
+        }}
+      >
+        <div className="flex items-stretch justify-center gap-3 sm:gap-4 max-w-[1440px] w-full h-[680px]">
+        {/* ================================================================ */}
+        {/* 1. LEFT POPUP: ASSET CATEGORIES (Exact replica of Food Logging)  */}
+        {/* ================================================================ */}
+        <div className="hidden md:flex bg-base-100 rounded-3xl border border-base-300 shadow-2xl h-full w-60 sm:w-68 flex-col overflow-hidden shrink-0 animate-in fade-in zoom-in-95 duration-200">
+          {/* Header */}
+          <div className="p-4 border-b border-base-300 flex items-center justify-between shrink-0">
+            <div className="flex items-center gap-2">
+              <Layers size={17} className="text-primary" />
+              <h4 className="font-bold text-sm text-base-content leading-tight">Categories</h4>
+            </div>
+            <span className="badge badge-sm badge-ghost font-mono opacity-70">
+              {allSources.length} Sources
+            </span>
+          </div>
+
+          {/* Search inside Categories */}
+          <div className="p-2.5 border-b border-base-200 shrink-0">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 opacity-40" size={13} />
+              <input
+                type="text"
+                className="input input-xs input-bordered w-full pl-8 rounded-lg text-xs bg-transparent"
+                placeholder="Filter categories..."
+                value={categorySearchQuery}
+                onChange={(e) => setCategorySearchQuery(e.target.value)}
+              />
+              {categorySearchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setCategorySearchQuery("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-xs opacity-50 hover:opacity-100"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Categories List */}
+          <div className="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar">
+            {filteredCategories.map((cat) => {
+              const IconComp = cat.icon;
+              const isSelected = selectedCategory === cat.id;
+              const count =
+                cat.id === "all"
+                  ? allSources.length
+                  : cat.id === "in_plan"
+                  ? allSources.filter((s) => isSourceInCurrentPlan(s)).length
+                  : cat.id === "bank"
+                  ? bankAccounts.length
+                  : cat.id === "stock"
+                  ? heldStocks.length
+                  : cat.id === "mf"
+                  ? (holdingMutualFunds || []).filter((m) => (m.availableUnits ?? m.activeUnits ?? 0) > 0.0001 && Number(m.holdingValue) > 0).length
+                  : cat.id === "fd"
+                  ? activeFixedDeposits.length
+                  : cat.id === "rd"
+                  ? activeRecurringDeposits.length
+                  : pfSource?.balance > 0
+                  ? 1
+                  : 0;
+
+              return (
+                <button
+                  key={cat.id}
+                  type="button"
+                  onClick={() => handleCategoryClick(cat.id)}
+                  className={`w-full px-3 py-2 rounded-xl text-left transition-all flex items-center justify-between group cursor-pointer ${
+                    isSelected
+                      ? "bg-primary/10 text-primary font-bold shadow-xs border border-primary/20"
+                      : "text-base-content/70 hover:text-base-content hover:bg-base-200/50 font-medium"
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5 truncate min-w-0">
+                    <span className={`shrink-0 ${cat.color}`}>
+                      <IconComp size={15} />
+                    </span>
+                    <span className="truncate text-xs">{cat.label}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <span className="badge badge-xs font-mono font-bold bg-base-200">
+                      {count}
+                    </span>
+                    {isSelected && <Check size={14} className="text-primary" />}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Bottom Status Footer */}
+          <div className="p-3 border-t border-base-200 text-[11px] text-base-content/70 flex items-center justify-between shrink-0 bg-base-200/40">
+            <span className="truncate max-w-[160px]">
+              Active:{" "}
+              <span className="font-bold text-primary">
+                {selectedCategory === "in_plan"
+                  ? `In Plan (${currentPlan?.title || "Active"})`
+                  : ASSET_CATEGORIES.find((c) => c.id === selectedCategory)?.label}
+              </span>
+            </span>
+            {selectedCategory !== "all" && (
+              <button
+                type="button"
+                onClick={() => handleCategoryClick("all")}
+                className="btn btn-ghost btn-xs text-[10px] text-primary hover:underline px-1 h-5 min-h-0"
+              >
+                Reset
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* ================================================================ */}
+        {/* 2. MAIN POPUP: MIDDLE (LIST) & RIGHT (ALLOTMENT CONTROLS)        */}
+        {/* ================================================================ */}
+        <div className="bg-base-200 rounded-3xl flex-1 h-full border border-base-300 shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200 min-w-0 max-w-5xl">
+          {/* Main Modal Header */}
+          <div className="p-2.5 sm:p-4 border-b border-base-300 flex justify-between items-center shrink-0 bg-base-100 gap-2 sm:gap-3">
+            <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+              <span className="text-xl sm:text-2xl shrink-0">{currentPlan.icon || "🎯"}</span>
+              <div className="min-w-0">
+                {/* Line 1: Heading */}
+                <h3 className="font-extrabold text-sm sm:text-base text-base-content truncate leading-tight whitespace-nowrap">
+                  Add Sources to {currentPlan.title}
+                </h3>
+                {/* Line 2: Target Badge + Guidance */}
+                <div className="flex items-center gap-1.5 text-[11px] sm:text-xs text-base-content/60 mt-1 whitespace-nowrap truncate">
+                  <span className="badge badge-xs sm:badge-sm font-bold bg-primary text-primary-content shrink-0 font-mono whitespace-nowrap">
+                    Target: {formatINRCompact(currentPlan.targetAmount)}
+                  </span>
+                  <span className="text-base-content/30 text-[10px] hidden xs:inline">•</span>
+                  <span className="text-[10.5px] sm:text-xs text-base-content/60 font-medium truncate hidden xs:inline whitespace-nowrap">
+                    Choose an asset to allocate funds
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Right side of Header: In-header Notification Banner + Close Button */}
+            <div className="flex items-center gap-2.5 shrink-0">
+              {topNotification && (
+                <div
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-bold shadow-xs animate-in fade-in slide-in-from-right-4 duration-250 ${
+                    topNotification.type === "info"
+                      ? "bg-base-200 text-base-content border-base-300"
+                      : topNotification.type === "error"
+                      ? "bg-error/15 text-error border-error/30"
+                      : "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30"
+                  }`}
+                >
+                  {topNotification.type === "info" ? (
+                    <Info size={15} className="shrink-0 text-primary" />
+                  ) : topNotification.type === "error" ? (
+                    <AlertCircle size={15} className="shrink-0 text-error" />
+                  ) : (
+                    <CheckCircle2 size={15} className="shrink-0 text-emerald-500" />
+                  )}
+                  <span className="font-semibold max-w-[120px] xs:max-w-[200px] sm:max-w-[340px] truncate">
+                    {topNotification.message}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (notificationTimerRef.current) clearTimeout(notificationTimerRef.current);
+                      setTopNotification(null);
+                    }}
+                    className="ml-1 hover:opacity-75 cursor-pointer text-xs p-0.5 text-base-content/50 hover:text-base-content"
+                    title="Dismiss"
+                  >
+                    ✕
+                  </button>
+                </div>
+              )}
+
+              <button
+                type="button"
+                className="btn btn-sm btn-circle btn-ghost"
+                onClick={onClose}
+                title="Close modal"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+
+          {/* Main Body Grid */}
+          <div className="p-2.5 sm:p-4 flex-1 min-h-0 flex flex-col overflow-hidden">
+            {renderMainColumns()}
           </div>
         </div>
       </div>
     </div>
+  );
+}
+
+  return (
+    <MobileDrawer
+      isOpen={isOpen}
+      onClose={onClose}
+      maxHeight="max-h-[92dvh]"
+      showHandle={true}
+      customHeader={
+        <div className="p-2.5 border-b border-base-300 flex justify-between items-center shrink-0 bg-base-100 gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-xl shrink-0">{currentPlan.icon || "🎯"}</span>
+            <div className="min-w-0">
+              <h3 className="font-extrabold text-xs text-base-content truncate leading-tight whitespace-nowrap">
+                Add Sources to {currentPlan.title}
+              </h3>
+              <div className="flex items-center gap-1.5 text-[10.5px] text-base-content/60 mt-0.5 whitespace-nowrap truncate">
+                <span className="badge badge-xs font-bold bg-primary text-primary-content shrink-0 font-mono whitespace-nowrap">
+                  Target: {formatINRCompact(currentPlan.targetAmount)}
+                </span>
+                <span className="text-base-content/30 text-[10px]">•</span>
+                <span className="text-[10px] text-base-content/60 font-medium truncate whitespace-nowrap">
+                  Choose asset to allocate
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1.5 shrink-0">
+            {topNotification && (
+              <div
+                className={`flex items-center gap-1.5 px-2 py-1 rounded-lg border text-[11px] font-bold shadow-xs ${
+                  topNotification.type === "info"
+                    ? "bg-base-200 text-base-content border-base-300"
+                    : topNotification.type === "error"
+                    ? "bg-error/15 text-error border-error/30"
+                    : "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30"
+                }`}
+              >
+                <span className="font-semibold max-w-[110px] truncate">
+                  {topNotification.message}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (notificationTimerRef.current) clearTimeout(notificationTimerRef.current);
+                    setTopNotification(null);
+                  }}
+                  className="hover:opacity-75 cursor-pointer text-xs p-0.5 text-base-content/50 hover:text-base-content"
+                >
+                  ✕
+                </button>
+              </div>
+            )}
+            <button
+              type="button"
+              className="btn btn-xs btn-circle btn-ghost"
+              onClick={onClose}
+              title="Close modal"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      }
+    >
+      <div className="p-2.5 flex-1 min-h-0 flex flex-col h-[calc(92dvh-80px)] overflow-hidden">
+        {renderMainColumns()}
+      </div>
+    </MobileDrawer>
   );
 }

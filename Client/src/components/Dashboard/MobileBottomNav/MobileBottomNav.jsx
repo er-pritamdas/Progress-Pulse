@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Home, ChevronUp, X, ArrowLeftRight, Calculator } from 'lucide-react';
+import MobileDrawer from '../../Common/MobileDrawer';
 
 import AlarmClockCheck from '../../../utils/Icons/AlarmClockCheck';
 import CreditCard from '../../../utils/Icons/CreditCard';
@@ -202,20 +203,13 @@ function MobileBottomNav() {
 
       {/* Tracker Switcher Bottom Sheet Modal */}
       {isSwitcherOpen && (
-        <>
-          {/* Backdrop Overlay */}
-          <div
-            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs md:hidden"
-            onClick={() => setIsSwitcherOpen(false)}
-          />
-
-          {/* Slide-Up Drawer */}
-          <div className="fixed inset-x-0 bottom-0 z-50 md:hidden bg-base-200 rounded-t-3xl border-t border-base-300 shadow-2xl p-4 max-h-[85vh] overflow-y-auto animate-in slide-in-from-bottom duration-200">
-            {/* Drag Handle Indicator */}
-            <div className="w-12 h-1.5 bg-base-content/20 rounded-full mx-auto mb-3" />
-
-            {/* Header */}
-            <div className="flex items-center justify-between pb-3 border-b border-base-content/10 mb-4">
+        <MobileDrawer
+          isOpen={isSwitcherOpen}
+          onClose={() => setIsSwitcherOpen(false)}
+          maxHeight="max-h-[85vh]"
+          showHandle={true}
+          customHeader={
+            <div className="flex items-center justify-between px-4 pb-3 border-b border-base-content/10">
               <div>
                 <h3 className="font-extrabold text-base text-base-content flex items-center gap-2">
                   <ArrowLeftRight size={17} className="text-primary" /> Switch Tracker
@@ -230,7 +224,9 @@ function MobileBottomNav() {
                 <X size={18} />
               </button>
             </div>
-
+          }
+        >
+          <div className="p-4 space-y-4">
             {/* Home Dashboard Shortcut */}
             <button
               type="button"
@@ -238,7 +234,7 @@ function MobileBottomNav() {
                 setIsSwitcherOpen(false);
                 navigate("/dashboard");
               }}
-              className="w-full flex items-center justify-between p-3 rounded-2xl bg-base-100 hover:bg-base-300/70 border border-base-content/10 mb-4 transition-all text-left group active:scale-98"
+              className="w-full flex items-center justify-between p-3 rounded-2xl bg-base-100 hover:bg-base-300/70 border border-base-content/10 transition-all text-left group active:scale-98"
             >
               <div className="flex items-center gap-3">
                 <div className="p-2.5 rounded-xl bg-primary/10 text-primary group-hover:bg-primary/20 transition-colors">
@@ -332,7 +328,7 @@ function MobileBottomNav() {
               })}
             </div>
           </div>
-        </>
+        </MobileDrawer>
       )}
     </>
   );

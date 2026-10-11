@@ -74,6 +74,7 @@ import AddSalaryModal from "../../../components/Dashboard/Investment/AddSalaryMo
 import AddPfWithdrawalModal from "../../../components/Dashboard/Investment/AddPfWithdrawalModal";
 import CompanyLogo from "../../../components/Dashboard/Investment/CompanyLogo";
 import { getCompanyDisplayName } from "../../../utils/companyLogos";
+import MobileDrawer from "../../../components/Common/MobileDrawer";
 import axiosInstance from "../../../Context/AxiosInstance";
 import { formatDateDDMMMYYYY } from "../../../components/Dashboard/DatePicker";
 
@@ -6246,63 +6247,66 @@ export default function InvTableEntry() {
         {/* MOBILE FILTER BOTTOM SHEET                                       */}
         {/* ================================================================ */}
         {isMobileInvFilterOpen && (
-          <div
-            className="fixed inset-0 z-[100] flex items-end justify-center bg-black/60 backdrop-blur-md transition-opacity duration-200 animate-in fade-in"
-            onClick={(e) => {
-              if (e.target === e.currentTarget) setIsMobileInvFilterOpen(false);
-            }}
-          >
-            <div
-              className="bg-base-100 rounded-t-3xl shadow-2xl w-full max-h-[85vh] flex flex-col overflow-hidden border-t border-x border-base-300 mobile-drawer-slide-up"
-              style={{ paddingBottom: "env(safe-area-inset-bottom, 16px)" }}
-            >
-              {/* Drag Handle & Sheet Header */}
-              <div className="border-b border-base-200 bg-base-200/60 select-none touch-none">
-                <div className="pt-3 pb-1.5 px-4 flex justify-center items-center">
-                  <div className="h-1.5 w-12 rounded-full bg-base-content/30" />
+          <MobileDrawer
+            isOpen={isMobileInvFilterOpen}
+            onClose={() => setIsMobileInvFilterOpen(false)}
+            maxHeight="max-h-[85vh]"
+            zIndex="z-[100]"
+            showHandle={true}
+            customHeader={
+              <div className="border-b border-base-200 bg-base-200/60 select-none px-4 pb-3 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Filter size={15} className="text-primary" />
+                  <h3 className="font-bold text-sm text-base-content">
+                    {categories.find((c) => c.id === activeTab)?.label} Filters
+                  </h3>
                 </div>
-                <div className="px-4 pb-3 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Filter size={15} className="text-primary" />
-                    <h3 className="font-bold text-sm text-base-content">
-                      {categories.find((c) => c.id === activeTab)?.label} Filters
-                    </h3>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (activeTab === "stocks") clearAllFilters();
-                        else if (activeTab === "mf") setMfSearchTerm("");
-                        else if (activeTab === "fd") setFdSearchTerm("");
-                        else if (activeTab === "rd") setRdSearchTerm("");
-                        else if (activeTab === "salary") {
-                          setSalarySearchTerm("");
-                          setSalaryCompanyFilter("all");
-                          setSalaryYearFilter("all");
-                        } else if (activeTab === "pf") {
-                          setPfSearchTerm("");
-                          setPfCompanyFilter("all");
-                          setPfYearFilter("all");
-                        }
-                      }}
-                      className="btn btn-ghost btn-xs text-xs text-error font-semibold cursor-pointer"
-                    >
-                      Reset
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setIsMobileInvFilterOpen(false)}
-                      className="btn btn-ghost btn-circle btn-xs text-base-content/60 hover:text-base-content cursor-pointer"
-                    >
-                      <X size={16} />
-                    </button>
-                  </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (activeTab === "stocks") clearAllFilters();
+                      else if (activeTab === "mf") setMfSearchTerm("");
+                      else if (activeTab === "fd") setFdSearchTerm("");
+                      else if (activeTab === "rd") setRdSearchTerm("");
+                      else if (activeTab === "salary") {
+                        setSalarySearchTerm("");
+                        setSalaryCompanyFilter("all");
+                        setSalaryYearFilter("all");
+                      } else if (activeTab === "pf") {
+                        setPfSearchTerm("");
+                        setPfCompanyFilter("all");
+                        setPfYearFilter("all");
+                      }
+                    }}
+                    className="btn btn-ghost btn-xs text-xs text-error font-semibold cursor-pointer"
+                  >
+                    Reset
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsMobileInvFilterOpen(false)}
+                    className="btn btn-ghost btn-circle btn-xs text-base-content/60 hover:text-base-content cursor-pointer"
+                  >
+                    <X size={16} />
+                  </button>
                 </div>
               </div>
-
-              {/* Filter Body Content */}
-              <div className="p-4 space-y-4 overflow-y-auto max-h-[60vh]">
+            }
+            footer={
+              <div className="p-3 bg-base-200/50 border-t border-base-200">
+                <button
+                  type="button"
+                  onClick={() => setIsMobileInvFilterOpen(false)}
+                  className="btn btn-primary btn-sm w-full rounded-xl font-bold cursor-pointer"
+                >
+                  Apply & Close
+                </button>
+              </div>
+            }
+          >
+            {/* Filter Body Content */}
+            <div className="p-4 space-y-4">
                 {/* Stocks Tab Filters */}
                 {activeTab === "stocks" && (
                   <div className="space-y-3.5">
@@ -6768,18 +6772,7 @@ export default function InvTableEntry() {
                 )}
               </div>
 
-              {/* Done Button */}
-              <div className="p-3 bg-base-200/50 border-t border-base-200">
-                <button
-                  type="button"
-                  onClick={() => setIsMobileInvFilterOpen(false)}
-                  className="btn btn-primary btn-sm w-full rounded-xl font-bold cursor-pointer"
-                >
-                  Apply & Close
-                </button>
-              </div>
-            </div>
-          </div>
+          </MobileDrawer>
         )}
 
         {/* ================================================================ */}
@@ -8247,19 +8240,13 @@ export default function InvTableEntry() {
 
               {/* ── SALARY COMPANY BOTTOM SHEET ─────────────────────────────────── */}
               {salaryBottomSheetCompany && (
-                <>
-                  {/* Backdrop */}
-                  <div
-                    className="fixed inset-0 z-[99998] bg-black/60 backdrop-blur-sm"
-                    onClick={() => setSalaryBottomSheetCompany(null)}
-                  />
-                  {/* Sheet */}
-                  <div className="fixed bottom-0 left-0 right-0 z-[99999] bg-base-100 rounded-t-3xl border-t border-base-content/10 dark:border-base-content/10 shadow-2xl animate-in slide-in-from-bottom duration-300 max-h-[88vh] flex flex-col">
-                    {/* Sheet Header */}
-                    <div className="px-4 pt-3 pb-2.5 border-b border-base-content/8 dark:border-base-content/8 bg-base-200/40 shrink-0">
-                      {/* Drag handle */}
-                      <div className="w-10 h-1 bg-base-content/20 rounded-full mx-auto mb-2.5" />
-                      
+                <MobileDrawer
+                  isOpen={Boolean(salaryBottomSheetCompany)}
+                  onClose={() => setSalaryBottomSheetCompany(null)}
+                  maxHeight="max-h-[88vh]"
+                  showHandle={true}
+                  customHeader={
+                    <div className="px-4 pb-2.5 border-b border-base-content/8 dark:border-base-content/8 bg-base-200/40 shrink-0">
                       {/* Top Row: Full Company Name with prominent Close Button at corner */}
                       <div className="flex items-start justify-between gap-2.5">
                         <div className="flex items-center gap-2.5 min-w-0 flex-1">
@@ -8314,9 +8301,28 @@ export default function InvTableEntry() {
                         </button>
                       </div>
                     </div>
-
-                    {/* Sheet Body: Scrollable Multi-Line Entries with Split Details */}
-                    <div className="flex-1 overflow-y-auto min-h-0 p-3 space-y-2.5">
+                  }
+                  footer={
+                    bottomSheetSalaryEntries.length > 0 ? (
+                      <div className="shrink-0 grid grid-cols-3 gap-2 px-4 py-3 bg-base-200/95 dark:bg-base-900/95 backdrop-blur-md border-t-2 border-base-content/10 shadow-lg text-xs">
+                        <div>
+                          <span className="text-[9px] uppercase font-extrabold text-base-content/50 block">Total CTC</span>
+                          <span className="font-mono font-black text-base-content text-xs">₹{sheetTotalCtc.toLocaleString("en-IN")}</span>
+                        </div>
+                        <div>
+                          <span className="text-[9px] uppercase font-extrabold text-error/70 block">Total Deductions</span>
+                          <span className="font-mono font-black text-error text-xs">-₹{sheetTotalDeductions.toLocaleString("en-IN")}</span>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-[9px] uppercase font-extrabold text-success block">Total In Hand</span>
+                          <span className="font-mono font-black text-success text-sm">₹{sheetTotalInHand.toLocaleString("en-IN")}</span>
+                        </div>
+                      </div>
+                    ) : null
+                  }
+                >
+                  {/* Sheet Body: Scrollable Multi-Line Entries with Split Details */}
+                  <div className="p-3 space-y-2.5">
                       {bottomSheetSalaryEntries.map((item, i) => {
                         const basic = Number(item.basicSalary || 0);
                         const hra = Number(item.hra || 0);
@@ -8428,26 +8434,7 @@ export default function InvTableEntry() {
                         );
                       })}
                     </div>
-
-                    {/* Fixed Total Footer Pinned on the Bottom */}
-                    {bottomSheetSalaryEntries.length > 0 && (
-                      <div className="shrink-0 grid grid-cols-3 gap-2 px-4 py-3 bg-base-200/95 dark:bg-base-900/95 backdrop-blur-md border-t-2 border-base-content/10 shadow-lg text-xs">
-                        <div>
-                          <span className="text-[9px] uppercase font-extrabold text-base-content/50 block">Total CTC</span>
-                          <span className="font-mono font-black text-base-content text-xs">₹{sheetTotalCtc.toLocaleString("en-IN")}</span>
-                        </div>
-                        <div>
-                          <span className="text-[9px] uppercase font-extrabold text-error/70 block">Total Deductions</span>
-                          <span className="font-mono font-black text-error text-xs">-₹{sheetTotalDeductions.toLocaleString("en-IN")}</span>
-                        </div>
-                        <div className="text-right">
-                          <span className="text-[9px] uppercase font-extrabold text-success block">Total In Hand</span>
-                          <span className="font-mono font-black text-success text-sm">₹{sheetTotalInHand.toLocaleString("en-IN")}</span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </>
+                  </MobileDrawer>
               )}
             </div>
           );
@@ -8815,19 +8802,13 @@ export default function InvTableEntry() {
 
               {/* ── COMPANY BOTTOM SHEET ─────────────────────────────────── */}
               {pfBottomSheetCompany && (
-                <>
-                  {/* Backdrop */}
-                  <div
-                    className="fixed inset-0 z-[99998] bg-black/60 backdrop-blur-sm"
-                    onClick={() => setPfBottomSheetCompany(null)}
-                  />
-                  {/* Sheet */}
-                  <div className="fixed bottom-0 left-0 right-0 z-[99999] bg-base-100 rounded-t-2xl border-t border-base-content/10 dark:border-base-content/10 shadow-2xl animate-in slide-in-from-bottom duration-300 max-h-[85vh] flex flex-col">
-                    {/* Sheet Header */}
-                    <div className="px-4 pt-3 pb-2.5 border-b border-base-content/8 dark:border-base-content/8 bg-base-200/40 shrink-0">
-                      {/* Drag handle */}
-                      <div className="w-10 h-1 bg-base-content/20 rounded-full mx-auto mb-2.5" />
-                      
+                <MobileDrawer
+                  isOpen={Boolean(pfBottomSheetCompany)}
+                  onClose={() => setPfBottomSheetCompany(null)}
+                  maxHeight="max-h-[85vh]"
+                  showHandle={true}
+                  customHeader={
+                    <div className="px-4 pb-2.5 border-b border-base-content/8 dark:border-base-content/8 bg-base-200/40 shrink-0">
                       {/* Top Row: Full Company Name & Corner Close Button */}
                       <div className="flex items-start justify-between gap-2.5">
                         <div className="flex items-center gap-2.5 min-w-0 flex-1">
@@ -8882,46 +8863,9 @@ export default function InvTableEntry() {
                         </button>
                       </div>
                     </div>
-
-                    {/* Sheet Table (Scrollable Entries Only) */}
-                    <div className="flex-1 overflow-y-auto min-h-0">
-                      {/* Column headers */}
-                      <div className="sticky top-0 grid grid-cols-4 gap-0 bg-base-200/90 backdrop-blur-xs px-4 py-2 border-b border-base-content/8 dark:border-base-content/8 z-10">
-                        <button
-                          type="button"
-                          onClick={() => setPfSortOrder((prev) => (prev === "desc" ? "asc" : "desc"))}
-                          className="flex items-center gap-1 text-[9.5px] font-extrabold uppercase tracking-wider text-base-content/70 hover:text-primary transition-colors cursor-pointer text-left"
-                        >
-                          <span>Month</span>
-                          <ArrowUpDown size={10} className="text-primary shrink-0" />
-                        </button>
-                        <span className="text-[9.5px] font-extrabold uppercase tracking-wider text-base-content/55 text-right">Employer</span>
-                        <span className="text-[9.5px] font-extrabold uppercase tracking-wider text-base-content/55 text-right">Employee</span>
-                        <span className="text-[9.5px] font-extrabold uppercase tracking-wider text-base-content/55 text-right">Total</span>
-                      </div>
-
-                      {bottomSheetEntries.map((entry, i) => {
-                        const er = Number(entry.erPf) || 0;
-                        const ee = entry.eePf !== undefined && entry.eePf !== null && entry.eePf !== ""
-                          ? Number(entry.eePf) || 0
-                          : er;
-                        const total = er + ee;
-                        return (
-                          <div
-                            key={entry.id || entry._id || i}
-                            className={`grid grid-cols-4 gap-0 px-4 py-2.5 border-b border-base-content/6 dark:border-base-content/6 ${i % 2 === 0 ? "" : "bg-base-200/20"}`}
-                          >
-                            <span className="text-[11px] font-bold text-base-content">{dayjs(entry.month).format("MMM YYYY")}</span>
-                            <span className="text-[11px] font-mono font-bold text-primary text-right">₹{er.toLocaleString("en-IN")}</span>
-                            <span className="text-[11px] font-mono font-bold text-info text-right">₹{ee.toLocaleString("en-IN")}</span>
-                            <span className="text-[11px] font-mono font-black text-success text-right">₹{total.toLocaleString("en-IN")}</span>
-                          </div>
-                        );
-                      })}
-                    </div>
-
-                    {/* Fixed Total Footer on the Bottom */}
-                    {bottomSheetEntries.length > 0 && (() => {
+                  }
+                  footer={
+                    bottomSheetEntries.length > 0 ? (() => {
                       const totEr = bottomSheetEntries.reduce((s, e) => s + (Number(e.erPf) || 0), 0);
                       const totEe = bottomSheetEntries.reduce((s, e) => {
                         const ee = e.eePf !== undefined && e.eePf !== null && e.eePf !== "" ? Number(e.eePf) || 0 : Number(e.erPf) || 0;
@@ -8935,9 +8879,46 @@ export default function InvTableEntry() {
                           <span className="text-[11px] font-mono font-black text-success text-right">₹{(totEr + totEe).toLocaleString("en-IN")}</span>
                         </div>
                       );
-                    })()}
+                    })() : null
+                  }
+                >
+                  {/* Sheet Table (Scrollable Entries Only) */}
+                  <div>
+                    {/* Column headers */}
+                    <div className="sticky top-0 grid grid-cols-4 gap-0 bg-base-200/90 backdrop-blur-xs px-4 py-2 border-b border-base-content/8 dark:border-base-content/8 z-10">
+                      <button
+                        type="button"
+                        onClick={() => setPfSortOrder((prev) => (prev === "desc" ? "asc" : "desc"))}
+                        className="flex items-center gap-1 text-[9.5px] font-extrabold uppercase tracking-wider text-base-content/70 hover:text-primary transition-colors cursor-pointer text-left"
+                      >
+                        <span>Month</span>
+                        <ArrowUpDown size={10} className="text-primary shrink-0" />
+                      </button>
+                      <span className="text-[9.5px] font-extrabold uppercase tracking-wider text-base-content/55 text-right">Employer</span>
+                      <span className="text-[9.5px] font-extrabold uppercase tracking-wider text-base-content/55 text-right">Employee</span>
+                      <span className="text-[9.5px] font-extrabold uppercase tracking-wider text-base-content/55 text-right">Total</span>
+                    </div>
+
+                    {bottomSheetEntries.map((entry, i) => {
+                      const er = Number(entry.erPf) || 0;
+                      const ee = entry.eePf !== undefined && entry.eePf !== null && entry.eePf !== ""
+                        ? Number(entry.eePf) || 0
+                        : er;
+                      const total = er + ee;
+                      return (
+                        <div
+                          key={entry.id || entry._id || i}
+                          className={`grid grid-cols-4 gap-0 px-4 py-2.5 border-b border-base-content/6 dark:border-base-content/6 ${i % 2 === 0 ? "" : "bg-base-200/20"}`}
+                        >
+                          <span className="text-[11px] font-bold text-base-content">{dayjs(entry.month).format("MMM YYYY")}</span>
+                          <span className="text-[11px] font-mono font-bold text-primary text-right">₹{er.toLocaleString("en-IN")}</span>
+                          <span className="text-[11px] font-mono font-bold text-info text-right">₹{ee.toLocaleString("en-IN")}</span>
+                          <span className="text-[11px] font-mono font-black text-success text-right">₹{total.toLocaleString("en-IN")}</span>
+                        </div>
+                      );
+                    })}
                   </div>
-                </>
+                </MobileDrawer>
               )}
             </div>
           );

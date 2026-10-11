@@ -42,6 +42,7 @@ import {
 import { TitleChanger } from "../../../utils/TitleChanger";
 import CompanyLogo from "../../../components/Dashboard/Investment/CompanyLogo";
 import AllocateSourceModal from "../../../components/Dashboard/Investment/AllocateSourceModal";
+import MobileDrawer from "../../../components/Common/MobileDrawer";
 import axiosInstance from "../../../Context/AxiosInstance";
 import apiCache from "../../../utils/apiCache";
 
@@ -339,6 +340,18 @@ export default function InvSettings() {
   // Target Month & Year dropdown popup states for goal modal
   const [isMonthOpen, setIsMonthOpen] = useState(false);
   const [isYearOpen, setIsYearOpen] = useState(false);
+  // Responsive screen detector for mobile drawer vs desktop modal
+  const [isMobileScreen, setIsMobileScreen] = useState(
+    typeof window !== "undefined" ? window.innerWidth < 640 : false
+  );
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobileScreen(window.innerWidth < 640);
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
   const monthPickerRef = useRef(null);
   const yearPickerRef = useRef(null);
 
@@ -3817,11 +3830,11 @@ export default function InvSettings() {
       )}
 
       {/* -------------------------------------------------------------------- */}
-      {/* 5. CREATE / EDIT GOAL MODAL                                          */}
+      {/* 5. CREATE / EDIT GOAL MODAL (Desktop View - 100% Untouched)          */}
       {/* -------------------------------------------------------------------- */}
-      {isGoalModalOpen && (
+      {isGoalModalOpen && !isMobileScreen && (
         <div
-          className="fixed inset-0 z-[99999] bg-black/70 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-y-auto"
+          className="fixed inset-0 z-[99999] bg-black/70 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto"
           onClick={(e) => {
             if (e.target === e.currentTarget) {
               setIsGoalModalOpen(false);
@@ -4486,9 +4499,416 @@ export default function InvSettings() {
         </div>
       )}
 
-      {/* -------------------------------------------------------------------- */}
-      {/* 6. CLEAR PLAN CONFIRMATION MODAL                                     */}
-      {/* -------------------------------------------------------------------- */}
+      {/* 5.1 CREATE / EDIT GOAL DRAWER (Mobile Phone View Only - Instagram / iOS Drawer) */}
+      {isGoalModalOpen && isMobileScreen && (
+        <MobileDrawer
+          isOpen={isGoalModalOpen}
+          onClose={() => {
+            setIsGoalModalOpen(false);
+            setShowEmojiPicker(false);
+            setIsMonthOpen(false);
+            setIsYearOpen(false);
+          }}
+          maxHeight="max-h-[92vh]"
+          showHandle={true}
+          title={editingGoal ? "Edit Financial Goal" : "Create New Goal"}
+          subtitle={
+            editingGoal
+              ? "Update target amount, timeline, or notes"
+              : "Define target capital, timeline, and vision"
+          }
+          icon={
+            <div className="w-9 h-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-lg shadow-xs shrink-0">
+              {goalForm.icon || "🎯"}
+            </div>
+          }
+          footer={
+            <div className="px-4 py-3 border-t border-base-300 bg-base-200/50 flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsGoalModalOpen(false);
+                  setShowEmojiPicker(false);
+                  setIsMonthOpen(false);
+                  setIsYearOpen(false);
+                }}
+                className="btn btn-sm btn-ghost rounded-xl font-semibold flex-1"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveGoal}
+                className="btn btn-sm btn-primary rounded-xl font-bold gap-1.5 px-5 shadow-sm flex-1"
+              >
+                <Check size={14} />
+                <span>{editingGoal ? "Save Changes" : "Create Goal"}</span>
+              </button>
+            </div>
+          }
+        >
+          <form onSubmit={handleSaveGoal} className="p-3.5 space-y-3.5">
+            {/* Mobile-only Templates Carousel */}
+            <div className="space-y-1.5 p-2.5 rounded-xl bg-base-200/60 border border-base-300/80">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-base-content/50 flex items-center gap-1">
+                  <Sparkles size={11} className="text-primary" /> Goal Templates
+                </span>
+                <span className="text-[9px] text-base-content/40">Tap to autofill</span>
+              </div>
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar -mx-1 px-1">
+                {GOAL_PRESETS.map((preset) => {
+                  const isSelected = goalForm.category === preset.id;
+                  return (
+                    <button
+                      key={preset.id}
+                      type="button"
+                      onClick={() => {
+                        setGoalForm((prev) => ({
+                          ...prev,
+                          category: preset.id,
+                          icon: preset.icon,
+                          title:
+                            preset.id === "custom"
+                              ? (prev.title || "My Goal")
+                              : (preset.id === "house" ? "Dream Home" : preset.name),
+                          targetAmount: preset.defaultAmount,
+                          targetDate: preset.defaultYears
+                            ? dayjs().add(preset.defaultYears, "year").format("YYYY-MM-DD")
+                            : prev.targetDate,
+                        }));
+                      }}
+                      className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold shrink-0 transition-all flex items-center gap-1.5 border cursor-pointer ${
+                        isSelected
+                          ? "bg-primary text-primary-content border-primary shadow-xs font-bold"
+                          : "bg-base-100 border-base-300 text-base-content/80"
+                      }`}
+                    >
+                      <span>{preset.icon}</span>
+                      <span>{preset.id === "house" ? "Home" : preset.name}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* SECTION 1: GOAL TITLE & ICON */}
+            <div className="p-3 rounded-xl bg-base-200/60 border border-base-300/80 space-y-2 shadow-xs">
+              <div className="flex items-center justify-between">
+                <label className="text-[10.5px] font-extrabold uppercase tracking-wider text-base-content/60 flex items-center gap-1.5">
+                  <Target size={13} className="text-primary" />
+                  <span>Goal Title & Icon</span>
+                  <span className="text-error">*</span>
+                </label>
+                <span className="badge badge-xs font-bold bg-base-300/80 text-base-content/70">
+                  {goalForm.category ? (
+                    GOAL_PRESETS.find((p) => p.id === goalForm.category)?.name || "Custom"
+                  ) : "Custom"}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <div className="relative shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                    className="w-9 h-9 rounded-xl bg-base-100 hover:bg-base-200 border border-base-300 flex items-center justify-center text-base transition-all cursor-pointer shadow-xs active:scale-95"
+                    title="Choose icon"
+                  >
+                    {goalForm.icon || "🎯"}
+                  </button>
+
+                  {showEmojiPicker && (
+                    <div className="absolute top-full left-0 mt-2 z-50 p-3 bg-base-100 rounded-2xl border border-base-300 shadow-xl w-64 max-w-[calc(100vw-32px)] animate-in fade-in zoom-in-95 duration-150">
+                      <div className="text-[10px] font-bold text-base-content/50 uppercase tracking-wider mb-2 flex items-center justify-between">
+                        <span>Select Goal Icon</span>
+                        <button
+                          type="button"
+                          onClick={() => setShowEmojiPicker(false)}
+                          className="text-base-content/40 hover:text-base-content text-xs font-bold"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-6 gap-1.5 mb-2.5">
+                        {POPULAR_GOAL_ICONS.map((emoji) => (
+                          <button
+                            key={emoji}
+                            type="button"
+                            onClick={() => {
+                              setGoalForm((prev) => ({ ...prev, icon: emoji }));
+                              setShowEmojiPicker(false);
+                            }}
+                            className={`w-8 h-8 rounded-xl flex items-center justify-center text-lg hover:bg-primary/20 transition-all ${
+                              goalForm.icon === emoji ? "bg-primary/20 ring-1 ring-primary" : "bg-base-200/70"
+                            }`}
+                          >
+                            {emoji}
+                          </button>
+                        ))}
+                      </div>
+                      <div className="flex items-center gap-1.5 pt-2 border-t border-base-200">
+                        <span className="text-[10px] text-base-content/50 shrink-0">Custom:</span>
+                        <input
+                          type="text"
+                          maxLength={4}
+                          placeholder="Emoji"
+                          value={goalForm.icon}
+                          onChange={(e) => setGoalForm((prev) => ({ ...prev, icon: e.target.value }))}
+                          className="input input-xs input-bordered w-full rounded-lg text-center bg-base-100"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Wedding 2027, Dream Home"
+                  value={goalForm.title}
+                  onChange={(e) => setGoalForm({ ...goalForm, title: e.target.value })}
+                  className="input input-bordered h-9 flex-1 rounded-xl text-xs font-semibold bg-base-100 focus:border-primary transition-all shadow-2xs"
+                />
+              </div>
+            </div>
+
+            {/* SECTION 2: TARGET CAPITAL */}
+            <div className="p-3 rounded-xl bg-base-200/60 border border-base-300/80 space-y-2 shadow-xs">
+              <div className="flex items-center justify-between">
+                <label className="text-[10.5px] font-extrabold uppercase tracking-wider text-base-content/60 flex items-center gap-1.5">
+                  <span className="font-mono text-primary font-bold">₹</span>
+                  <span>Target Capital</span>
+                  <span className="text-error">*</span>
+                </label>
+                {Number(goalForm.targetAmount) > 0 && (
+                  <span className="text-[11px] font-mono font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-lg border border-primary/20">
+                    {formatINRCompact(goalForm.targetAmount)}
+                  </span>
+                )}
+              </div>
+
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 font-mono font-bold text-xs text-base-content/40">
+                  ₹
+                </span>
+                <input
+                  type="number"
+                  min="0"
+                  step="any"
+                  required
+                  placeholder="Target amount, e.g. 2500000"
+                  value={goalForm.targetAmount === 0 ? "" : goalForm.targetAmount}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setGoalForm((prev) => ({
+                      ...prev,
+                      targetAmount: val === "" ? "" : val,
+                    }));
+                  }}
+                  className="input input-bordered h-9 w-full pl-7 rounded-xl font-mono text-xs font-bold bg-base-100 focus:border-primary transition-all shadow-2xs"
+                />
+              </div>
+
+              {/* Quick Shortcuts */}
+              <div className="flex items-center gap-1 flex-nowrap overflow-x-auto no-scrollbar pt-0.5">
+                {[500000, 1000000, 2000000, 2500000, 5000000, 10000000].map((amt) => {
+                  const isSelected = Number(goalForm.targetAmount) === amt;
+                  return (
+                    <button
+                      key={amt}
+                      type="button"
+                      onClick={() => setGoalForm((prev) => ({ ...prev, targetAmount: amt }))}
+                      className={`px-2 py-0.5 font-mono text-[10px] rounded-lg transition-all shrink-0 cursor-pointer border font-semibold ${
+                        isSelected
+                          ? "bg-primary text-primary-content border-primary shadow-xs font-bold"
+                          : "bg-base-100 hover:bg-primary/10 border-base-300 text-base-content/70 hover:text-primary hover:border-primary/40"
+                      }`}
+                    >
+                      {formatINRCompact(amt)}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* SECTION 3: TARGET DATE & TIMELINE */}
+            <div className="p-3 rounded-xl bg-base-200/60 border border-base-300/80 space-y-2.5 shadow-xs">
+              <div className="flex items-center justify-between">
+                <label className="text-[10.5px] font-extrabold uppercase tracking-wider text-base-content/60 flex items-center gap-1.5">
+                  <Calendar size={13} className="text-primary" />
+                  <span>Target Date & Timeline</span>
+                  <span className="text-error">*</span>
+                </label>
+                {modalDateInfo && (
+                  <span
+                    className={`badge badge-sm font-bold font-mono text-[10px] ${
+                      modalDateInfo.isPast
+                        ? "badge-error text-white"
+                        : modalDateInfo.isToday
+                        ? "badge-warning"
+                        : "badge-primary badge-soft text-primary"
+                    }`}
+                  >
+                    {modalDateInfo.text}
+                  </span>
+                )}
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div className="relative">
+                  <label className="text-[10px] font-extrabold uppercase tracking-wider text-base-content/50 block mb-1">
+                    Target Month
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsMonthOpen(!isMonthOpen);
+                      setIsYearOpen(false);
+                    }}
+                    className="w-full h-9 px-3 rounded-xl bg-base-100 hover:bg-base-200/70 border border-base-300 flex items-center justify-between text-xs font-bold transition-all shadow-2xs"
+                  >
+                    <span>{dayjs().month(currentMonthIndex).format("MMMM")}</span>
+                    <ChevronDown size={14} className={`text-base-content/50 transition-transform ${isMonthOpen ? "rotate-180" : ""}`} />
+                  </button>
+
+                  {isMonthOpen && (
+                    <div className="absolute top-full left-0 mt-1.5 z-50 p-2 bg-base-100 rounded-2xl border border-base-300 shadow-xl w-60 max-w-[calc(100vw-32px)] grid grid-cols-3 gap-1 animate-in fade-in zoom-in-95 duration-150">
+                      {Array.from({ length: 12 }, (_, i) => {
+                        const mName = dayjs().month(i).format("MMM");
+                        const isSel = currentMonthIndex === i;
+                        return (
+                          <button
+                            key={i}
+                            type="button"
+                            onClick={() => {
+                              handleSelectMonth(i);
+                              setIsMonthOpen(false);
+                            }}
+                            className={`px-2 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                              isSel
+                                ? "bg-primary text-primary-content shadow-xs"
+                                : "hover:bg-base-200 text-base-content/80"
+                            }`}
+                          >
+                            {mName}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                <div className="relative">
+                  <label className="text-[10px] font-extrabold uppercase tracking-wider text-base-content/50 block mb-1">
+                    Target Year
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsYearOpen(!isYearOpen);
+                      setIsMonthOpen(false);
+                    }}
+                    className="w-full h-9 px-3 rounded-xl bg-base-100 hover:bg-base-200/70 border border-base-300 flex items-center justify-between text-xs font-bold transition-all shadow-2xs font-mono"
+                  >
+                    <span>{currentYearVal}</span>
+                    <ChevronDown size={14} className={`text-base-content/50 transition-transform ${isYearOpen ? "rotate-180" : ""}`} />
+                  </button>
+
+                  {isYearOpen && (
+                    <div className="absolute top-full right-0 mt-1.5 z-50 p-2 bg-base-100 rounded-2xl border border-base-300 shadow-xl w-52 max-w-[calc(100vw-32px)] max-h-56 overflow-y-auto grid grid-cols-2 gap-1 animate-in fade-in zoom-in-95 duration-150 custom-scrollbar">
+                      {Array.from({ length: MAX_GOAL_YEAR - MIN_GOAL_YEAR + 1 }, (_, i) => {
+                        const yr = MIN_GOAL_YEAR + i;
+                        const isSel = currentYearVal === yr;
+                        return (
+                          <button
+                            key={yr}
+                            type="button"
+                            onClick={() => {
+                              handleSelectYear(yr);
+                              setIsYearOpen(false);
+                            }}
+                            className={`px-2 py-1.5 rounded-lg text-xs font-mono font-bold transition-all ${
+                              isSel
+                                ? "bg-primary text-primary-content shadow-xs"
+                                : "hover:bg-base-200 text-base-content/80"
+                            }`}
+                          >
+                            {yr}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Milestone Age Preview */}
+              <div className="bg-base-100/80 p-2.5 rounded-xl border border-base-300/70 flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="w-7 h-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                    <Clock size={13} />
+                  </div>
+                  <div className="min-w-0">
+                    <span className="text-[10px] text-base-content/50 font-bold uppercase tracking-wider block">
+                      Age at Target:
+                    </span>
+                    <span className="text-xs font-bold text-base-content truncate block">
+                      {calculatedAgeAtTarget !== null ? (
+                        <span className="font-mono text-primary font-extrabold">{calculatedAgeAtTarget} Years Old</span>
+                      ) : (
+                        <span className="text-warning text-[11px] font-semibold">DOB not configured</span>
+                      )}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="text-right shrink-0">
+                  <div className="text-[9.5px] text-base-content/50 font-mono">
+                    {userDob && dayjs(userDob).isValid() ? `DOB: ${dayjs(userDob).format("DD MMM YYYY")}` : "DOB: Not set"}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsGoalModalOpen(false);
+                      navigate("/dashboard/settings/profile");
+                    }}
+                    className="text-[9.5px] text-primary hover:underline font-bold inline-flex items-center gap-1 mt-0.5 cursor-pointer"
+                  >
+                    <span>{userDob ? "Change" : "Set in Settings"}</span>
+                    <ExternalLink size={9} className="opacity-70" />
+                  </button>
+                </div>
+              </div>
+
+              {modalDateInfo?.isPast && (
+                <div className="px-3 py-2 rounded-xl bg-error/10 border border-error/20 flex items-center gap-1.5 text-xs text-error font-medium">
+                  <AlertCircle size={14} className="shrink-0" />
+                  <span>Target month is in past. Select future date.</span>
+                </div>
+              )}
+            </div>
+
+            {/* SECTION 4: NOTES */}
+            <div className="p-3 rounded-xl bg-base-200/60 border border-base-300/80 space-y-1.5 shadow-xs">
+              <div className="flex items-center justify-between">
+                <label className="text-[10.5px] font-extrabold uppercase tracking-wider text-base-content/60 flex items-center gap-1.5">
+                  <Layers size={13} className="text-primary" />
+                  <span>Notes & Vision</span>
+                </label>
+                <span className="text-[10px] text-base-content/40 font-medium">Optional</span>
+              </div>
+              <textarea
+                rows={2}
+                placeholder="e.g. Venue, jewelry, down payment breakdown..."
+                value={goalForm.notes}
+                onChange={(e) => setGoalForm({ ...goalForm, notes: e.target.value })}
+                className="textarea textarea-bordered w-full rounded-xl text-xs bg-base-100 focus:border-primary transition-all resize-none min-h-[50px] shadow-2xs"
+              />
+            </div>
+          </form>
+        </MobileDrawer>
+      )}
       {isClearModalOpen && planToClear && (
         <div className="fixed inset-0 z-[99999] bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
           <div className="bg-base-100 rounded-3xl border border-base-300 shadow-2xl max-w-sm w-full p-5 space-y-4 animate-in fade-in zoom-in-95 duration-200">

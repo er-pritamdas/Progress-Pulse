@@ -10,6 +10,7 @@ import PortfolioSettingsModal, {
 } from "../../../components/Dashboard/Investment/PortfolioSettingsModal";
 import InteractivePortfolioGauge from "../../../components/Dashboard/Investment/InteractivePortfolioGauge";
 import CompanyLogo from "../../../components/Dashboard/Investment/CompanyLogo";
+import MobileDrawer from "../../../components/Common/MobileDrawer";
 import {
   Landmark,
   TrendingUp,
@@ -4155,17 +4156,13 @@ export default function InvTableView() {
 
         {/* 7. Mobile Planner Selection Bottom Sheet */}
         {isMobilePlannerSheetOpen && (
-          <>
-            {/* Backdrop */}
-            <div
-              className="fixed inset-0 z-[99998] bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
-              onClick={() => setIsMobilePlannerSheetOpen(false)}
-            />
-            {/* Sheet */}
-            <div className="fixed bottom-0 left-0 right-0 z-[99999] bg-base-100 rounded-t-3xl border-t border-base-content/10 shadow-2xl animate-in slide-in-from-bottom duration-300 max-h-[82vh] flex flex-col">
-              {/* Header */}
-              <div className="px-4 pt-3 pb-2.5 border-b border-base-content/8 bg-base-200/40 shrink-0">
-                <div className="w-10 h-1 bg-base-content/20 rounded-full mx-auto mb-2.5" />
+          <MobileDrawer
+            isOpen={isMobilePlannerSheetOpen}
+            onClose={() => setIsMobilePlannerSheetOpen(false)}
+            maxHeight="max-h-[82vh]"
+            showHandle={true}
+            customHeader={
+              <div className="px-4 pb-2.5 border-b border-base-content/8 bg-base-200/40 shrink-0">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <div className="p-1.5 rounded-lg bg-primary/15 text-primary">
@@ -4185,88 +4182,88 @@ export default function InvTableView() {
                   </button>
                 </div>
               </div>
-
-              {/* Sheet Body */}
-              <div className="flex-1 overflow-y-auto p-3 space-y-2 min-h-0">
-                {/* Option 1: Whole Portfolio */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedPlannerId("all");
-                    setSearchParams({});
-                    setIsMobilePlannerSheetOpen(false);
-                  }}
-                  className={`w-full p-3 rounded-2xl border flex items-center justify-between text-left transition-all cursor-pointer ${
-                    selectedPlannerId === "all"
-                      ? "bg-primary/10 border-primary text-primary shadow-xs"
-                      : "bg-base-200/40 border-base-content/8 hover:bg-base-200"
-                  }`}
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <span className="text-xl shrink-0">🌐</span>
-                    <div className="min-w-0">
-                      <span className="font-black text-xs text-base-content block truncate">
-                        Whole Portfolio
-                      </span>
-                      <span className="text-[10px] text-base-content/55 font-medium block">
-                        Consolidated net worth across all 6 asset classes
-                      </span>
-                    </div>
+            }
+          >
+            {/* Sheet Body */}
+            <div className="p-3 space-y-2">
+              {/* Option 1: Whole Portfolio */}
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedPlannerId("all");
+                  setSearchParams({});
+                  setIsMobilePlannerSheetOpen(false);
+                }}
+                className={`w-full p-3 rounded-2xl border flex items-center justify-between text-left transition-all cursor-pointer ${
+                  selectedPlannerId === "all"
+                    ? "bg-primary/10 border-primary text-primary shadow-xs"
+                    : "bg-base-200/40 border-base-content/8 hover:bg-base-200"
+                }`}
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className="text-xl shrink-0">🌐</span>
+                  <div className="min-w-0">
+                    <span className="font-black text-xs text-base-content block truncate">
+                      Whole Portfolio
+                    </span>
+                    <span className="text-[10px] text-base-content/55 font-medium block">
+                      Consolidated net worth across all 6 asset classes
+                    </span>
                   </div>
-                  {selectedPlannerId === "all" && (
-                    <div className="w-6 h-6 rounded-full bg-primary text-primary-content flex items-center justify-center shrink-0">
-                      <Check size={13} strokeWidth={3} />
-                    </div>
-                  )}
-                </button>
-
-                {/* Divider */}
-                {plannerGoals.length > 0 && (
-                  <div className="text-[10px] font-extrabold uppercase tracking-wider text-base-content/40 px-2 pt-2">
-                    Goals & Planners ({plannerGoals.length})
+                </div>
+                {selectedPlannerId === "all" && (
+                  <div className="w-6 h-6 rounded-full bg-primary text-primary-content flex items-center justify-center shrink-0">
+                    <Check size={13} strokeWidth={3} />
                   </div>
                 )}
+              </button>
 
-                {/* Goal Plans */}
-                {plannerGoals.map((goal) => {
-                  const isSelected = selectedPlannerId === goal.id || selectedPlannerId === goal._id;
-                  return (
-                    <button
-                      key={goal.id || goal._id}
-                      type="button"
-                      onClick={() => {
-                        setSelectedPlannerId(goal.id || goal._id);
-                        setSearchParams({ planner: goal.id || goal._id });
-                        setIsMobilePlannerSheetOpen(false);
-                      }}
-                      className={`w-full p-3 rounded-2xl border flex items-center justify-between text-left transition-all cursor-pointer ${
-                        isSelected
-                          ? "bg-primary/10 border-primary text-primary shadow-xs"
-                          : "bg-base-200/40 border-base-content/8 hover:bg-base-200"
-                      }`}
-                    >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <span className="text-xl shrink-0">{goal.icon || "🎯"}</span>
-                        <div className="min-w-0">
-                          <span className="font-black text-xs text-base-content block truncate">
-                            {goal.title}
-                          </span>
-                          <span className="text-[10px] text-base-content/55 font-medium block">
-                            Target: {formatCurrencyCompact(goal.targetAmount)} • {goal.targetDate ? dayjs(goal.targetDate).format("MMM YYYY") : "No date"}
-                          </span>
-                        </div>
+              {/* Divider */}
+              {plannerGoals.length > 0 && (
+                <div className="text-[10px] font-extrabold uppercase tracking-wider text-base-content/40 px-2 pt-2">
+                  Goals & Planners ({plannerGoals.length})
+                </div>
+              )}
+
+              {/* Goal Plans */}
+              {plannerGoals.map((goal) => {
+                const isSelected = selectedPlannerId === goal.id || selectedPlannerId === goal._id;
+                return (
+                  <button
+                    key={goal.id || goal._id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedPlannerId(goal.id || goal._id);
+                      setSearchParams({ planner: goal.id || goal._id });
+                      setIsMobilePlannerSheetOpen(false);
+                    }}
+                    className={`w-full p-3 rounded-2xl border flex items-center justify-between text-left transition-all cursor-pointer ${
+                      isSelected
+                        ? "bg-primary/10 border-primary text-primary shadow-xs"
+                        : "bg-base-200/40 border-base-content/8 hover:bg-base-200"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className="text-xl shrink-0">{goal.icon || "🎯"}</span>
+                      <div className="min-w-0">
+                        <span className="font-black text-xs text-base-content block truncate">
+                          {goal.title}
+                        </span>
+                        <span className="text-[10px] text-base-content/55 font-medium block">
+                          Target: {formatCurrencyCompact(goal.targetAmount)} • {goal.targetDate ? dayjs(goal.targetDate).format("MMM YYYY") : "No date"}
+                        </span>
                       </div>
-                      {isSelected && (
-                        <div className="w-6 h-6 rounded-full bg-primary text-primary-content flex items-center justify-center shrink-0">
-                          <Check size={13} strokeWidth={3} />
-                        </div>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
+                    </div>
+                    {isSelected && (
+                      <div className="w-6 h-6 rounded-full bg-primary text-primary-content flex items-center justify-center shrink-0">
+                        <Check size={13} strokeWidth={3} />
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
             </div>
-          </>
+          </MobileDrawer>
         )}
       </div>
 
