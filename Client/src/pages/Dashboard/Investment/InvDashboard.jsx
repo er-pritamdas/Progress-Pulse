@@ -105,7 +105,17 @@ const formatCurrencyCompact = (val) => {
 const formatCompanyShortName = (name) => {
   if (!name || typeof name !== "string") return "";
   const trimmed = name.trim();
-  if (trimmed.toLowerCase() === "all" || trimmed.toLowerCase() === "all companies") {
+  const lower = trimmed.toLowerCase();
+  if (lower === "all" || lower === "all companies") {
+    return trimmed;
+  }
+  if (lower.startsWith("verizon data services") || lower === "vdsipl") {
+    return "VDSIPL";
+  }
+  if (lower.startsWith("tata communication") || lower === "tcl") {
+    return "TCL";
+  }
+  if (lower.startsWith("verizon")) {
     return trimmed;
   }
   const words = trimmed.split(/\s+/).filter(Boolean);

@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 264.58334 240.07435" version="1.1">
+  <defs>
+    <linearGradient id="linearGradient1542">
+      <stop id="stop1540" offset="0" style="stop-color:#f5ff1e;stop-opacity:1"/>
+      <stop id="stop1538" offset="1" style="stop-color:#f50a23;stop-opacity:1"/>
+    </linearGradient>
+    <radialGradient xlink:href="#linearGradient1542" id="radialGradient3738" cx="-227.379" cy="164.06917" fx="-227.379" fy="164.06917" r="30.251394" gradientTransform="matrix(9.6100483e-7,-3.7650134,3.4156819,8.7183933e-7,-705.50063,-739.98397)" gradientUnits="userSpaceOnUse"/>
+  </defs>
+  <g transform="translate(276.06152,41.207843)">
+    <path d="m -276.06152,-41.207843 91.01924,237.084863 c 0.69179,1.80356 2.42124,2.9895 4.34836,2.9895 h 73.84813 c -1.92712,0 -3.65657,-1.18594 -4.34836,-2.9895 l -91.01924,-237.084863 z" id="path27" style="fill:url(#radialGradient3738);fill-opacity:1;stroke:none;stroke-width:2.47066331"/>
+    <path d="M -11.478187,-41.207843 -102.49743,195.87702 c -0.69176,1.80356 -2.42123,2.9895 -4.34836,2.9895 h -73.84813 c 1.92713,0 3.6566,-1.18594 4.34837,-2.9895 l 91.019234,-237.084863 z" id="path29" style="fill:#f50a23;fill-opacity:1;stroke:none;stroke-width:2.47066331"/>
+  </g>
+</svg>

@@ -73,6 +73,7 @@ import RecurringDepositTableModal from "../../../components/Dashboard/Investment
 import AddSalaryModal from "../../../components/Dashboard/Investment/AddSalaryModal";
 import AddPfWithdrawalModal from "../../../components/Dashboard/Investment/AddPfWithdrawalModal";
 import CompanyLogo from "../../../components/Dashboard/Investment/CompanyLogo";
+import { getCompanyDisplayName } from "../../../utils/companyLogos";
 import axiosInstance from "../../../Context/AxiosInstance";
 import { formatDateDDMMMYYYY } from "../../../components/Dashboard/DatePicker";
 
@@ -160,6 +161,7 @@ export default function InvTableEntry() {
     return localStorage.getItem("pulse_salary_table_view_mode") || "detailed";
   });
   const [salaryBreakdownModal, setSalaryBreakdownModal] = useState(null);
+  const [selectedCompanyInfoModal, setSelectedCompanyInfoModal] = useState(null);
   // Salary mobile: company bottom-sheet & sort order
   const [salaryBottomSheetCompany, setSalaryBottomSheetCompany] = useState(null); // company name string or null
   const [salarySortOrder, setSalarySortOrder] = useState("desc"); // "desc" (most recent first) | "asc" (oldest first)
@@ -3359,7 +3361,7 @@ export default function InvTableEntry() {
                     <Building2 size={13} className="text-primary shrink-0" />
                     <span className="text-base-content/60 font-medium">Company:</span>
                     <span className="text-primary font-bold whitespace-nowrap">
-                      {salaryCompanyFilter === "all" ? "All" : salaryCompanyFilter}
+                      {salaryCompanyFilter === "all" ? "All" : getCompanyDisplayName(salaryCompanyFilter, true)}
                     </span>
                     <ChevronDown size={13} className="opacity-60 shrink-0" />
                   </div>
@@ -3407,7 +3409,7 @@ export default function InvTableEntry() {
                             }
                           }}
                         >
-                          <span className="whitespace-nowrap font-medium">{c}</span>
+                          <span className="whitespace-nowrap font-medium">{getCompanyDisplayName(c, true)}</span>
                         </button>
                       </li>
                     ))}
@@ -3592,7 +3594,7 @@ export default function InvTableEntry() {
                         <Building2 size={13} className="text-primary shrink-0" />
                         <span className="text-base-content/60 font-medium">Company:</span>
                         <span className="text-primary font-bold whitespace-nowrap">
-                          {pfCompanyFilter === "all" ? "All" : pfCompanyFilter}
+                          {pfCompanyFilter === "all" ? "All" : getCompanyDisplayName(pfCompanyFilter, true)}
                         </span>
                         <ChevronDown size={13} className="opacity-60 shrink-0" />
                       </div>
@@ -3640,7 +3642,7 @@ export default function InvTableEntry() {
                                 }
                               }}
                             >
-                              <span className="whitespace-nowrap font-medium">{c}</span>
+                              <span className="whitespace-nowrap font-medium">{getCompanyDisplayName(c, true)}</span>
                             </button>
                           </li>
                         ))}
@@ -5263,11 +5265,22 @@ export default function InvTableEntry() {
                             </div>
                           </td>
                           <td className="sticky left-[178px] z-10 bg-base-100 group-hover:bg-base-200 py-3 px-3 whitespace-nowrap font-bold text-base-content opacity-100 min-w-[200px] max-w-[220px] border-b border-r border-base-200/80 shadow-[3px_0_5px_-2px_rgba(0,0,0,0.08)] dark:shadow-[3px_0_8px_-2px_rgba(0,0,0,0.4)] transition-colors" style={{ opacity: 1 }}>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1.5 min-w-0">
                               <CompanyLogo name={item.company} size="w-6 h-6" type="company" />
-                              <span className="font-bold text-base-content opacity-100 truncate max-w-[150px]" style={{ opacity: 1 }} title={item.company}>
-                                {item.company}
+                              <span className="font-bold text-base-content opacity-100 truncate max-w-[130px]" style={{ opacity: 1 }} title={item.company}>
+                                {getCompanyDisplayName(item.company, true)}
                               </span>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedCompanyInfoModal(item.company);
+                                }}
+                                className="btn btn-ghost btn-circle btn-xs text-base-content/40 hover:text-primary hover:bg-primary/10 cursor-pointer p-0 w-4 h-4 min-h-0 shrink-0"
+                                title={`Full Company Name: ${item.company}`}
+                              >
+                                <Info size={11} />
+                              </button>
                             </div>
                           </td>
                           <td className="py-3 px-3 text-right font-mono text-base-content/90 whitespace-nowrap border-b border-base-200/60">
@@ -5436,11 +5449,22 @@ export default function InvTableEntry() {
                             className="sticky left-[178px] z-10 bg-base-100 group-hover:bg-base-200 py-3.5 px-4 whitespace-nowrap font-bold text-base-content opacity-100 min-w-[200px] max-w-[220px] border-b border-r border-base-200/80 shadow-[3px_0_5px_-2px_rgba(0,0,0,0.08)] dark:shadow-[3px_0_8px_-2px_rgba(0,0,0,0.4)] transition-colors"
                             style={{ opacity: 1 }}
                           >
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1.5 min-w-0">
                               <CompanyLogo name={item.company} size="w-6 h-6" type="company" />
-                              <span className="font-bold text-base-content opacity-100 truncate max-w-[150px]" style={{ opacity: 1 }} title={item.company}>
-                                {item.company}
+                              <span className="font-bold text-base-content opacity-100 truncate max-w-[130px]" style={{ opacity: 1 }} title={item.company}>
+                                {getCompanyDisplayName(item.company, true)}
                               </span>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedCompanyInfoModal(item.company);
+                                }}
+                                className="btn btn-ghost btn-circle btn-xs text-base-content/40 hover:text-primary hover:bg-primary/10 cursor-pointer p-0 w-4 h-4 min-h-0 shrink-0"
+                                title={`Full Company Name: ${item.company}`}
+                              >
+                                <Info size={11} />
+                              </button>
                             </div>
                           </td>
                           <td className="py-3.5 px-4 text-right font-mono font-black text-primary bg-primary/5 whitespace-nowrap border-b border-base-200/60">
@@ -5803,11 +5827,22 @@ export default function InvTableEntry() {
                                 </div>
                               </td>
                               <td className="py-3.5 px-4 whitespace-nowrap font-bold text-base-content opacity-100" style={{ opacity: 1 }}>
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-1.5 min-w-0">
                                   <CompanyLogo name={item.company} size="w-6 h-6" type="company" />
-                                  <span className="font-bold text-base-content opacity-100 truncate max-w-[170px]" style={{ opacity: 1 }} title={item.company}>
-                                    {item.company}
+                                  <span className="font-bold text-base-content opacity-100 truncate max-w-[150px]" style={{ opacity: 1 }} title={item.company}>
+                                    {getCompanyDisplayName(item.company, true)}
                                   </span>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSelectedCompanyInfoModal(item.company);
+                                    }}
+                                    className="btn btn-ghost btn-circle btn-xs text-base-content/40 hover:text-primary hover:bg-primary/10 cursor-pointer p-0 w-4 h-4 min-h-0 shrink-0"
+                                    title={`Full Company Name: ${item.company}`}
+                                  >
+                                    <Info size={11} />
+                                  </button>
                                 </div>
                               </td>
                               <td className="py-3.5 px-4 text-right font-mono font-medium text-base-content/90 whitespace-nowrap">
@@ -8137,7 +8172,22 @@ export default function InvTableEntry() {
                           <div className="flex items-center gap-2.5 min-w-0">
                             <CompanyLogo name={company} size="w-9 h-9" type="company" />
                             <div className="min-w-0">
-                              <span className="font-black text-sm text-base-content truncate block">{company}</span>
+                              <div className="flex items-center gap-1.5 min-w-0">
+                                <span className="font-black text-sm text-base-content truncate block" title={company}>
+                                  {getCompanyDisplayName(company, false)}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedCompanyInfoModal(company);
+                                  }}
+                                  className="btn btn-ghost btn-circle btn-xs text-base-content/40 hover:text-primary hover:bg-primary/10 cursor-pointer p-0 w-4 h-4 min-h-0 shrink-0"
+                                  title={`Full Company Name: ${company}`}
+                                >
+                                  <Info size={11} />
+                                </button>
+                              </div>
                               <span className="text-[10px] text-base-content/55 font-medium block">
                                 {dayjs(startDate).format("MMM YYYY")} → {dayjs(endDate).format("MMM YYYY")} • <span className="text-primary font-bold">{compExpText}</span>
                               </span>
@@ -8215,9 +8265,22 @@ export default function InvTableEntry() {
                         <div className="flex items-center gap-2.5 min-w-0 flex-1">
                           <CompanyLogo name={salaryBottomSheetCompany} size="w-9 h-9" type="company" />
                           <div className="min-w-0 flex-1">
-                            <h3 className="font-black text-sm text-base-content leading-snug break-words">
-                              {salaryBottomSheetCompany}
-                            </h3>
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <h3 className="font-black text-sm text-base-content leading-snug break-words" title={salaryBottomSheetCompany}>
+                                {getCompanyDisplayName(salaryBottomSheetCompany, false)}
+                              </h3>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedCompanyInfoModal(salaryBottomSheetCompany);
+                                }}
+                                className="btn btn-ghost btn-circle btn-xs text-base-content/40 hover:text-primary hover:bg-primary/10 cursor-pointer p-0 w-4 h-4 min-h-0 shrink-0"
+                                title={`Full Company Name: ${salaryBottomSheetCompany}`}
+                              >
+                                <Info size={11} />
+                              </button>
+                            </div>
                             <p className="text-[10px] text-base-content/55 font-medium mt-0.5">
                               {bsExpText ? `${bsExpText} • ` : ""}{bottomSheetSalaryEntries.length} Payslips Recorded
                             </p>
@@ -8620,7 +8683,22 @@ export default function InvTableEntry() {
                               <div className="flex items-center gap-2.5 min-w-0">
                                 <CompanyLogo name={company} size="w-9 h-9" type="company" />
                                 <div className="min-w-0">
-                                  <span className="font-black text-sm text-base-content truncate block">{company}</span>
+                                  <div className="flex items-center gap-1.5 min-w-0">
+                                    <span className="font-black text-sm text-base-content truncate block" title={company}>
+                                      {getCompanyDisplayName(company, false)}
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setSelectedCompanyInfoModal(company);
+                                      }}
+                                      className="btn btn-ghost btn-circle btn-xs text-base-content/40 hover:text-primary hover:bg-primary/10 cursor-pointer p-0 w-4 h-4 min-h-0 shrink-0"
+                                      title={`Full Company Name: ${company}`}
+                                    >
+                                      <Info size={11} />
+                                    </button>
+                                  </div>
                                   <span className="text-[10px] text-base-content/55 font-medium">
                                     {dayjs(startDate).format("MMM YYYY")} → {dayjs(endDate).format("MMM YYYY")}
                                   </span>
@@ -8755,9 +8833,22 @@ export default function InvTableEntry() {
                         <div className="flex items-center gap-2.5 min-w-0 flex-1">
                           <CompanyLogo name={pfBottomSheetCompany} size="w-9 h-9" type="company" />
                           <div className="min-w-0 flex-1">
-                            <h3 className="font-black text-sm text-base-content leading-snug break-words">
-                              {pfBottomSheetCompany}
-                            </h3>
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <h3 className="font-black text-sm text-base-content leading-snug break-words" title={pfBottomSheetCompany}>
+                                {getCompanyDisplayName(pfBottomSheetCompany, false)}
+                              </h3>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedCompanyInfoModal(pfBottomSheetCompany);
+                                }}
+                                className="btn btn-ghost btn-circle btn-xs text-base-content/40 hover:text-primary hover:bg-primary/10 cursor-pointer p-0 w-4 h-4 min-h-0 shrink-0"
+                                title={`Full Company Name: ${pfBottomSheetCompany}`}
+                              >
+                                <Info size={11} />
+                              </button>
+                            </div>
                             <p className="text-[10px] text-base-content/55 font-medium mt-0.5">
                               {bottomSheetEntries.length} PF Contributions
                             </p>
@@ -10542,6 +10633,93 @@ export default function InvTableEntry() {
         </div>,
         document.body
       )}
+
+      {/* ------------------------------------------------------------------ */}
+      {/* Company Full Name Info Modal                                      */}
+      {/* ------------------------------------------------------------------ */}
+      {selectedCompanyInfoModal &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
+            onClick={() => setSelectedCompanyInfoModal(null)}
+          >
+            <div
+              className="bg-base-100 rounded-3xl border border-base-content/10 shadow-2xl w-full max-w-sm overflow-hidden p-5 space-y-4 animate-in zoom-in-95 duration-200"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header: Logo + Title */}
+              <div className="flex items-start justify-between gap-3 pb-3 border-b border-base-content/10">
+                <div className="flex items-center gap-3 min-w-0">
+                  <CompanyLogo
+                    name={selectedCompanyInfoModal}
+                    size="w-11 h-11"
+                    rounded="rounded-2xl"
+                    type="company"
+                  />
+                  <div className="min-w-0">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-primary">
+                      Company Profile
+                    </span>
+                    <h3 className="font-black text-base text-base-content leading-snug break-words">
+                      {selectedCompanyInfoModal}
+                    </h3>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSelectedCompanyInfoModal(null)}
+                  className="btn btn-xs btn-circle btn-ghost text-base-content/60 hover:text-base-content cursor-pointer shrink-0"
+                >
+                  <X size={15} />
+                </button>
+              </div>
+
+              {/* Details Cards */}
+              <div className="space-y-2.5 text-xs">
+                {/* Full Legal Name */}
+                <div className="p-3 rounded-2xl bg-base-200/50 border border-base-content/5 space-y-1">
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-base-content/50">
+                    Full Legal Name
+                  </div>
+                  <div className="font-extrabold text-sm text-base-content break-words">
+                    {selectedCompanyInfoModal}
+                  </div>
+                </div>
+
+                {/* Display Code / Shortened Label */}
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="p-3 rounded-2xl bg-base-200/50 border border-base-content/5 space-y-0.5">
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-base-content/50">
+                      Desktop Code
+                    </div>
+                    <div className="font-black font-mono text-xs text-primary">
+                      {getCompanyDisplayName(selectedCompanyInfoModal, true)}
+                    </div>
+                  </div>
+
+                  <div className="p-3 rounded-2xl bg-base-200/50 border border-base-content/5 space-y-0.5">
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-base-content/50">
+                      Mobile Name
+                    </div>
+                    <div className="font-black font-mono text-xs text-base-content/80 truncate">
+                      {getCompanyDisplayName(selectedCompanyInfoModal, false)}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Button */}
+              <button
+                type="button"
+                onClick={() => setSelectedCompanyInfoModal(null)}
+                className="btn btn-sm btn-primary w-full rounded-xl font-bold cursor-pointer shadow-xs"
+              >
+                Close
+              </button>
+            </div>
+          </div>,
+          document.body
+        )}
 
       <style>{`
         @keyframes mfSlideDown {

@@ -351,7 +351,20 @@ export const BRAND_DOMAINS = {
   cred: "cred.club",
   jio: "jio.com",
   tata: "tata.com",
+  "tata communication limited": "tatacommunications.com",
+  "tata communications limited": "tatacommunications.com",
+  "tata communications": "tatacommunications.com",
+  "tata communication": "tatacommunications.com",
+  tatacomm: "tatacommunications.com",
+  tcl: "tatacommunications.com",
   samsung: "samsung.com",
+  verizon: "verizon.com",
+  "verizon india": "verizon.com",
+  "verizon communications": "verizon.com",
+  "verizon wireless": "verizon.com",
+  "verizon data services": "verizon.com",
+  vdsipl: "verizon.com",
+  vz: "verizon.com",
 };
 
 /**
@@ -578,7 +591,7 @@ export const LOCAL_BRAND_LOGOS = {
 
   "tata mutual fund": "/logos/amcs/tata_groww.png",
   "tata mf": "/logos/amcs/tata_groww.png",
-  tata: "/logos/amcs/tata_groww.png",
+  tata: "/logos/companies/tata.svg",
   tatamotors: "/logos/amcs/tata_groww.png",
   tatasteel: "/logos/amcs/tata_groww.png",
   tatapower: "/logos/amcs/tata_groww.png",
@@ -663,7 +676,55 @@ export const LOCAL_BRAND_LOGOS = {
   "groww mutual fund": "/logos/amcs/groww.png",
   "groww mf": "/logos/amcs/groww.png",
   groww: "/logos/amcs/groww.png",
+
+  // --------------------------------------------------------------------
+  // 3. CORPORATES & EMPLOYERS (Pristine Vector SVGs)
+  // --------------------------------------------------------------------
+  verizon: "/logos/companies/verizon.svg",
+  "verizon india": "/logos/companies/verizon.svg",
+  "verizon communications": "/logos/companies/verizon.svg",
+  "verizon wireless": "/logos/companies/verizon.svg",
+  "verizon data services": "/logos/companies/verizon.svg",
+  vdsipl: "/logos/companies/verizon.svg",
+  vz: "/logos/companies/verizon.svg",
+
+  "tata communication limited": "/logos/companies/tata.svg",
+  "tata communications limited": "/logos/companies/tata.svg",
+  "tata communications": "/logos/companies/tata.svg",
+  "tata communication": "/logos/companies/tata.svg",
+  tatacomm: "/logos/companies/tata.svg",
+  tcl: "/logos/companies/tata.svg",
 };
+
+/**
+ * Formats company names for display:
+ * - "Verizon Data Services..." (any full name variation) -> "VDSIPL"
+ * - "Tata Communication Limited" -> "TCL" (in Desktop view) / full name (in Mobile view)
+ */
+export function getCompanyDisplayName(name, isDesktop = false) {
+  if (!name || typeof name !== "string") return "";
+  const trimmed = name.trim();
+  const lower = trimmed.toLowerCase();
+
+  // 1. Verizon Data Services (any full name variation) -> VDSIPL
+  if (lower.startsWith("verizon data services") || lower === "vdsipl") {
+    return "VDSIPL";
+  }
+
+  // 2. Tata Communication Limited -> "TCL" only in Desktop view
+  if (
+    lower === "tata communication limited" ||
+    lower === "tata communications limited" ||
+    lower === "tata communication" ||
+    lower === "tata communications" ||
+    lower.startsWith("tata communication") ||
+    lower === "tcl"
+  ) {
+    return isDesktop ? "TCL" : trimmed;
+  }
+
+  return trimmed;
+}
 
 /**
  * Resolves an entity name to a local crisp SVG or 512px asset if available.
@@ -673,6 +734,33 @@ export function resolveLocalBrandLogo(name, type = "") {
 
   const raw = cleanKey(name);
   if (!raw) return null;
+
+  // Direct rule: Any entity or employer whose name starts with "verizon", "vz", or "vdsipl"
+  if (
+    raw === "verizon" ||
+    raw.startsWith("verizon") ||
+    String(name).trim().toLowerCase().startsWith("verizon") ||
+    raw === "vz" ||
+    raw.startsWith("vz ") ||
+    raw === "vdsipl" ||
+    raw.startsWith("vdsipl")
+  ) {
+    return "/logos/companies/verizon.svg";
+  }
+
+  // Direct rule: Tata Communication Limited, Tata Communications, TCL, or Tata corporate entities
+  if (
+    raw === "tata communication limited" ||
+    raw === "tata communications limited" ||
+    raw === "tata communication" ||
+    raw === "tata communications" ||
+    raw === "tatacomm" ||
+    raw === "tcl" ||
+    raw.startsWith("tata communication") ||
+    String(name).trim().toLowerCase().startsWith("tata communication")
+  ) {
+    return "/logos/companies/tata.svg";
+  }
 
   // 1. Direct dictionary match
   if (LOCAL_BRAND_LOGOS[raw]) {
