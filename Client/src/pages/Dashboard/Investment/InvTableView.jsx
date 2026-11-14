@@ -11,6 +11,7 @@ import PortfolioSettingsModal, {
 import InteractivePortfolioGauge from "../../../components/Dashboard/Investment/InteractivePortfolioGauge";
 import CompanyLogo from "../../../components/Dashboard/Investment/CompanyLogo";
 import MobileDrawer from "../../../components/Common/MobileDrawer";
+import { getCreditCardUsage } from "../../../utils/investmentUtils";
 import {
   Landmark,
   TrendingUp,
@@ -330,6 +331,7 @@ export default function InvTableView() {
 
   // Raw Data from APIs
   const [bankSources, setBankSources] = useState([]);
+  const [expenseTransactions, setExpenseTransactions] = useState([]);
   const [stocksData, setStocksData] = useState([]);
   const [fdData, setFdData] = useState([]);
   const [rdData, setRdData] = useState([]);
@@ -372,6 +374,12 @@ export default function InvTableView() {
           payload?.sources ||
           (Array.isArray(payload?.data) ? payload.data : []);
         setBankSources(Array.isArray(rawSources) ? rawSources : []);
+
+        const rawTx =
+          payload?.data?.transactions ||
+          payload?.transactions ||
+          [];
+        setExpenseTransactions(Array.isArray(rawTx) ? rawTx : []);
       }
 
       // 2. Stocks
@@ -595,7 +603,12 @@ export default function InvTableView() {
     return { years: Math.max(0, years), months: Math.max(0, months), days: Math.max(0, days) };
   }, [dob, targetDateObj]);
 
-  // 1. Current Bank Balance (Bank, Wallet, Cash sources; exclude Cards and Loans)
+  // Credit Card Usage across all card sources and transactions
+  const totalCreditCardDue = useMemo(() => {
+    return getCreditCardUsage(bankSources, expenseTransactions);
+  }, [bankSources, expenseTransactions]);
+
+  // 1. Current Bank Balance (Bank, Wallet, Cash sources; exclude Cards and Loans; deduct Credit Card Usage)
   const bankMetrics = useMemo(() => {
     let validSources = (bankSources || []).filter((s) => {
       const type = (s.type || "").toLowerCase();
@@ -615,19 +628,27 @@ export default function InvTableView() {
       validSources = validSources.filter((s) => bankIds.has(String(s.id || s._id)));
     }
 
+    const grossTotal = validSources.reduce((sum, s) => {
+      const b = Number(s.currentBalance !== undefined ? s.currentBalance : s.balance) || 0;
+      return sum + Math.max(0, b);
+    }, 0);
+
+    const ratio = grossTotal > 0 ? Math.max(0, grossTotal - totalCreditCardDue) / grossTotal : 1;
+
     const items = validSources.map((s) => {
       const sId = String(s.id || s._id);
       const rawBal = Number(s.currentBalance !== undefined ? s.currentBalance : s.balance) || 0;
-      let allocatedAmount = rawBal;
+      const netBal = Math.max(0, Math.round(rawBal * ratio * 100) / 100);
+      let allocatedAmount = netBal;
       let allocatedPercent = 100;
 
       if (activePlanner) {
         if (activePlanner.allocations && activePlanner.allocations[sId]) {
           const alloc = activePlanner.allocations[sId];
           allocatedPercent = Number(alloc.percent) || 0;
-          allocatedAmount = (rawBal * allocatedPercent) / 100;
+          allocatedAmount = (netBal * allocatedPercent) / 100;
         } else if (activePlanner.selectedBanks || activePlanner.allocatedBanks) {
-          allocatedAmount = rawBal;
+          allocatedAmount = netBal;
           allocatedPercent = 100;
         } else {
           allocatedAmount = 0;
@@ -637,6 +658,9 @@ export default function InvTableView() {
 
       return {
         ...s,
+        rawBalance: rawBal,
+        netBalance: netBal,
+        creditCardDeducted: Math.max(0, Math.round((rawBal - netBal) * 100) / 100),
         allocatedAmount: Math.max(0, allocatedAmount),
         allocatedPercent,
       };
@@ -644,12 +668,14 @@ export default function InvTableView() {
 
     const total = items.reduce((sum, s) => sum + s.allocatedAmount, 0);
     return {
+      grossTotal: Math.round(grossTotal * 100) / 100,
       total: Math.round(total * 100) / 100,
+      creditCardDue: totalCreditCardDue,
       count: items.length,
       primarySource: items[0]?.name || (activePlanner ? "No Plan Bank" : "Primary Account"),
       items,
     };
-  }, [bankSources, activePlanner]);
+  }, [bankSources, activePlanner, totalCreditCardDue]);
 
   // 2. Current Demat Amount (Quantity Left * Share Price)
   const dematMetrics = useMemo(() => {
@@ -2135,13 +2161,23 @@ export default function InvTableView() {
                       <div className="text-xl sm:text-2xl font-black font-mono text-emerald-600 dark:text-emerald-400">
                         {hideNumbers ? "••••••" : `₹${formatCurrency2Dec(displayBankValuation)}`}
                       </div>
-                      <div className="text-xs text-base-content/60 flex items-center gap-1.5">
-                        {projectionMode ? (
-                          <span>
-                            {targetMonthFormattedShort ? `Target: ${targetMonthFormattedShort}` : "Projected"} • {bankMetrics.count} accounts
+                      <div className="text-xs text-base-content/60 flex items-center justify-between gap-1.5 flex-wrap">
+                        <div>
+                          {projectionMode ? (
+                            <span>
+                              {targetMonthFormattedShort ? `Target: ${targetMonthFormattedShort}` : "Projected"} • {bankMetrics.count} accounts
+                            </span>
+                          ) : (
+                            <span>{bankMetrics.count} bank/wallet accounts</span>
+                          )}
+                        </div>
+                        {totalCreditCardDue > 0 && (
+                          <span
+                            className="badge badge-xs sm:badge-sm font-mono font-bold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20"
+                            title={`Gross Cash: ₹${formatCurrency2Dec(bankMetrics.grossTotal)} minus ₹${formatCurrency2Dec(totalCreditCardDue)} Credit Card Usage`}
+                          >
+                            CC Usage: -₹{formatCurrencyCompact(totalCreditCardDue)}
                           </span>
-                        ) : (
-                          <span>{bankMetrics.count} bank/wallet accounts</span>
                         )}
                       </div>
                     </div>
@@ -3942,6 +3978,11 @@ export default function InvTableView() {
                             <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
                               {hideNumbers ? "••••" : formatCurrencyCompact(bankMetrics.total)}
                             </span>
+                            {totalCreditCardDue > 0 && (
+                              <span className="block text-[8.5px] font-mono text-rose-500 font-bold">
+                                (CC: -₹{formatCurrencyCompact(totalCreditCardDue)})
+                              </span>
+                            )}
                           </div>
                         </div>
                       )}

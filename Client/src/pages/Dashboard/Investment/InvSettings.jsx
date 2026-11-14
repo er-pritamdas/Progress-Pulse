@@ -43,6 +43,7 @@ import { TitleChanger } from "../../../utils/TitleChanger";
 import CompanyLogo from "../../../components/Dashboard/Investment/CompanyLogo";
 import AllocateSourceModal from "../../../components/Dashboard/Investment/AllocateSourceModal";
 import MobileDrawer from "../../../components/Common/MobileDrawer";
+import { getCreditCardUsage } from "../../../utils/investmentUtils";
 import axiosInstance from "../../../Context/AxiosInstance";
 import apiCache from "../../../utils/apiCache";
 
@@ -250,6 +251,7 @@ export default function InvSettings() {
   // Raw Data States from APIs across all 6 asset categories
   // ----------------------------------------------------------------------
   const [bankSources, setBankSources] = useState([]);
+  const [expenseTransactions, setExpenseTransactions] = useState([]);
   const [stocksData, setStocksData] = useState([]);
   const [mfData, setMfData] = useState([]);
   const [fdData, setFdData] = useState([]);
@@ -512,6 +514,12 @@ export default function InvSettings() {
           payload?.sources ||
           (Array.isArray(payload?.data) ? payload.data : []);
         setBankSources(Array.isArray(rawSources) ? rawSources : []);
+
+        const rawTx =
+          payload?.data?.transactions ||
+          payload?.transactions ||
+          [];
+        setExpenseTransactions(Array.isArray(rawTx) ? rawTx : []);
       }
 
       setStocksData(parseList(stocksRes));
@@ -618,7 +626,14 @@ export default function InvSettings() {
   }, []);
 
   // ----------------------------------------------------------------------
-  // 1. Bank Accounts (Liquid Savings - Identical to Portfolio Calculation)
+  // Credit Card Usage across all card sources and transactions
+  // ----------------------------------------------------------------------
+  const totalCreditCardDue = useMemo(() => {
+    return getCreditCardUsage(bankSources, expenseTransactions);
+  }, [bankSources, expenseTransactions]);
+
+  // ----------------------------------------------------------------------
+  // 1. Bank Accounts (Liquid Savings - Identical to Portfolio Calculation, net of CC usage)
   // ----------------------------------------------------------------------
   const bankAccounts = useMemo(() => {
     const validSources = (bankSources || []).filter((s) => {
@@ -626,24 +641,34 @@ export default function InvSettings() {
       return type !== "card" && type !== "credit card" && type !== "loan";
     });
 
+    const grossTotal = validSources.reduce((sum, s) => {
+      const b = Number(s.currentBalance !== undefined ? s.currentBalance : s.balance) || 0;
+      return sum + Math.max(0, b);
+    }, 0);
+
+    const ratio = grossTotal > 0 ? Math.max(0, grossTotal - totalCreditCardDue) / grossTotal : 1;
+
     return validSources
       .map((s, idx) => {
         const id = String(s.id || s._id || `bank-${s.name}-${idx}`);
-        const bal = Number(s.currentBalance !== undefined ? s.currentBalance : s.balance) || 0;
-        const holdingValue = Math.max(0, bal);
+        const rawBal = Number(s.currentBalance !== undefined ? s.currentBalance : s.balance) || 0;
+        const netBal = Math.max(0, Math.round(rawBal * ratio * 100) / 100);
+        const ccDeducted = Math.max(0, Math.round((rawBal - netBal) * 100) / 100);
         return {
           ...s,
           id,
           sourceType: "bank",
           displayName: `${s.name || "Bank Account"} (${s.accountType || "Savings"})`,
           bankName: s.name || "Bank",
-          holdingValue: Math.round(holdingValue * 100) / 100,
-          balance: Math.round(holdingValue * 100) / 100,
+          rawBalance: rawBal,
+          creditCardDeducted: ccDeducted,
+          holdingValue: netBal,
+          balance: netBal,
           accountType: s.accountType || "Savings",
         };
       })
-      .filter((b) => b.holdingValue > 0);
-  }, [bankSources]);
+      .filter((b) => b.holdingValue > 0 || (b.rawBalance > 0 && ratio === 0));
+  }, [bankSources, totalCreditCardDue]);
 
   // ----------------------------------------------------------------------
   // 2. Held Stocks (Identical to Portfolio Calculation)
@@ -5137,6 +5162,11 @@ export default function InvSettings() {
                         <div className="text-[9.5px] sm:text-[10.5px] text-base-content/50 font-mono truncate whitespace-nowrap mt-0.5">
                           <span className="hidden sm:inline">{formatINR(st.amount)}</span>
                           <span className="sm:hidden">{st.amount > 0 ? formatINR(st.amount) : "₹0"}</span>
+                          {st.id === "bank" && totalCreditCardDue > 0 && (
+                            <span className="text-rose-500 font-bold ml-1">
+                              (CC: -₹{formatINRCompact(totalCreditCardDue)})
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -5322,6 +5352,11 @@ export default function InvSettings() {
                         <div className="text-[9.5px] sm:text-[10.5px] text-base-content/50 font-mono truncate whitespace-nowrap mt-0.5">
                           <span className="hidden sm:inline">{formatINR(st.amount)}</span>
                           <span className="sm:hidden">{st.amount > 0 ? formatINR(st.amount) : "₹0"}</span>
+                          {st.id === "bank" && totalCreditCardDue > 0 && (
+                            <span className="text-rose-500 font-bold ml-1">
+                              (CC: -₹{formatINRCompact(totalCreditCardDue)})
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -5578,6 +5613,11 @@ export default function InvSettings() {
                             {it.source.sourceType === "bank" && (
                               <span>
                                 {it.source.bankName || "Bank"} • {it.source.accountType || "Savings"}
+                                {it.source.creditCardDeducted > 0 && (
+                                  <span className="text-rose-500 font-bold ml-1">
+                                    (Gross: ₹{formatINR(it.source.rawBalance)} • CC: -₹{formatINR(it.source.creditCardDeducted)})
+                                  </span>
+                                )}
                               </span>
                             )}
                             {it.source.sourceType === "pf" && (

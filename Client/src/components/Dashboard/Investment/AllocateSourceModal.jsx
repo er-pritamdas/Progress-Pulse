@@ -706,7 +706,9 @@ export default function AllocateSourceModal({
                               <div className="text-[10px] text-base-content/50 font-semibold flex items-center gap-1 mt-0.5 whitespace-nowrap truncate leading-tight">
                                 <span className="truncate">
                                   {item.sourceType === "bank"
-                                    ? item.accountType ? `${item.accountType} Account` : "Liquid Balance"
+                                    ? item.creditCardDeducted > 0
+                                      ? `Net (${item.accountType || "Savings"} • CC: -₹${formatINRCompact(item.creditCardDeducted)})`
+                                      : item.accountType ? `${item.accountType} Account` : "Liquid Balance"
                                     : item.sourceType === "stock"
                                     ? `${item.holdingQty} shares`
                                     : item.sourceType === "mf"
@@ -864,6 +866,14 @@ export default function AllocateSourceModal({
                               <span className="hidden sm:inline font-mono">{formatINR(selectedSource.holdingValue)}</span>
                               <span className="sm:hidden font-mono">{formatINRCompact(selectedSource.holdingValue)}</span>
                             </span>
+                            {selectedSource.sourceType === "bank" && selectedSource.creditCardDeducted > 0 && (
+                              <>
+                                <span>•</span>
+                                <span className="text-rose-500 font-mono font-bold whitespace-nowrap truncate">
+                                  CC: -₹{formatINRCompact(selectedSource.creditCardDeducted)}
+                                </span>
+                              </>
+                            )}
                             {selectedSource.sourceType === "stock" && (
                               <>
                                 <span>•</span>
