@@ -89,6 +89,11 @@ export const createInvestmentPlan = async (req, res) => {
     planData._id = newObjectId;
     planData.customId = customId ? String(customId) : newObjectId.toString();
 
+    if (planData.order === undefined) {
+      const planCount = await InvestmentPlan.countDocuments({ userId });
+      planData.order = planCount;
+    }
+
     const createdPlan = await InvestmentPlan.create(planData);
 
     return res.status(201).json({
@@ -328,6 +333,62 @@ export const syncInvestmentPlans = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: error.message || "Failed to sync investment plans",
+      error: error.message,
+    });
+  }
+};
+
+// ----------------------------------------------------------------------
+// 7. Reorder Investment Plans
+// ----------------------------------------------------------------------
+export const reorderInvestmentPlans = async (req, res) => {
+  try {
+    const userId = req.user?._id;
+    if (!userId) {
+      return res.status(401).json({ success: false, message: "Unauthorized user" });
+    }
+
+    const { planIds } = req.body;
+    if (!Array.isArray(planIds) || planIds.length === 0) {
+      return res.status(400).json({ success: false, message: "planIds array is required" });
+    }
+
+    const userObjectId = mongoose.Types.ObjectId.isValid(userId)
+      ? new mongoose.Types.ObjectId(userId)
+      : userId;
+
+    const bulkOps = planIds.map((id, index) => {
+      const isObjectId = mongoose.Types.ObjectId.isValid(id);
+      return {
+        updateOne: {
+          filter: isObjectId
+            ? {
+                userId: userObjectId,
+                $or: [{ _id: new mongoose.Types.ObjectId(id) }, { customId: String(id) }],
+              }
+            : {
+                userId: userObjectId,
+                customId: String(id),
+              },
+          update: { $set: { order: index } },
+        },
+      };
+    });
+
+    await InvestmentPlan.bulkWrite(bulkOps);
+
+    const updatedPlans = await InvestmentPlan.find({ userId: userObjectId }).sort({ order: 1, createdAt: -1 });
+
+    return res.status(200).json({
+      success: true,
+      message: "Investment Plans reordered successfully",
+      data: updatedPlans.map(formatPlan),
+    });
+  } catch (error) {
+    console.error("Error in reorderInvestmentPlans:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Failed to reorder investment plans",
       error: error.message,
     });
   }

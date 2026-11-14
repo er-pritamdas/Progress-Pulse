@@ -128,6 +128,7 @@ const investmentPlanSchema = new mongoose.Schema(
 
 investmentPlanSchema.index({ userId: 1, createdAt: -1 });
 investmentPlanSchema.index({ userId: 1, customId: 1 });
+investmentPlanSchema.index({ userId: 1, order: 1 });
 
 const InvestmentPlan = InvestmentDB.model("InvestmentPlan", investmentPlanSchema);
 

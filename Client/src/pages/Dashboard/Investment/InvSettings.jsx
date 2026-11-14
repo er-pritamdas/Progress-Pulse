@@ -34,6 +34,9 @@ import {
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
+  ArrowUpToLine,
+  ArrowDownToLine,
+  GripVertical,
   ArrowLeft,
   ArrowUpRight,
   Home,
@@ -328,6 +331,11 @@ export default function InvSettings() {
   // 7. Category Itemized Breakdown Sub-Modal
   const [categoryBreakdownModal, setCategoryBreakdownModal] = useState(null);
   const [breakdownSearch, setBreakdownSearch] = useState("");
+
+  // 8. Reorder Planners Modal State
+  const [isReorderModalOpen, setIsReorderModalOpen] = useState(false);
+  const [isSavingOrder, setIsSavingOrder] = useState(false);
+  const [orderToast, setOrderToast] = useState("");
 
   // Emoji picker popup state for goal modal
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -1787,6 +1795,66 @@ export default function InvSettings() {
     }
   };
 
+  // Handle persisting the new planner order to Database
+  const handleReorderPlans = async (newOrderedPlans) => {
+    if (!Array.isArray(newOrderedPlans) || newOrderedPlans.length === 0) return;
+    // Optimistic UI update
+    setGoals(newOrderedPlans);
+    setIsSavingOrder(true);
+
+    try {
+      const planIds = newOrderedPlans.map((p) => p.id || p._id || p.customId);
+      const res = await axiosInstance.put("/v1/dashboard/investment/plans/reorder", {
+        planIds,
+      });
+      if (res.data?.data && Array.isArray(res.data.data)) {
+        setGoals(res.data.data);
+      }
+      setOrderToast("Planner order saved to database!");
+      setTimeout(() => setOrderToast(""), 2500);
+    } catch (err) {
+      console.error("Failed to persist planner reorder in DB:", err);
+      setOrderToast("Failed to save order to database.");
+      setTimeout(() => setOrderToast(""), 3000);
+    } finally {
+      setIsSavingOrder(false);
+    }
+  };
+
+  // Move plan immediately to the very top (#1)
+  const handleMovePlanToTop = (planId) => {
+    const currentIndex = goals.findIndex((g) => (g.id || g._id) === planId);
+    if (currentIndex <= 0) return;
+    const targetPlan = goals[currentIndex];
+    const remainingPlans = goals.filter((_, idx) => idx !== currentIndex);
+    const updated = [targetPlan, ...remainingPlans];
+    handleReorderPlans(updated);
+  };
+
+  // Move plan up or down by 1 position
+  const handleMovePlanStep = (planId, direction) => {
+    const currentIndex = goals.findIndex((g) => (g.id || g._id) === planId);
+    if (currentIndex === -1) return;
+    if (direction === "up" && currentIndex === 0) return;
+    if (direction === "down" && currentIndex === goals.length - 1) return;
+
+    const targetIndex = direction === "up" ? currentIndex - 1 : currentIndex + 1;
+    const updated = [...goals];
+    const [moved] = updated.splice(currentIndex, 1);
+    updated.splice(targetIndex, 0, moved);
+    handleReorderPlans(updated);
+  };
+
+  // Move plan to the bottom
+  const handleMovePlanToBottom = (planId) => {
+    const currentIndex = goals.findIndex((g) => (g.id || g._id) === planId);
+    if (currentIndex === -1 || currentIndex === goals.length - 1) return;
+    const targetPlan = goals[currentIndex];
+    const remainingPlans = goals.filter((_, idx) => idx !== currentIndex);
+    const updated = [...remainingPlans, targetPlan];
+    handleReorderPlans(updated);
+  };
+
   return (
     <div className="w-full select-none">
       {/* ============================================================ */}
@@ -2041,6 +2109,18 @@ export default function InvSettings() {
                 </button>
               )}
 
+              {goals.length > 1 && (
+                <button
+                  type="button"
+                  className="btn btn-xs sm:btn-sm btn-ghost border border-base-300 gap-1.5 text-xs text-base-content/80 hover:text-primary hover:bg-base-100 rounded-xl transition-all shadow-xs"
+                  onClick={() => setIsReorderModalOpen(true)}
+                  title="Reorder planners (keep high-priority goals on top)"
+                >
+                  <ArrowUpDown size={14} className="text-primary" />
+                  <span>Reorder Plans</span>
+                </button>
+              )}
+
               <button
                 type="button"
                 className="btn btn-xs sm:btn-sm btn-primary btn-soft gap-1.5 text-xs rounded-xl"
@@ -2111,7 +2191,7 @@ export default function InvSettings() {
             </div>
           ) : (
             /* Goal / Planner Cards List */
-            goals.map((goal) => {
+            goals.map((goal, goalIndex) => {
               const metrics = calculateGoalMetrics(goal);
               const isCollapsed = !expandedPlans[goal.id];
               const hasItems = metrics.items.length > 0;
@@ -2219,6 +2299,31 @@ export default function InvSettings() {
                       className="flex items-center gap-2 shrink-0 ml-auto"
                       onClick={(e) => e.stopPropagation()}
                     >
+                      {/* Reorder / Move to Top quick buttons */}
+                      {goals.length > 1 && (
+                        <div className="flex items-center gap-1">
+                          {goalIndex > 0 && (
+                            <button
+                              type="button"
+                              className="btn btn-xs btn-ghost border border-base-300 gap-1 text-xs text-base-content/75 hover:text-primary hover:bg-primary/10 rounded-lg px-2"
+                              title="Move this planner to the top"
+                              onClick={() => handleMovePlanToTop(goal.id || goal._id)}
+                            >
+                              <ArrowUpToLine size={13} className="text-primary" />
+                              <span className="hidden xl:inline font-semibold">To Top</span>
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            className="btn btn-xs btn-ghost border border-base-300 p-1.5 text-base-content/60 hover:text-primary hover:bg-base-100 rounded-lg"
+                            title="Reorder all planners"
+                            onClick={() => setIsReorderModalOpen(true)}
+                          >
+                            <ArrowUpDown size={13} />
+                          </button>
+                        </div>
+                      )}
+
                       {/* Clear all sources button */}
                       {hasItems && (
                         <button
@@ -3016,6 +3121,16 @@ export default function InvSettings() {
               >
                 <RefreshCw size={13} className={loading ? "animate-spin text-primary" : ""} />
               </button>
+              {goals.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => setIsReorderModalOpen(true)}
+                  className="btn btn-ghost btn-xs btn-circle text-base-content/60 hover:text-primary hover:bg-base-200"
+                  title="Reorder Planners"
+                >
+                  <ArrowUpDown size={13} />
+                </button>
+              )}
               <button
                 type="button"
                 onClick={openCreateGoalModal}
@@ -3224,7 +3339,7 @@ export default function InvSettings() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {goals.map((goal) => {
+                  {goals.map((goal, goalIndex) => {
                     const metrics = calculateGoalMetrics(goal);
                     const isCollapsed = !expandedPlans[goal.id];
                     const hasItems = metrics.items.length > 0;
@@ -3379,6 +3494,20 @@ export default function InvSettings() {
                                 <Layers size={10} className="opacity-60" />
                                 <span>{metrics.itemCount} {metrics.itemCount === 1 ? "source" : "sources"}</span>
                               </span>
+                              {goals.length > 1 && goalIndex > 0 && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleMovePlanToTop(goal.id || goal._id);
+                                  }}
+                                  className="btn btn-ghost btn-xs text-primary text-[10px] font-bold h-5 min-h-0 px-1.5 border border-primary/25 rounded-md gap-0.5 bg-primary/5 hover:bg-primary/15"
+                                  title="Move to top"
+                                >
+                                  <ArrowUpToLine size={10} />
+                                  <span>Top</span>
+                                </button>
+                              )}
                               {metrics.percentFunded < 100 && (
                                 <span className="text-[10px] font-mono text-base-content/50 truncate">
                                   Need {formatINRCompact(Math.max(0, goal.targetAmount - metrics.totalAllocated))} more
@@ -3442,6 +3571,27 @@ export default function InvSettings() {
                             {/* Actions Ribbon */}
                             <div className="flex items-center justify-between gap-1.5 bg-base-200/80 p-1.5 rounded-xl border border-base-300/60">
                               <div className="flex items-center gap-1">
+                                {goals.length > 1 && goalIndex > 0 && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleMovePlanToTop(goal.id || goal._id)}
+                                    className="btn btn-ghost btn-xs border border-primary/30 bg-primary/5 rounded-lg gap-1 text-[11px] font-bold h-6 min-h-0 px-2 text-primary hover:bg-primary/15"
+                                    title="Move this planner to the top"
+                                  >
+                                    <ArrowUpToLine size={11} />
+                                    <span>Top</span>
+                                  </button>
+                                )}
+                                {goals.length > 1 && (
+                                  <button
+                                    type="button"
+                                    onClick={() => setIsReorderModalOpen(true)}
+                                    className="btn btn-ghost btn-xs border border-base-300/80 rounded-lg gap-1 text-[11px] font-semibold h-6 min-h-0 px-1.5 text-base-content/70 hover:text-primary"
+                                    title="Reorder Planners"
+                                  >
+                                    <ArrowUpDown size={11} />
+                                  </button>
+                                )}
                                 <button
                                   type="button"
                                   onClick={() => openEditGoalModal(goal)}
@@ -5715,6 +5865,333 @@ export default function InvSettings() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* ============================================================ */}
+      {/* 8. REORDER PLANNERS MODAL (Desktop View Only)                */}
+      {/* ============================================================ */}
+      {isReorderModalOpen && !isMobileScreen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div
+            className="bg-base-100 rounded-3xl border border-base-300 shadow-2xl w-full max-w-xl overflow-hidden flex flex-col max-h-[85vh] animate-in fade-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="p-4 sm:p-5 border-b border-base-300 flex items-center justify-between bg-base-200/50">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shadow-xs">
+                  <ArrowUpDown size={18} />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-base text-base-content">
+                    Reorder Planners
+                  </h3>
+                  <p className="text-xs text-base-content/60">
+                    Keep your high-priority life goals on top
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsReorderModalOpen(false)}
+                className="btn btn-xs btn-circle btn-ghost text-base-content/60 hover:text-base-content"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Notice / Toast */}
+            {orderToast && (
+              <div className="mx-4 mt-3 alert alert-success py-2 px-3 text-xs rounded-xl shadow-xs flex items-center gap-2 font-semibold">
+                <CheckCircle2 size={14} />
+                <span>{orderToast}</span>
+              </div>
+            )}
+
+            {/* List */}
+            <div className="p-4 overflow-y-auto space-y-2 flex-1">
+              {goals.length === 0 ? (
+                <div className="text-center py-8 text-base-content/50 text-sm">
+                  No planners found.
+                </div>
+              ) : (
+                goals.map((goal, idx) => {
+                  const metrics = calculateGoalMetrics(goal);
+                  const isFirst = idx === 0;
+                  const isLast = idx === goals.length - 1;
+                  const goalId = goal.id || goal._id;
+
+                  return (
+                    <div
+                      key={goalId}
+                      className={`flex items-center justify-between p-3 rounded-2xl border transition-all ${
+                        isFirst
+                          ? "bg-primary/5 border-primary/30 shadow-xs"
+                          : "bg-base-200/60 border-base-300 hover:border-base-content/20"
+                      }`}
+                    >
+                      {/* Left: Position & Goal info */}
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <div
+                          className={`w-7 h-7 rounded-xl font-mono font-bold text-xs flex items-center justify-center shrink-0 ${
+                            isFirst
+                              ? "bg-primary text-primary-content shadow-xs"
+                              : "bg-base-300 text-base-content/70"
+                          }`}
+                        >
+                          #{idx + 1}
+                        </div>
+                        <div className="w-9 h-9 rounded-xl bg-base-100 border border-base-300/70 flex items-center justify-center text-base shrink-0 shadow-2xs">
+                          {goal.icon || "🎯"}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-bold text-sm text-base-content truncate">
+                              {goal.title}
+                            </h4>
+                            {isFirst && (
+                              <span className="badge badge-xs badge-primary font-bold">
+                                TOP
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 text-xs font-mono text-base-content/60 mt-0.5">
+                            <span>Target: {formatINRCompact(goal.targetAmount)}</span>
+                            <span>•</span>
+                            <span
+                              className={`font-semibold ${
+                                metrics.percentFunded >= 100
+                                  ? "text-emerald-600"
+                                  : metrics.percentFunded >= 50
+                                  ? "text-primary"
+                                  : "text-amber-500"
+                              }`}
+                            >
+                              {metrics.percentFunded}% funded
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Right: Actions */}
+                      <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                        <button
+                          type="button"
+                          disabled={isFirst}
+                          onClick={() => handleMovePlanToTop(goalId)}
+                          className="btn btn-xs btn-ghost border border-base-300 gap-1 rounded-xl text-xs font-semibold hover:text-primary hover:border-primary/40 disabled:opacity-30"
+                          title="Move to top"
+                        >
+                          <ArrowUpToLine size={13} />
+                          <span>Top</span>
+                        </button>
+                        <button
+                          type="button"
+                          disabled={isFirst}
+                          onClick={() => handleMovePlanStep(goalId, "up")}
+                          className="btn btn-xs btn-circle btn-ghost border border-base-300 text-base-content/70 hover:text-primary disabled:opacity-30"
+                          title="Move up"
+                        >
+                          <ArrowUp size={13} />
+                        </button>
+                        <button
+                          type="button"
+                          disabled={isLast}
+                          onClick={() => handleMovePlanStep(goalId, "down")}
+                          className="btn btn-xs btn-circle btn-ghost border border-base-300 text-base-content/70 hover:text-primary disabled:opacity-30"
+                          title="Move down"
+                        >
+                          <ArrowDown size={13} />
+                        </button>
+                        <button
+                          type="button"
+                          disabled={isLast}
+                          onClick={() => handleMovePlanToBottom(goalId)}
+                          className="btn btn-xs btn-ghost border border-base-300 gap-1 rounded-xl text-xs font-semibold hover:text-primary hover:border-primary/40 disabled:opacity-30"
+                          title="Move to bottom"
+                        >
+                          <ArrowDownToLine size={13} />
+                          <span className="hidden sm:inline">End</span>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 border-t border-base-300 bg-base-200/50 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                {isSavingOrder && <span className="loading loading-spinner loading-xs text-primary" />}
+                <span className="text-xs text-base-content/60 font-medium">
+                  {isSavingOrder ? "Saving order..." : "Order is saved to the database automatically."}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsReorderModalOpen(false)}
+                className="btn btn-sm btn-primary rounded-xl font-bold px-5"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================ */}
+      {/* 8.1 REORDER PLANNERS DRAWER (Mobile Phone View Only)        */}
+      {/* ============================================================ */}
+      {isReorderModalOpen && isMobileScreen && (
+        <MobileDrawer
+          isOpen={isReorderModalOpen}
+          onClose={() => setIsReorderModalOpen(false)}
+          maxHeight="max-h-[85vh]"
+          showHandle={true}
+          title="Reorder Planners"
+          subtitle="Move priority life goals to the top"
+          icon={
+            <div className="w-9 h-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shadow-xs shrink-0">
+              <ArrowUpDown size={18} />
+            </div>
+          }
+          footer={
+            <div className="px-4 py-3 border-t border-base-300 bg-base-200/50 flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                {isSavingOrder && <span className="loading loading-spinner loading-xs text-primary" />}
+                <span className="text-[11px] text-base-content/60 font-medium">
+                  {isSavingOrder ? "Saving..." : "Saved automatically to database"}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsReorderModalOpen(false)}
+                className="btn btn-sm btn-primary rounded-xl font-bold px-5"
+              >
+                Done
+              </button>
+            </div>
+          }
+        >
+          <div className="p-3.5 space-y-2.5">
+            {orderToast && (
+              <div className="alert alert-success py-2 px-3 text-xs rounded-xl shadow-xs flex items-center gap-2 font-semibold">
+                <CheckCircle2 size={14} />
+                <span>{orderToast}</span>
+              </div>
+            )}
+            <div className="space-y-2">
+              {goals.length === 0 ? (
+                <div className="text-center py-6 text-base-content/50 text-xs">
+                  No planners found.
+                </div>
+              ) : (
+                goals.map((goal, idx) => {
+                  const metrics = calculateGoalMetrics(goal);
+                  const isFirst = idx === 0;
+                  const isLast = idx === goals.length - 1;
+                  const goalId = goal.id || goal._id;
+
+                  return (
+                    <div
+                      key={goalId}
+                      className={`flex items-center justify-between p-2.5 rounded-2xl border transition-all ${
+                        isFirst
+                          ? "bg-primary/5 border-primary/30 shadow-xs"
+                          : "bg-base-200/60 border-base-300/80"
+                      }`}
+                    >
+                      {/* Left: Position & Goal info */}
+                      <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                        <div
+                          className={`w-6 h-6 rounded-lg font-mono font-bold text-[11px] flex items-center justify-center shrink-0 ${
+                            isFirst
+                              ? "bg-primary text-primary-content shadow-xs"
+                              : "bg-base-300 text-base-content/70"
+                          }`}
+                        >
+                          #{idx + 1}
+                        </div>
+                        <div className="w-8 h-8 rounded-xl bg-base-100 border border-base-300/70 flex items-center justify-center text-sm shrink-0 shadow-2xs">
+                          {goal.icon || "🎯"}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5">
+                            <h4 className="font-bold text-xs text-base-content truncate">
+                              {goal.title}
+                            </h4>
+                            {isFirst && (
+                              <span className="badge badge-2xs badge-primary font-bold text-[9px]">
+                                TOP
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1.5 text-[10.5px] font-mono text-base-content/60 mt-0.5">
+                            <span>{formatINRCompact(goal.targetAmount)}</span>
+                            <span>•</span>
+                            <span
+                              className={`font-semibold ${
+                                metrics.percentFunded >= 100
+                                  ? "text-emerald-600"
+                                  : metrics.percentFunded >= 50
+                                  ? "text-primary"
+                                  : "text-amber-500"
+                              }`}
+                            >
+                              {metrics.percentFunded}%
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Right: Quick Actions */}
+                      <div className="flex items-center gap-1 shrink-0 ml-1.5">
+                        <button
+                          type="button"
+                          disabled={isFirst}
+                          onClick={() => handleMovePlanToTop(goalId)}
+                          className="btn btn-xs btn-ghost border border-base-300/80 rounded-lg text-[10px] font-bold h-6 min-h-0 px-2 text-primary disabled:opacity-30"
+                          title="Move to top"
+                        >
+                          <ArrowUpToLine size={11} />
+                          <span>Top</span>
+                        </button>
+                        <button
+                          type="button"
+                          disabled={isFirst}
+                          onClick={() => handleMovePlanStep(goalId, "up")}
+                          className="btn btn-xs btn-ghost border border-base-300/80 rounded-lg h-6 w-6 min-h-0 p-0 text-base-content/70 disabled:opacity-30"
+                          title="Move up"
+                        >
+                          <ArrowUp size={12} />
+                        </button>
+                        <button
+                          type="button"
+                          disabled={isLast}
+                          onClick={() => handleMovePlanStep(goalId, "down")}
+                          className="btn btn-xs btn-ghost border border-base-300/80 rounded-lg h-6 w-6 min-h-0 p-0 text-base-content/70 disabled:opacity-30"
+                          title="Move down"
+                        >
+                          <ArrowDown size={12} />
+                        </button>
+                        <button
+                          type="button"
+                          disabled={isLast}
+                          onClick={() => handleMovePlanToBottom(goalId)}
+                          className="btn btn-xs btn-ghost border border-base-300/80 rounded-lg h-6 w-6 min-h-0 p-0 text-base-content/70 disabled:opacity-30"
+                          title="Move to bottom"
+                        >
+                          <ArrowDownToLine size={12} />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        </MobileDrawer>
       )}
     </div>
   );

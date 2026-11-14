@@ -55,6 +55,7 @@ import {
   deleteInvestmentPlan,
   clearPlanAllocations,
   syncInvestmentPlans,
+  reorderInvestmentPlans,
 } from "../../controllers/Investment-controllers/investmentPlan.controller.js";
 
 const router = Router();
@@ -192,6 +193,10 @@ router
   .post(syncInvestmentPlans);
 
 router
+  .route("/plans/reorder")
+  .put(reorderInvestmentPlans);
+
+router
   .route("/plans/:id")
   .put(updateInvestmentPlan)
   .delete(deleteInvestmentPlan);
@@ -209,6 +214,10 @@ router
 router
   .route("/planner/sync")
   .post(syncInvestmentPlans);
+
+router
+  .route("/planner/reorder")
+  .put(reorderInvestmentPlans);
 
 router
   .route("/planner/:id")
