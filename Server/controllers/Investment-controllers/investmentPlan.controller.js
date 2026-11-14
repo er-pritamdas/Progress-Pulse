@@ -353,30 +353,18 @@ export const reorderInvestmentPlans = async (req, res) => {
       return res.status(400).json({ success: false, message: "planIds array is required" });
     }
 
-    const userObjectId = mongoose.Types.ObjectId.isValid(userId)
-      ? new mongoose.Types.ObjectId(userId)
-      : userId;
-
-    const bulkOps = planIds.map((id, index) => {
-      const isObjectId = mongoose.Types.ObjectId.isValid(id);
-      return {
-        updateOne: {
-          filter: isObjectId
-            ? {
-                userId: userObjectId,
-                $or: [{ _id: new mongoose.Types.ObjectId(id) }, { customId: String(id) }],
-              }
-            : {
-                userId: userObjectId,
-                customId: String(id),
-              },
-          update: { $set: { order: index } },
-        },
-      };
-    });
+    const bulkOps = planIds.map((id, index) => ({
+      updateOne: {
+        filter: getFindQuery(id, userId),
+        update: { $set: { order: index } },
+      },
+    }));
 
     await InvestmentPlan.bulkWrite(bulkOps);
 
+    const userObjectId = mongoose.Types.ObjectId.isValid(userId)
+      ? new mongoose.Types.ObjectId(userId)
+      : userId;
     const updatedPlans = await InvestmentPlan.find({ userId: userObjectId }).sort({ order: 1, createdAt: -1 });
 
     return res.status(200).json({

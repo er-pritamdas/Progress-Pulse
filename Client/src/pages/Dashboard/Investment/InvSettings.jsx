@@ -336,6 +336,7 @@ export default function InvSettings() {
   const [isReorderModalOpen, setIsReorderModalOpen] = useState(false);
   const [isSavingOrder, setIsSavingOrder] = useState(false);
   const [orderToast, setOrderToast] = useState("");
+  const [draggedPlanIndex, setDraggedPlanIndex] = useState(null);
 
   // Emoji picker popup state for goal modal
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -2301,21 +2302,39 @@ export default function InvSettings() {
                     >
                       {/* Reorder / Move to Top quick buttons */}
                       {goals.length > 1 && (
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center gap-0.5 bg-base-100 p-0.5 rounded-xl border border-base-300 shadow-2xs">
                           {goalIndex > 0 && (
                             <button
                               type="button"
-                              className="btn btn-xs btn-ghost border border-base-300 gap-1 text-xs text-base-content/75 hover:text-primary hover:bg-primary/10 rounded-lg px-2"
-                              title="Move this planner to the top"
+                              className="btn btn-xs btn-ghost gap-1 text-xs text-primary hover:bg-primary/10 rounded-lg px-2 font-bold"
+                              title="Move this planner to the very top"
                               onClick={() => handleMovePlanToTop(goal.id || goal._id)}
                             >
-                              <ArrowUpToLine size={13} className="text-primary" />
-                              <span className="hidden xl:inline font-semibold">To Top</span>
+                              <ArrowUpToLine size={13} />
+                              <span className="hidden xl:inline">To Top</span>
                             </button>
                           )}
                           <button
                             type="button"
-                            className="btn btn-xs btn-ghost border border-base-300 p-1.5 text-base-content/60 hover:text-primary hover:bg-base-100 rounded-lg"
+                            disabled={goalIndex === 0}
+                            className="btn btn-xs btn-circle btn-ghost text-base-content/65 hover:text-primary disabled:opacity-20"
+                            title="Move section up"
+                            onClick={() => handleMovePlanStep(goal.id || goal._id, "up")}
+                          >
+                            <ArrowUp size={13} />
+                          </button>
+                          <button
+                            type="button"
+                            disabled={goalIndex === goals.length - 1}
+                            className="btn btn-xs btn-circle btn-ghost text-base-content/65 hover:text-primary disabled:opacity-20"
+                            title="Move section down"
+                            onClick={() => handleMovePlanStep(goal.id || goal._id, "down")}
+                          >
+                            <ArrowDown size={13} />
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btn-xs btn-ghost p-1.5 text-base-content/60 hover:text-primary rounded-lg"
                             title="Reorder all planners"
                             onClick={() => setIsReorderModalOpen(true)}
                           >
@@ -3571,26 +3590,46 @@ export default function InvSettings() {
                             {/* Actions Ribbon */}
                             <div className="flex items-center justify-between gap-1.5 bg-base-200/80 p-1.5 rounded-xl border border-base-300/60">
                               <div className="flex items-center gap-1">
-                                {goals.length > 1 && goalIndex > 0 && (
-                                  <button
-                                    type="button"
-                                    onClick={() => handleMovePlanToTop(goal.id || goal._id)}
-                                    className="btn btn-ghost btn-xs border border-primary/30 bg-primary/5 rounded-lg gap-1 text-[11px] font-bold h-6 min-h-0 px-2 text-primary hover:bg-primary/15"
-                                    title="Move this planner to the top"
-                                  >
-                                    <ArrowUpToLine size={11} />
-                                    <span>Top</span>
-                                  </button>
-                                )}
                                 {goals.length > 1 && (
-                                  <button
-                                    type="button"
-                                    onClick={() => setIsReorderModalOpen(true)}
-                                    className="btn btn-ghost btn-xs border border-base-300/80 rounded-lg gap-1 text-[11px] font-semibold h-6 min-h-0 px-1.5 text-base-content/70 hover:text-primary"
-                                    title="Reorder Planners"
-                                  >
-                                    <ArrowUpDown size={11} />
-                                  </button>
+                                  <div className="flex items-center gap-0.5 bg-base-100/90 rounded-lg p-0.5 border border-base-300/80">
+                                    {goalIndex > 0 && (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleMovePlanToTop(goal.id || goal._id)}
+                                        className="btn btn-ghost btn-xs rounded-md gap-0.5 text-[10.5px] font-bold h-6 min-h-0 px-1.5 text-primary hover:bg-primary/10"
+                                        title="Move to top"
+                                      >
+                                        <ArrowUpToLine size={11} />
+                                        <span>Top</span>
+                                      </button>
+                                    )}
+                                    <button
+                                      type="button"
+                                      disabled={goalIndex === 0}
+                                      onClick={() => handleMovePlanStep(goal.id || goal._id, "up")}
+                                      className="btn btn-ghost btn-xs rounded-md h-6 w-5 min-h-0 p-0 text-base-content/70 disabled:opacity-20"
+                                      title="Move section up"
+                                    >
+                                      <ArrowUp size={11} />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      disabled={goalIndex === goals.length - 1}
+                                      onClick={() => handleMovePlanStep(goal.id || goal._id, "down")}
+                                      className="btn btn-ghost btn-xs rounded-md h-6 w-5 min-h-0 p-0 text-base-content/70 disabled:opacity-20"
+                                      title="Move section down"
+                                    >
+                                      <ArrowDown size={11} />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => setIsReorderModalOpen(true)}
+                                      className="btn btn-ghost btn-xs rounded-md h-6 w-5 min-h-0 p-0 text-base-content/60 hover:text-primary"
+                                      title="Reorder all"
+                                    >
+                                      <ArrowUpDown size={11} />
+                                    </button>
+                                  </div>
                                 )}
                                 <button
                                   type="button"
@@ -5924,14 +5963,33 @@ export default function InvSettings() {
                   return (
                     <div
                       key={goalId}
-                      className={`flex items-center justify-between p-3 rounded-2xl border transition-all ${
-                        isFirst
+                      draggable={true}
+                      onDragStart={() => setDraggedPlanIndex(idx)}
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                      }}
+                      onDrop={() => {
+                        if (draggedPlanIndex === null || draggedPlanIndex === idx) return;
+                        const updated = [...goals];
+                        const [removed] = updated.splice(draggedPlanIndex, 1);
+                        updated.splice(idx, 0, removed);
+                        setDraggedPlanIndex(null);
+                        handleReorderPlans(updated);
+                      }}
+                      onDragEnd={() => setDraggedPlanIndex(null)}
+                      className={`flex items-center justify-between p-3 rounded-2xl border transition-all cursor-move select-none ${
+                        draggedPlanIndex === idx
+                          ? "opacity-40 scale-[0.98] border-dashed border-primary"
+                          : isFirst
                           ? "bg-primary/5 border-primary/30 shadow-xs"
                           : "bg-base-200/60 border-base-300 hover:border-base-content/20"
                       }`}
                     >
                       {/* Left: Position & Goal info */}
-                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                        <div className="text-base-content/30 hover:text-base-content/70 cursor-grab active:cursor-grabbing p-0.5">
+                          <GripVertical size={16} />
+                        </div>
                         <div
                           className={`w-7 h-7 rounded-xl font-mono font-bold text-xs flex items-center justify-center shrink-0 ${
                             isFirst
@@ -6103,7 +6161,10 @@ export default function InvSettings() {
                       }`}
                     >
                       {/* Left: Position & Goal info */}
-                      <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <div className="text-base-content/30 p-0.5 shrink-0">
+                          <GripVertical size={13} />
+                        </div>
                         <div
                           className={`w-6 h-6 rounded-lg font-mono font-bold text-[11px] flex items-center justify-center shrink-0 ${
                             isFirst
