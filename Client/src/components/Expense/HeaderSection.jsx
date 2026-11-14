@@ -2,8 +2,9 @@ import React, { useState, useEffect, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import dayjs from "dayjs";
 import { updateSalary } from "../../services/redux/slice/ExpenseSlice";
-import { Eye, EyeOff, Wallet, Banknote, Calculator, PiggyBank, Flame, ChevronLeft, ChevronRight, Pencil, Building2, CreditCard } from "lucide-react";
+import { Eye, EyeOff, Wallet, Banknote, Calculator, PiggyBank, Flame, ChevronLeft, ChevronRight, Pencil, Building2, CreditCard, ExternalLink } from "lucide-react";
 import EditSalaryModal from "./EditSalaryModal";
+import BankBalancesModal from "./BankBalancesModal";
 import { message } from "antd";
 
 const HeaderSection = () => {
@@ -11,6 +12,8 @@ const HeaderSection = () => {
     const { salary, sources, transactions, categories, currentMonth } = useSelector((state) => state.expense);
 
     const [showSalaryModal, setShowSalaryModal] = useState(false);
+    const [showBankBalancesModal, setShowBankBalancesModal] = useState(false);
+    const [bankModalTypeFilter, setBankModalTypeFilter] = useState("all");
 
     // Privacy State (synced with expense_hide_numbers across the app)
     const [hideNumbers, setHideNumbers] = useState(() => {
@@ -79,51 +82,76 @@ const HeaderSection = () => {
         } catch (e) {}
     };
 
+    // Card Due calculation helper aligned with ExpTableEntry & BankBalancesModal
+    const getCardDueAmount = (source, txList = []) => {
+        if (!source || source.type !== 'Card') return 0;
+        if (source.cardDue !== undefined && source.cardDue !== null && Number(source.cardDue) > 0) {
+            return Number(source.cardDue);
+        }
+        const bal = Number(source.balance) || 0;
+        if (bal < 0) return Math.abs(bal);
+        if (source.cardDue !== undefined && source.cardDue !== null) {
+            return Number(source.cardDue);
+        }
+        const sId = String(source._id || source.id || "");
+        const cardDebits = (txList || [])
+            .filter(t => t.type === 'Debit' && String(t.sourceId?._id || t.sourceId) === sId)
+            .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+
+        const cardCredits = (txList || [])
+            .filter(t => (t.type === 'Credit' || t.type === 'Transfer') && (
+                String(t.targetSourceId?._id || t.targetSourceId) === sId ||
+                String(t.sourceId?._id || t.sourceId) === sId
+            ))
+            .reduce((sum, t) => {
+                if (t.type === 'Credit' && String(t.sourceId?._id || t.sourceId) === sId) {
+                    return sum + (Number(t.amount) || 0);
+                }
+                if (t.type === 'Transfer' && String(t.targetSourceId?._id || t.targetSourceId) === sId) {
+                    return sum + (Number(t.amount) || 0);
+                }
+                return sum;
+            }, 0);
+
+        const due = cardDebits - cardCredits;
+        return due > 0 ? due : 0;
+    };
+
     // Calculate Global Used (only Debit transactions with a valid Category count as category spending)
     const totalUsed = transactions
         .filter(t => t.type === 'Debit' && Boolean(t.categoryId?._id || t.categoryId))
-        .reduce((sum, t) => sum + t.amount, 0);
+        .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
     const totalRemaining = salary - totalUsed;
 
-    // Calculate Source Totals & Sorted Sources (Banks first by highest balance, then Cards by highest spent/money)
-    const sourceTotals = sources.map(source => {
-        const spent = transactions
-            .filter(t => t.type === 'Debit' && (t.sourceId?._id === source._id || t.sourceId === source._id))
-            .reduce((sum, t) => sum + t.amount, 0);
-        return { ...source, spent };
-    });
+    // Filter sources excluding disabled sources
+    const bankSources = sources.filter((s) => (s.type === "Bank" || !s.type) && !excludedSourceIds.includes(String(s._id)));
+    const cardSources = sources.filter((s) => s.type === "Card" && !excludedSourceIds.includes(String(s._id)));
+    const walletSources = sources.filter((s) => s.type === "Wallet" && !excludedSourceIds.includes(String(s._id)));
 
+    const totalBankBalance = bankSources.reduce((sum, s) => sum + (Number(s.balance) || 0), 0);
+    const totalWalletBalance = walletSources.reduce((sum, s) => sum + (Number(s.balance) || 0), 0);
+    const totalAssets = totalBankBalance + totalWalletBalance;
+
+    const totalCardSpent = cardSources.reduce((sum, source) => sum + getCardDueAmount(source, transactions), 0);
+    const netAssetsAfterCards = totalAssets - totalCardSpent;
+
+    // Sorted Sources: Banks and Wallets first by highest balance, then Cards by highest due
     const sortedSources = [...sources].sort((a, b) => {
-        const isABank = a.type === 'Bank';
-        const isBBank = b.type === 'Bank';
+        const isABank = a.type === 'Bank' || a.type === 'Wallet' || !a.type;
+        const isBBank = b.type === 'Bank' || b.type === 'Wallet' || !b.type;
 
         if (isABank && !isBBank) return -1;
         if (!isABank && isBBank) return 1;
 
         const getAmt = (s) => {
             if (s.type === 'Card') {
-                const st = sourceTotals.find(item => item._id === s._id);
-                return st?.spent ?? s.balance ?? 0;
+                return getCardDueAmount(s, transactions);
             }
-            return s.balance || 0;
+            return Number(s.balance) || 0;
         };
 
         return getAmt(b) - getAmt(a);
     });
-
-    const totalBankBalance = sourceTotals
-        .filter(s => (s.type === 'Bank' || !s.type) && !excludedSourceIds.includes(String(s._id)))
-        .reduce((sum, s) => sum + (s.balance || 0), 0);
-
-    const totalCardSpent = sourceTotals
-        .filter(s => s.type === 'Card' && !excludedSourceIds.includes(String(s._id)))
-        .reduce((sum, s) => sum + (s.spent || 0), 0);
-
-    const netAssetsAfterCards = totalBankBalance - totalCardSpent;
-
-    const breakdownSources = sourceTotals
-        .filter(s => s.type === 'Bank' || s.type === 'Card')
-        .slice(0, 4);
 
     const handleSaveSalaryModal = async (newSalary) => {
         const val = Number(newSalary) || 0;
@@ -158,13 +186,34 @@ const HeaderSection = () => {
 
                 {/* 1. Total Assets Card (with Compact Scrollable Bank & Card Balance List - Side Arrows) */}
                 <div className="stat place-items-center relative overflow-hidden p-5">
-                    <div className="stat-title text-base-content/60 font-medium uppercase tracking-wide text-xs relative z-10 flex items-center gap-1">
-                        <span>Total Net Assets</span>
-                        {excludedSourceIds.length > 0 && (
-                            <span className="text-[10px] text-amber-500 font-bold">({excludedSourceIds.length} Excluded)</span>
-                        )}
+                    <div className="stat-title text-base-content/60 font-medium uppercase tracking-wide text-xs relative z-10 flex items-center justify-between w-full">
+                        <div className="flex items-center gap-1">
+                            <span>Total Net Assets</span>
+                            {excludedSourceIds.length > 0 && (
+                                <span className="text-[10px] text-amber-500 font-bold">({excludedSourceIds.length} Excluded)</span>
+                            )}
+                        </div>
+                        <button
+                            type="button"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setBankModalTypeFilter("all");
+                                setShowBankBalancesModal(true);
+                            }}
+                            className="btn btn-ghost btn-xs btn-circle text-base-content/50 hover:text-primary transition-colors cursor-pointer"
+                            title="View Bank & Card Breakdown"
+                        >
+                            <ExternalLink size={12} />
+                        </button>
                     </div>
-                    <div className={`stat-value text-3xl relative z-10 ${netAssetsAfterCards < 0 ? 'text-error' : 'text-success'}`}>
+                    <div
+                        onClick={() => {
+                            setBankModalTypeFilter("all");
+                            setShowBankBalancesModal(true);
+                        }}
+                        className={`stat-value text-3xl relative z-10 cursor-pointer hover:opacity-85 transition-opacity ${netAssetsAfterCards < 0 ? 'text-error' : 'text-success'}`}
+                        title="Click to view all accounts and dues"
+                    >
                         {showBalance ? (netAssetsAfterCards < 0 ? `-₹${Math.abs(netAssetsAfterCards).toLocaleString()}` : `₹${netAssetsAfterCards.toLocaleString()}`) : "••••••••"}
                     </div>
 
@@ -172,7 +221,14 @@ const HeaderSection = () => {
                     <div className="stat-desc font-medium text-[11px] relative z-10 mt-0.5">
                         {showBalance ? (
                             <span className="text-base-content/70 font-medium">
-                                Banks: ₹{totalBankBalance.toLocaleString()} | Cards: <span className="text-error font-bold">-₹{totalCardSpent.toLocaleString()}</span>
+                                {totalWalletBalance > 0 ? (
+                                    <>Liquid: ₹{totalAssets.toLocaleString()} | Cards: </>
+                                ) : (
+                                    <>Banks: ₹{totalBankBalance.toLocaleString()} | Cards: </>
+                                )}
+                                <span className={totalCardSpent > 0 ? "text-error font-bold" : "text-base-content/60 font-semibold"}>
+                                    {totalCardSpent > 0 ? `-₹${totalCardSpent.toLocaleString()}` : "₹0"}
+                                </span>
                             </span>
                         ) : (
                             <span className="text-base-content/50">Net: ••••••</span>
@@ -203,11 +259,19 @@ const HeaderSection = () => {
                                 {sortedSources.map((source) => {
                                     const isCard = source.type === 'Card';
                                     const rawAmt = isCard
-                                        ? (sourceTotals.find(s => s._id === source._id)?.spent ?? source.balance ?? 0)
-                                        : (source.balance || 0);
+                                        ? getCardDueAmount(source, transactions)
+                                        : (Number(source.balance) || 0);
+                                    const hasDue = isCard && rawAmt > 0;
                                     const isNegativeBank = !isCard && rawAmt < 0;
-                                    const isErrorColor = isCard || isNegativeBank;
+                                    const isErrorColor = hasDue || isNegativeBank;
                                     const isExcluded = excludedSourceIds.includes(String(source._id));
+
+                                    let displayAmt = "₹0";
+                                    if (isCard) {
+                                        displayAmt = rawAmt > 0 ? `-₹${rawAmt.toLocaleString()}` : "₹0";
+                                    } else {
+                                        displayAmt = rawAmt < 0 ? `-₹${Math.abs(rawAmt).toLocaleString()}` : `₹${rawAmt.toLocaleString()}`;
+                                    }
 
                                     return (
                                         <div
@@ -225,11 +289,12 @@ const HeaderSection = () => {
                                                 {isExcluded && <EyeOff size={10} className="shrink-0 text-amber-500" />}
                                                 {source.name}
                                             </span>
-                                            <span className={`font-mono font-extrabold text-[11px] shrink-0 text-right ${isExcluded ? 'text-base-content/40' : (isErrorColor ? 'text-error' : 'text-success')}`}>
-                                                {showBalance
-                                                    ? (isCard ? `-₹${Math.abs(rawAmt).toLocaleString()}` : (rawAmt < 0 ? `-₹${Math.abs(rawAmt).toLocaleString()}` : `₹${rawAmt.toLocaleString()}`))
-                                                    : "••••"
-                                                }
+                                            <span className={`font-mono font-extrabold text-[11px] shrink-0 text-right ${
+                                                isExcluded 
+                                                    ? 'text-base-content/40' 
+                                                    : (isErrorColor ? 'text-error' : (isCard && rawAmt === 0 ? 'text-base-content/50' : 'text-success'))
+                                            }`}>
+                                                {showBalance ? displayAmt : "••••"}
                                             </span>
                                         </div>
                                     );
@@ -417,6 +482,17 @@ const HeaderSection = () => {
                             )}
                             <button
                                 type="button"
+                                onClick={() => {
+                                    setBankModalTypeFilter("all");
+                                    setShowBankBalancesModal(true);
+                                }}
+                                className="btn btn-xs btn-outline rounded-xl text-[11px] font-bold gap-1 cursor-pointer"
+                            >
+                                <Wallet size={12} />
+                                <span>Accounts</span>
+                            </button>
+                            <button
+                                type="button"
                                 onClick={toggleHideNumbers}
                                 className="btn btn-xs btn-ghost btn-circle text-base-content/60 hover:text-primary cursor-pointer"
                                 title={showBalance ? "Hide Balances" : "Show Balances"}
@@ -428,25 +504,39 @@ const HeaderSection = () => {
 
                     {/* Sub-breakdown: Banks & Cards Due */}
                     <div className="grid grid-cols-2 gap-2 pt-2.5 border-t border-base-content/10">
-                        <div className="bg-base-200/50 p-2.5 rounded-xl border border-base-content/5">
+                        <div
+                            onClick={() => {
+                                setBankModalTypeFilter("Bank");
+                                setShowBankBalancesModal(true);
+                            }}
+                            className="bg-base-200/50 hover:bg-base-200/80 transition-colors p-2.5 rounded-xl cursor-pointer border border-base-content/5"
+                        >
                             <div className="flex items-center justify-between text-[10px] text-base-content/60 font-semibold mb-0.5">
                                 <span className="flex items-center gap-1">
-                                    <Building2 size={11} className="text-primary" /> Banks
+                                    <Building2 size={11} className="text-primary" /> {totalWalletBalance > 0 ? "Banks & Wallets" : "Banks"}
                                 </span>
+                                <ExternalLink size={9} className="opacity-50" />
                             </div>
-                            <div className={`text-xs font-extrabold font-mono ${totalBankBalance < 0 ? 'text-error' : 'text-success'}`}>
-                                {!showBalance ? "••••••••" : (totalBankBalance < 0 ? `-₹${Math.abs(totalBankBalance).toLocaleString()}` : `₹${totalBankBalance.toLocaleString()}`)}
+                            <div className={`text-xs font-extrabold font-mono ${totalAssets < 0 ? 'text-error' : 'text-success'}`}>
+                                {!showBalance ? "••••••••" : (totalAssets < 0 ? `-₹${Math.abs(totalAssets).toLocaleString()}` : `₹${totalAssets.toLocaleString()}`)}
                             </div>
                         </div>
 
-                        <div className="bg-base-200/50 p-2.5 rounded-xl border border-base-content/5">
+                        <div
+                            onClick={() => {
+                                setBankModalTypeFilter("Card");
+                                setShowBankBalancesModal(true);
+                            }}
+                            className="bg-base-200/50 hover:bg-base-200/80 transition-colors p-2.5 rounded-xl cursor-pointer border border-base-content/5"
+                        >
                             <div className="flex items-center justify-between text-[10px] text-base-content/60 font-semibold mb-0.5">
                                 <span className="flex items-center gap-1">
                                     <CreditCard size={11} className="text-error" /> CC Dues
                                 </span>
+                                <ExternalLink size={9} className="opacity-50" />
                             </div>
-                            <div className="text-xs font-extrabold font-mono text-error">
-                                {!showBalance ? "••••••••" : `-₹${totalCardSpent.toLocaleString()}`}
+                            <div className={`text-xs font-extrabold font-mono ${totalCardSpent > 0 ? 'text-error' : 'text-base-content/60'}`}>
+                                {!showBalance ? "••••••••" : (totalCardSpent > 0 ? `-₹${totalCardSpent.toLocaleString()}` : "₹0")}
                             </div>
                         </div>
                     </div>
@@ -457,10 +547,19 @@ const HeaderSection = () => {
                             {sortedSources.map((source) => {
                                 const isCard = source.type === 'Card';
                                 const rawAmt = isCard
-                                    ? (sourceTotals.find(s => s._id === source._id)?.spent ?? source.balance ?? 0)
-                                    : (source.balance || 0);
-                                const isErrorColor = isCard || (!isCard && rawAmt < 0);
+                                    ? getCardDueAmount(source, transactions)
+                                    : (Number(source.balance) || 0);
+                                const hasDue = isCard && rawAmt > 0;
+                                const isNegativeBank = !isCard && rawAmt < 0;
+                                const isErrorColor = hasDue || isNegativeBank;
                                 const isExcluded = excludedSourceIds.includes(String(source._id));
+
+                                let displayAmt = "₹0";
+                                if (isCard) {
+                                    displayAmt = rawAmt > 0 ? `-₹${rawAmt.toLocaleString()}` : "₹0";
+                                } else {
+                                    displayAmt = rawAmt < 0 ? `-₹${Math.abs(rawAmt).toLocaleString()}` : `₹${rawAmt.toLocaleString()}`;
+                                }
 
                                 return (
                                     <button
@@ -474,11 +573,12 @@ const HeaderSection = () => {
                                         }`}
                                     >
                                         <span className="truncate max-w-[90px]">{source.name}:</span>
-                                        <span className={`font-mono ${isExcluded ? '' : (isErrorColor ? 'text-error' : 'text-success')}`}>
-                                            {showBalance
-                                                ? (isCard ? `-₹${Math.abs(rawAmt).toLocaleString()}` : (rawAmt < 0 ? `-₹${Math.abs(rawAmt).toLocaleString()}` : `₹${rawAmt.toLocaleString()}`))
-                                                : "••••"
-                                            }
+                                        <span className={`font-mono ${
+                                            isExcluded 
+                                                ? '' 
+                                                : (isErrorColor ? 'text-error' : (isCard && rawAmt === 0 ? 'text-base-content/50' : 'text-success'))
+                                        }`}>
+                                            {showBalance ? displayAmt : "••••"}
                                         </span>
                                     </button>
                                 );
@@ -558,6 +658,13 @@ const HeaderSection = () => {
                 currentMonth={currentMonth}
                 currentSalary={salary}
                 onSaveSalary={handleSaveSalaryModal}
+            />
+
+            {/* Bank & Card Balances Modal */}
+            <BankBalancesModal
+                isOpen={showBankBalancesModal}
+                onClose={() => setShowBankBalancesModal(false)}
+                initialTypeFilter={bankModalTypeFilter}
             />
         </div>
     );
