@@ -3283,25 +3283,38 @@ export default function InvSettings() {
                   </span>
                 </div>
 
-                {goals.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={toggleAllPlansCollapse}
-                    className="btn btn-ghost btn-xs text-primary font-bold gap-1 text-[11px] h-6 min-h-0 px-2 rounded-lg"
-                  >
-                    {areAllPlansCollapsed ? (
-                      <>
-                        <ChevronDown size={12} />
-                        <span>Expand All</span>
-                      </>
-                    ) : (
-                      <>
-                        <ChevronUp size={12} />
-                        <span>Collapse</span>
-                      </>
-                    )}
-                  </button>
-                )}
+                <div className="flex items-center gap-1.5">
+                  {goals.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => setIsReorderModalOpen(true)}
+                      className="btn btn-ghost btn-xs text-primary font-bold gap-1 text-[11px] h-6 min-h-0 px-2 rounded-lg border border-primary/30 bg-primary/5 hover:bg-primary/15"
+                      title="Reorder Planners"
+                    >
+                      <ArrowUpDown size={11} />
+                      <span>Reorder</span>
+                    </button>
+                  )}
+                  {goals.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={toggleAllPlansCollapse}
+                      className="btn btn-ghost btn-xs text-primary font-bold gap-1 text-[11px] h-6 min-h-0 px-2 rounded-lg"
+                    >
+                      {areAllPlansCollapsed ? (
+                        <>
+                          <ChevronDown size={12} />
+                          <span>Expand All</span>
+                        </>
+                      ) : (
+                        <>
+                          <ChevronUp size={12} />
+                          <span>Collapse</span>
+                        </>
+                      )}
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* Goals List or Empty State */}
@@ -3513,20 +3526,6 @@ export default function InvSettings() {
                                 <Layers size={10} className="opacity-60" />
                                 <span>{metrics.itemCount} {metrics.itemCount === 1 ? "source" : "sources"}</span>
                               </span>
-                              {goals.length > 1 && goalIndex > 0 && (
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleMovePlanToTop(goal.id || goal._id);
-                                  }}
-                                  className="btn btn-ghost btn-xs text-primary text-[10px] font-bold h-5 min-h-0 px-1.5 border border-primary/25 rounded-md gap-0.5 bg-primary/5 hover:bg-primary/15"
-                                  title="Move to top"
-                                >
-                                  <ArrowUpToLine size={10} />
-                                  <span>Top</span>
-                                </button>
-                              )}
                               {metrics.percentFunded < 100 && (
                                 <span className="text-[10px] font-mono text-base-content/50 truncate">
                                   Need {formatINRCompact(Math.max(0, goal.targetAmount - metrics.totalAllocated))} more
@@ -3590,47 +3589,6 @@ export default function InvSettings() {
                             {/* Actions Ribbon */}
                             <div className="flex items-center justify-between gap-1.5 bg-base-200/80 p-1.5 rounded-xl border border-base-300/60">
                               <div className="flex items-center gap-1">
-                                {goals.length > 1 && (
-                                  <div className="flex items-center gap-0.5 bg-base-100/90 rounded-lg p-0.5 border border-base-300/80">
-                                    {goalIndex > 0 && (
-                                      <button
-                                        type="button"
-                                        onClick={() => handleMovePlanToTop(goal.id || goal._id)}
-                                        className="btn btn-ghost btn-xs rounded-md gap-0.5 text-[10.5px] font-bold h-6 min-h-0 px-1.5 text-primary hover:bg-primary/10"
-                                        title="Move to top"
-                                      >
-                                        <ArrowUpToLine size={11} />
-                                        <span>Top</span>
-                                      </button>
-                                    )}
-                                    <button
-                                      type="button"
-                                      disabled={goalIndex === 0}
-                                      onClick={() => handleMovePlanStep(goal.id || goal._id, "up")}
-                                      className="btn btn-ghost btn-xs rounded-md h-6 w-5 min-h-0 p-0 text-base-content/70 disabled:opacity-20"
-                                      title="Move section up"
-                                    >
-                                      <ArrowUp size={11} />
-                                    </button>
-                                    <button
-                                      type="button"
-                                      disabled={goalIndex === goals.length - 1}
-                                      onClick={() => handleMovePlanStep(goal.id || goal._id, "down")}
-                                      className="btn btn-ghost btn-xs rounded-md h-6 w-5 min-h-0 p-0 text-base-content/70 disabled:opacity-20"
-                                      title="Move section down"
-                                    >
-                                      <ArrowDown size={11} />
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => setIsReorderModalOpen(true)}
-                                      className="btn btn-ghost btn-xs rounded-md h-6 w-5 min-h-0 p-0 text-base-content/60 hover:text-primary"
-                                      title="Reorder all"
-                                    >
-                                      <ArrowUpDown size={11} />
-                                    </button>
-                                  </div>
-                                )}
                                 <button
                                   type="button"
                                   onClick={() => openEditGoalModal(goal)}
